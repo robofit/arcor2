@@ -3,10 +3,10 @@
 
 from random import choice
 from typing import cast
-from arcor2_classes import Pose, WorldObject, Robot
+from arcor2_demo.arcor2_classes import Pose, WorldObject, Robot, Arcor2Exception
 
 
-class KinaliAPI(object):
+class KinaliAPI(object):  # TODO singleton?
     """
     Provides thread-safe interface to the API
     """
@@ -27,7 +27,7 @@ class PCB(WorldObject):
 
     def __init__(self, pcb_type: str, max_attempts: int):
 
-        super(PCB, self).__init__()
+        super(PCB, self).__init__(child_limit=1)
 
         self.pcb_type = pcb_type
         self.attempt = 0
@@ -35,7 +35,9 @@ class PCB(WorldObject):
 
 
 class DataMatrixLabel(WorldObject):
-    pass
+
+    def __init__(self, pose):
+        super(DataMatrixLabel, self).__init__(child_limit=0, pose=pose)
 
 
 class AuboRobot(Robot):
@@ -97,17 +99,25 @@ class DataMatrixPrinter(WorldObject):
         return label
 
 
+class PCBTesterException(Arcor2Exception):
+    pass
+
+
 class PCBTester(WorldObject):
 
     def __init__(self, api: KinaliAPI, tester_id: str):
 
-        super(PCBTester, self).__init__()
+        super(PCBTester, self).__init__(child_limit=1)
 
         self._api = api
         self.tester_id = tester_id
+        self.test_in_progress = False
         # TODO get tester pose from api
 
     def place_pcb_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
+
+        if pcb.attempt >= pcb.max_attempts:
+            raise PCBTesterException("Max attempts for PCB reached.")
 
         robot.place_to(Pose(), robot.GRIPPER)
         self.add_child(pcb)
@@ -115,19 +125,32 @@ class PCBTester(WorldObject):
 
     def test_run(self) -> None:
 
+        if self.test_in_progress:
+            raise PCBTesterException("Test already running.")
+
+        if len(self.childs()) == 0:
+            raise PCBTesterException("No PCB in the tester.")
+
+        self.test_in_progress = True
+
         # TODO call API - exception on failure
-        pass
 
     def pick_pcb_blocking(self, robot: AuboRobot) -> PCB:
 
         # TODO wait for test result
+        # TODO consider case when test was not started - just pick pcb...
+        self.test_in_progress = False
 
-        pcb = cast(PCB, self.childs()[0])
+        try:
+            pcb = cast(PCB, self.childs()[0])
+        except IndexError:
+            raise PCBTesterException("There is no PCB in the tester!")
         pcb.attempt += 1
         self.remove_child(pcb)
 
         if type(pcb) == PCB:
-            pcb = choice((OkPCB, OkPCB, OkPCB, NokPCB))(pcb)  # now, the pcb has different type
+            pcb = choice((OkPCB, OkPCB, OkPCB, NokPCB))(
+                pcb)  # now, the pcb has different type
 
         robot.pick(pcb, robot.GRIPPER)
 

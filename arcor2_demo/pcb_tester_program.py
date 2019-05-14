@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import time
-from arcor2_classes import Arcor2Exception
-from pcb_tester_classes import KinaliAPI, AuboRobot, PCBBin, DataMatrixPrinter,\
+from arcor2_demo.arcor2_classes import Arcor2Exception
+from arcor2_demo.pcb_tester_classes import KinaliAPI, AuboRobot, PCBBin, DataMatrixPrinter,\
     UnorganizedOutputBox, Pose, PCB, Clamp, NokPCB
 
 # Extended (instrumented) classes could be imported instead of pure ones in order to provide interactive features
 # std. / extended will be imported based on e.g. script argument
-from pcb_tester_interaction_classes import PCBTesterInt as PCBTester
+from arcor2_demo.pcb_tester_interaction_classes import PCBTesterInt as PCBTester
 
 
 def fce_001(bin: PCBBin, robot: AuboRobot,
@@ -92,7 +92,8 @@ def main():
             print(e)
             return
 
-        print("OK: {}, NOK: {}".format(len(box_ok.childs()), len(box_nok.childs())))
+        print("OK: {}, NOK: {}".format(
+            len(box_ok.childs()), len(box_nok.childs())))
         time.sleep(1)
 
 

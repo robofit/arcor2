@@ -19,7 +19,8 @@ def main():
 
         generated_code = visitors.to_source(node)
 
-        generated_code = autopep8.fix_code(generated_code, options = {'aggressive': 1})
+        generated_code = autopep8.fix_code(
+            generated_code, options={'aggressive': 1})
 
         print(generated_code)
 
