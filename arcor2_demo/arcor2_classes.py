@@ -41,7 +41,7 @@ class WorldObject(object):
 
         if self._child_limit is not None and len(
                 self._contains) >= self._child_limit:
-            raise WorldObjectException("Child limit reached.")
+            raise WorldObjectException("Child limit reached for {}.".format(self))
 
         self._contains.append(obj)
 
@@ -69,6 +69,13 @@ class Robot(object):
     def __init__(self):
 
         self._holding: Dict[int, WorldObject] = {}
+
+    def holding(self, end_effector):
+
+        try:
+            return self._holding[end_effector]
+        except KeyError:
+            return None
 
     def move_to(self, pose: Pose) -> None:
         time.sleep(1)

@@ -191,6 +191,10 @@ class UnorganizedOutputBox(WorldObject):  # TODO limit capacity?
         self.add_child(pcb)
 
 
+class ClampException(Arcor2Exception):
+    pass
+
+
 class Clamp(WorldObject):
 
     def __init__(self, api: KinaliAPI):
@@ -215,13 +219,16 @@ class Clamp(WorldObject):
 
     def place_blocking(self, robot: AuboRobot, method: int):
 
-        assert isinstance(robot.holding[method], PCB)
+        assert isinstance(robot.holding(method), PCB)
         self.add_child(robot.place_to(Pose(), method))
         # TODO API - catch command
 
     def stick_label_blocking(self, robot):
 
-        assert isinstance(robot.holding[robot.SUCTION], DataMatrixLabel)
-        assert len(self.childs()) == 1
+        if not isinstance(robot.holding(robot.SUCTION), DataMatrixLabel):
+            raise ClampException("Robot does not hold DM label.")
 
-        self.childs()[0].add_child(robot.place_to(Pose(), robot.SUCTION))
+        try:
+            self.childs()[0].add_child(robot.place_to(Pose(), robot.SUCTION))
+        except IndexError:
+            raise ClampException("There is no PCB in the clamp.")

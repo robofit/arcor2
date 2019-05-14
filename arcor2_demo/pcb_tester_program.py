@@ -17,6 +17,9 @@ def fce_001(bin: PCBBin, robot: AuboRobot,
     Automatically generated function - code duplication detected
     """
 
+    if pcb_tester.childs():
+        return
+
     pcb = PCB("big_pcb_123", max_attempts=5)
     bin.detect_blocking(pcb)
     bin.pick_blocking(robot, pcb)
@@ -53,7 +56,7 @@ def fce_003(pcb_tester: PCBTester, robot: AuboRobot,
     pcb = pcb_tester.pick_pcb_blocking(robot)
 
     if isinstance(pcb, NokPCB):
-        if pcb.attempt > pcb.max_attempts:
+        if pcb.attempt >= pcb.max_attempts:
             fce_002(dm_printer, clamp, pcb, robot, box_nok)
         else:
             pcb_tester.place_pcb_blocking(robot, pcb)
