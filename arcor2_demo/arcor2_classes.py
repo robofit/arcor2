@@ -72,16 +72,51 @@ class Robot:
         self._holding: Dict[Hashable, WorldObject] = {}
 
     def holding(self, end_effector: Hashable) -> Union[None, WorldObject]:
+        """Allows to test if robot holds something.
+
+        Parameters
+        ----------
+        end_effector:
+            Identificator for the end effector.
+
+        """
 
         try:
             return self._holding[end_effector]
         except KeyError:
             return None
 
-    def move_to(self, pose: Pose) -> None:
+    def move_to(self, end_effector: Hashable, pose: Pose) -> None:
+        """
+
+        Parameters
+        ----------
+        end_effector:
+            Robot's end effector.
+        pose:
+            Move specified end-effector to the given pose.
+        """
+
         time.sleep(1)
 
     def pick(self, obj: WorldObject, end_effector: int) -> None:
+        """Picks given object from its pose using a given end effector.
+
+        The object has to know its pose.
+
+        Parameters
+        ----------
+        obj:
+            Object to be picked.
+        end_effector:
+            End effector.
+
+        Raises
+        -------
+        RobotException
+            When something goes wrong.
+
+        """
 
         if obj.pose is None:
             raise RobotException("Object {} has no pose set.".format(obj))
@@ -94,6 +129,20 @@ class Robot:
         # TODO set obj.pose relative to the gripper now?
 
     def place_to(self, pose: Pose, end_effector: int) -> WorldObject:
+        """
+
+        Parameters
+        ----------
+        pose:
+            Pose where to place the object.
+        end_effector
+            Specifies end effector to use (robot might hold more objects using different end effectors).
+
+        Returns
+        -------
+        The placed object.
+
+        """
 
         try:
             obj = self._holding[end_effector]
