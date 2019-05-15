@@ -11,8 +11,8 @@ from arcor2_demo.pcb_tester_classes import KinaliAPI, AuboRobot, PCBBin, DataMat
 from arcor2_demo.pcb_tester_interaction_classes import PCBTesterInt as PCBTester
 
 
-def fce_001(bin: PCBBin, robot: AuboRobot,
-            clamp: Clamp, pcb_tester: PCBTester):
+def fce_001(pcb_bin: PCBBin, robot: AuboRobot,
+            clamp: Clamp, pcb_tester: PCBTester) -> None:
     """
     Automatically generated function - code duplication detected
     """
@@ -21,8 +21,8 @@ def fce_001(bin: PCBBin, robot: AuboRobot,
         return
 
     pcb = PCB("big_pcb_123", max_attempts=5)
-    bin.detect_blocking(pcb)
-    bin.pick_blocking(robot, pcb)
+    pcb_bin.detect_blocking(pcb)
+    pcb_bin.pick_blocking(robot, pcb)
 
     clamp.place_blocking(robot, robot.SUCTION)
     pcb = clamp.pick_blocking(robot, robot.GRIPPER)
@@ -32,7 +32,7 @@ def fce_001(bin: PCBBin, robot: AuboRobot,
 
 
 def fce_002(dm_printer: DataMatrixPrinter, clamp: Clamp, pcb: PCB,
-            robot: AuboRobot, box: UnorganizedOutputBox):
+            robot: AuboRobot, box: UnorganizedOutputBox) -> None:
     """
     Automatically generated function - code duplication detected
     """
@@ -47,7 +47,7 @@ def fce_002(dm_printer: DataMatrixPrinter, clamp: Clamp, pcb: PCB,
 
 def fce_003(pcb_tester: PCBTester, robot: AuboRobot,
             dm_printer: DataMatrixPrinter, clamp: Clamp,
-            box_nok: UnorganizedOutputBox, box_ok: UnorganizedOutputBox):
+            box_nok: UnorganizedOutputBox, box_ok: UnorganizedOutputBox) -> None:
     """
     Automatically generated function - code duplication detected
     """
@@ -65,13 +65,13 @@ def fce_003(pcb_tester: PCBTester, robot: AuboRobot,
         fce_002(dm_printer, clamp, pcb, robot, box_ok)
 
 
-def main():
+def main() -> None:
 
     api = KinaliAPI("192.168.1.1", 1234)
 
     # definition of the environment
     robot = AuboRobot(api)  # robot origin == world origin
-    bin = PCBBin(api)  # there is only one bin, it get pose from API (?)
+    pcb_bin = PCBBin(api)  # there is only one bin, it get pose from API (?)
 
     # ...poses of the boxes are given by the user
     box_ok = UnorganizedOutputBox(pose=Pose())
@@ -87,8 +87,8 @@ def main():
     while True:  # automatically "optimized" program
 
         try:
-            fce_001(bin, robot, clamp, pcb_tester1)
-            fce_001(bin, robot, clamp, pcb_tester2)
+            fce_001(pcb_bin, robot, clamp, pcb_tester1)
+            fce_001(pcb_bin, robot, clamp, pcb_tester2)
             fce_003(pcb_tester1, robot, dm_printer, clamp, box_nok, box_ok)
             fce_003(pcb_tester2, robot, dm_printer, clamp, box_nok, box_ok)
         except Arcor2Exception as e:

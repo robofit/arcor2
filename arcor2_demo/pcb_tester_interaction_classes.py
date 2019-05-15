@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import coloredlogs
+import coloredlogs  # type: ignore
 import logging
-from arcor2_demo.pcb_tester_classes import PCBTester, AuboRobot, PCB
+from arcor2_demo.pcb_tester_classes import PCBTester, AuboRobot, PCB, KinaliAPI
 # from arcor2_msgs.msg import WorldObjectState
 
 logger = logging.getLogger()
@@ -12,9 +12,9 @@ coloredlogs.install(level='DEBUG')
 
 class PCBTesterInt(PCBTester):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, api: KinaliAPI, tester_id: str) -> None:
 
-        super(PCBTesterInt, self).__init__(*args, **kwargs)
+        super(PCBTesterInt, self).__init__(api, tester_id)
 
         # self.state_publisher = rospy.Publish("/arcor2/objects/pcbtester/state", WorldObjectState)
 

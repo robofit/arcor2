@@ -2,11 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import ast
-from astmonkey import visitors, transformers
-import autopep8
+from astmonkey import visitors, transformers  # type: ignore
+import autopep8  # type: ignore
+
+"""
+https://greentreesnakes.readthedocs.io
+https://python-ast-explorer.com/
+https://astor.readthedocs.io/en/latest/
+"""
 
 
-def main():
+def main() -> None:
 
     with open("pcb_tester_program.py", "r") as source:
 

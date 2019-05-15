@@ -6,7 +6,7 @@ from typing import cast
 from arcor2_demo.arcor2_classes import Pose, WorldObject, Robot, Arcor2Exception
 
 
-class KinaliAPI(object):  # TODO singleton?
+class KinaliAPI:  # TODO singleton?
     """
     Provides thread-safe interface to the API
     """
@@ -16,7 +16,7 @@ class KinaliAPI(object):  # TODO singleton?
         self._websocket = None
 
 
-class FakeKinaliAPI(object):
+class FakeKinaliAPI:
     """
     Provides simulated API - for testing.
     """
@@ -36,7 +36,7 @@ class PCB(WorldObject):
 
 class DataMatrixLabel(WorldObject):
 
-    def __init__(self, pose):
+    def __init__(self, pose: Pose) -> None:
         super(DataMatrixLabel, self).__init__(child_limit=0, pose=pose)
 
 
@@ -45,14 +45,14 @@ class AuboRobot(Robot):
     SUCTION = 0
     GRIPPER = 1
 
-    def __init__(self, api):
+    def __init__(self, api: KinaliAPI) -> None:
         self._api = api
         super(AuboRobot, self).__init__()
 
 
 class OkPCB(PCB):
 
-    def __init__(self, pcb: PCB):
+    def __init__(self, pcb: PCB) -> None:
 
         # TODO is there a more elegant way how to 'upgrade' a class?
         self.pcb_type = pcb.pcb_type
@@ -65,7 +65,7 @@ class OkPCB(PCB):
 
 class NokPCB(PCB):
 
-    def __init__(self, pcb: PCB):
+    def __init__(self, pcb: PCB) -> None:
 
         self.pcb_type = pcb.pcb_type
         self.pose = pcb.pose
@@ -77,7 +77,7 @@ class NokPCB(PCB):
 
 class DataMatrixPrinter(WorldObject):
 
-    def __init__(self, api: KinaliAPI):
+    def __init__(self, api: KinaliAPI) -> None:
 
         self._api = api
         super(DataMatrixPrinter, self).__init__(child_limit=1)
@@ -105,7 +105,7 @@ class PCBTesterException(Arcor2Exception):
 
 class PCBTester(WorldObject):
 
-    def __init__(self, api: KinaliAPI, tester_id: str):
+    def __init__(self, api: KinaliAPI, tester_id: str) -> None:
 
         super(PCBTester, self).__init__(child_limit=1)
 
@@ -128,7 +128,7 @@ class PCBTester(WorldObject):
         if self.test_in_progress:
             raise PCBTesterException("Test already running.")
 
-        if len(self.childs()) == 0:
+        if not self.childs():
             raise PCBTesterException("No PCB in the tester.")
 
         self.test_in_progress = True
@@ -159,19 +159,19 @@ class PCBTester(WorldObject):
 
 class PCBBin(WorldObject):
 
-    def __init__(self, api: KinaliAPI):
+    def __init__(self, api: KinaliAPI) -> None:
 
         self._api = api
         self.pose = Pose()  # TODO get from API?
         super(PCBBin, self).__init__()
 
     # TODO should this be non-blocking?
-    def detect_blocking(self, pcb: PCB, attempts: int = 5):
+    def detect_blocking(self, pcb: PCB, attempts: int = 5) -> None:
 
         # pose = self.api.detect(pcb.pcb_type)
         pcb.pose = Pose()
 
-    def pick_blocking(self, robot: AuboRobot, pcb: PCB):
+    def pick_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
 
         assert pcb.pose is not None
 
@@ -180,7 +180,7 @@ class PCBBin(WorldObject):
 
 class UnorganizedOutputBox(WorldObject):  # TODO limit capacity?
 
-    def __init__(self, pose: Pose):
+    def __init__(self, pose: Pose) -> None:
 
         super(UnorganizedOutputBox, self).__init__(pose)
 
@@ -197,7 +197,7 @@ class ClampException(Arcor2Exception):
 
 class Clamp(WorldObject):
 
-    def __init__(self, api: KinaliAPI):
+    def __init__(self, api: KinaliAPI) -> None:
 
         self._api = api
         super(Clamp, self).__init__()
@@ -217,13 +217,13 @@ class Clamp(WorldObject):
 
         return pcb
 
-    def place_blocking(self, robot: AuboRobot, method: int):
+    def place_blocking(self, robot: AuboRobot, method: int) -> None:
 
         assert isinstance(robot.holding(method), PCB)
         self.add_child(robot.place_to(Pose(), method))
         # TODO API - catch command
 
-    def stick_label_blocking(self, robot):
+    def stick_label_blocking(self, robot: AuboRobot) -> None:
 
         if not isinstance(robot.holding(robot.SUCTION), DataMatrixLabel):
             raise ClampException("Robot does not hold DM label.")

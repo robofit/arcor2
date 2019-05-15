@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Iterable, Dict, Tuple, List
+from typing import Optional, Collection, Dict, Tuple, List, Hashable, Union
 import time
 
 
@@ -9,10 +9,10 @@ class Arcor2Exception(Exception):
     pass
 
 
-class Pose(object):
+class Pose:
 
-    def __init__(self, position: Iterable[float] = (
-            0, 0, 0), orientation: Iterable[float] = (0, 0, 0, 1)):
+    def __init__(self, position: Collection[float] = (
+            0, 0, 0), orientation: Collection[float] = (0, 0, 0, 1)) -> None:
 
         assert len(position) == 3 and len(orientation) == 4
 
@@ -24,16 +24,16 @@ class WorldObjectException(Arcor2Exception):
     pass
 
 
-class WorldObject(object):
+class WorldObject:
 
     def __init__(self, pose: Optional[Pose] = None,
-                 child_limit: Optional[int] = None):
+                 child_limit: Optional[int] = None) -> None:
 
         self.pose = pose
         self._child_limit = child_limit
         self._contains: List[WorldObject] = []
 
-    def add_child(self, obj: "WorldObject"):
+    def add_child(self, obj: "WorldObject") -> None:
 
         if obj in self._contains:
             raise WorldObjectException(
@@ -41,11 +41,12 @@ class WorldObject(object):
 
         if self._child_limit is not None and len(
                 self._contains) >= self._child_limit:
-            raise WorldObjectException("Child limit reached for {}.".format(self))
+            raise WorldObjectException(
+                "Child limit reached for {}.".format(self))
 
         self._contains.append(obj)
 
-    def remove_child(self, obj: "WorldObject"):
+    def remove_child(self, obj: "WorldObject") -> None:
 
         try:
             self._contains.remove(obj)
@@ -61,16 +62,16 @@ class RobotException(Arcor2Exception):
     pass
 
 
-class Robot(object):
+class Robot:
     """
     Abstract class representing robot and its basic capabilities (motion)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
 
-        self._holding: Dict[int, WorldObject] = {}
+        self._holding: Dict[Hashable, WorldObject] = {}
 
-    def holding(self, end_effector):
+    def holding(self, end_effector: Hashable) -> Union[None, WorldObject]:
 
         try:
             return self._holding[end_effector]
@@ -80,7 +81,7 @@ class Robot(object):
     def move_to(self, pose: Pose) -> None:
         time.sleep(1)
 
-    def pick(self, obj: WorldObject, end_effector: int):
+    def pick(self, obj: WorldObject, end_effector: int) -> None:
 
         if obj.pose is None:
             raise RobotException("Object {} has no pose set.".format(obj))
