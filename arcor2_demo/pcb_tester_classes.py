@@ -5,6 +5,9 @@ from random import choice
 from typing import cast
 from arcor2_demo.arcor2_classes import Pose, WorldObject, Robot, Arcor2Exception
 
+__all__ = ("PCB", "DataMatrixLabel", "AuboRobot", "OkPCB", "NokPCB", "DataMatrixPrinter", "PCBTester", "PCBBin",
+           "UnorganizedOutputBox", "Clamp")
+
 
 class KinaliAPI:  # TODO singleton?
     """
@@ -82,7 +85,7 @@ class DataMatrixPrinter(WorldObject):
         self._api = api
         super(DataMatrixPrinter, self).__init__(child_limit=1)
 
-    def print(self, pcb: PCB) -> None:
+    def io_print(self, pcb: PCB) -> None:
 
         if isinstance(pcb, OkPCB):
             pass
@@ -91,7 +94,7 @@ class DataMatrixPrinter(WorldObject):
 
         self.add_child(DataMatrixLabel(pose=Pose()))
 
-    def pick_label_blocking(self, robot: AuboRobot) -> DataMatrixLabel:
+    def io_pick_label_blocking(self, robot: AuboRobot) -> DataMatrixLabel:
 
         label = cast(DataMatrixLabel, self.childs()[0])
         robot.pick(label, AuboRobot.SUCTION)
@@ -114,7 +117,7 @@ class PCBTester(WorldObject):
         self.test_in_progress = False
         # TODO get tester pose from api
 
-    def place_pcb_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
+    def io_place_pcb_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
 
         if pcb.attempt >= pcb.max_attempts:
             raise PCBTesterException("Max attempts for PCB reached.")
@@ -123,7 +126,7 @@ class PCBTester(WorldObject):
         self.add_child(pcb)
         # TODO exception on failure
 
-    def test_run(self) -> None:
+    def io_test_run(self) -> None:
 
         if self.test_in_progress:
             raise PCBTesterException("Test already running.")
@@ -135,7 +138,7 @@ class PCBTester(WorldObject):
 
         # TODO call API - exception on failure
 
-    def pick_pcb_blocking(self, robot: AuboRobot) -> PCB:
+    def io_pick_pcb_blocking(self, robot: AuboRobot) -> PCB:
 
         # TODO wait for test result
         # TODO consider case when test was not started - just pick pcb...
@@ -166,12 +169,12 @@ class PCBBin(WorldObject):
         super(PCBBin, self).__init__()
 
     # TODO should this be non-blocking?
-    def detect_blocking(self, pcb: PCB, attempts: int = 5) -> None:
+    def io_detect_blocking(self, pcb: PCB, attempts: int = 5) -> None:
 
         # pose = self.api.detect(pcb.pcb_type)
         pcb.pose = Pose()
 
-    def pick_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
+    def io_pick_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
 
         assert pcb.pose is not None
 
@@ -184,7 +187,7 @@ class UnorganizedOutputBox(WorldObject):  # TODO limit capacity?
 
         super(UnorganizedOutputBox, self).__init__(pose)
 
-    def place_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
+    def io_place_blocking(self, robot: AuboRobot, pcb: PCB) -> None:
 
         robot.place_to(Pose(), robot.SUCTION)
         pcb.pose = None
@@ -202,7 +205,7 @@ class Clamp(WorldObject):
         self._api = api
         super(Clamp, self).__init__()
 
-    def pick_blocking(self, robot: AuboRobot, method: int) -> PCB:
+    def io_pick_blocking(self, robot: AuboRobot, method: int) -> PCB:
         """
         Method specifies whether PCB should be picked-up with suction cup or with a gripper
         """
@@ -217,13 +220,13 @@ class Clamp(WorldObject):
 
         return pcb
 
-    def place_blocking(self, robot: AuboRobot, method: int) -> None:
+    def io_place_blocking(self, robot: AuboRobot, method: int) -> None:
 
         assert isinstance(robot.holding(method), PCB)
         self.add_child(robot.place_to(Pose(), method))
         # TODO API - catch command
 
-    def stick_label_blocking(self, robot: AuboRobot) -> None:
+    def io_stick_label_blocking(self, robot: AuboRobot) -> None:
 
         if not isinstance(robot.holding(robot.SUCTION), DataMatrixLabel):
             raise ClampException("Robot does not hold DM label.")

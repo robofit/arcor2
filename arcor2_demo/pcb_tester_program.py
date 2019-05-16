@@ -21,14 +21,14 @@ def fce_001(pcb_bin: PCBBin, robot: AuboRobot,
         return
 
     pcb = PCB("big_pcb_123", max_attempts=5)
-    pcb_bin.detect_blocking(pcb)
-    pcb_bin.pick_blocking(robot, pcb)
+    pcb_bin.io_detect_blocking(pcb)
+    pcb_bin.io_pick_blocking(robot, pcb)
 
-    clamp.place_blocking(robot, robot.SUCTION)
-    pcb = clamp.pick_blocking(robot, robot.GRIPPER)
+    clamp.io_place_blocking(robot, robot.SUCTION)
+    pcb = clamp.io_pick_blocking(robot, robot.GRIPPER)
 
-    pcb_tester.place_pcb_blocking(robot, pcb)
-    pcb_tester.test_run()
+    pcb_tester.io_place_pcb_blocking(robot, pcb)
+    pcb_tester.io_test_run()
 
 
 def fce_002(dm_printer: DataMatrixPrinter, clamp: Clamp, pcb: PCB,
@@ -37,12 +37,12 @@ def fce_002(dm_printer: DataMatrixPrinter, clamp: Clamp, pcb: PCB,
     Automatically generated function - code duplication detected
     """
 
-    dm_printer.print(pcb)
-    clamp.place_blocking(robot, robot.GRIPPER)
-    dm_printer.pick_label_blocking(robot)
-    clamp.stick_label_blocking(robot)
-    clamp.pick_blocking(robot, robot.SUCTION)
-    box.place_blocking(robot, pcb)
+    dm_printer.io_print(pcb)
+    clamp.io_place_blocking(robot, robot.GRIPPER)
+    dm_printer.io_pick_label_blocking(robot)
+    clamp.io_stick_label_blocking(robot)
+    clamp.io_pick_blocking(robot, robot.SUCTION)
+    box.io_place_blocking(robot, pcb)
 
 
 def fce_003(pcb_tester: PCBTester, robot: AuboRobot,
@@ -53,14 +53,14 @@ def fce_003(pcb_tester: PCBTester, robot: AuboRobot,
     """
 
     # TODO it might be good to know test result before picking up the board
-    pcb = pcb_tester.pick_pcb_blocking(robot)
+    pcb = pcb_tester.io_pick_pcb_blocking(robot)
 
     if isinstance(pcb, NokPCB):
         if pcb.attempt >= pcb.max_attempts:
             fce_002(dm_printer, clamp, pcb, robot, box_nok)
         else:
-            pcb_tester.place_pcb_blocking(robot, pcb)
-            pcb_tester.test_run()
+            pcb_tester.io_place_pcb_blocking(robot, pcb)
+            pcb_tester.io_test_run()
     else:
         fce_002(dm_printer, clamp, pcb, robot, box_ok)
 

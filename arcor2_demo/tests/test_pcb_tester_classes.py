@@ -17,7 +17,7 @@ class TestPCBTester(unittest.TestCase):
 
         tester = PCBTester(self.api, "abc")
         with self.assertRaises(PCBTesterException):
-            tester.pick_pcb_blocking(self.robot)
+            tester.io_pick_pcb_blocking(self.robot)
 
     def test_place_run_pick(self):
 
@@ -27,9 +27,9 @@ class TestPCBTester(unittest.TestCase):
 
         self.robot.pick(pcb, self.robot.GRIPPER)
 
-        tester.place_pcb_blocking(self.robot, pcb)
-        tester.test_run()
-        pcb2 = tester.pick_pcb_blocking(self.robot)
+        tester.io_place_pcb_blocking(self.robot, pcb)
+        tester.io_test_run()
+        pcb2 = tester.io_pick_pcb_blocking(self.robot)
 
         self.assertEqual(pcb.pcb_type, pcb2.pcb_type)
 
@@ -38,7 +38,7 @@ class TestPCBTester(unittest.TestCase):
         tester = PCBTester(self.api, "abc")
 
         with self.assertRaises(PCBTesterException):
-            tester.test_run()
+            tester.io_test_run()
 
     def test_run_twice(self):
 
@@ -48,11 +48,11 @@ class TestPCBTester(unittest.TestCase):
 
         self.robot.pick(pcb, self.robot.GRIPPER)
 
-        tester.place_pcb_blocking(self.robot, pcb)
-        tester.test_run()
+        tester.io_place_pcb_blocking(self.robot, pcb)
+        tester.io_test_run()
 
         with self.assertRaises(PCBTesterException):
-            tester.test_run()
+            tester.io_test_run()
 
     def test_attempts(self):
 
@@ -64,14 +64,14 @@ class TestPCBTester(unittest.TestCase):
 
         self.robot.pick(pcb, self.robot.GRIPPER)
 
-        tester.place_pcb_blocking(self.robot, pcb)
-        tester.test_run()
-        pcb = tester.pick_pcb_blocking(self.robot)
+        tester.io_place_pcb_blocking(self.robot, pcb)
+        tester.io_test_run()
+        pcb = tester.io_pick_pcb_blocking(self.robot)
 
         self.assertEqual(pcb.attempt, 1)
 
         with self.assertRaises(PCBTesterException):
-            tester.place_pcb_blocking(self.robot, pcb)
+            tester.io_place_pcb_blocking(self.robot, pcb)
 
 
 if __name__ == '__main__':
