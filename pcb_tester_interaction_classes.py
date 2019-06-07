@@ -3,7 +3,7 @@
 
 import coloredlogs  # type: ignore
 import logging
-from arcor2_demo.pcb_tester_classes import PCBTester, AuboRobot, PCB, KinaliAPI
+from arcor2.pcb_tester_classes import PCBTester, AuboRobot, PCB, KinaliAPI
 # from arcor2_msgs.msg import WorldObjectState
 
 logger = logging.getLogger()

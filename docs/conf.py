@@ -20,7 +20,7 @@ import sys
 
 # -- Project information -----------------------------------------------------
 
-project = 'arcor2_demo'
+project = 'arcor2'
 copyright = '2019, Robo@FIT'
 author = 'Robo@FIT'
 

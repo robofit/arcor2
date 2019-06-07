@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
-from arcor2_demo.arcor2_classes import Pose, WorldObject, WorldObjectException, Robot, RobotException
-from arcor2_demo.pcb_tester_classes import KinaliAPI, PCBTester, PCBTesterException, AuboRobot, PCB
+from arcor2.core import Pose, WorldObject, WorldObjectException, Robot, RobotException
+from arcor2.pcb_tester_classes import KinaliAPI, PCBTester, PCBTesterException, AuboRobot, PCB
 
 
 class TestPCBTester(unittest.TestCase):

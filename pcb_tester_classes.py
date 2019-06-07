@@ -3,7 +3,7 @@
 
 from random import choice
 from typing import cast
-from arcor2_demo.arcor2_classes import Pose, WorldObject, Robot, Arcor2Exception
+from arcor2.core import Pose, WorldObject, Robot, Arcor2Exception
 
 __all__ = ("PCB", "DataMatrixLabel", "AuboRobot", "OkPCB", "NokPCB", "DataMatrixPrinter", "PCBTester", "PCBBin",
            "UnorganizedOutputBox", "Clamp")
