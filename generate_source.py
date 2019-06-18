@@ -6,7 +6,7 @@ from astmonkey import visitors, transformers  # type: ignore
 import autopep8  # type: ignore
 import os
 import stat
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List, Any, Set
 import importlib
 
 
@@ -47,17 +47,6 @@ def empty_script_tree() -> ast.Module:
     ])
 
 
-class VisitorFinished(Exception):
-    pass
-
-
-def call_visitor(visitor, node):
-    try:
-        visitor.visit(node)
-    except VisitorFinished:
-        pass
-
-
 def find_function(name, tree) -> ast.FunctionDef:
 
     class FindFunction(ast.NodeVisitor):
@@ -68,10 +57,13 @@ def find_function(name, tree) -> ast.FunctionDef:
         def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
             if node.name == name:
                 self.function_node = node
-                raise VisitorFinished()
+                return
+
+            if not self.function_node:
+                self.generic_visit(node)
 
     ff = FindFunction()
-    call_visitor(ff, tree)
+    ff.visit(tree)
 
     return ff.function_node
 
@@ -126,7 +118,7 @@ def add_import(node: ast.Module, module: str, cls: str) -> None:
         node.body.insert(0, ast.ImportFrom(module=module, names=[ast.alias(name=cls, asname=None)], level=0))
 
 
-def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] = None) -> None:
+def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] = None, kwargs2parse: Optional[Dict] = None) -> None:
 
     class FindImport(ast.NodeVisitor):
 
@@ -138,8 +130,10 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
 
             for alias in node.names:
                 if alias.name == cls:
-                    self.found = True  # TODO how to stop here?
-                    raise VisitorFinished()
+                    self.found = True
+
+            if not self.found:
+                self.generic_visit(node)
 
     class FindClsInst(ast.NodeVisitor):
 
@@ -160,7 +154,9 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
 
                         self.found = True
                         # TODO update arguments?
-                        raise VisitorFinished()
+
+            if not self.found:
+                self.generic_visit(node)
 
     class AddClsInst(ast.NodeTransformer):
 
@@ -172,6 +168,10 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
 
                 if kwargs:
                     for k, v in kwargs.items():
+                        kw.append(ast.keyword(arg=k, value=v))
+
+                if kwargs2parse:
+                    for k, v in kwargs2parse.items():
                         kw.append(ast.keyword(arg=k, value=ast.parse(v)))
 
                 node.body.insert(0, ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())],
@@ -182,18 +182,19 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
             return node
 
     find_import = FindImport(cls)
-    call_visitor(find_import, node)
+    find_import.visit(node)
 
     if not find_import.found:
         raise GenerateSourceException("Class '{}' not imported!".format(cls))
 
     vis = FindClsInst()
-    call_visitor(vis, node)
+    vis.visit(node)
 
     if not vis.found:
 
         tr = AddClsInst()
         node = tr.visit(node)
+
 
 def add_method_call(tree: ast.Module, instance: str, method: str, init: bool, args: List, kwargs: Optional[Dict] = None):
     """
@@ -231,13 +232,45 @@ def add_method_call(tree: ast.Module, instance: str, method: str, init: bool, ar
                                                                                                 ctx=ast.Load()),
                                                                                  attr=method,
                                                                                  ctx=ast.Load()),
-                                                              args=[ast.Name(id=args[0], ctx=ast.Load())], keywords=[])))
+                                                              args=args, keywords=[])))
 
 
-def main() -> None:  # TODO turn it into proper test
+def get_name(name):
+
+    return ast.Name(id=name, ctx=ast.Load())
+
+
+
+def tree_to_script(tree: ast.Module, out_file: str, graph_file: Optional[str] = None) -> None:
+
+    ast.fix_missing_locations(tree)
+
+    node = transformers.ParentChildNodeTransformer().visit(tree)  # adds link to parent node etc.
+    visitor = visitors.GraphNodeVisitor()
+    visitor.visit(node)
+
+    if graph_file:
+        visitor.graph.write_png(graph_file)
+
+    generated_code = visitors.to_source(node)
+
+    generated_code = autopep8.fix_code(generated_code, options={'aggressive': 1})
+
+    with open(out_file, "w") as f:
+
+        f.write("#!/usr/bin/env python3\n")
+        f.write("# -*- coding: utf-8 -*-\n\n")
+        f.write(generated_code)
+
+    st = os.stat(out_file)
+    os.chmod(out_file, st.st_mode | stat.S_IEXEC)
+
+
+def main() -> None:
 
     tree = empty_script_tree()
 
+    # TODO turn following into proper test
     add_import(tree, "arcor2.core", "Workspace")
     add_import(tree, "arcor2.core", "Robot")
     add_import(tree, "arcor2.core", "Robot")
@@ -253,7 +286,7 @@ def main() -> None:  # TODO turn it into proper test
     except GenerateSourceException as e:
         print(e)
 
-    add_cls_inst(tree, "Robot", "robot", kwargs={"end_effectors": '("gripper",)'})
+    add_cls_inst(tree, "Robot", "robot", kwargs2parse={"end_effectors": '("gripper",)'})
     add_cls_inst(tree, "Robot", "robot")
     add_cls_inst(tree, "Workspace", "workspace")
 
@@ -269,35 +302,10 @@ def main() -> None:  # TODO turn it into proper test
     except GenerateSourceException as e:
         print(e)
 
-    add_method_call(tree, "workspace", "add_child", True, ["robot"])
-    add_method_call(tree, "workspace", "add_child", True, ["wo"])
+    add_method_call(tree, "workspace", "add_child", True, [get_name("robot")])
+    add_method_call(tree, "workspace", "add_child", True, [get_name("wo")])
 
-    ast.fix_missing_locations(tree)
-
-    node = transformers.ParentChildNodeTransformer().visit(tree)  # adds link to parent node etc.
-    visitor = visitors.GraphNodeVisitor()
-    visitor.visit(node)
-
-    visitor.graph.write_png('graph.png')
-
-    generated_code = visitors.to_source(node)
-
-    generated_code = autopep8.fix_code(
-        generated_code, options={'aggressive': 1})
-
-    print()
-    print(generated_code)
-
-    out_file = "output.py"
-
-    with open(out_file, "w") as f:
-
-        f.write("#!/usr/bin/env python3\n")
-        f.write("# -*- coding: utf-8 -*-\n\n")
-        f.write(generated_code)
-
-    st = os.stat(out_file)
-    os.chmod(out_file, st.st_mode | stat.S_IEXEC)
+    tree_to_script(tree, "output.py", "graph.png")
 
 
 if __name__ == "__main__":

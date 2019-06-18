@@ -12,8 +12,14 @@ WoAp = Tuple[str, Optional["WorldObject"]]
 
 class WorldObject:
 
-    def __init__(self, pose: Optional[Pose] = None,
+    def __init__(self, name: Optional[str] = None,
+                 pose: Optional[Pose] = None,
                  child_limit: Optional[int] = None) -> None:
+
+        if name is None:
+            self.name = type(self).__name__
+        else:
+            self.name = name
 
         self.pose = pose
         self._child_limit = child_limit
@@ -22,6 +28,10 @@ class WorldObject:
 
         # TODO get it from resources
         self.action_points: Dict[str, ActionPoint] = {}
+
+    def add_action_point(self, ap: ActionPoint):
+
+        self.action_points[ap.name] = ap
 
     def add_child(self, obj: "WorldObject") -> None:
 
@@ -48,6 +58,19 @@ class WorldObject:
         return str(self.__dict__)
 
     def _check_action_point_arg(self, arg: WoAp, method: Callable) -> None:
+        """
+        Free methods may be used with action point(s) from another WorldObject.
+        In that case, reference to the action point's parent object has to be given.
+
+        Parameters
+        ----------
+        arg
+        method
+
+        Returns
+        -------
+
+        """
 
         assert (method in self.instructions.bound and len(arg) == 1) or \
                (method in self.instructions.free and len(arg) == 2)
