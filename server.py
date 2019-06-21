@@ -7,6 +7,10 @@ import json
 import logging
 import websockets
 import functools
+import sys
+
+# TODO https://pypi.org/project/aiofiles/
+# TODO https://github.com/mongodb/motor
 
 logging.basicConfig(level=logging.INFO)
 
@@ -84,8 +88,17 @@ async def server(ui, path, extra_argument):
     finally:
         await unregister(ui)
 
-bound_handler = functools.partial(server, extra_argument='spam')
-# asyncio.get_event_loop().set_debug(enabled=True)
-asyncio.get_event_loop().run_until_complete(
-    websockets.serve(bound_handler, 'localhost', 6789))
-asyncio.get_event_loop().run_forever()
+
+def main():
+
+    assert sys.version_info >= (3, 6)
+
+    bound_handler = functools.partial(server, extra_argument='spam')
+    # asyncio.get_event_loop().set_debug(enabled=True)
+    asyncio.get_event_loop().run_until_complete(
+        websockets.serve(bound_handler, 'localhost', 6789))
+    asyncio.get_event_loop().run_forever()
+
+
+if __name__ == "__main__":
+    main()
