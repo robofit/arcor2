@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import ast
-from astmonkey import visitors, transformers  # type: ignore
+from horast import parse, unparse
+import typed_ast.ast3
+from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, Store, alias
 import autopep8  # type: ignore
 import os
 import stat
 from typing import Dict, Optional, List, Any, Set
 import importlib
+import typed_astunparse
+import static_typing as st
+
+
+validator = st.ast_manipulation.AstValidator[typed_ast.ast3](mode="strict")
 
 
 class GenerateSourceException(Exception):
     pass
 
 
-def empty_script_tree() -> ast.Module:
+def empty_script_tree() -> Module:
     """
     Creates barebones of the script (empty 'main' function).
 
@@ -23,23 +29,23 @@ def empty_script_tree() -> ast.Module:
 
     """
 
-    return ast.Module(body=[
-        ast.FunctionDef(name="main",
-                        body=[ast.While(test=ast.NameConstant(value=True), body=[ast.Pass()], orelse=[])],
+    return Module(body=[
+        FunctionDef(name="main",
+                        body=[While(test=NameConstant(value=True), body=[Pass()], orelse=[])],
                         decorator_list=[],
-                        args=ast.arguments(args=[],
+                        args=arguments(args=[],
                                            vararg=None,
                                            kwonlyargs=[],
                                            kw_defaults=[],
                                            kwarg=None,
                                            defaults=[]),
-                        returns=ast.NameConstant(value=None)),
+                        returns=NameConstant(value=None)),
 
-        ast.If(test=ast.Compare(left=ast.Name(id='__name__', ctx=ast.Load()),
-                                ops=[ast.Eq()],
-                                comparators=[ast.Str(s='__main__')],
+        If(test=Compare(left=Name(id='__name__', ctx=Load()),
+                                ops=[Eq()],
+                                comparators=[Str(s='__main__')],
                                 ),
-               body=[ast.Expr(value=ast.Call(func=ast.Name(id='main', ctx=ast.Load()),
+               body=[Expr(value=Call(func=Name(id='main', ctx=Load()),
                                              args=[],
                                              keywords=[]))],
                orelse=[]
@@ -47,14 +53,14 @@ def empty_script_tree() -> ast.Module:
     ])
 
 
-def find_function(name, tree) -> ast.FunctionDef:
+def find_function(name, tree) -> FunctionDef:
 
-    class FindFunction(ast.NodeVisitor):
+    class FindFunction(NodeVisitor):
 
         def __init__(self):
             self.function_node = None
 
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        def visit_FunctionDef(self, node: FunctionDef) -> None:
             if node.name == name:
                 self.function_node = node
                 return
@@ -68,7 +74,7 @@ def find_function(name, tree) -> ast.FunctionDef:
     return ff.function_node
 
 
-def add_import(node: ast.Module, module: str, cls: str) -> None:
+def add_import(node: Module, module: str, cls: str) -> None:
     """
     Adds "from ... import ..." to the beginning of the script.
 
@@ -83,20 +89,20 @@ def add_import(node: ast.Module, module: str, cls: str) -> None:
 
     """
 
-    class AddImportTransformer(ast.NodeTransformer):
+    class AddImportTransformer(NodeTransformer):
 
         def __init__(self, module, cls):
             self.done = False
 
-        def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.ImportFrom:
+        def visit_ImportFrom(self, node: ImportFrom) -> ImportFrom:
             if node.module == module:
 
-                for alias in node.names:
-                    if alias.name == cls:
+                for aliass in node.names:
+                    if aliass.name == cls:
                         self.done = True
                         break
                 else:
-                    node.names.append(ast.alias(name=cls, asname=None))
+                    node.names.append(alias(name=cls, asname=None))
                     self.done = True
 
             return node
@@ -115,18 +121,18 @@ def add_import(node: ast.Module, module: str, cls: str) -> None:
     node = tr.visit(node)
 
     if not tr.done:
-        node.body.insert(0, ast.ImportFrom(module=module, names=[ast.alias(name=cls, asname=None)], level=0))
+        node.body.insert(0, ImportFrom(module=module, names=[alias(name=cls, asname=None)], level=0))
 
 
-def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] = None, kwargs2parse: Optional[Dict] = None) -> None:
+def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = None, kwargs2parse: Optional[Dict] = None) -> None:
 
-    class FindImport(ast.NodeVisitor):
+    class FindImport(NodeVisitor):
 
         def __init__(self, cls: str):
 
             self.found = False
 
-        def visit_ImportFrom(self, node: ast.ImportFrom):
+        def visit_ImportFrom(self, node: ImportFrom):
 
             for alias in node.names:
                 if alias.name == cls:
@@ -135,19 +141,19 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
             if not self.found:
                 self.generic_visit(node)
 
-    class FindClsInst(ast.NodeVisitor):
+    class FindClsInst(NodeVisitor):
 
         def __init__(self):
 
             self.found = False
 
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        def visit_FunctionDef(self, node: FunctionDef) -> None:
 
             if node.name == 'main':
 
                 for item in node.body:
 
-                    if isinstance(item, ast.Assign) and item.targets[0].id == name:
+                    if isinstance(item, Assign) and item.targets[0].id == name:
 
                         if item.value.func.id != cls:
                             raise GenerateSourceException("Name '{}' already used for instance of '{}'!".format(name, item.value.func.id))
@@ -158,9 +164,9 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
             if not self.found:
                 self.generic_visit(node)
 
-    class AddClsInst(ast.NodeTransformer):
+    class AddClsInst(NodeTransformer):
 
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
+        def visit_FunctionDef(self, node: FunctionDef) -> FunctionDef:
 
             if node.name == 'main':
 
@@ -168,14 +174,14 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
 
                 if kwargs:
                     for k, v in kwargs.items():
-                        kw.append(ast.keyword(arg=k, value=v))
+                        kw.append(keyword(arg=k, value=v))
 
                 if kwargs2parse:
                     for k, v in kwargs2parse.items():
-                        kw.append(ast.keyword(arg=k, value=ast.parse(v)))
+                        kw.append(keyword(arg=k, value=parse(v)))
 
-                node.body.insert(0, ast.Assign(targets=[ast.Name(id=name, ctx=ast.Store())],
-                                               value=ast.Call(func=ast.Name(id=cls, ctx=ast.Load()),
+                node.body.insert(0, Assign(targets=[Name(id=name, ctx=Store())],
+                                               value=Call(func=Name(id=cls, ctx=Load()),
                                                               args=[],
                                                               keywords=kw)))
 
@@ -196,7 +202,7 @@ def add_cls_inst(node: ast.Module, cls: str, name: str, kwargs: Optional[Dict] =
         node = tr.visit(node)
 
 
-def add_method_call(tree: ast.Module, instance: str, method: str, init: bool, args: List, kwargs: Optional[Dict] = None):
+def add_method_call(tree: Module, instance: str, method: str, init: bool, args: List, kwargs: Optional[Dict] = None):
     """
     Places method call after block where instances are created.
 
@@ -220,7 +226,7 @@ def add_method_call(tree: ast.Module, instance: str, method: str, init: bool, ar
 
         # TODO check if instance exists!
 
-        if isinstance(body_item, ast.Assign):
+        if isinstance(body_item, Assign):
             last_assign_idx = body_idx
 
     if not last_assign_idx:
@@ -228,32 +234,25 @@ def add_method_call(tree: ast.Module, instance: str, method: str, init: bool, ar
 
     # TODO iterate over args/kwargs
     # TODO check actual number of method's arguments (and types?)
-    main_body.insert(last_assign_idx+1, ast.Expr(value=ast.Call(func=ast.Attribute(value=ast.Name(id=instance,
-                                                                                                ctx=ast.Load()),
+    main_body.insert(last_assign_idx+1, Expr(value=Call(func=Attribute(value=Name(id=instance,
+                                                                                                ctx=Load()),
                                                                                  attr=method,
-                                                                                 ctx=ast.Load()),
+                                                                                 ctx=Load()),
                                                               args=args, keywords=[])))
 
 
 def get_name(name):
 
-    return ast.Name(id=name, ctx=ast.Load())
+    return Name(id=name, ctx=Load())
 
 
+def tree_to_script(tree: Module, out_file: str) -> None:
 
-def tree_to_script(tree: ast.Module, out_file: str, graph_file: Optional[str] = None) -> None:
+    # TODO why this fails?
+    # validator.visit(tree)
 
-    ast.fix_missing_locations(tree)
-
-    node = transformers.ParentChildNodeTransformer().visit(tree)  # adds link to parent node etc.
-    visitor = visitors.GraphNodeVisitor()
-    visitor.visit(node)
-
-    if graph_file:
-        visitor.graph.write_png(graph_file)
-
-    generated_code = visitors.to_source(node)
-
+    fix_missing_locations(tree)
+    generated_code = unparse(tree)
     generated_code = autopep8.fix_code(generated_code, options={'aggressive': 1})
 
     with open(out_file, "w") as f:
@@ -264,6 +263,11 @@ def tree_to_script(tree: ast.Module, out_file: str, graph_file: Optional[str] = 
 
     st = os.stat(out_file)
     os.chmod(out_file, st.st_mode | stat.S_IEXEC)
+
+
+def dump(tree: Module) -> None:
+
+    return typed_astunparse.dump(tree)
 
 
 def main() -> None:
@@ -305,7 +309,7 @@ def main() -> None:
     add_method_call(tree, "workspace", "add_child", True, [get_name("robot")])
     add_method_call(tree, "workspace", "add_child", True, [get_name("wo")])
 
-    tree_to_script(tree, "output.py", "graph.png")
+    tree_to_script(tree, "output.py")
 
 
 if __name__ == "__main__":

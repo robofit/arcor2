@@ -4,7 +4,8 @@
 
 import json
 from arcor2.generate_source import empty_script_tree, tree_to_script, add_import, add_cls_inst, add_method_call
-import ast
+from typed_ast.ast3 import Str, Load, Call, Name
+from horast import parse
 
 # TODO get rid of ast stuff here?
 
@@ -23,7 +24,7 @@ def main():
 
         inst_name = scene_object["_id"].lower().replace(' ', '_')
 
-        add_cls_inst(tree, "WorldObject", inst_name, kwargs={"name": ast.Str(scene_object["_id"])})
+        add_cls_inst(tree, "WorldObject", inst_name, kwargs={"name": Str(scene_object["_id"])})
 
         for action_point in scene_object["ActionPoints"]:
 
@@ -41,15 +42,15 @@ def main():
 
             # TODO action points should rather go into resources and then be referenced by id/name
             add_method_call(tree, inst_name, "add_action_point", True,
-                            [ast.Call(func=ast.Name(id="ActionPoint", ctx=ast.Load()),
-                                      args=[ast.Str(action_point["_id"]),
-                                            ast.Call(func=ast.Name(id="Pose", ctx=ast.Load()),
+                            [Call(func=Name(id="ActionPoint", ctx=Load()),
+                                      args=[Str(action_point["_id"]),
+                                            Call(func=Name(id="Pose", ctx=Load()),
                                                     # TODO is this the best way?
-                                                     args=[ast.parse(str(position)), ast.parse(str(orientation))], keywords=[])
+                                                     args=[parse(str(position)), parse(str(orientation))], keywords=[])
                                             ],
                                       keywords=[])])
 
-    tree_to_script(tree, "load_json_output.py", "load_json_graph.png")
+    tree_to_script(tree, "load_json_output.py")
 
 
 if __name__ == "__main__":
