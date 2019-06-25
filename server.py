@@ -24,6 +24,7 @@ from typing import get_type_hints
 logging.basicConfig(level=logging.INFO)
 
 SCENE = {}
+PROJECT = {}
 INTERFACES = set()
 
 
@@ -36,14 +37,29 @@ def scene_event():
     return json.dumps({"event": "sceneChanged", "data": SCENE})
 
 
+def project_event():
+    return json.dumps({"event": "projectChanged", "data": PROJECT})
+
+
 async def notify_scene_change_to_others(interface=None):
     if len(INTERFACES) > 1:
         message = scene_event()
         await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])
 
 
+async def notify_project_change_to_others(interface=None):
+    if len(INTERFACES) > 1:
+        message = project_event()
+        await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])
+
+
 async def notify_scene(interface):
     message = scene_event()
+    await asyncio.wait([interface.send(message)])
+
+
+async def notify_project(interface):
+    message = project_event()
     await asyncio.wait([interface.send(message)])
 
 
@@ -107,9 +123,11 @@ async def get_object_actions(req, ui, args):
 
     await asyncio.wait([ui.send(json.dumps(msg))])
 
+
 async def register(websocket):
     INTERFACES.add(websocket)
     await notify_scene(websocket)
+    await notify_project(websocket)
 
 
 async def unregister(websocket):
@@ -121,9 +139,15 @@ async def scene_change(ui, scene):
     await notify_scene_change_to_others(ui)
 
 
+async def project_change(ui, project):
+    PROJECT.update(project)
+    await notify_project_change_to_others(ui)
+
+
 RPC_DICT = {'getObjectTypes': get_object_types,
             'getObjectActions': get_object_actions}
-EVENT_DICT = {'sceneChanged': scene_change}
+EVENT_DICT = {'sceneChanged': scene_change,
+              'projectChanged': project_change}
 
 
 async def server(ui, path, extra_argument):
@@ -142,14 +166,15 @@ async def server(ui, path, extra_argument):
             if "request" in data:  # then it is RPC
                 try:
                     await RPC_DICT[data['request']](data['request'], ui, data["args"])
-                except KeyError:
-                    pass
+                except KeyError as e:
+                    print(e)
+
             elif "event" in data:
 
                 try:
-                    await EVENT_DICT["sceneChanged"](ui, data["data"])
-                except KeyError:
-                    pass
+                    await EVENT_DICT[data["event"]](ui, data["data"])
+                except KeyError as e:
+                    print(e)
 
             else:
                 logging.error("unsupported format of message: {}".format(data))
