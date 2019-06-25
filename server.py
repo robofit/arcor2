@@ -8,14 +8,28 @@ import logging
 import websockets
 import functools
 import sys
+from typing import Dict, List
+import inspect
+from arcor2.core import WorldObject
+import arcor2.core
+import arcor2.user_objects
+import importlib
+from typing import get_type_hints
 
 # TODO https://pypi.org/project/aiofiles/
 # TODO https://github.com/mongodb/motor
+
+# TODO read additional objects' locations from env. variable and import them dynamically on start
 
 logging.basicConfig(level=logging.INFO)
 
 SCENE = {}
 INTERFACES = set()
+
+
+def response(resp_to: str, result: bool = True, messages: List[str] = []) -> Dict:
+
+    return {"response": resp_to, "result": result, "messages": messages}
 
 
 def scene_event():
@@ -33,12 +47,65 @@ async def notify_scene(interface):
     await asyncio.wait([interface.send(message)])
 
 
-async def get_object_types(ui, args):
+async def get_object_types(req, ui, args):
 
-    # TODO get actual data
-    message = '{"response": "getObjectTypes", "result": true, "messages": [], "data": [{"type": "kinali.objects/Tester", "description": "Generic tester.", "ancestor": "arcor2.core/WorldObject"}]}'
-    await asyncio.wait([ui.send(message)])
+    msg = response(req)
+    msg["data"] = []
 
+    modules = (arcor2.core, arcor2.user_objects)
+
+    for module in modules:
+        for cls in inspect.getmembers(module, inspect.isclass):
+            if not issubclass(cls[1], WorldObject):
+                continue
+
+            # TODO ancestor
+            msg["data"].append({"type": "{}/{}".format(module.__name__, cls[0]), "description": cls[1].__DESCRIPTION__})
+
+    await asyncio.wait([ui.send(json.dumps(msg))])
+
+
+async def get_object_actions(req, ui, args):
+
+    try:
+        module_name, cls_name = args["type"].split('/')
+    except (TypeError, ValueError):
+        await asyncio.wait([ui.send(json.dumps(response(req, False, ["Invalid module or object type."])))])
+        return
+
+    msg = response(req)
+    msg["data"] = []
+
+    module = importlib.import_module(module_name)
+    cls = getattr(module, cls_name)
+
+    # ...inspect.ismethod does not work on un-initialized classes
+    for method in inspect.getmembers(cls, predicate=inspect.isfunction):
+
+        if not hasattr(method[1], "__action__"):
+            continue
+
+        meta = method[1].__action__
+
+        data = {"name": method[0], "blocking": meta.blocking, "free": meta.free, "composite": False, "blackbox": False,
+         "action_args": []}
+
+        for name, ttype in get_type_hints(method[1]).items():
+
+            try:
+
+                if name == "return":
+                    data["returns"] = ttype.__name__
+                    continue
+
+                data["action_args"].append({"name": name, "type": ttype.__name__})
+
+            except AttributeError:
+                print("Skipping {}".format(ttype))  # TODO make a fix for Union
+
+        msg["data"].append(data)
+
+    await asyncio.wait([ui.send(json.dumps(msg))])
 
 async def register(websocket):
     INTERFACES.add(websocket)
@@ -54,7 +121,8 @@ async def scene_change(ui, scene):
     await notify_scene_change_to_others(ui)
 
 
-RPC_DICT = {'getObjectTypes': get_object_types}
+RPC_DICT = {'getObjectTypes': get_object_types,
+            'getObjectActions': get_object_actions}
 EVENT_DICT = {'sceneChanged': scene_change}
 
 
@@ -73,7 +141,7 @@ async def server(ui, path, extra_argument):
 
             if "request" in data:  # then it is RPC
                 try:
-                    await RPC_DICT[data['request']](ui, data["args"])
+                    await RPC_DICT[data['request']](data['request'], ui, data["args"])
                 except KeyError:
                     pass
             elif "event" in data:

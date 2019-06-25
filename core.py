@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Collection, Dict, Hashable, Union, Callable, Set, FrozenSet, cast, List, Tuple
-import time
+from typing import Optional, Collection, Dict, Hashable, Union, Callable, Set, FrozenSet
 from arcor2.exceptions import WorldObjectException, RobotException
-from arcor2.data import Pose, Instructions, ActionPoint
+from arcor2.data import Pose, ActionPoint, ActionMetadata
 
-
-WoAp = Tuple[str, Optional["WorldObject"]]
+# TODO for bound methods - check whether provided action point belongs to the object
 
 
 class WorldObject:
+
+    __DESCRIPTION__ = "Generic object"
 
     def __init__(self, name: Optional[str] = None,
                  pose: Optional[Pose] = None,
@@ -24,14 +24,13 @@ class WorldObject:
         self.pose = pose
         self._child_limit = child_limit
         self._childs: Set[WorldObject] = set()
-        self.instructions: Instructions = Instructions()
 
         # TODO get it from resources
         self.action_points: Dict[str, ActionPoint] = {}
 
-    def add_action_point(self, ap: ActionPoint):
+    def add_action_point(self, name: str, pose: Pose) -> None:
 
-        self.action_points[ap.name] = ap
+        self.action_points[name] = ActionPoint(name, self, pose)
 
     def add_child(self, obj: "WorldObject") -> None:
 
@@ -57,24 +56,6 @@ class WorldObject:
     def __repr__(self):
         return str(self.__dict__)
 
-    def _check_action_point_arg(self, arg: WoAp, method: Callable) -> None:
-        """
-        Free methods may be used with action point(s) from another WorldObject.
-        In that case, reference to the action point's parent object has to be given.
-
-        Parameters
-        ----------
-        arg
-        method
-
-        Returns
-        -------
-
-        """
-
-        assert (method in self.instructions.bound and len(arg) == 1) or \
-               (method in self.instructions.free and len(arg) == 2)
-
 
 class Workspace(WorldObject):
     pass
@@ -89,102 +70,21 @@ class Robot(WorldObject):
 
         super(Robot, self).__init__(child_limit=len(end_effectors))
 
-        self._holding: Dict[Hashable, Union[WorldObject, None]] = {}  # TODO partial duplication of child mechanism?
-
         for end_effector in end_effectors:
             self._holding[end_effector] = None
 
-        for inst in (self.move_to, self.pick, self.place_to):
-
-            self.instructions.blocking.add(inst)
-            self.instructions.free.add(inst)
-
-    def holding(self, end_effector: Hashable) -> Union[None, WorldObject]:
-        """Allows to test if robot holds something.
-
-        Parameters
-        ----------
-        end_effector:
-            Identificator for the end effector.
-
-        """
-
-        try:
-            return self._holding[end_effector]
-        except KeyError:
-            return None
-
-    def move_to(self, target: WoAp, end_effector: Hashable) -> None:
+    def move_to(self, action_point: ActionPoint, end_effector: str) -> None:
         """
 
         Parameters
         ----------
         end_effector:
             Robot's end effector.
-        target:
+        action_point:
             Move specified end-effector to the given pose.
         """
 
-        self._check_action_point_arg(target, self.move_to)
+        # TODO call underlying API
+        return
 
-        time.sleep(1)
-
-    def pick(self, pre_grasp: WoAp, obj: WorldObject, end_effector: Hashable) -> None:
-        """Picks given object from its pose using a given end effector.
-
-        The object has to know its pose.
-
-        Parameters
-        ----------
-        action_point:
-            Pre-grasp pose.
-        obj:
-            Object to be picked.
-        end_effector:
-            End effector.
-
-        Raises
-        -------
-        RobotException
-            When something goes wrong.
-
-        """
-
-        self._check_action_point_arg(pre_grasp, self.pick)
-
-        if obj.pose is None:
-            raise RobotException("Object {} has no pose set.".format(obj))
-
-        if end_effector in self._holding:
-            raise RobotException("End effector {} already holds object.".format(end_effector))
-
-        self._holding[end_effector] = obj
-        # TODO set obj.pose relative to the gripper now?
-
-    def place_to(self, where: WoAp, end_effector: Hashable) -> WorldObject:
-        """
-
-        Parameters
-        ----------
-        pose:
-            Pose where to place the object.
-        end_effector
-            Specifies end effector to use (robot might hold more objects using different end effectors).
-
-        Returns
-        -------
-        The placed object.
-
-        """
-
-        self._check_action_point_arg(where, self.place_to)
-
-        try:
-            if self._holding[end_effector] is None:
-                raise RobotException("Robot's end-effector {} does not hold any object.".format(end_effector))
-        except KeyError:
-            raise RobotException("Unknown end-effector!")
-
-        obj = self._holding[end_effector]
-        self._holding[end_effector] = None
-        return cast(WorldObject, obj)
+    move_to.__action__ = ActionMetadata(free=True, blocking=True)

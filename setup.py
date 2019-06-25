@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='arcor2',
     version='',
-    packages=['arcor2.tests'],
+    packages=['arcor2.tests', 'arcor2.user_objects'],
     url='',
     license='',
     author='Robo@FIT',

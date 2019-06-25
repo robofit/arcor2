@@ -20,20 +20,15 @@ class Pose:
 
 
 @dataclass
-class Instructions:
+class ActionMetadata:
 
-    free: Set[AnyFunction] = field(default_factory=set)
-    bound: Set[AnyFunction] = field(default_factory=set)
-    blocking: Set[AnyFunction] = field(default_factory=set)
-
-    @property
-    def all(self) -> Set[Callable]:
-
-        return self.free | self.bound | self.blocking
+    free: bool = False
+    blocking: bool = False
 
 
 @dataclass
 class ActionPoint:
 
     name: str
+    owner: object
     pose: Pose = field(default_factory=Pose)
