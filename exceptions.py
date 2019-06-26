@@ -11,3 +11,7 @@ class WorldObjectException(Arcor2Exception):
 
 class RobotException(Arcor2Exception):
     pass
+
+
+class ResourcesException(Exception):
+    pass

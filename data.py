@@ -30,5 +30,4 @@ class ActionMetadata:
 class ActionPoint:
 
     name: str
-    owner: object
     pose: Pose = field(default_factory=Pose)
