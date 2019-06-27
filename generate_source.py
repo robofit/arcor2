@@ -3,7 +3,9 @@
 
 from horast import parse, unparse
 import typed_ast.ast3
-from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, Store, alias
+from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, \
+    NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, Store, \
+    alias, ClassDef, arg
 import autopep8  # type: ignore
 import os
 import stat
@@ -11,13 +13,28 @@ from typing import Dict, Optional, List, Any, Set
 import importlib
 import typed_astunparse
 import static_typing as st
+from arcor2.core import ResourcesBase
 
+SCRIPT_HEADER = "#!/usr/bin/env python3\n""# -*- coding: utf-8 -*-\n\n"
 
 validator = st.ast_manipulation.AstValidator[typed_ast.ast3](mode="strict")
 
 
 class GenerateSourceException(Exception):
     pass
+
+
+def program_src(project: Dict) -> str:
+
+    tree = empty_script_tree()
+    add_import(tree, "arcor2.projects." + project["_id"] + ".resources", "Resources")
+    add_cls_inst(tree, "Resources", "res")
+
+    # TODO api???
+    # TODO object instances (get from res)
+    # TODO logic
+
+    return tree_to_str(tree)
 
 
 def empty_script_tree() -> Module:
@@ -31,30 +48,29 @@ def empty_script_tree() -> Module:
 
     return Module(body=[
         FunctionDef(name="main",
-                        body=[While(test=NameConstant(value=True), body=[Pass()], orelse=[])],
-                        decorator_list=[],
-                        args=arguments(args=[],
-                                           vararg=None,
-                                           kwonlyargs=[],
-                                           kw_defaults=[],
-                                           kwarg=None,
-                                           defaults=[]),
-                        returns=NameConstant(value=None)),
+                    body=[While(test=NameConstant(value=True), body=[Pass()], orelse=[])],
+                    decorator_list=[],
+                    args=arguments(args=[],
+                                   vararg=None,
+                                   kwonlyargs=[],
+                                   kw_defaults=[],
+                                   kwarg=None,
+                                   defaults=[]),
+                    returns=NameConstant(value=None)),
 
         If(test=Compare(left=Name(id='__name__', ctx=Load()),
-                                ops=[Eq()],
-                                comparators=[Str(s='__main__')],
-                                ),
-               body=[Expr(value=Call(func=Name(id='main', ctx=Load()),
-                                             args=[],
-                                             keywords=[]))],
-               orelse=[]
-               )
+                        ops=[Eq()],
+                        comparators=[Str(s='__main__')],
+                        ),
+           body=[Expr(value=Call(func=Name(id='main', ctx=Load()),
+                                 args=[],
+                                 keywords=[]))],
+           orelse=[]
+           )
     ])
 
 
 def find_function(name, tree) -> FunctionDef:
-
     class FindFunction(NodeVisitor):
 
         def __init__(self):
@@ -124,8 +140,8 @@ def add_import(node: Module, module: str, cls: str) -> None:
         node.body.insert(0, ImportFrom(module=module, names=[alias(name=cls, asname=None)], level=0))
 
 
-def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = None, kwargs2parse: Optional[Dict] = None) -> None:
-
+def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = None,
+                 kwargs2parse: Optional[Dict] = None) -> None:
     class FindImport(NodeVisitor):
 
         def __init__(self, cls: str):
@@ -156,7 +172,8 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
                     if isinstance(item, Assign) and item.targets[0].id == name:
 
                         if item.value.func.id != cls:
-                            raise GenerateSourceException("Name '{}' already used for instance of '{}'!".format(name, item.value.func.id))
+                            raise GenerateSourceException(
+                                "Name '{}' already used for instance of '{}'!".format(name, item.value.func.id))
 
                         self.found = True
                         # TODO update arguments?
@@ -181,9 +198,9 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
                         kw.append(keyword(arg=k, value=parse(v)))
 
                 node.body.insert(0, Assign(targets=[Name(id=name, ctx=Store())],
-                                               value=Call(func=Name(id=cls, ctx=Load()),
-                                                              args=[],
-                                                              keywords=kw)))
+                                           value=Call(func=Name(id=cls, ctx=Load()),
+                                                      args=[],
+                                                      keywords=kw)))
 
             return node
 
@@ -197,7 +214,6 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
     vis.visit(node)
 
     if not vis.found:
-
         tr = AddClsInst()
         node = tr.visit(node)
 
@@ -234,20 +250,18 @@ def add_method_call(tree: Module, instance: str, method: str, init: bool, args: 
 
     # TODO iterate over args/kwargs
     # TODO check actual number of method's arguments (and types?)
-    main_body.insert(last_assign_idx+1, Expr(value=Call(func=Attribute(value=Name(id=instance,
-                                                                                                ctx=Load()),
-                                                                                 attr=method,
-                                                                                 ctx=Load()),
-                                                              args=args, keywords=[])))
+    main_body.insert(last_assign_idx + 1, Expr(value=Call(func=Attribute(value=Name(id=instance,
+                                                                                    ctx=Load()),
+                                                                         attr=method,
+                                                                         ctx=Load()),
+                                                          args=args, keywords=[])))
 
 
 def get_name(name):
-
     return Name(id=name, ctx=Load())
 
 
-def tree_to_script(tree: Module, out_file: str) -> None:
-
+def tree_to_str(tree: Module) -> str:
     # TODO why this fails?
     # validator.visit(tree)
 
@@ -255,23 +269,63 @@ def tree_to_script(tree: Module, out_file: str) -> None:
     generated_code = unparse(tree)
     generated_code = autopep8.fix_code(generated_code, options={'aggressive': 1})
 
-    with open(out_file, "w") as f:
+    return generated_code
 
-        f.write("#!/usr/bin/env python3\n")
-        f.write("# -*- coding: utf-8 -*-\n\n")
+
+def make_executable(path_to_file: str) -> None:
+
+    st = os.stat(path_to_file)
+    os.chmod(path_to_file, st.st_mode | stat.S_IEXEC)
+
+
+def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
+
+    generated_code = tree_to_str(tree)
+
+    with open(out_file, "w") as f:
+        f.write(SCRIPT_HEADER)
         f.write(generated_code)
 
-    st = os.stat(out_file)
-    os.chmod(out_file, st.st_mode | stat.S_IEXEC)
+    if executable:
+        make_executable(out_file)
+
+
+def derived_resources_class(project_id: str, parameters: List[str]) -> str:
+
+    tree = Module(body=[])
+    add_import(tree, "arcor2.core", ResourcesBase.__name__)
+
+    derived_cls_name = "Resources"
+
+    init_body = [Expr(value=Call(
+                                  func=Attribute(value=Call(func=Name(id='super', ctx=Load()),
+                                                            args=[Name(id=derived_cls_name, ctx=Load()),
+                                                                  Name(id='self', ctx=Load())], keywords=[]),
+                                                 attr='__init__', ctx=Load()), args=[Str(s=project_id)],
+                                  keywords=[]))]
+
+    for param in parameters:
+
+        init_body.append(Assign(targets=[Attribute(value=Name(id='self', ctx=Load()), attr=param, ctx=Store())],
+               value=Call(func=Attribute(value=Name(id='self', ctx=Load()), attr='parameters', ctx=Load()),
+                          args=[Str(s=param)], keywords=[])))
+
+    tree.body.append(ClassDef(name=derived_cls_name,
+                              bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
+                              keywords=[],
+                              body=[FunctionDef(name='__init__', args=arguments(args=[arg(arg='self', annotation=None)],
+                                                                                vararg=None, kwonlyargs=[],
+                                                                                kw_defaults=[], kwarg=None,
+                                                                                defaults=[]), body=init_body, decorator_list=[], returns=None)], decorator_list=[]))
+
+    return tree_to_str(tree)
 
 
 def dump(tree: Module) -> None:
-
     return typed_astunparse.dump(tree)
 
 
 def main() -> None:
-
     tree = empty_script_tree()
 
     # TODO turn following into proper test

@@ -22,6 +22,7 @@ class Pose:
 @dataclass
 class ActionMetadata:
 
+    api_name: str
     free: bool = False
     blocking: bool = False
 

@@ -9,4 +9,4 @@ class Tester(WorldObject):
     def run_test(self) -> None:  # not needed in demo 0, just for test purposes
         pass
 
-    run_test.__action__ = ActionMetadata(blocking=True)
+    run_test.__action__ = ActionMetadata("RunTest", blocking=True)

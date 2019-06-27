@@ -13,5 +13,5 @@ class RobotException(Arcor2Exception):
     pass
 
 
-class ResourcesException(Exception):
+class ResourcesException(Arcor2Exception):
     pass

@@ -4,7 +4,6 @@
 
 import asyncio
 import json
-import logging
 import websockets
 import functools
 import sys
@@ -13,13 +12,16 @@ import inspect
 from arcor2.core import WorldObject
 import arcor2.core
 import arcor2.user_objects
+import arcor2.projects
+from arcor2 import generate_source
 import importlib
 from typing import get_type_hints
 from aiologger import Logger
 import motor.motor_asyncio
+import aiofiles
+import os
+from pprint import pprint
 
-
-# TODO https://pypi.org/project/aiofiles/
 
 # TODO read additional objects' locations from env. variable and import them dynamically on start
 
@@ -27,7 +29,6 @@ logger = Logger.with_default_handlers(name='arcor2-server')
 
 mongo = motor.motor_asyncio.AsyncIOMotorClient()
 
-PROJECT_ID = "demo_v0"
 SCENE: Dict = {}
 PROJECT: Dict = {}
 INTERFACES: Set = set()
@@ -101,14 +102,19 @@ async def get_object_types(req, ui, args) -> None:
 @rpc
 async def save_scene(req, ui, args):
 
-    assert "scene_id" in SCENE
+    assert SCENE["_id"]
 
     msg = response(req)
 
     db = mongo.arcor2
 
-    result = await db.scenes.insert_one(SCENE)
-    # TODO check result
+    old_scene = await db.scenes.find_one({"_id": SCENE["_id"]})
+    if old_scene:
+        result = await db.scenes.replace_one({'_id': old_scene["_id"]}, SCENE)
+        await logger.debug("scene updated")
+    else:
+        result = await db.scenes.insert_one(SCENE)
+        await logger.debug("scene created")
 
     return msg
 
@@ -116,19 +122,50 @@ async def save_scene(req, ui, args):
 @rpc
 async def save_project(req, ui, args):
 
-    assert "project_id" in PROJECT
-
-    msg = response(req)
+    assert PROJECT["_id"]
 
     db = mongo.arcor2
     # TODO validate project here or in DB?
-    result = await db.projects.insert_one(PROJECT)
-    # TODO check result
 
-    # TODO generate Resources class
-    # TODO generate script
+    old_project = await db.projects.find_one({"_id": PROJECT["_id"]})
+    if old_project:
+        result = await db.projects.replace_one({'_id': old_project["_id"]}, PROJECT)
+        await logger.debug("project updated")
+    else:
+        result = await db.projects.insert_one(PROJECT)
+        await logger.debug("project created")
 
-    return msg
+    action_names = []
+
+    try:
+        for obj in PROJECT["objects"]:
+            for aps in obj["action_points"]:
+                for act in aps["actions"]:
+                    action_names.append(act["id"])
+    except KeyError as e:
+        await logger.error("Project data invalid: {}".format(e))
+        return response(req, False, ["Project data invalid!", str(e)])
+
+    project_path = os.path.join(arcor2.projects.__path__[0], PROJECT["_id"])
+
+    if not os.path.exists(project_path):
+        os.makedirs(project_path)
+
+        async with aiofiles.open(os.path.join(project_path, "__init__.py"), mode='w') as f:
+            pass
+
+    async with aiofiles.open(os.path.join(project_path, "resources.py"), mode='w') as f:
+        await f.write(generate_source.derived_resources_class(PROJECT["_id"], action_names))
+
+    script_path = os.path.join(project_path, "script.py")
+
+    async with aiofiles.open(script_path, mode='w') as f:
+        await f.write(generate_source.SCRIPT_HEADER)
+        await f.write(generate_source.program_src(PROJECT))
+
+    generate_source.make_executable(script_path)
+
+    return response(req)
 
 
 @rpc
@@ -210,30 +247,39 @@ async def server(ui, path, extra_argument) -> None:
     try:
         async for message in ui:
 
-            print(message)
             try:
                 data = json.loads(message)
             except json.decoder.JSONDecodeError as e:
-                logging.error(e)
+                await logger.error(e)
                 continue
 
             if "request" in data:  # then it is RPC
                 try:
                     await RPC_DICT[data['request']](data['request'], ui, data["args"])
                 except KeyError as e:
-                    logging.error(e)
+                    await logger.error(e)
 
             elif "event" in data:
 
                 try:
                     await EVENT_DICT[data["event"]](ui, data["data"])
                 except KeyError as e:
-                    logging.error(e)
+                    await logger.error(e)
 
             else:
-                logging.error("unsupported format of message: {}".format(data))
+                await logger.error("unsupported format of message: {}".format(data))
     finally:
         await unregister(ui)
+
+
+def custom_exception_handler(loop, context):
+    # first, handle with default handler
+    loop.default_exception_handler(context)
+
+    # exception = context.get('exception')
+    #if isinstance(exception, ZeroDivisionError):
+    pprint(context)
+    loop.stop()
 
 
 def main():
@@ -244,6 +290,7 @@ def main():
     # asyncio.get_event_loop().set_debug(enabled=True)
     asyncio.get_event_loop().run_until_complete(
         websockets.serve(bound_handler, '0.0.0.0', 6789))
+    asyncio.get_event_loop().set_exception_handler(custom_exception_handler)
     asyncio.get_event_loop().run_forever()
 
 

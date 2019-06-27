@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Collection, Dict, Hashable, Union, Callable, Set, FrozenSet, List
+from typing import Optional, Collection, Dict, Hashable, Union, Callable, Set, FrozenSet, List, Tuple
 from arcor2.exceptions import WorldObjectException, RobotException, ResourcesException
 from arcor2.data import Pose, ActionPoint, ActionMetadata
 from pymongo import MongoClient
+import importlib
 
 # TODO for bound methods - check whether provided action point belongs to the object
 
 
-class Resources:
+class ResourcesBase:
     """
     Wrapper around MongoDB document store API for specific project.
     """
@@ -20,10 +21,41 @@ class Resources:
         self.client = MongoClient('localhost', 27017)
 
         # TODO program should be parsed from script!
-        self.program = self.client.arcor2.projects.find_one({'project_id': project_id})
+        self.program = self.client.arcor2.projects.find_one({'_id': project_id})
+
+        if not self.program:
+            raise ResourcesException("Could not find project {}!".format(project_id))
 
         # TODO switch to the "resource" format instead of server-ui format
-        self.scene = self.client.arcor2.scenes.find_one({'scene_id': self.program["scene_id"]})
+        self.scene = self.client.arcor2.scenes.find_one({'_id': self.program["scene_id"]})
+
+        if not self.scene:
+            raise ResourcesException("Could not find scene {} for project {}!".format(self.program["scene_id"], self.program["_id"]))
+
+        # TODO create instances of all objects according to the scene
+        self.objects: Dict[str, WorldObject] = {}
+
+        for obj in self.scene["objects"]:
+
+            try:
+                module_name, cls_name = obj["type"].split('/')
+            except ValueError:
+                raise ResourcesException("Invalid object type {}, should be in format 'python_module/class'.".format(obj["type"]))
+
+            module = importlib.import_module(module_name)
+            cls = getattr(module, cls_name)
+
+            assert obj["id"] not in self.objects, "Duplicate object id {}!".format(obj["id"])
+
+            # TODO handle hierarchy of objects (tree), e.g. call add_child...
+            inst = cls(obj["id"], Pose(list(obj["position"].values()), list(obj["orientation"].values())))
+            self.objects[obj["id"]] = inst
+
+        # add action points to the objects
+        for obj in self.program["objects"]:
+
+            for aps in obj["action_points"]:
+                self.objects[obj["id"]].add_action_point(aps["id"], Pose(aps["position"].values(), aps["orientation"].values()))
 
     def action_ids(self) -> Set:
 
@@ -37,21 +69,13 @@ class Resources:
 
         return ids
 
-    def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
+    def action_point(self, object_id: str, ap_id: str) -> Tuple["WorldObject", str]:
 
-        for obj in self.program["objects"]:
+        assert ap_id in self.objects[object_id].action_points
 
-            if obj["id"] != object_id:
-                continue
-
-            for aps in obj["action_points"]:
-
-                if aps["id"] != ap_id:
-                    continue
-
-                return ActionPoint(ap_id, Pose(aps["position"].values(), aps["orientation"].values()))
-
-        raise ResourcesException("Could not find action point {} for object {}.".format(ap_id, object_id))
+        # TODO action point pose should be relative to its parent object pose - how and where to get the absolute pose?
+        # ...temporarily, simply return action point as it is
+        return self.objects[object_id].action_points[ap_id]
 
     def parameters(self, action_id: str) -> Dict:
 
@@ -96,7 +120,7 @@ class WorldObject:
 
     def add_action_point(self, name: str, pose: Pose) -> None:
 
-        self.action_points[name] = ActionPoint(name, self, pose)
+        self.action_points[name] = ActionPoint(name, pose)
 
     def add_child(self, obj: "WorldObject") -> None:
 
@@ -132,22 +156,13 @@ class Robot(WorldObject):
     Abstract class representing robot and its basic capabilities (motion)
     """
 
-    def __init__(self, end_effectors: Collection[Hashable]) -> None:  # TODO pose
+    def move_to(self, target: ActionPoint, end_effector: str, speed: int) -> None:
 
-        super(Robot, self).__init__(child_limit=len(end_effectors))
+        # TODO refactor printing out arguments into decorator?
+        print("move_to, target: {}, end_effector: {}, speed: {}".format(target, end_effector, speed))
 
-    def move_to(self, action_point: ActionPoint, end_effector: str) -> None:
-        """
-
-        Parameters
-        ----------
-        end_effector:
-            Robot's end effector.
-        action_point:
-            Move specified end-effector to the given pose.
-        """
-
+        # TODO action point pose should be relative to its parent object pose - how and where to get the absolute pose?
         # TODO call underlying API
         return
 
-    move_to.__action__ = ActionMetadata(free=True, blocking=True)
+    move_to.__action__ = ActionMetadata("Move", free=True, blocking=True)
