@@ -59,7 +59,7 @@ class ResourcesBase:
 
     def action_ids(self) -> Set:
 
-        ids = set()
+        ids: Set = set()
 
         for obj in self.program["objects"]:
             for aps in obj["action_points"]:

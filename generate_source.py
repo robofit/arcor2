@@ -5,11 +5,11 @@ from horast import parse, unparse
 import typed_ast.ast3
 from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, \
     NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, Store, \
-    alias, ClassDef, arg
+    alias, ClassDef, arg, AnnAssign, Subscript, Index
 import autopep8  # type: ignore
 import os
 import stat
-from typing import Dict, Optional, List, Any, Set
+from typing import Dict, Optional, List, Any, Set, Union
 import importlib
 import typed_astunparse
 import static_typing as st
@@ -24,17 +24,134 @@ class GenerateSourceException(Exception):
     pass
 
 
-def program_src(project: Dict) -> str:
+def fix_object_name(object_id: str) -> str:
+
+    return object_id.lower().replace(' ', '_')
+
+
+def program_src(project: Dict, scene: Dict) -> str:
 
     tree = empty_script_tree()
     add_import(tree, "arcor2.projects." + project["_id"] + ".resources", "Resources")
     add_cls_inst(tree, "Resources", "res")
 
     # TODO api???
-    # TODO object instances (get from res)
-    # TODO logic
+    # get object instances from resources object
+    for obj in scene["objects"]:
+
+        try:
+            module_name, cls_name = obj["type"].split('/')
+        except ValueError:
+            raise GenerateSourceException(
+                "Invalid object type {}, should be in format 'python_module/class'.".format(obj["type"]))
+
+        add_import(tree, module_name, cls_name)
+        object_instance_from_res(tree, obj["id"], cls_name)
+
+    add_logic_to_loop(tree, project)
+    print("after after")
+    print(main_loop_body(tree))
 
     return tree_to_str(tree)
+
+
+def add_logic_to_loop(tree, project: Dict):
+
+    loop = main_loop_body(tree)
+    next_action = None
+
+    print("before")
+    print(loop)
+
+    while True:
+
+        act = find_action(project, next_action)
+
+        print(act)
+
+        if len(loop) == 1 and isinstance(loop[0], Pass):
+            # pass is not necessary now
+            print("removing pass")
+            loop.clear()
+
+        ac_obj, ac_type = act["type"].split('/')
+        append_method_call(loop, fix_object_name(ac_obj), ac_type, [], [keyword(
+                                                                      arg=None,
+                                                                      value=Attribute(
+                                                                        value=Name(
+                                                                          id='res',
+                                                                          ctx=Load()),
+                                                                        attr=act["id"],
+                                                                        ctx=Load()))])
+
+        if act["outputs"][0]["default"] == "end":
+            break
+
+        next_action = act["outputs"][0]["default"]
+
+    print("after")
+    print(loop)
+
+
+def find_action(project: Dict, which: Union[None, Dict] = None) -> Dict:
+
+    for obj in project["objects"]:
+        for aps in obj["action_points"]:
+            for act in aps["actions"]:
+
+                if which is None and act["inputs"][0]["default"]:
+                    return act
+                elif which and act["id"] == which:
+                    return act
+
+    raise GenerateSourceException("Action {} not found.".format(which))
+
+
+def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
+
+    main_body = find_function("main", tree).body
+    last_assign_idx = None
+
+    for body_idx, body_item in enumerate(main_body):
+
+        if isinstance(body_item, Assign) or isinstance(body_item, AnnAssign):
+            last_assign_idx = body_idx
+
+    if last_assign_idx is None:
+        raise GenerateSourceException()
+
+    assign = AnnAssign(
+        target=Name(
+            id=fix_object_name(object_id),
+            ctx=Store()),
+        annotation=Name(
+            id=cls_name,
+            ctx=Load()),
+        value=Subscript(
+            value=Attribute(
+                value=Name(
+                    id='res',
+                    ctx=Load()),
+                attr='objects',
+                ctx=Load()),
+            slice=Index(value=Str(
+                s=object_id,
+                kind='')),
+            ctx=Load()),
+        simple=1)
+
+    main_body.insert(last_assign_idx + 1, assign)
+
+
+def main_loop_body(tree) -> Module:
+
+    main_body = find_function("main", tree).body
+
+    for node in main_body:
+        if isinstance(node, While):  # TODO more specific condition
+            return node.body
+
+    raise GenerateSourceException("Main loop not found.")
 
 
 def empty_script_tree() -> Module:
@@ -218,7 +335,16 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
         node = tr.visit(node)
 
 
-def add_method_call(tree: Module, instance: str, method: str, init: bool, args: List, kwargs: Optional[Dict] = None):
+def append_method_call(tree: Module, instance: str, method: str, args: List, kwargs: List):
+
+    tree.append(Expr(value=Call(func=Attribute(value=Name(id=instance,
+                                                                                    ctx=Load()),
+                                                                         attr=method,
+                                                                         ctx=Load()),
+                                                          args=args, keywords=kwargs)))
+
+
+def add_method_call_in_main(tree: Module, instance: str, method: str, args: List, kwargs: List):
     """
     Places method call after block where instances are created.
 
@@ -273,13 +399,11 @@ def tree_to_str(tree: Module) -> str:
 
 
 def make_executable(path_to_file: str) -> None:
-
     st = os.stat(path_to_file)
     os.chmod(path_to_file, st.st_mode | stat.S_IEXEC)
 
 
 def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
-
     generated_code = tree_to_str(tree)
 
     with open(out_file, "w") as f:
@@ -291,24 +415,23 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
 
 
 def derived_resources_class(project_id: str, parameters: List[str]) -> str:
-
     tree = Module(body=[])
     add_import(tree, "arcor2.core", ResourcesBase.__name__)
 
     derived_cls_name = "Resources"
 
     init_body = [Expr(value=Call(
-                                  func=Attribute(value=Call(func=Name(id='super', ctx=Load()),
-                                                            args=[Name(id=derived_cls_name, ctx=Load()),
-                                                                  Name(id='self', ctx=Load())], keywords=[]),
-                                                 attr='__init__', ctx=Load()), args=[Str(s=project_id)],
-                                  keywords=[]))]
+        func=Attribute(value=Call(func=Name(id='super', ctx=Load()),
+                                  args=[Name(id=derived_cls_name, ctx=Load()),
+                                        Name(id='self', ctx=Load())], keywords=[]),
+                       attr='__init__', ctx=Load()), args=[Str(s=project_id)],
+        keywords=[]))]
 
     for param in parameters:
-
         init_body.append(Assign(targets=[Attribute(value=Name(id='self', ctx=Load()), attr=param, ctx=Store())],
-               value=Call(func=Attribute(value=Name(id='self', ctx=Load()), attr='parameters', ctx=Load()),
-                          args=[Str(s=param)], keywords=[])))
+                                value=Call(
+                                    func=Attribute(value=Name(id='self', ctx=Load()), attr='parameters', ctx=Load()),
+                                    args=[Str(s=param)], keywords=[])))
 
     tree.body.append(ClassDef(name=derived_cls_name,
                               bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
@@ -316,7 +439,8 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
                               body=[FunctionDef(name='__init__', args=arguments(args=[arg(arg='self', annotation=None)],
                                                                                 vararg=None, kwonlyargs=[],
                                                                                 kw_defaults=[], kwarg=None,
-                                                                                defaults=[]), body=init_body, decorator_list=[], returns=None)], decorator_list=[]))
+                                                                                defaults=[]), body=init_body,
+                                                decorator_list=[], returns=None)], decorator_list=[]))
 
     return tree_to_str(tree)
 
@@ -360,8 +484,8 @@ def main() -> None:
     except GenerateSourceException as e:
         print(e)
 
-    add_method_call(tree, "workspace", "add_child", True, [get_name("robot")])
-    add_method_call(tree, "workspace", "add_child", True, [get_name("wo")])
+    add_method_call_in_main(tree, "workspace", "add_child", [get_name("robot")])
+    add_method_call_in_main(tree, "workspace", "add_child", [get_name("wo")])
 
     tree_to_script(tree, "output.py")
 

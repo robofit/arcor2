@@ -20,9 +20,9 @@ from aiologger import Logger
 import motor.motor_asyncio
 import aiofiles
 import os
-from pprint import pprint
 
 
+# TODO validation of scene/project -> in thread pool executor (CPU intensive)
 # TODO read additional objects' locations from env. variable and import them dynamically on start
 
 logger = Logger.with_default_handlers(name='arcor2-server')
@@ -102,7 +102,8 @@ async def get_object_types(req, ui, args) -> None:
 @rpc
 async def save_scene(req, ui, args):
 
-    assert SCENE["_id"]
+    if "_id" not in SCENE:
+        return response(req, False, ["Scene not opened or invalid."])
 
     msg = response(req)
 
@@ -122,7 +123,8 @@ async def save_scene(req, ui, args):
 @rpc
 async def save_project(req, ui, args):
 
-    assert PROJECT["_id"]
+    if "_id" not in PROJECT:
+        return response(req, False, ["Project not opened or invalid."])
 
     db = mongo.arcor2
     # TODO validate project here or in DB?
@@ -161,7 +163,7 @@ async def save_project(req, ui, args):
 
     async with aiofiles.open(script_path, mode='w') as f:
         await f.write(generate_source.SCRIPT_HEADER)
-        await f.write(generate_source.program_src(PROJECT))
+        await f.write(generate_source.program_src(PROJECT, SCENE))
 
     generate_source.make_executable(script_path)
 
@@ -213,12 +215,14 @@ async def get_object_actions(req, ui, args):
 
 
 async def register(websocket) -> None:
+    await logger.info("Registering new ui")
     INTERFACES.add(websocket)
     await notify_scene(websocket)
     await notify_project(websocket)
 
 
 async def unregister(websocket) -> None:
+    await logger.info("Unregistering ui")  # TODO print out some identifier
     INTERFACES.remove(websocket)
 
 
@@ -238,7 +242,7 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types,
                   'saveScene': save_scene}
 
 EVENT_DICT: Dict = {'sceneChanged': scene_change,
-              'projectChanged': project_change}
+                    'projectChanged': project_change}
 
 
 async def server(ui, path, extra_argument) -> None:
@@ -253,18 +257,24 @@ async def server(ui, path, extra_argument) -> None:
                 await logger.error(e)
                 continue
 
-            if "request" in data:  # then it is RPC
+            if "request" in data:  # ...then it is RPC
                 try:
-                    await RPC_DICT[data['request']](data['request'], ui, data["args"])
+                    rpc_func = RPC_DICT[data['request']]
                 except KeyError as e:
-                    await logger.error(e)
+                    await logger.error("Unknown RPC request: {}.".format(e))
+                    continue
 
-            elif "event" in data:
+                await rpc_func(data['request'], ui, data.get("args", {}))
+
+            elif "event" in data:  # ...event from UI
 
                 try:
-                    await EVENT_DICT[data["event"]](ui, data["data"])
+                    event_func = EVENT_DICT[data["event"]]
                 except KeyError as e:
-                    await logger.error(e)
+                    await logger.error("Unknown event type: {}.".format(e))
+                    continue
+
+                await event_func(ui, data["data"])
 
             else:
                 await logger.error("unsupported format of message: {}".format(data))
@@ -272,25 +282,14 @@ async def server(ui, path, extra_argument) -> None:
         await unregister(ui)
 
 
-def custom_exception_handler(loop, context):
-    # first, handle with default handler
-    loop.default_exception_handler(context)
-
-    # exception = context.get('exception')
-    #if isinstance(exception, ZeroDivisionError):
-    pprint(context)
-    loop.stop()
-
-
 def main():
 
     assert sys.version_info >= (3, 6)
 
     bound_handler = functools.partial(server, extra_argument='spam')
-    # asyncio.get_event_loop().set_debug(enabled=True)
+    asyncio.get_event_loop().set_debug(enabled=True)
     asyncio.get_event_loop().run_until_complete(
         websockets.serve(bound_handler, '0.0.0.0', 6789))
-    asyncio.get_event_loop().set_exception_handler(custom_exception_handler)
     asyncio.get_event_loop().run_forever()
 
 
