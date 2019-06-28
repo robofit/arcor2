@@ -49,8 +49,6 @@ def program_src(project: Dict, scene: Dict) -> str:
         object_instance_from_res(tree, obj["id"], cls_name)
 
     add_logic_to_loop(tree, project)
-    print("after after")
-    print(main_loop_body(tree))
 
     return tree_to_str(tree)
 
@@ -60,18 +58,12 @@ def add_logic_to_loop(tree, project: Dict):
     loop = main_loop_body(tree)
     next_action = None
 
-    print("before")
-    print(loop)
-
     while True:
 
         act = find_action(project, next_action)
 
-        print(act)
-
         if len(loop) == 1 and isinstance(loop[0], Pass):
             # pass is not necessary now
-            print("removing pass")
             loop.clear()
 
         ac_obj, ac_type = act["type"].split('/')
@@ -88,9 +80,6 @@ def add_logic_to_loop(tree, project: Dict):
             break
 
         next_action = act["outputs"][0]["default"]
-
-    print("after")
-    print(loop)
 
 
 def find_action(project: Dict, which: Union[None, Dict] = None) -> Dict:
