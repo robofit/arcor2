@@ -1,13 +1,57 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Collection, Dict, Hashable, Union, Callable, Set, FrozenSet, List, Tuple
-from arcor2.exceptions import WorldObjectException, RobotException, ResourcesException
-from arcor2.data import Pose, ActionPoint, ActionMetadata
+from typing import Optional, Dict, Set, FrozenSet, Tuple, Union
+from arcor2.exceptions import WorldObjectException, ResourcesException
+from arcor2.data import Pose, ActionPoint, ActionMetadata, DataClassEncoder
 from pymongo import MongoClient
 import importlib
+import json
+import time
+import sys
+import select  # only available on Linux?
 
 # TODO for bound methods - check whether provided action point belongs to the object
+
+
+def read_stdin(timeout=0.0) -> Union[str, None]:
+
+    if select.select([sys.stdin], [], [], timeout)[0]:
+        return sys.stdin.readline().strip()
+    return None
+
+
+def handle_action(obj_id, f, where) -> None:
+
+    d = {"event": "actionState", "data": {"method": "{}/{}".format(obj_id, f.__name__), "where": where}}
+    print_json(d)
+
+    ctrl_cmd = read_stdin()
+
+    if ctrl_cmd == "p":
+        print_json({"event": "projectState", "data": {"state": "paused"}})
+        while True:
+            ctrl_cmd = read_stdin(0.1)
+            if ctrl_cmd == "r":
+                print_json({"event": "projectState", "data": {"state": "resumed"}})
+                break
+
+
+def print_json(d: Dict) -> None:
+
+    print(json.dumps(d, cls=DataClassEncoder))
+    sys.stdout.flush()
+
+
+def action(f):  # TODO read stdin and pause if requested
+    def wrapper(*args, **kwargs):
+
+        handle_action(args[0].name, f, "before")
+        res = f(*args, **kwargs)
+        handle_action(args[0].name, f, "after")
+        return res
+
+    return wrapper
 
 
 class ResourcesBase:
@@ -55,7 +99,12 @@ class ResourcesBase:
         for obj in self.program["objects"]:
 
             for aps in obj["action_points"]:
-                self.objects[obj["id"]].add_action_point(aps["id"], Pose(aps["position"].values(), aps["orientation"].values()))
+                self.objects[obj["id"]].add_action_point(aps["id"], Pose(list(aps["position"].values()), list(aps["orientation"].values())))
+
+    @staticmethod
+    def print_info(action_id: str, args: Dict) -> None:
+
+        print_json({"event": "currentAction", "data": {"action_id": action_id, "args": args}})
 
     def action_ids(self) -> Set:
 
@@ -156,13 +205,13 @@ class Robot(WorldObject):
     Abstract class representing robot and its basic capabilities (motion)
     """
 
+    @action
     def move_to(self, target: ActionPoint, end_effector: str, speed: int) -> None:
 
-        # TODO refactor printing out arguments into decorator?
-        print("move_to, target: {}, end_effector: {}, speed: {}".format(target, end_effector, speed))
-
         # TODO action point pose should be relative to its parent object pose - how and where to get the absolute pose?
+
         # TODO call underlying API
+        time.sleep(1)
         return
 
     move_to.__action__ = ActionMetadata("Move", free=True, blocking=True)

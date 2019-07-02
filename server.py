@@ -33,6 +33,18 @@ SCENE: Dict = {}
 PROJECT: Dict = {}
 INTERFACES: Set = set()
 
+MANAGER_CLIENT = websockets.connect("ws://localhost:6790")
+
+
+async def handle_manager_events():
+
+    async for message in MANAGER_CLIENT:
+
+        msg = json.loads(message)
+        await logger.info("Message from manager: {}".format(msg))
+        # TODO process message
+        await asyncio.wait([intf.send(json.dumps(msg)) for intf in INTERFACES])
+
 
 def rpc(f):  # TODO log UI id...
     async def wrapper(req, ui, args):
@@ -81,7 +93,7 @@ async def notify_project(interface) -> None:
 
 
 @rpc
-async def get_object_types(req, ui, args) -> None:
+async def get_object_types(req, ui, args) -> Dict:
 
     msg = response(req)
     msg["data"] = []
@@ -100,7 +112,7 @@ async def get_object_types(req, ui, args) -> None:
 
 
 @rpc
-async def save_scene(req, ui, args):
+async def save_scene(req, ui, args) -> Dict:
 
     if "_id" not in SCENE:
         return response(req, False, ["Scene not opened or invalid."])
@@ -121,7 +133,7 @@ async def save_scene(req, ui, args):
 
 
 @rpc
-async def save_project(req, ui, args):
+async def save_project(req, ui, args) -> Dict:
 
     if "_id" not in PROJECT:
         return response(req, False, ["Project not opened or invalid."])
@@ -171,7 +183,7 @@ async def save_project(req, ui, args):
 
 
 @rpc
-async def get_object_actions(req, ui, args):
+async def get_object_actions(req, ui, args) -> Dict:
 
     try:
         module_name, cls_name = args["type"].split('/')
@@ -214,6 +226,15 @@ async def get_object_actions(req, ui, args):
     return msg
 
 
+@rpc
+async def manager_request(req, ui, args) -> Dict:
+
+    await MANAGER_CLIENT.send(json.dumps({"request": "runProject"}))
+    # TODO how to get response here? some queue?
+    # TODO process request
+    return response(req)
+
+
 async def register(websocket) -> None:
     await logger.info("Registering new ui")
     INTERFACES.add(websocket)
@@ -239,7 +260,9 @@ async def project_change(ui, project) -> None:
 RPC_DICT: Dict = {'getObjectTypes': get_object_types,
                   'getObjectActions': get_object_actions,
                   'saveProject': save_project,
-                  'saveScene': save_scene}
+                  'saveScene': save_scene,
+                  'runProject': manager_request,
+                  'stopProject': manager_request}
 
 EVENT_DICT: Dict = {'sceneChanged': scene_change,
                     'projectChanged': project_change}
@@ -282,14 +305,21 @@ async def server(ui, path, extra_argument) -> None:
         await unregister(ui)
 
 
+async def multiple_tasks():
+
+    bound_handler = functools.partial(server, extra_argument='spam')
+
+    input_coroutines = [websockets.serve(bound_handler, '0.0.0.0', 6789), handle_manager_events()]
+    res = await asyncio.gather(*input_coroutines, return_exceptions=True)
+    return res
+
+
 def main():
 
     assert sys.version_info >= (3, 6)
 
-    bound_handler = functools.partial(server, extra_argument='spam')
     asyncio.get_event_loop().set_debug(enabled=True)
-    asyncio.get_event_loop().run_until_complete(
-        websockets.serve(bound_handler, '0.0.0.0', 6789))
+    asyncio.get_event_loop().run_until_complete(multiple_tasks())
     asyncio.get_event_loop().run_forever()
 
 

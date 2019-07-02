@@ -5,7 +5,7 @@ from horast import parse, unparse
 import typed_ast.ast3
 from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, \
     NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, Store, \
-    alias, ClassDef, arg, AnnAssign, Subscript, Index
+    alias, ClassDef, arg, AnnAssign, Subscript, Index, Return
 import autopep8  # type: ignore
 import os
 import stat
@@ -417,19 +417,65 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
         keywords=[]))]
 
     for param in parameters:
-        init_body.append(Assign(targets=[Attribute(value=Name(id='self', ctx=Load()), attr=param, ctx=Store())],
+        init_body.append(Assign(targets=[Attribute(value=Name(id='self', ctx=Load()), attr="_" + param, ctx=Store())],
                                 value=Call(
                                     func=Attribute(value=Name(id='self', ctx=Load()), attr='parameters', ctx=Load()),
                                     args=[Str(s=param)], keywords=[])))
 
-    tree.body.append(ClassDef(name=derived_cls_name,
+    cls_def = ClassDef(name=derived_cls_name,
                               bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
                               keywords=[],
                               body=[FunctionDef(name='__init__', args=arguments(args=[arg(arg='self', annotation=None)],
                                                                                 vararg=None, kwonlyargs=[],
                                                                                 kw_defaults=[], kwarg=None,
                                                                                 defaults=[]), body=init_body,
-                                                decorator_list=[], returns=None)], decorator_list=[]))
+                                                decorator_list=[], returns=None)], decorator_list=[])
+
+    tree.body.append(cls_def)
+
+    for param in parameters:
+        cls_def.body.append(FunctionDef(
+            name=param,
+            args=arguments(
+                args=[arg(
+                    arg='self',
+                    annotation=None,
+                    type_comment=None)],
+                vararg=None,
+                kwonlyargs=[],
+                kw_defaults=[],
+                kwarg=None,
+                defaults=[]),
+            body=[
+                Expr(value=Call(
+                    func=Attribute(
+                        value=Name(
+                            id='Resources',
+                            ctx=Load()),
+                        attr='print_info',
+                        ctx=Load()),
+                    args=[
+                        Str(
+                            s=param,
+                            kind=''),
+                        Attribute(
+                            value=Name(
+                                id='self',
+                                ctx=Load()),
+                            attr='_' + param,
+                            ctx=Load())],
+                    keywords=[])),
+                Return(value=Attribute(
+                    value=Name(
+                        id='self',
+                        ctx=Load()),
+                    attr='_' + param,
+                    ctx=Load()))],
+            decorator_list=[Name(
+                id='property',
+                ctx=Load())],
+            returns=None,
+            type_comment=None))
 
     return tree_to_str(tree)
 
