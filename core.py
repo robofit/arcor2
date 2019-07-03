@@ -4,7 +4,7 @@
 from typing import Optional, Dict, Set, FrozenSet, Tuple, Union
 from arcor2.exceptions import WorldObjectException, ResourcesException
 from arcor2.data import Pose, ActionPoint, ActionMetadata, DataClassEncoder
-from pymongo import MongoClient
+from pymongo import MongoClient  # type: ignore
 import importlib
 import json
 import time
@@ -74,7 +74,8 @@ class ResourcesBase:
         self.scene = self.client.arcor2.scenes.find_one({'_id': self.program["scene_id"]})
 
         if not self.scene:
-            raise ResourcesException("Could not find scene {} for project {}!".format(self.program["scene_id"], self.program["_id"]))
+            raise ResourcesException(f"Could not find scene "
+                                     f"{self.program['scene_id']} for project {self.program['_id']}!")
 
         # TODO create instances of all objects according to the scene
         self.objects: Dict[str, WorldObject] = {}
@@ -84,7 +85,8 @@ class ResourcesBase:
             try:
                 module_name, cls_name = obj["type"].split('/')
             except ValueError:
-                raise ResourcesException("Invalid object type {}, should be in format 'python_module/class'.".format(obj["type"]))
+                raise ResourcesException(f"Invalid object type {obj['type']}, "
+                                         f"should be in format 'python_module/class'.")
 
             module = importlib.import_module(module_name)
             cls = getattr(module, cls_name)
@@ -99,10 +101,13 @@ class ResourcesBase:
         for obj in self.program["objects"]:
 
             for aps in obj["action_points"]:
-                self.objects[obj["id"]].add_action_point(aps["id"], Pose(list(aps["position"].values()), list(aps["orientation"].values())))
+                self.objects[obj["id"]].add_action_point(aps["id"],
+                                                         Pose(list(aps["position"].values()),
+                                                              list(aps["orientation"].values())))
 
     @staticmethod
     def print_info(action_id: str, args: Dict) -> None:
+        """Helper method used to print out info about the action going to be executed."""
 
         print_json({"event": "currentAction", "data": {"action_id": action_id, "args": args}})
 

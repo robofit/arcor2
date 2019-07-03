@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from horast import parse, unparse
+from horast import parse, unparse  # type: ignore
 import typed_ast.ast3
 from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, \
-    NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, Store, \
-    alias, ClassDef, arg, AnnAssign, Subscript, Index, Return
+    NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, \
+    alias, ClassDef, arg, AnnAssign, Subscript, Index, Return, Store
 import autopep8  # type: ignore
 import os
 import stat
-from typing import Dict, Optional, List, Any, Set, Union
+from typing import Dict, Optional, List, Union
 import importlib
-import typed_astunparse
-import static_typing as st
+import typed_astunparse  # type: ignore
+import static_typing as st  # type: ignore
 from arcor2.core import ResourcesBase
 
 SCRIPT_HEADER = "#!/usr/bin/env python3\n""# -*- coding: utf-8 -*-\n\n"
@@ -132,7 +132,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
     main_body.insert(last_assign_idx + 1, assign)
 
 
-def main_loop_body(tree) -> Module:
+def main_loop_body(tree) -> List:
 
     main_body = find_function("main", tree).body
 
@@ -256,8 +256,8 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
 
         def visit_ImportFrom(self, node: ImportFrom):
 
-            for alias in node.names:
-                if alias.name == cls:
+            for node_alias in node.names:
+                if node_alias.name == cls:
                     self.found = True
 
             if not self.found:
@@ -324,13 +324,11 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
         node = tr.visit(node)
 
 
-def append_method_call(tree: Module, instance: str, method: str, args: List, kwargs: List):
+def append_method_call(body: List, instance: str, method: str, args: List, kwargs: List):
 
-    tree.append(Expr(value=Call(func=Attribute(value=Name(id=instance,
-                                                                                    ctx=Load()),
-                                                                         attr=method,
-                                                                         ctx=Load()),
-                                                          args=args, keywords=kwargs)))
+    body.append(Expr(value=Call(func=Attribute(value=Name(id=instance, ctx=Load()), attr=method, ctx=Load()),
+                                args=args,
+                                keywords=kwargs)))
 
 
 def add_method_call_in_main(tree: Module, instance: str, method: str, args: List, kwargs: List):
@@ -409,7 +407,7 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
 
     derived_cls_name = "Resources"
 
-    init_body = [Expr(value=Call(
+    init_body: List = [Expr(value=Call(
         func=Attribute(value=Call(func=Name(id='super', ctx=Load()),
                                   args=[Name(id=derived_cls_name, ctx=Load()),
                                         Name(id='self', ctx=Load())], keywords=[]),
@@ -423,13 +421,13 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
                                     args=[Str(s=param)], keywords=[])))
 
     cls_def = ClassDef(name=derived_cls_name,
-                              bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
-                              keywords=[],
-                              body=[FunctionDef(name='__init__', args=arguments(args=[arg(arg='self', annotation=None)],
-                                                                                vararg=None, kwonlyargs=[],
-                                                                                kw_defaults=[], kwarg=None,
-                                                                                defaults=[]), body=init_body,
-                                                decorator_list=[], returns=None)], decorator_list=[])
+                       bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
+                       keywords=[],
+                       body=[FunctionDef(name='__init__', args=arguments(args=[arg(arg='self', annotation=None)],
+                                                                         vararg=None, kwonlyargs=[],
+                                                                         kw_defaults=[], kwarg=None,
+                                                                         defaults=[]), body=init_body,
+                                         decorator_list=[], returns=None)], decorator_list=[])
 
     tree.body.append(cls_def)
 
@@ -482,48 +480,3 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
 
 def dump(tree: Module) -> None:
     return typed_astunparse.dump(tree)
-
-
-def main() -> None:
-    tree = empty_script_tree()
-
-    # TODO turn following into proper test
-    add_import(tree, "arcor2.core", "Workspace")
-    add_import(tree, "arcor2.core", "Robot")
-    add_import(tree, "arcor2.core", "Robot")
-    add_import(tree, "arcor2.core", "WorldObject")
-
-    try:
-        add_import(tree, "arcor2.core", "NonExistingClass")
-    except GenerateSourceException as e:
-        print(e)
-
-    try:
-        add_import(tree, "NonExistingModule", "NonExistingClass")
-    except GenerateSourceException as e:
-        print(e)
-
-    add_cls_inst(tree, "Robot", "robot", kwargs2parse={"end_effectors": '("gripper",)'})
-    add_cls_inst(tree, "Robot", "robot")
-    add_cls_inst(tree, "Workspace", "workspace")
-
-    try:
-        add_cls_inst(tree, "WorldObject", "robot")
-    except GenerateSourceException as e:
-        print(e)
-
-    add_cls_inst(tree, "WorldObject", "wo")
-
-    try:
-        add_cls_inst(tree, "NonExistingType", "test")
-    except GenerateSourceException as e:
-        print(e)
-
-    add_method_call_in_main(tree, "workspace", "add_child", [get_name("robot")])
-    add_method_call_in_main(tree, "workspace", "add_child", [get_name("wo")])
-
-    tree_to_script(tree, "output.py")
-
-
-if __name__ == "__main__":
-    main()

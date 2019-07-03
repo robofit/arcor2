@@ -2,21 +2,24 @@
 # -*- coding: utf-8 -*-
 
 from typing import List, Callable, Any
-from dataclasses import dataclass, field
-from dataclasses_json import DataClassJsonMixin  # latest release (with to_dict()) not yet available through pip, install it from git!
 from json import JSONEncoder
+from dataclasses import dataclass, field
+
+# latest release (with to_dict()) not yet available through pip, install it from git!
+from dataclasses_json import DataClassJsonMixin  # type: ignore
 
 AnyFunction = Callable[[Any], Any]
 
 
 class DataClassEncoder(JSONEncoder):
 
-    def default(self, o):
+    def default(self, o: Any) -> Any:
 
         if isinstance(o, DataClassJsonMixin):
             return o.to_dict()
 
         return o.__dict__
+
 
 @dataclass
 class Pose(DataClassJsonMixin):

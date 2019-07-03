@@ -4,22 +4,21 @@
 
 import asyncio
 import json
-import websockets
+import websockets  # type: ignore
 import functools
 import sys
-from typing import Dict, List, Union, Set, Optional
+from typing import Dict, List, Union, Set, Optional, Callable
 import arcor2.core
 import arcor2.user_objects
 import arcor2.projects
-from aiologger import Logger
-import motor.motor_asyncio
+from aiologger import Logger  # type: ignore
+import motor.motor_asyncio  # type: ignore
 import os
-import arcor2.projects
 
 
 logger = Logger.with_default_handlers(name='arcor2-manager')
 
-PROJECT = "demo_v0"
+PROJECT: str = "demo_v0"
 PROCESS: Union[asyncio.subprocess.Process, None] = None
 TASK = None
 
@@ -28,20 +27,20 @@ CLIENTS: Set = set()
 mongo = motor.motor_asyncio.AsyncIOMotorClient()
 
 
-def rpc(f):
-    async def wrapper(req, ui, args, req_id):
+def rpc(f: Callable) -> Callable:
+    async def wrapper(req: str, ui, args: Dict, req_id: str):
 
         msg = await f(req, ui, args, req_id)
         j = json.dumps(msg)
         await asyncio.wait([ui.send(j)])
-        await logger.debug("RPC request: {}, args: {}, req_id: {}, result: {}".format(req, args, req_id, j))
+        await logger.debug(f"RPC request: {req}, args: {args}, req_id: {req_id}, result: {j}")
 
     return wrapper
 
 
 def process_running() -> bool:
 
-    return PROCESS and PROCESS.returncode is None
+    return PROCESS is not None and PROCESS.returncode is None
 
 
 def response(resp_to: str, req_id: int, result: bool = True, messages: Optional[List[str]] = None) -> Dict:
@@ -52,9 +51,12 @@ def response(resp_to: str, req_id: int, result: bool = True, messages: Optional[
     return {"response": resp_to, "req_id": req_id, "result": result, "messages": messages}
 
 
-async def read_proc_stdout():
+async def read_proc_stdout() -> None:
 
     logger.info("Reading script stdout...")
+
+    assert PROCESS is not None
+    assert PROCESS.stdout is not None
 
     while process_running():
         try:
@@ -68,11 +70,11 @@ async def read_proc_stdout():
         except json.decoder.JSONDecodeError as e:
             await logger.error(e)
 
-    logger.info("Process finished with returncode {}.".format(PROCESS.returncode))
+    logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
 @rpc
-async def project_run(req, client, args, req_id) -> Dict:
+async def project_run(req: str, client, args: Dict, req_id: int) -> Dict:
 
     global PROCESS
     global TASK
@@ -82,36 +84,40 @@ async def project_run(req, client, args, req_id) -> Dict:
 
     path = os.path.join(arcor2.projects.__path__[0], PROJECT, "script.py")
 
-    await logger.info("Starting script: {}".format(path))
+    await logger.info(f"Starting script: {path}")
     PROCESS = await asyncio.create_subprocess_exec(path, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-                                                    stderr=asyncio.subprocess.STDOUT)
+                                                   stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is None:
         TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
         return response(req, req_id)
     else:
         return response(req, req_id, False, ["Failed to start project."])
 
+
 @rpc
-async def project_stop(req, client, args, req_id) -> Dict:
+async def project_stop(req: str, client, args: Dict, req_id: int) -> Dict:
 
     if not process_running():
         return response(req, req_id, False, ["Project not running."])
+
+    assert PROCESS is not None
+    assert TASK is not None
 
     await logger.info("Terminating process")
-
-    # TODO send "s" and wait for script to stop itself
-    # PROCESS.stdin.write("s\n")
     PROCESS.terminate()
     await logger.info("Waiting for process to finish...")
-    # await PROCESS.wait()
-    await TASK
+    await asyncio.wait([TASK])
     return response(req, req_id)
 
+
 @rpc
-async def project_pause(req, client, args, req_id) -> Dict:
+async def project_pause(req: str, client, args: Dict, req_id: int) -> Dict:
 
     if not process_running():
         return response(req, req_id, False, ["Project not running."])
+
+    assert PROCESS is not None
+    assert PROCESS.stdin is not None
 
     # TODO check if it is not already paused
 
@@ -121,10 +127,12 @@ async def project_pause(req, client, args, req_id) -> Dict:
 
 
 @rpc
-async def project_resume(req, client, args, req_id) -> Dict:
+async def project_resume(req: str, client, args: Dict, req_id: int) -> Dict:
 
     if not process_running():
         return response(req, req_id, False, ["Project not running."])
+
+    assert PROCESS is not None and PROCESS.stdin is not None
 
     # TODO check if paused
 
@@ -149,13 +157,13 @@ async def unregister(websocket) -> None:
     await logger.info("Unregistering client")
     CLIENTS.remove(websocket)
 
-RPC_DICT: Dict = {'runProject': project_run,
-                  'stopProject': project_stop,
-                  'pauseProject': project_pause,
-                  'resumeProject': project_resume}
+RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
+                                 'stopProject': project_stop,
+                                 'pauseProject': project_pause,
+                                 'resumeProject': project_resume}
 
 
-async def server(client, path, extra_argument) -> None:
+async def server(client, path: str, extra_argument) -> None:
 
     await register(client)
     try:
@@ -171,12 +179,14 @@ async def server(client, path, extra_argument) -> None:
                 try:
                     rpc_func = RPC_DICT[data['request']]
                 except KeyError as e:
-                    await logger.error("Unknown RPC request: {}.".format(e))
+                    await logger.error(f"Unknown RPC request: {e}.")
                     continue
 
                 await rpc_func(data['request'], client, data.get("args", {}), data.get("req_id", 0))
             else:
-                await logger.error("unsupported format of message: {}".format(data))
+                await logger.error(f"unsupported format of message: {data}")
+    except websockets.exceptions.ConnectionClosed:
+        pass
     finally:
         await unregister(client)
 

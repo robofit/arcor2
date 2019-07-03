@@ -4,7 +4,7 @@
 
 import asyncio
 import json
-import websockets
+import websockets  # type: ignore
 import functools
 import sys
 from typing import Dict, List, Set, Optional
@@ -16,15 +16,14 @@ import arcor2.projects
 from arcor2 import generate_source
 import importlib
 from typing import get_type_hints
-from aiologger import Logger
-import motor.motor_asyncio
-import aiofiles
+from aiologger import Logger  # type: ignore
+import motor.motor_asyncio  # type: ignore
+import aiofiles  # type: ignore
 import os
 from arcor2.manager import RPC_DICT as MANAGER_RPC_DICT
 
 
 # TODO validation of scene/project -> in thread pool executor (CPU intensive)
-# TODO read additional objects' locations from env. variable and import them dynamically on start
 
 logger = Logger.with_default_handlers(name='arcor2-server')
 
@@ -34,11 +33,9 @@ SCENE: Dict = {}
 PROJECT: Dict = {}
 INTERFACES: Set = set()
 
-# TODO
-MANAGER_RPC_REQUEST_QUEUE = asyncio.Queue()
-MANAGER_RPC_RESPONSE_QUEUE = asyncio.Queue()
-
-MANAGER_RPC_REQ_ID = 0
+MANAGER_RPC_REQUEST_QUEUE: asyncio.Queue = asyncio.Queue()
+MANAGER_RPC_RESPONSE_QUEUE: asyncio.Queue = asyncio.Queue()
+MANAGER_RPC_REQ_ID: int = 0
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -48,7 +45,7 @@ async def handle_manager_incoming_messages(manager_client):
         async for message in manager_client:
 
             msg = json.loads(message)
-            await logger.info("Message from manager: {}".format(msg))
+            await logger.info(f"Message from manager: {msg}")
 
             if "event" in msg:
                 await asyncio.wait([intf.send(json.dumps(msg)) for intf in INTERFACES])
@@ -62,13 +59,33 @@ async def handle_manager_incoming_messages(manager_client):
 
 async def project_manager_client():
 
-    async with websockets.client.connect("ws://localhost:6790") as manager_client:
+    while True:
 
-        asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
+        await logger.info("Attempting connection to manager...")
 
-        while True:
-            msg = await MANAGER_RPC_REQUEST_QUEUE.get()
-            await manager_client.send(json.dumps(msg))
+        # TODO if manager does not run initially, this won't connect even if the manager gets started afterwards
+        async with websockets.connect("ws://localhost:6790") as manager_client:
+
+            await logger.info("Connected to manager.")
+
+            future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
+
+            while True:
+
+                if future.done():
+                    break
+
+                try:
+                    msg = await asyncio.wait_for(MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
+                except asyncio.TimeoutError:
+                    continue
+
+                try:
+                    await manager_client.send(json.dumps(msg))
+                except websockets.exceptions.ConnectionClosed:
+                    await MANAGER_RPC_REQUEST_QUEUE.put(msg)
+                    break
+
 
 # TODO log UI id...
 # TODO notify RPC requests to other interfaces to let them know what happened?
@@ -78,7 +95,7 @@ def rpc(f):
         msg = await f(req, ui, args)
         j = json.dumps(msg)
         await asyncio.wait([ui.send(j)])
-        await logger.debug("RPC request: {}, args: {}, result: {}".format(req, args, j))
+        await logger.debug(f"RPC request: {req}, args: {args}, result: {j}")
 
     return wrapper
 
@@ -135,7 +152,7 @@ async def get_object_types(req, ui, args) -> Dict:
                 continue
 
             # TODO ancestor
-            msg["data"].append({"type": "{}/{}".format(module.__name__, cls[0]), "description": cls[1].__DESCRIPTION__})
+            msg["data"].append({"type": f"{module.__name__}/{cls[0]}", "description": cls[1].__DESCRIPTION__})
 
     return msg
 
@@ -152,10 +169,10 @@ async def save_scene(req, ui, args) -> Dict:
 
     old_scene = await db.scenes.find_one({"_id": SCENE["_id"]})
     if old_scene:
-        result = await db.scenes.replace_one({'_id': old_scene["_id"]}, SCENE)
+        await db.scenes.replace_one({'_id': old_scene["_id"]}, SCENE)
         await logger.debug("scene updated")
     else:
-        result = await db.scenes.insert_one(SCENE)
+        await db.scenes.insert_one(SCENE)
         await logger.debug("scene created")
 
     return msg
@@ -172,10 +189,10 @@ async def save_project(req, ui, args) -> Dict:
 
     old_project = await db.projects.find_one({"_id": PROJECT["_id"]})
     if old_project:
-        result = await db.projects.replace_one({'_id': old_project["_id"]}, PROJECT)
+        await db.projects.replace_one({'_id': old_project["_id"]}, PROJECT)
         await logger.debug("project updated")
     else:
-        result = await db.projects.insert_one(PROJECT)
+        await db.projects.insert_one(PROJECT)
         await logger.debug("project created")
 
     action_names = []
@@ -186,7 +203,7 @@ async def save_project(req, ui, args) -> Dict:
                 for act in aps["actions"]:
                     action_names.append(act["id"])
     except KeyError as e:
-        await logger.error("Project data invalid: {}".format(e))
+        await logger.error(f"Project data invalid: {e}")
         return response(req, False, ["Project data invalid!", str(e)])
 
     project_path = os.path.join(arcor2.projects.__path__[0], PROJECT["_id"])
@@ -217,8 +234,7 @@ async def get_object_actions(req, ui, args) -> Dict:
     try:
         module_name, cls_name = args["type"].split('/')
     except (TypeError, ValueError):
-        await asyncio.wait([ui.send(json.dumps(response(req, False, ["Invalid module or object type."])))])
-        return
+        return response(req, False, ["Invalid module or object type."])
 
     msg = response(req)
     msg["data"] = []
@@ -235,7 +251,7 @@ async def get_object_actions(req, ui, args) -> Dict:
         meta = method[1].__action__
 
         data = {"name": method[0], "blocking": meta.blocking, "free": meta.free, "composite": False, "blackbox": False,
-         "action_args": []}
+                "action_args": []}
 
         for name, ttype in get_type_hints(method[1]).items():
 
@@ -248,7 +264,7 @@ async def get_object_actions(req, ui, args) -> Dict:
                 data["action_args"].append({"name": name, "type": ttype.__name__})
 
             except AttributeError:
-                print("Skipping {}".format(ttype))  # TODO make a fix for Union
+                print(f"Skipping {ttype}")  # TODO make a fix for Union
 
         msg["data"].append(data)
 
@@ -328,7 +344,7 @@ async def server(ui, path, extra_argument) -> None:
                 try:
                     rpc_func = RPC_DICT[data['request']]
                 except KeyError as e:
-                    await logger.error("Unknown RPC request: {}.".format(e))
+                    await logger.error(f"Unknown RPC request: {e}.")
                     continue
 
                 await rpc_func(data['request'], ui, data.get("args", {}))
@@ -338,13 +354,15 @@ async def server(ui, path, extra_argument) -> None:
                 try:
                     event_func = EVENT_DICT[data["event"]]
                 except KeyError as e:
-                    await logger.error("Unknown event type: {}.".format(e))
+                    await logger.error(f"Unknown event type: {e}.")
                     continue
 
                 await event_func(ui, data["data"])
 
             else:
-                await logger.error("unsupported format of message: {}".format(data))
+                await logger.error(f"unsupported format of message: {data}")
+    except websockets.exceptions.ConnectionClosed:
+        pass
     finally:
         await unregister(ui)
 
