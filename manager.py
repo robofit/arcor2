@@ -7,7 +7,7 @@ import json
 import websockets
 import functools
 import sys
-from typing import Dict, List, Union, Set
+from typing import Dict, List, Union, Set, Optional
 import arcor2.core
 import arcor2.user_objects
 import arcor2.projects
@@ -29,12 +29,12 @@ mongo = motor.motor_asyncio.AsyncIOMotorClient()
 
 
 def rpc(f):
-    async def wrapper(req, ui, args):
+    async def wrapper(req, ui, args, req_id):
 
-        msg = await f(req, ui, args)
+        msg = await f(req, ui, args, req_id)
         j = json.dumps(msg)
         await asyncio.wait([ui.send(j)])
-        await logger.debug("RPC request: {}, args: {}, result: {}".format(req, args, j))
+        await logger.debug("RPC request: {}, args: {}, req_id: {}, result: {}".format(req, args, req_id, j))
 
     return wrapper
 
@@ -44,9 +44,12 @@ def process_running() -> bool:
     return PROCESS and PROCESS.returncode is None
 
 
-def response(resp_to: str, result: bool = True, messages: List[str] = []) -> Dict:
+def response(resp_to: str, req_id: int, result: bool = True, messages: Optional[List[str]] = None) -> Dict:
 
-    return {"response": resp_to, "result": result, "messages": messages}
+    if messages is None:
+        messages = []
+
+    return {"response": resp_to, "req_id": req_id, "result": result, "messages": messages}
 
 
 async def read_proc_stdout():
@@ -69,13 +72,13 @@ async def read_proc_stdout():
 
 
 @rpc
-async def project_run(req, client, args) -> Dict:
+async def project_run(req, client, args, req_id) -> Dict:
 
     global PROCESS
     global TASK
 
     if process_running():
-        return response(req, False, ["Already running!"])
+        return response(req, req_id, False, ["Already running!"])
 
     path = os.path.join(arcor2.projects.__path__[0], PROJECT, "script.py")
 
@@ -84,15 +87,15 @@ async def project_run(req, client, args) -> Dict:
                                                     stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is None:
         TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
-        return response(req)
+        return response(req, req_id)
     else:
-        return response(req, False, ["Failed to start project."])
+        return response(req, req_id, False, ["Failed to start project."])
 
 @rpc
-async def project_stop(req, client, args) -> Dict:
+async def project_stop(req, client, args, req_id) -> Dict:
 
     if not process_running():
-        return response(req, False, ["Project not running."])
+        return response(req, req_id, False, ["Project not running."])
 
     await logger.info("Terminating process")
 
@@ -102,32 +105,32 @@ async def project_stop(req, client, args) -> Dict:
     await logger.info("Waiting for process to finish...")
     # await PROCESS.wait()
     await TASK
-    return response(req)
+    return response(req, req_id)
 
 @rpc
-async def project_pause(req, client, args) -> Dict:
+async def project_pause(req, client, args, req_id) -> Dict:
 
     if not process_running():
-        return response(req, False, ["Project not running."])
+        return response(req, req_id, False, ["Project not running."])
 
     # TODO check if it is not already paused
 
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
-    return response(req)
+    return response(req, req_id)
 
 
 @rpc
-async def project_resume(req, client, args) -> Dict:
+async def project_resume(req, client, args, req_id) -> Dict:
 
     if not process_running():
-        return response(req, False, ["Project not running."])
+        return response(req, req_id, False, ["Project not running."])
 
     # TODO check if paused
 
     PROCESS.stdin.write("r\n".encode())
     await PROCESS.stdin.drain()
-    return response(req)
+    return response(req, req_id)
 
 
 async def send_to_clients(data: Dict) -> None:
@@ -171,7 +174,7 @@ async def server(client, path, extra_argument) -> None:
                     await logger.error("Unknown RPC request: {}.".format(e))
                     continue
 
-                await rpc_func(data['request'], client, data.get("args", {}))
+                await rpc_func(data['request'], client, data.get("args", {}), data.get("req_id", 0))
             else:
                 await logger.error("unsupported format of message: {}".format(data))
     finally:

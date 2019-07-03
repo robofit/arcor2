@@ -7,7 +7,7 @@ import json
 import websockets
 import functools
 import sys
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 import inspect
 from arcor2.core import WorldObject
 import arcor2.core
@@ -20,6 +20,7 @@ from aiologger import Logger
 import motor.motor_asyncio
 import aiofiles
 import os
+from arcor2.manager import RPC_DICT as MANAGER_RPC_DICT
 
 
 # TODO validation of scene/project -> in thread pool executor (CPU intensive)
@@ -33,20 +34,45 @@ SCENE: Dict = {}
 PROJECT: Dict = {}
 INTERFACES: Set = set()
 
-MANAGER_CLIENT = websockets.connect("ws://localhost:6790")
+# TODO
+MANAGER_RPC_REQUEST_QUEUE = asyncio.Queue()
+MANAGER_RPC_RESPONSE_QUEUE = asyncio.Queue()
+
+MANAGER_RPC_REQ_ID = 0
 
 
-async def handle_manager_events():
+async def handle_manager_incoming_messages(manager_client):
 
-    async for message in MANAGER_CLIENT:
+    try:
 
-        msg = json.loads(message)
-        await logger.info("Message from manager: {}".format(msg))
-        # TODO process message
-        await asyncio.wait([intf.send(json.dumps(msg)) for intf in INTERFACES])
+        async for message in manager_client:
+
+            msg = json.loads(message)
+            await logger.info("Message from manager: {}".format(msg))
+
+            if "event" in msg:
+                await asyncio.wait([intf.send(json.dumps(msg)) for intf in INTERFACES])
+            elif "response" in msg:
+                await MANAGER_RPC_RESPONSE_QUEUE.put(msg)
+
+    except websockets.exceptions.ConnectionClosed:
+        await logger.error("Connection to manager closed.")
+        # TODO try to open it again and refuse requests meanwhile
 
 
-def rpc(f):  # TODO log UI id...
+async def project_manager_client():
+
+    async with websockets.client.connect("ws://localhost:6790") as manager_client:
+
+        asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
+
+        while True:
+            msg = await MANAGER_RPC_REQUEST_QUEUE.get()
+            await manager_client.send(json.dumps(msg))
+
+# TODO log UI id...
+# TODO notify RPC requests to other interfaces to let them know what happened?
+def rpc(f):
     async def wrapper(req, ui, args):
 
         msg = await f(req, ui, args)
@@ -57,7 +83,10 @@ def rpc(f):  # TODO log UI id...
     return wrapper
 
 
-def response(resp_to: str, result: bool = True, messages: List[str] = []) -> Dict:
+def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None) -> Dict:
+
+    if messages is None:
+        messages = []
 
     return {"response": resp_to, "result": result, "messages": messages}
 
@@ -229,10 +258,23 @@ async def get_object_actions(req, ui, args) -> Dict:
 @rpc
 async def manager_request(req, ui, args) -> Dict:
 
-    await MANAGER_CLIENT.send(json.dumps({"request": "runProject"}))
-    # TODO how to get response here? some queue?
+    global MANAGER_RPC_REQ_ID
+
+    req_id = MANAGER_RPC_REQ_ID
+    msg = {"request": req, "args": args, "req_id": req_id}
+    MANAGER_RPC_REQ_ID += 1
+
+    await MANAGER_RPC_REQUEST_QUEUE.put(msg)
     # TODO process request
-    return response(req)
+
+    # TODO better way to get correct response based on req_id?
+    while True:
+        resp = await MANAGER_RPC_RESPONSE_QUEUE.get()
+        if resp["req_id"] == req_id:
+            del resp["req_id"]
+            return resp
+        else:
+            await MANAGER_RPC_RESPONSE_QUEUE.put(resp)
 
 
 async def register(websocket) -> None:
@@ -260,9 +302,11 @@ async def project_change(ui, project) -> None:
 RPC_DICT: Dict = {'getObjectTypes': get_object_types,
                   'getObjectActions': get_object_actions,
                   'saveProject': save_project,
-                  'saveScene': save_scene,
-                  'runProject': manager_request,
-                  'stopProject': manager_request}
+                  'saveScene': save_scene}
+
+# add Project Manager RPC API
+for k, v in MANAGER_RPC_DICT.items():
+    RPC_DICT[k] = manager_request
 
 EVENT_DICT: Dict = {'sceneChanged': scene_change,
                     'projectChanged': project_change}
@@ -309,7 +353,7 @@ async def multiple_tasks():
 
     bound_handler = functools.partial(server, extra_argument='spam')
 
-    input_coroutines = [websockets.serve(bound_handler, '0.0.0.0', 6789), handle_manager_events()]
+    input_coroutines = [websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client()]
     res = await asyncio.gather(*input_coroutines, return_exceptions=True)
     return res
 
