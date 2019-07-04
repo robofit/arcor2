@@ -56,11 +56,31 @@ def program_src(project: Dict, scene: Dict) -> str:
 def add_logic_to_loop(tree, project: Dict):
 
     loop = main_loop_body(tree)
-    next_action = None
+
+    actions_cache = {}
+    first_action_id = None
+    last_action_id = None
+
+    for obj in project["objects"]:
+        for aps in obj["action_points"]:
+            for act in aps["actions"]:
+                actions_cache[act["id"]] = act
+                if act["inputs"][0]["default"] == "start":
+                    first_action_id = act["id"]
+                elif act["outputs"][0]["default"] == "end":
+                    last_action_id = act["id"]
+
+    if first_action_id is None:
+        raise GenerateSourceException("'start' action not found.")
+
+    if last_action_id is None:
+        raise GenerateSourceException("'end' action not found.")
+
+    next_action_id = first_action_id
 
     while True:
 
-        act = find_action(project, next_action)
+        act = actions_cache[next_action_id]
 
         if len(loop) == 1 and isinstance(loop[0], Pass):
             # pass is not necessary now
@@ -76,24 +96,11 @@ def add_logic_to_loop(tree, project: Dict):
                                                                         attr=act["id"],
                                                                         ctx=Load()))])
 
-        if act["outputs"][0]["default"] == "end":
+        if act["id"] == last_action_id:
             break
 
-        next_action = act["outputs"][0]["default"]
+        next_action_id = act["outputs"][0]["default"]
 
-
-def find_action(project: Dict, which: Union[None, Dict] = None) -> Dict:
-
-    for obj in project["objects"]:
-        for aps in obj["action_points"]:
-            for act in aps["actions"]:
-
-                if which is None and act["inputs"][0]["default"]:
-                    return act
-                elif which and act["id"] == which:
-                    return act
-
-    raise GenerateSourceException("Action {} not found.".format(which))
 
 
 def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
