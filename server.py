@@ -7,7 +7,7 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
-from typing import Dict, List, Set, Optional
+from typing import Dict, Set, Callable, Optional
 import inspect
 from arcor2.core import WorldObject
 import arcor2.core
@@ -21,9 +21,11 @@ import motor.motor_asyncio  # type: ignore
 import aiofiles  # type: ignore
 import os
 from arcor2.manager import RPC_DICT as MANAGER_RPC_DICT
+from arcor2.helpers import response, rpc, server
 
 
 # TODO validation of scene/project -> in thread pool executor (CPU intensive)
+# TODO notify RPC requests to other interfaces to let them know what happened?
 
 logger = Logger.with_default_handlers(name='arcor2-server')
 
@@ -87,27 +89,6 @@ async def project_manager_client():
                     break
 
 
-# TODO log UI id...
-# TODO notify RPC requests to other interfaces to let them know what happened?
-def rpc(f):
-    async def wrapper(req, ui, args):
-
-        msg = await f(req, ui, args)
-        j = json.dumps(msg)
-        await asyncio.wait([ui.send(j)])
-        await logger.debug(f"RPC request: {req}, args: {args}, result: {j}")
-
-    return wrapper
-
-
-def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None) -> Dict:
-
-    if messages is None:
-        messages = []
-
-    return {"response": resp_to, "result": result, "messages": messages}
-
-
 def scene_event() -> str:
     return json.dumps({"event": "sceneChanged", "data": SCENE})
 
@@ -138,8 +119,8 @@ async def notify_project(interface) -> None:
     await asyncio.wait([interface.send(message)])
 
 
-@rpc
-async def get_object_types(req, ui, args) -> Dict:
+@rpc(logger)
+async def get_object_types(req: str, ui, args: Dict) -> Dict:
 
     msg = response(req)
     msg["data"] = []
@@ -150,14 +131,12 @@ async def get_object_types(req, ui, args) -> Dict:
         for cls in inspect.getmembers(module, inspect.isclass):
             if not issubclass(cls[1], WorldObject):
                 continue
-
             # TODO ancestor
             msg["data"].append({"type": f"{module.__name__}/{cls[0]}", "description": cls[1].__DESCRIPTION__})
-
     return msg
 
 
-@rpc
+@rpc(logger)
 async def save_scene(req, ui, args) -> Dict:
 
     if "_id" not in SCENE:
@@ -178,7 +157,7 @@ async def save_scene(req, ui, args) -> Dict:
     return msg
 
 
-@rpc
+@rpc(logger)
 async def save_project(req, ui, args) -> Dict:
 
     if "_id" not in PROJECT:
@@ -228,7 +207,7 @@ async def save_project(req, ui, args) -> Dict:
     return response(req)
 
 
-@rpc
+@rpc(logger)
 async def get_object_actions(req, ui, args) -> Dict:
 
     try:
@@ -271,7 +250,7 @@ async def get_object_actions(req, ui, args) -> Dict:
     return msg
 
 
-@rpc
+@rpc(logger)
 async def manager_request(req, ui, args) -> Dict:
 
     global MANAGER_RPC_REQ_ID
@@ -306,11 +285,13 @@ async def unregister(websocket) -> None:
 
 
 async def scene_change(ui, scene) -> None:
+    # TODO validate
     SCENE.update(scene)
     await notify_scene_change_to_others(ui)
 
 
 async def project_change(ui, project) -> None:
+    # TODO validate
     PROJECT.update(project)
     await notify_project_change_to_others(ui)
 
@@ -328,49 +309,10 @@ EVENT_DICT: Dict = {'sceneChanged': scene_change,
                     'projectChanged': project_change}
 
 
-async def server(ui, path, extra_argument) -> None:
-
-    await register(ui)
-    try:
-        async for message in ui:
-
-            try:
-                data = json.loads(message)
-            except json.decoder.JSONDecodeError as e:
-                await logger.error(e)
-                continue
-
-            if "request" in data:  # ...then it is RPC
-                try:
-                    rpc_func = RPC_DICT[data['request']]
-                except KeyError as e:
-                    await logger.error(f"Unknown RPC request: {e}.")
-                    continue
-
-                await rpc_func(data['request'], ui, data.get("args", {}))
-
-            elif "event" in data:  # ...event from UI
-
-                try:
-                    event_func = EVENT_DICT[data["event"]]
-                except KeyError as e:
-                    await logger.error(f"Unknown event type: {e}.")
-                    continue
-
-                await event_func(ui, data["data"])
-
-            else:
-                await logger.error(f"unsupported format of message: {data}")
-    except websockets.exceptions.ConnectionClosed:
-        pass
-    finally:
-        await unregister(ui)
-
-
 async def multiple_tasks():
 
-    bound_handler = functools.partial(server, extra_argument='spam')
-
+    bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
+                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
     input_coroutines = [websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client()]
     res = await asyncio.gather(*input_coroutines, return_exceptions=True)
     return res
