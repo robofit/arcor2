@@ -7,7 +7,6 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
-import os
 from typing import Dict, Set, List
 import inspect
 from arcor2 import generate_source

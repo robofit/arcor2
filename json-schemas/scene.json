@@ -1,149 +1,78 @@
 {
-  "definitions": {},
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "http://example.com/root.json",
   "type": "object",
-  "title": "The Root Schema",
+  "title": "ARCOR2 scene schema",
+  "definitions": {
+    "pose": {
+      "type": "object",
+      "properties":{
+        "position": {
+          "type": "object",
+          "properties": {
+            "x": "number",
+            "y": "number",
+            "z": "number"
+          },
+          "required": ["x", "y", "z"]
+        },
+        "orientation": {
+          "type": "object",
+          "properties": {
+            "x": "number",
+            "y": "number",
+            "z": "number",
+            "w": "number"
+          },
+          "required": ["x", "y", "z", "w"]
+        }
+      },
+      "required": ["position", "orientation"]
+    },
+    "sceneObject": {
+      "type": "object",
+      "description": "Instances of given type in the scene.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "This will be used as variable name in script (transformed into lower case).",
+          "examples": ["robot1", "bigBox"],
+          "pattern": "^[^\\d\\W]\\w*\\Z"
+        },
+        "type": {
+          "type": "string",
+          "description": "Respective class.",
+          "examples": ["Generic", "Robot"],
+          "pattern": "[a-zA-Z_][a-zA-Z0-9_]*"
+        },
+        "pose": {
+          "type": "object",
+          "properties": {
+            "$ref": "#/definitions/pose"
+          }
+        }
+      },
+      "required": ["id", "type", "pose"]
+    }
+  },
   "required": [
     "_id",
     "objects"
   ],
   "properties": {
     "_id": {
-      "$id": "#/properties/_id",
       "type": "string",
-      "title": "The _id Schema",
-      "default": "",
+      "description": "Scene id. Used as primary key in MongoDB. Should not contain dot.",
+      "minLength": 3,
       "examples": [
-        "jabloPCB/scenes/default"
+        "anything_without_dot"
       ],
-      "pattern": "^(.*)$"
+      "pattern": "^[^.]*$"
     },
     "objects": {
-      "$id": "#/properties/objects",
       "type": "array",
-      "title": "The Objects Schema",
-      "items": {
-        "$id": "#/properties/objects/items",
-        "type": "object",
-        "title": "The Items Schema",
-        "required": [
-          "id",
-          "type",
-          "position",
-          "orientation"
-        ],
-        "properties": {
-          "id": {
-            "$id": "#/properties/objects/items/properties/id",
-            "type": "string",
-            "title": "The Id Schema",
-            "default": "",
-            "examples": [
-              "Robot"
-            ],
-            "pattern": "^(.*)$"
-          },
-          "type": {
-            "$id": "#/properties/objects/items/properties/type",
-            "type": "string",
-            "title": "The Type Schema",
-            "default": "",
-            "examples": [
-              "Robot"
-            ],
-            "pattern": "^(.*)$"
-          },
-          "position": {
-            "$id": "#/properties/objects/items/properties/position",
-            "type": "object",
-            "title": "The Position Schema",
-            "required": [
-              "x",
-              "y",
-              "z"
-            ],
-            "properties": {
-              "x": {
-                "$id": "#/properties/objects/items/properties/position/properties/x",
-                "type": "number",
-                "title": "The X Schema",
-                "default": 0.0,
-                "examples": [
-                  0.1
-                ]
-              },
-              "y": {
-                "$id": "#/properties/objects/items/properties/position/properties/y",
-                "type": "number",
-                "title": "The Y Schema",
-                "default": 0.0,
-                "examples": [
-                  0.2
-                ]
-              },
-              "z": {
-                "$id": "#/properties/objects/items/properties/position/properties/z",
-                "type": "integer",
-                "title": "The Z Schema",
-                "default": 0,
-                "examples": [
-                  0
-                ]
-              }
-            }
-          },
-          "orientation": {
-            "$id": "#/properties/objects/items/properties/orientation",
-            "type": "object",
-            "title": "The Orientation Schema",
-            "required": [
-              "x",
-              "y",
-              "z",
-              "w"
-            ],
-            "properties": {
-              "x": {
-                "$id": "#/properties/objects/items/properties/orientation/properties/x",
-                "type": "integer",
-                "title": "The X Schema",
-                "default": 0,
-                "examples": [
-                  0
-                ]
-              },
-              "y": {
-                "$id": "#/properties/objects/items/properties/orientation/properties/y",
-                "type": "integer",
-                "title": "The Y Schema",
-                "default": 0,
-                "examples": [
-                  0
-                ]
-              },
-              "z": {
-                "$id": "#/properties/objects/items/properties/orientation/properties/z",
-                "type": "integer",
-                "title": "The Z Schema",
-                "default": 0,
-                "examples": [
-                  0
-                ]
-              },
-              "w": {
-                "$id": "#/properties/objects/items/properties/orientation/properties/w",
-                "type": "integer",
-                "title": "The W Schema",
-                "default": 0,
-                "examples": [
-                  1
-                ]
-              }
-            }
-          }
-        }
-      }
+      "items": { "$ref": "#/definitions/sceneObject" },
+      "default": []
     }
   }
 }

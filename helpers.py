@@ -7,6 +7,7 @@ import re
 import fastjsonschema
 import os
 
+import arcor2
 import arcor2.object_types
 from arcor2.object_types import Generic
 
@@ -58,7 +59,7 @@ def validate_event(logger, validate_func: Callable, arg_idx: int = 1):
 
 def read_schema(schema: str) -> Dict:
 
-    with open(os.path.join("json-schemas", schema + ".json"), 'r') as f:
+    with open(os.path.join(arcor2.__path__[0], "json-schemas", schema + ".json"), 'r') as f:
         return json.loads(f.read())
 
 
