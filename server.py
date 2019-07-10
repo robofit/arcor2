@@ -240,8 +240,8 @@ async def save_project(req, ui, args) -> Dict:
 
     project_db = PROJECT.copy()  # shallow copy is enough here
     project_db["sources"] = {}
-    project_db["sources"]["resources.py"] = generate_source.derived_resources_class(PROJECT["_id"], action_names)
-    project_db["sources"]["script.py"] = generate_source.SCRIPT_HEADER +\
+    project_db["sources"]["resources"] = generate_source.derived_resources_class(PROJECT["_id"], action_names)
+    project_db["sources"]["script"] = generate_source.SCRIPT_HEADER +\
         generate_source.program_src(PROJECT, SCENE, built_in_types_names())
 
     db = mongo.arcor2

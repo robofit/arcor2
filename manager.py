@@ -142,11 +142,11 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     # TODO just write out all in sources?
     async with aiofiles.open(script_path, "w") as f:
-        await f.write(project["sources"]["script.py"])
+        await f.write(project["sources"]["script"])
     make_executable(script_path)
 
     async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
-        await f.write(project["sources"]["resources.py"])
+        await f.write(project["sources"]["resources"])
 
     scene = await db.scenes.find_one({"_id": project["scene_id"]})
 
