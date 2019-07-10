@@ -4,6 +4,8 @@ import json
 import asyncio
 import websockets
 import re
+import fastjsonschema
+import os
 
 import arcor2.object_types
 from arcor2.object_types import Generic
@@ -38,6 +40,25 @@ def rpc(logger):
 
         return wrapper
     return rpc_inner
+
+
+def validate_event(logger, validate_func: Callable, arg_idx: int = 1):
+    def validate_inner(f: Callable) -> Callable:
+        async def wrapper(*args, **kwargs):
+            try:
+                validate_func(args[arg_idx])
+            except fastjsonschema.JsonSchemaException as e:
+                await logger.error(str(e))
+                return
+            return await f(*args, **kwargs)
+        return wrapper
+    return validate_inner
+
+
+def read_schema(schema: str) -> Dict:
+
+    with open(os.path.join("json-schemas", schema + ".json"), 'r') as f:
+        return json.loads(f.read())
 
 
 async def server(client, path, logger, register, unregister, rpc_dict: Dict, event_dict: Optional[Dict] = None) -> None:

@@ -7,6 +7,7 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
+import os
 from typing import Dict, Set, List
 import inspect
 from arcor2 import generate_source
@@ -14,8 +15,9 @@ from typing import get_type_hints
 from aiologger import Logger  # type: ignore
 import motor.motor_asyncio  # type: ignore
 from arcor2.manager import RPC_DICT as MANAGER_RPC_DICT
-from arcor2.helpers import response, rpc, server
+from arcor2.helpers import response, rpc, server, validate_event, read_schema
 from undecorated import undecorated
+import fastjsonschema
 
 
 # TODO validation of scene/project -> in thread pool executor (CPU intensive)
@@ -37,6 +39,9 @@ MANAGER_RPC_REQ_ID: int = 0
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: Dict[str, Dict] = {}
 OBJECT_ACTIONS: Dict[str, List[Dict]] = {}
+
+VALIDATE_SCENE = fastjsonschema.compile(read_schema("scene"))
+VALIDATE_PROJECT = fastjsonschema.compile(read_schema("project"))
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -395,14 +400,16 @@ async def unregister(websocket) -> None:
     INTERFACES.remove(websocket)
 
 
+@validate_event(logger, VALIDATE_SCENE)
 async def scene_change(ui, scene) -> None:
-    # TODO validate
+
     SCENE.update(scene)
     await notify_scene_change_to_others(ui)
 
 
+@validate_event(logger, VALIDATE_PROJECT)
 async def project_change(ui, project) -> None:
-    # TODO validate
+
     PROJECT.update(project)
     await notify_project_change_to_others(ui)
 

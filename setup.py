@@ -22,6 +22,7 @@ setup(
         'motor',
         'aiofiles',
         'dataclasses_json',
-        'undecorated'
+        'undecorated',
+        'fastjsonschema'
     ]
 )
