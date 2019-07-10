@@ -46,7 +46,8 @@ def validate_event(logger, validate_func: Callable, arg_idx: int = 1):
     def validate_inner(f: Callable) -> Callable:
         async def wrapper(*args, **kwargs):
             try:
-                validate_func(args[arg_idx])
+                # validate_func may add default values
+                args[arg_idx] = validate_func(args[arg_idx])
             except fastjsonschema.JsonSchemaException as e:
                 await logger.error(str(e))
                 return
