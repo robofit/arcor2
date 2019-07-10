@@ -39,6 +39,7 @@ MANAGER_RPC_REQ_ID: int = 0
 OBJECT_TYPES: Dict[str, Dict] = {}
 OBJECT_ACTIONS: Dict[str, List[Dict]] = {}
 
+
 VALIDATE_SCENE = fastjsonschema.compile(read_schema("scene"))
 VALIDATE_PROJECT = fastjsonschema.compile(read_schema("project"))
 

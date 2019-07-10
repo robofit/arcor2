@@ -1,34 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://example.com/root.json",
-  "type": "object",
   "title": "ARCOR2 project schema",
   "definitions": {
-    "pose": {
-      "type": "object",
-      "properties":{
-        "position": {
-          "type": "object",
-          "properties": {
-            "x": "number",
-            "y": "number",
-            "z": "number"
-          },
-          "required": ["x", "y", "z"]
-        },
-        "orientation": {
-          "type": "object",
-          "properties": {
-            "x": "number",
-            "y": "number",
-            "z": "number",
-            "w": "number"
-          },
-          "required": ["x", "y", "z", "w"]
-        }
-      },
-      "required": ["position", "orientation"]
-    },
     "action": {
       "type": "object",
       "properties": {
@@ -93,10 +66,7 @@
           "examples": ["AP1"]
         },
         "pose": {
-          "type": "object",
-          "properties": {
-            "$ref": "#/definitions/pose"
-          }
+          "$ref": "common.json#/definitions/pose"
         },
         "actions":{
           "type": "array",
@@ -125,6 +95,7 @@
       }
     }
   },
+  "type": "object",
   "required": [
     "_id",
     "objects"
