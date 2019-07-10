@@ -9,11 +9,12 @@ from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, C
 import autopep8  # type: ignore
 import os
 import stat
-from typing import Dict, Optional, List, Union
+from typing import Dict, Optional, List, Set
 import importlib
 import typed_astunparse  # type: ignore
 import static_typing as st  # type: ignore
-from arcor2.core import ResourcesBase
+from arcor2.resources import ResourcesBase
+from arcor2.helpers import convert_cc
 
 SCRIPT_HEADER = "#!/usr/bin/env python3\n""# -*- coding: utf-8 -*-\n\n"
 
@@ -24,29 +25,123 @@ class GenerateSourceException(Exception):
     pass
 
 
+def get_object_actions(object_source: str) -> List:
+
+    tree = object_cls_def(object_source)
+
+    action_attr: Dict = {}
+    ret: List = []
+
+    for node in tree.body:
+        if not isinstance(node, Assign):
+            continue
+
+        if not hasattr(node, "targets"):
+            continue
+
+        if not len(node.targets) == 1 or not isinstance(node.targets[0], Attribute):
+            continue
+
+        if node.targets[0].attr != "__action__":
+            continue
+
+        # TODO further checks?
+        action_attr[node.targets[0].value.id] = {}
+        for kwarg in node.value.keywords:
+            action_attr[node.targets[0].value.id][kwarg.arg] = kwarg.value.value
+
+    # TODO add missing attributes (e.g. free, composite, blackbox) to action_attr?
+
+    for node in tree.body:
+
+        if not isinstance(node, FunctionDef):
+            continue
+
+        for decorator in node.decorator_list:
+            if decorator.id == "action":
+                if node.name in action_attr:
+                    break
+                raise GenerateSourceException(f"Method {node.name} has @action decorator, but no metadata.")
+        else:
+            raise GenerateSourceException(f"Method {node.name} without @action decorator.")
+
+        d: Dict = {"name": node.name, "action_args": []}
+        d.update(action_attr[node.name])
+
+        for arg in node.args.args:
+
+            if arg.arg == "self":
+                continue
+
+            d["action_args"].append({"name": arg.arg, "type": arg.annotation.id})
+
+        ret.append(d)
+
+    return ret
+
+
+def object_type_info(object_source: str) -> Dict:
+
+    tree = object_cls_def(object_source)
+
+    d = {"base": "", "description": ""}
+
+    if len(tree.bases) > 1:
+        raise GenerateSourceException("Only one base class is supported!")
+
+    if tree.bases:
+        d["base"] = tree.bases[0].id
+
+    for node in tree.body:
+        if not isinstance(node, Assign):
+            continue
+        if len(node.targets) == 1 and isinstance(node.targets[0], Name) and node.targets[0].id == "__DESCRIPTION__":
+            d["description"] = node.value.s
+
+    return d
+
+
+def object_cls_def(object_source: str) -> ClassDef:
+
+    tree = parse(object_source)
+
+    cls_def = None
+
+    for node in tree.body:
+
+        if isinstance(node, ClassDef):
+            if cls_def is None:
+                cls_def = node
+                break
+            else:
+                raise GenerateSourceException("Multiple class definition!")
+    else:
+        raise GenerateSourceException("No class definition!")
+
+    return cls_def
+
+
 def fix_object_name(object_id: str) -> str:
 
-    return object_id.lower().replace(' ', '_')
+    return convert_cc(object_id).replace(' ', '_')
 
 
-def program_src(project: Dict, scene: Dict) -> str:
+def program_src(project: Dict, scene: Dict, built_in_objects: Set) -> str:
 
     tree = empty_script_tree()
-    add_import(tree, "arcor2.projects." + project["_id"] + ".resources", "Resources")
+    add_import(tree, "resources", "Resources", try_to_import=False)
     add_cls_inst(tree, "Resources", "res")
 
     # TODO api???
     # get object instances from resources object
     for obj in scene["objects"]:
 
-        try:
-            module_name, cls_name = obj["type"].split('/')
-        except ValueError:
-            raise GenerateSourceException(
-                "Invalid object type {}, should be in format 'python_module/class'.".format(obj["type"]))
+        if obj["type"] in built_in_objects:
+            add_import(tree, "arcor2.object_types", obj["type"], try_to_import=False)
+        else:
+            add_import(tree, "object_types." + convert_cc(obj["type"]), obj["type"], try_to_import=False)
 
-        add_import(tree, module_name, cls_name)
-        object_instance_from_res(tree, obj["id"], cls_name)
+        object_instance_from_res(tree, obj["id"], obj["type"])
 
     add_logic_to_loop(tree, project)
 
@@ -102,7 +197,6 @@ def add_logic_to_loop(tree, project: Dict):
         next_action_id = act["outputs"][0]["default"]
 
 
-
 def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
 
     main_body = find_function("main", tree).body
@@ -110,7 +204,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
 
     for body_idx, body_item in enumerate(main_body):
 
-        if isinstance(body_item, Assign) or isinstance(body_item, AnnAssign):
+        if isinstance(body_item, (Assign, AnnAssign)):
             last_assign_idx = body_idx
 
     if last_assign_idx is None:
@@ -203,7 +297,7 @@ def find_function(name, tree) -> FunctionDef:
     return ff.function_node
 
 
-def add_import(node: Module, module: str, cls: str) -> None:
+def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) -> None:
     """
     Adds "from ... import ..." to the beginning of the script.
 
@@ -236,15 +330,17 @@ def add_import(node: Module, module: str, cls: str) -> None:
 
             return node
 
-    try:
-        imported_mod = importlib.import_module(module)
-    except ModuleNotFoundError as e:
-        raise GenerateSourceException(e)
+    if try_to_import:
 
-    try:
-        getattr(imported_mod, cls)
-    except AttributeError as e:
-        raise GenerateSourceException(e)
+        try:
+            imported_mod = importlib.import_module(module)
+        except ModuleNotFoundError as e:
+            raise GenerateSourceException(e)
+
+        try:
+            getattr(imported_mod, cls)
+        except AttributeError as e:
+            raise GenerateSourceException(e)
 
     tr = AddImportTransformer(module, cls)
     node = tr.visit(node)
@@ -410,7 +506,9 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
 
 def derived_resources_class(project_id: str, parameters: List[str]) -> str:
     tree = Module(body=[])
-    add_import(tree, "arcor2.core", ResourcesBase.__name__)
+
+    # TODO avoid having "arcor2.resources" as string - how?
+    add_import(tree, "arcor2.resources", ResourcesBase.__name__)
 
     derived_cls_name = "Resources"
 

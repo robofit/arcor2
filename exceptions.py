@@ -5,7 +5,7 @@ class Arcor2Exception(Exception):
     pass
 
 
-class WorldObjectException(Arcor2Exception):
+class GenericException(Arcor2Exception):
     pass
 
 

@@ -1,11 +1,13 @@
-from arcor2.core import WorldObject
+from arcor2.object_types import Generic
+from arcor2.object_types.utils import action
 from arcor2.data import ActionMetadata
 
 
-class Tester(WorldObject):
+class Tester(Generic):
 
     __DESCRIPTION__ = "A generic tester"
 
+    @action
     def run_test(self) -> None:  # not needed in demo 0, just for test purposes
         pass
 

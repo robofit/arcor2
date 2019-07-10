@@ -7,25 +7,28 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
-from typing import Dict, Union, Set, Callable, Optional
-import arcor2.core
-import arcor2.user_objects
-import arcor2.projects
+from typing import Dict, Union, Set, Callable
 from aiologger import Logger  # type: ignore
+import aiofiles  # type: ignore
 import motor.motor_asyncio  # type: ignore
 import os
-from arcor2.helpers import response, rpc, server
+from arcor2.helpers import response, rpc, server, convert_cc, built_in_types_names
+from arcor2.generate_source import make_executable
 
 
 logger = Logger.with_default_handlers(name='arcor2-manager')
 
-PROJECT: str = "demo_v0"
 PROCESS: Union[asyncio.subprocess.Process, None] = None
 TASK = None
 
 CLIENTS: Set = set()
 
 mongo = motor.motor_asyncio.AsyncIOMotorClient()
+
+try:
+    PROJECT_PATH = os.environ["ARCOR2_PROJECT_PATH"]
+except KeyError:
+    sys.exit("'ARCOR2_PROJECT_PATH' env. variable not set.")
 
 
 def process_running() -> bool:
@@ -64,7 +67,7 @@ async def project_run(req: str, client, args: Dict) -> Dict:
     if process_running():
         return response(req, False, ["Already running!"])
 
-    path = os.path.join(arcor2.projects.__path__[0], PROJECT, "script.py")
+    path = os.path.join(PROJECT_PATH, "script.py")
 
     await logger.info(f"Starting script: {path}")
     PROCESS = await asyncio.create_subprocess_exec(path, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
@@ -123,6 +126,66 @@ async def project_resume(req: str, client, args: Dict) -> Dict:
     return response(req)
 
 
+@rpc(logger)
+async def project_load(req: str, client, args: Dict) -> Dict:
+
+    # TODO check if there are some modifications in already loaded project (if any)
+
+    db = mongo.arcor2
+
+    try:
+        project = await db.projects.find_one({"_id": args["_id"]})
+    except KeyError as e:
+        return response(req, False, [str(e)])
+
+    script_path = os.path.join(PROJECT_PATH, "script.py")
+
+    # TODO just write out all in sources?
+    async with aiofiles.open(script_path, "w") as f:
+        await f.write(project["sources"]["script.py"])
+    make_executable(script_path)
+
+    async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
+        await f.write(project["sources"]["resources.py"])
+
+    scene = await db.scenes.find_one({"_id": project["scene_id"]})
+
+    objects_path = os.path.join(PROJECT_PATH, "object_types")
+
+    if not os.path.exists(objects_path):
+        os.makedirs(objects_path)
+
+        async with aiofiles.open(os.path.join(objects_path, "__init__.py"), mode='w') as f:
+            pass
+
+    built_in_types = built_in_types_names()
+
+    to_download = set()
+
+    # in scene, there might be more instances of one type
+    # ...here we will get necessary types
+    for obj in scene["objects"]:
+
+        # if built-in, do not attempt to find it in DB
+        if obj["type"] in built_in_types:
+            continue
+
+        to_download.add(obj["type"])
+
+    for obj_type_name in to_download:
+
+        obj_type = await db.object_types.find_one({"_id": obj_type_name})
+
+        if obj_type is None:
+            # TODO cleanup?
+            return response(req, False, [f'Failed to retrieve object type {obj_type_name}.'])
+
+        async with aiofiles.open(os.path.join(objects_path, convert_cc(obj_type_name)) + ".py", "w") as f:
+            await f.write(obj_type["source"])
+
+    return response(req)
+
+
 async def send_to_clients(data: Dict) -> None:
 
     if CLIENTS:
@@ -142,7 +205,8 @@ async def unregister(websocket) -> None:
 RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
                                  'stopProject': project_stop,
                                  'pauseProject': project_pause,
-                                 'resumeProject': project_resume}
+                                 'resumeProject': project_resume,
+                                 'loadProject': project_load}
 
 
 def main():

@@ -1,7 +1,20 @@
+import inspect
 from typing import Optional, List, Dict, Callable
 import json
 import asyncio
 import websockets
+import re
+
+import arcor2.object_types
+from arcor2.object_types import Generic
+
+_first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+_all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+def convert_cc(name):
+    s1 = _first_cap_re.sub(r'\1_\2', name)
+    return _all_cap_re.sub(r'\1_\2', s1).lower()
 
 
 def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None) -> Dict:
@@ -67,3 +80,25 @@ async def server(client, path, logger, register, unregister, rpc_dict: Dict, eve
         pass
     finally:
         await unregister(client)
+
+
+def built_in_types():
+    """
+    Yields class name and class definition tuple
+    """
+
+    for cls in inspect.getmembers(arcor2.object_types, inspect.isclass):
+        if not issubclass(cls[1], Generic):
+            continue
+
+        yield cls[0], cls[1]
+
+
+def built_in_types_names():
+
+    names = set()
+
+    for type_name, type_def in built_in_types():
+        names.add(type_name)
+
+    return names

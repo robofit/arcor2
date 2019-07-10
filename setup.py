@@ -21,6 +21,7 @@ setup(
         'aiologger',
         'motor',
         'aiofiles',
-        'dataclasses_json'
+        'dataclasses_json',
+        'undecorated'
     ]
 )

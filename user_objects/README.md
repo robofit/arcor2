@@ -1,0 +1,1 @@
+The package ```user_objects``` is to be deleted when AR Server will be able to create new object types.
