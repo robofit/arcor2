@@ -5,3 +5,6 @@ max-line-length=120
 
 # List of note tags to take in consideration, separated by a comma.
 notes=FIXME,XXX
+
+[REPORTS]
+output-format=colorized

@@ -1,312 +1,128 @@
 {
-  "definitions": {},
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://example.com/root.json",
-  "type": "object",
-  "title": "The Root Schema",
-  "required": [
-    "_id",
-    "scene_id",
-    "objects"
-  ],
-  "properties": {
-    "_id": {
-      "$id": "#/properties/_id",
-      "type": "string",
-      "title": "The _id Schema",
-      "default": "",
-      "examples": [
-        "demo_v0"
-      ],
-      "pattern": "^(.*)$"
-    },
-    "scene_id": {
-      "$id": "#/properties/scene_id",
-      "type": "string",
-      "title": "The Scene_id Schema",
-      "default": "",
-      "examples": [
-        "jabloPCB/scenes/default"
-      ],
-      "pattern": "^(.*)$"
-    },
-    "objects": {
-      "$id": "#/properties/objects",
-      "type": "array",
-      "title": "The Objects Schema",
-      "items": {
-        "$id": "#/properties/objects/items",
-        "type": "object",
-        "title": "The Items Schema",
-        "required": [
-          "id",
-          "action_points"
-        ],
-        "properties": {
-          "id": {
-            "$id": "#/properties/objects/items/properties/id",
-            "type": "string",
-            "title": "The Id Schema",
-            "default": "",
-            "examples": [
-              "BoxIN"
-            ],
-            "pattern": "^(.*)$"
-          },
-          "action_points": {
-            "$id": "#/properties/objects/items/properties/action_points",
-            "type": "array",
-            "title": "The Action_points Schema",
-            "items": {
-              "$id": "#/properties/objects/items/properties/action_points/items",
-              "type": "object",
-              "title": "The Items Schema",
-              "required": [
-                "id",
-                "position",
-                "orientation",
-                "actions"
-              ],
-              "properties": {
-                "id": {
-                  "$id": "#/properties/objects/items/properties/action_points/items/properties/id",
-                  "type": "string",
-                  "title": "The Id Schema",
-                  "default": "",
-                  "examples": [
-                    "transfer"
-                  ],
-                  "pattern": "^(.*)$"
-                },
-                "position": {
-                  "$id": "#/properties/objects/items/properties/action_points/items/properties/position",
-                  "type": "object",
-                  "title": "The Position Schema",
-                  "required": [
-                    "x",
-                    "y",
-                    "z"
-                  ],
-                  "properties": {
-                    "x": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/position/properties/x",
-                      "type": "number",
-                      "title": "The X Schema",
-                      "default": 0.0,
-                      "examples": [
-                        0.5
-                      ]
-                    },
-                    "y": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/position/properties/y",
-                      "type": "number",
-                      "title": "The Y Schema",
-                      "default": 0.0,
-                      "examples": [
-                        0.6
-                      ]
-                    },
-                    "z": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/position/properties/z",
-                      "type": "integer",
-                      "title": "The Z Schema",
-                      "default": 0,
-                      "examples": [
-                        0
-                      ]
-                    }
-                  }
-                },
-                "orientation": {
-                  "$id": "#/properties/objects/items/properties/action_points/items/properties/orientation",
-                  "type": "object",
-                  "title": "The Orientation Schema",
-                  "required": [
-                    "x",
-                    "y",
-                    "z",
-                    "w"
-                  ],
-                  "properties": {
-                    "x": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/orientation/properties/x",
-                      "type": "integer",
-                      "title": "The X Schema",
-                      "default": 0,
-                      "examples": [
-                        0
-                      ]
-                    },
-                    "y": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/orientation/properties/y",
-                      "type": "integer",
-                      "title": "The Y Schema",
-                      "default": 0,
-                      "examples": [
-                        0
-                      ]
-                    },
-                    "z": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/orientation/properties/z",
-                      "type": "integer",
-                      "title": "The Z Schema",
-                      "default": 0,
-                      "examples": [
-                        0
-                      ]
-                    },
-                    "w": {
-                      "$id": "#/properties/objects/items/properties/action_points/items/properties/orientation/properties/w",
-                      "type": "integer",
-                      "title": "The W Schema",
-                      "default": 0,
-                      "examples": [
-                        1
-                      ]
-                    }
-                  }
-                },
-                "actions": {
-                  "$id": "#/properties/objects/items/properties/action_points/items/properties/actions",
-                  "type": "array",
-                  "title": "The Actions Schema",
-                  "items": {
-                    "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items",
-                    "type": "object",
-                    "title": "The Items Schema",
-                    "required": [
-                      "id",
-                      "type",
-                      "parameters",
-                      "inputs",
-                      "outputs"
-                    ],
-                    "properties": {
-                      "id": {
-                        "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/id",
-                        "type": "string",
-                        "title": "The Id Schema",
-                        "default": "",
-                        "examples": [
-                          "MoveToBoxIN"
-                        ],
-                        "pattern": "^(.*)$"
-                      },
-                      "type": {
-                        "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/type",
-                        "type": "string",
-                        "title": "The Type Schema",
-                        "default": "",
-                        "examples": [
-                          "robot/move_to"
-                        ],
-                        "pattern": "^(.*)$"
-                      },
-                      "parameters": {
-                        "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/parameters",
-                        "type": "array",
-                        "title": "The Parameters Schema",
-                        "items": {
-                          "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/parameters/items",
-                          "type": "object",
-                          "title": "The Items Schema",
-                          "required": [
-                            "id",
-                            "type",
-                            "value"
-                          ],
-                          "properties": {
-                            "id": {
-                              "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/parameters/items/properties/id",
-                              "type": "string",
-                              "title": "The Id Schema",
-                              "default": "",
-                              "examples": [
-                                "end_effector"
-                              ],
-                              "pattern": "^(.*)$"
-                            },
-                            "type": {
-                              "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/parameters/items/properties/type",
-                              "type": "string",
-                              "title": "The Type Schema",
-                              "default": "",
-                              "examples": [
-                                "string"
-                              ],
-                              "pattern": "^(.*)$"
-                            },
-                            "value": {
-                              "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/parameters/items/properties/value",
-                              "type": ["string", "integer", "number"],
-                              "title": "The Value Schema",
-                              "default": "",
-                              "examples": [
-                                "gripper1"
-                              ],
-                              "pattern": "^(.*)$"
-                            }
-                          }
-                        }
-                      },
-                      "inputs": {
-                        "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/inputs",
-                        "type": "array",
-                        "title": "The Inputs Schema",
-                        "items": {
-                          "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/inputs/items",
-                          "type": "object",
-                          "title": "The Items Schema",
-                          "required": [
-                            "default"
-                          ],
-                          "properties": {
-                            "default": {
-                              "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/inputs/items/properties/default",
-                              "type": "string",
-                              "title": "The Default Schema",
-                              "default": "",
-                              "examples": [
-                                "start"
-                              ],
-                              "pattern": "^(.*)$"
-                            }
-                          }
-                        }
-                      },
-                      "outputs": {
-                        "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/outputs",
-                        "type": "array",
-                        "title": "The Outputs Schema",
-                        "items": {
-                          "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/outputs/items",
-                          "type": "object",
-                          "title": "The Items Schema",
-                          "required": [
-                            "default"
-                          ],
-                          "properties": {
-                            "default": {
-                              "$id": "#/properties/objects/items/properties/action_points/items/properties/actions/items/properties/outputs/items/properties/default",
-                              "type": "string",
-                              "title": "The Default Schema",
-                              "default": "",
-                              "examples": [
-                                "MoveToTester"
-                              ],
-                              "pattern": "^(.*)$"
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+  "title": "ARCOR2 project schema",
+  "definitions": {
+    "action": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "examples": ["MoveToBoxIN"],
+          "pattern": "[a-zA-Z_][a-zA-Z0-9_]*"
+        },
+        "type": {
+          "type": "string",
+          "examples": ["robot/move_to"]
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "examples": ["string", "ActionPoint", "float"]
+              },
+              "value": {
+                "type": ["string", "number"]
+              }
+            },
+            "required": ["id", "type", "value"]
+          }
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "default": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "default": {
+                "type": "string"
               }
             }
           }
         }
+      },
+      "required": ["id", "type", "parameters", "inputs", "outputs"]
+    },
+    "action_point": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "examples": ["AP1"]
+        },
+        "pose": {
+          "$ref": "common.json#/definitions/pose"
+        },
+        "actions":{
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          }
+        }
+      },
+      "required": ["id", "pose", "actions"]
+    },
+    "projectObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID of the object instance (variable name in script).",
+          "examples": ["robot1", "bigBox"],
+          "pattern": "^[^\\d\\W]\\w*\\Z"
+        },
+        "action_points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action_point"
+          }
+        }
       }
+    }
+  },
+  "type": "object",
+  "required": [
+    "_id",
+    "objects"
+  ],
+  "properties": {
+    "_id": {
+      "type": "string",
+      "description": "Project id. Used as primary key in MongoDB. Should not contain dot.",
+      "minLength": 3,
+      "examples": [
+        "anything_without_dot"
+      ],
+      "pattern": "^[^.]*$"
+    },
+    "scene_id": {
+      "type": "string",
+      "description": "Project is always linked to some scene.",
+      "minLength": 3,
+      "examples": [
+        "anything_without_dot"
+      ],
+      "pattern": "^[^.]*$"
+    },
+    "objects": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/projectObject" },
+      "default": []
     }
   }
 }

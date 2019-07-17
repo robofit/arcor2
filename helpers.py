@@ -7,6 +7,7 @@ import re
 import fastjsonschema
 import os
 
+import arcor2
 import arcor2.object_types
 from arcor2.object_types import Generic
 
@@ -47,7 +48,7 @@ def validate_event(logger, validate_func: Callable, arg_idx: int = 1):
         async def wrapper(*args, **kwargs):
             try:
                 # validate_func may add default values
-                args[arg_idx] = validate_func(args[arg_idx])
+                args[arg_idx].update(validate_func(args[arg_idx]))
             except fastjsonschema.JsonSchemaException as e:
                 await logger.error(str(e))
                 return
@@ -58,8 +59,13 @@ def validate_event(logger, validate_func: Callable, arg_idx: int = 1):
 
 def read_schema(schema: str) -> Dict:
 
-    with open(os.path.join("json-schemas", schema + ".json"), 'r') as f:
-        return json.loads(f.read())
+    schemas_path = os.path.join(arcor2.__path__[0], "json-schemas")
+
+    with open(os.path.join(schemas_path, schema + ".json"), 'r') as f:
+        schema_str = f.read()
+        # kind of hack - fastjsonschema (probably) does not support local references, only with absolute path
+        schema_str = schema_str.replace("common.json", "file://" + schemas_path + "/common.json")
+        return json.loads(schema_str)
 
 
 async def server(client, path, logger, register, unregister, rpc_dict: Dict, event_dict: Optional[Dict] = None) -> None:

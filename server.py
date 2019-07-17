@@ -7,7 +7,6 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
-import os
 from typing import Dict, Set, List
 import inspect
 from arcor2 import generate_source
@@ -39,6 +38,7 @@ MANAGER_RPC_REQ_ID: int = 0
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: Dict[str, Dict] = {}
 OBJECT_ACTIONS: Dict[str, List[Dict]] = {}
+
 
 VALIDATE_SCENE = fastjsonschema.compile(read_schema("scene"))
 VALIDATE_PROJECT = fastjsonschema.compile(read_schema("project"))
@@ -240,8 +240,8 @@ async def save_project(req, ui, args) -> Dict:
 
     project_db = PROJECT.copy()  # shallow copy is enough here
     project_db["sources"] = {}
-    project_db["sources"]["resources.py"] = generate_source.derived_resources_class(PROJECT["_id"], action_names)
-    project_db["sources"]["script.py"] = generate_source.SCRIPT_HEADER +\
+    project_db["sources"]["resources"] = generate_source.derived_resources_class(PROJECT["_id"], action_names)
+    project_db["sources"]["script"] = generate_source.SCRIPT_HEADER +\
         generate_source.program_src(PROJECT, SCENE, built_in_types_names())
 
     db = mongo.arcor2
