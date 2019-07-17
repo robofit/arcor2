@@ -7,12 +7,14 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
-from typing import Dict, Union, Set, Callable
+from typing import Dict, Union, Set, Callable, List, cast
+import argparse
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
 import motor.motor_asyncio  # type: ignore
 import os
-from arcor2.helpers import response, rpc, server, convert_cc, built_in_types_names
+from arcor2.helpers import response, rpc, server, convert_cc, built_in_types_names, RpcPlugin, \
+    import_cls, ImportClsException
 from arcor2.generate_source import make_executable
 
 
@@ -24,6 +26,8 @@ TASK = None
 CLIENTS: Set = set()
 
 mongo = motor.motor_asyncio.AsyncIOMotorClient()
+
+RPC_PLUGINS: List[RpcPlugin] = []
 
 try:
     PROJECT_PATH = os.environ["ARCOR2_PROJECT_PATH"]
@@ -58,7 +62,7 @@ async def read_proc_stdout() -> None:
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-@rpc(logger)
+@rpc(logger, RPC_PLUGINS)
 async def project_run(req: str, client, args: Dict) -> Dict:
 
     global PROCESS
@@ -79,7 +83,7 @@ async def project_run(req: str, client, args: Dict) -> Dict:
         return response(req, False, ["Failed to start project."])
 
 
-@rpc(logger)
+@rpc(logger, RPC_PLUGINS)
 async def project_stop(req: str, client, args: Dict) -> Dict:
 
     if not process_running():
@@ -95,7 +99,7 @@ async def project_stop(req: str, client, args: Dict) -> Dict:
     return response(req)
 
 
-@rpc(logger)
+@rpc(logger, RPC_PLUGINS)
 async def project_pause(req: str, client, args: Dict) -> Dict:
 
     if not process_running():
@@ -111,7 +115,7 @@ async def project_pause(req: str, client, args: Dict) -> Dict:
     return response(req)
 
 
-@rpc(logger)
+@rpc(logger, RPC_PLUGINS)
 async def project_resume(req: str, client, args: Dict) -> Dict:
 
     if not process_running():
@@ -126,7 +130,7 @@ async def project_resume(req: str, client, args: Dict) -> Dict:
     return response(req)
 
 
-@rpc(logger)
+@rpc(logger, RPC_PLUGINS)
 async def project_load(req: str, client, args: Dict) -> Dict:
 
     # TODO check if there are some modifications in already loaded project (if any)
@@ -212,6 +216,28 @@ RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
 def main():
 
     assert sys.version_info >= (3, 6)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--rpc-plugins', nargs='*')
+
+    for k, v in parser.parse_args()._get_kwargs():
+
+        if not v:
+            continue
+
+        if k == "rpc_plugins":
+            for plugin in v:
+                try:
+                    _, cls = import_cls(plugin)
+                except ImportClsException as e:
+                    print(e)
+                    continue
+
+                if not issubclass(cls, RpcPlugin):
+                    print(f"{cls.__name__} not subclass of RpcPlugin, ignoring.")
+                    continue
+
+                RPC_PLUGINS.append(cls())
 
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT)

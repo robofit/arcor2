@@ -59,11 +59,14 @@ def get_object_actions(object_source: str) -> List:
 
         for decorator in node.decorator_list:
             if decorator.id == "action":
-                if node.name in action_attr:
-                    break
-                raise GenerateSourceException(f"Method {node.name} has @action decorator, but no metadata.")
+                break
         else:
-            raise GenerateSourceException(f"Method {node.name} without @action decorator.")
+            if node.name in action_attr:
+                raise GenerateSourceException(f"Method {node.name} has metadata, but no @action decorator.")
+            continue
+
+        if node.name not in action_attr:
+            raise GenerateSourceException(f"Method {node.name} has @action decorator, but no metadata.")
 
         d: Dict = {"name": node.name, "action_args": []}
         d.update(action_attr[node.name])
@@ -78,6 +81,17 @@ def get_object_actions(object_source: str) -> List:
         ret.append(d)
 
     return ret
+
+
+def check_object_type(object_type_source: str):
+    """
+    Checks whether the object type source is a valid one.
+    :param object_type_source:
+    :return:
+    """
+
+    object_type_info(object_type_source)
+    get_object_actions(object_type_source)
 
 
 def object_type_info(object_source: str) -> Dict:

@@ -1,5 +1,6 @@
 import inspect
-from typing import Optional, List, Dict, Callable
+from typing import Optional, List, Dict, Callable, Tuple, Type
+from types import ModuleType
 import json
 import asyncio
 import websockets
@@ -10,9 +11,39 @@ import os
 import arcor2
 import arcor2.object_types
 from arcor2.object_types import Generic
+import importlib
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 _all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
+class ImportClsException(Exception):
+    pass
+
+
+def import_cls(module_cls: str) -> Tuple[ModuleType, Type]:
+    """
+    Gets module and class based on string like 'module/Cls'.
+    :param module_cls:
+    :return:
+    """
+
+    try:
+        module_name, cls_name = module_cls.split('/')
+    except (IndexError, ValueError):
+        raise ImportClsException("Invalid format.")
+
+    try:
+        module = importlib.import_module(module_name)
+    except ModuleNotFoundError:
+        raise ImportClsException(f"Module '{module_name}' not found.")
+
+    try:
+        cls = getattr(module, cls_name)
+    except AttributeError:
+        raise ImportClsException(f"Class {cls_name} not found in module '{module_name}'.")
+
+    return module, cls
 
 
 def convert_cc(name):
@@ -28,7 +59,13 @@ def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = 
     return {"response": resp_to, "result": result, "messages": messages}
 
 
-def rpc(logger):
+class RpcPlugin:
+
+    def post_hook(self, req: str, args: Dict, resp: Dict):
+        pass
+
+
+def rpc(logger, plugins: Optional[List[RpcPlugin]] = None):
     def rpc_inner(f: Callable) -> Callable:
         async def wrapper(req: str, ui, args: Dict, req_id: Optional[int] = None):
 
@@ -36,8 +73,13 @@ def rpc(logger):
             if req_id is not None:
                 msg["req_id"] = req_id
             j = json.dumps(msg)
+
             await asyncio.wait([ui.send(j)])
             await logger.debug(f"RPC request: {req}, args: {args}: {req_id}, result: {j}")
+
+            if plugins:
+                for plugin in plugins:
+                    await asyncio.get_event_loop().run_in_executor(None, plugin.post_hook, req, args, msg)
 
         return wrapper
     return rpc_inner
