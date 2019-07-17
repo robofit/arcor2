@@ -53,7 +53,8 @@ class ResourcesBase:
             assert obj["id"] not in self.objects, "Duplicate object id {}!".format(obj["id"])
 
             # TODO handle hierarchy of object_types (tree), e.g. call add_child...
-            inst = cls(obj["id"], Pose(list(obj["position"].values()), list(obj["orientation"].values())))
+            inst = cls(obj["id"],
+                       Pose(list(obj["pose"]["position"].values()), list(obj["pose"]["orientation"].values())))
             self.objects[obj["id"]] = inst
 
         # add action points to the object_types
@@ -61,8 +62,8 @@ class ResourcesBase:
 
             for aps in obj["action_points"]:
                 self.objects[obj["id"]].add_action_point(aps["id"],
-                                                         Pose(list(aps["position"].values()),
-                                                              list(aps["orientation"].values())))
+                                                         Pose(list(aps["pose"]["position"].values()),
+                                                              list(aps["pose"]["orientation"].values())))
 
     @staticmethod
     def print_info(action_id: str, args: Dict) -> None:
