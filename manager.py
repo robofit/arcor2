@@ -7,7 +7,7 @@ import json
 import websockets  # type: ignore
 import functools
 import sys
-from typing import Dict, Union, Set, Callable, List, cast
+from typing import Dict, Union, Set, Callable, List
 import argparse
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
@@ -137,8 +137,10 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     db = mongo.arcor2
 
+    print(args)
+
     try:
-        project = await db.projects.find_one({"_id": args["_id"]})
+        project = await db.projects.find_one({"id": args["id"]})
     except KeyError as e:
         return response(req, False, [str(e)])
 
@@ -152,7 +154,7 @@ async def project_load(req: str, client, args: Dict) -> Dict:
     async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
         await f.write(project["sources"]["resources"])
 
-    scene = await db.scenes.find_one({"_id": project["scene_id"]})
+    scene = await db.scenes.find_one({"id": project["scene_id"]})
 
     objects_path = os.path.join(PROJECT_PATH, "object_types")
 
@@ -178,7 +180,7 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     for obj_type_name in to_download:
 
-        obj_type = await db.object_types.find_one({"_id": obj_type_name})
+        obj_type = await db.object_types.find_one({"id": obj_type_name})
 
         if obj_type is None:
             # TODO cleanup?

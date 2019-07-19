@@ -3,7 +3,6 @@
 
 from pymongo import MongoClient  # type: ignore
 import sys
-import importlib
 import inspect
 from arcor2.object_types import Generic
 from arcor2.generate_source import check_object_type, GenerateSourceException
@@ -41,7 +40,7 @@ def upload(module_cls: str):
 
         print(f"Storing '{cls.__name__}'...")
         # TODO check if it already exists?
-        db.object_types.update_one({"_id": cls.__name__}, {'$set': {"source": source}}, upsert=True)
+        db.object_types.update_one({"id": cls.__name__}, {'$set': {"source": source}}, upsert=True)
 
 
 def main():

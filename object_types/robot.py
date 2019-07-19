@@ -18,4 +18,4 @@ class Robot(Generic):
         time.sleep(1)
         return
 
-    move_to.__action__ = ActionMetadata("Move", free=True, blocking=True)
+    move_to.__action__ = ActionMetadata(free=True, blocking=True)

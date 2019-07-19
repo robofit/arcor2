@@ -15,6 +15,7 @@ import typed_astunparse  # type: ignore
 import static_typing as st  # type: ignore
 from arcor2.resources import ResourcesBase
 from arcor2.helpers import convert_cc
+from arcor2.data import Scene, Project, ObjectType, ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs
 
 SCRIPT_HEADER = "#!/usr/bin/env python3\n""# -*- coding: utf-8 -*-\n\n"
 
@@ -25,12 +26,12 @@ class GenerateSourceException(Exception):
     pass
 
 
-def get_object_actions(object_source: str) -> List:
+def get_object_actions(object_source: str) -> ObjectActions:
 
     tree = object_cls_def(object_source)
 
-    action_attr: Dict = {}
-    ret: List = []
+    action_attr: Dict[str, ActionMetadata] = {}
+    ret: ObjectActions = []
 
     for node in tree.body:
         if not isinstance(node, Assign):
@@ -46,9 +47,14 @@ def get_object_actions(object_source: str) -> List:
             continue
 
         # TODO further checks?
-        action_attr[node.targets[0].value.id] = {}
+        meta = ActionMetadata()
+
         for kwarg in node.value.keywords:
-            action_attr[node.targets[0].value.id][kwarg.arg] = kwarg.value.value
+            try:
+                setattr(meta, kwarg.arg, kwarg.value.value)
+            except AttributeError:
+                raise GenerateSourceException(f"Unknown __action__ attribute {kwarg.arg}.")
+        action_attr[node.targets[0].value.id] = meta
 
     # TODO add missing attributes (e.g. free, composite, blackbox) to action_attr?
 
@@ -68,17 +74,19 @@ def get_object_actions(object_source: str) -> List:
         if node.name not in action_attr:
             raise GenerateSourceException(f"Method {node.name} has @action decorator, but no metadata.")
 
-        d: Dict = {"name": node.name, "action_args": []}
-        d.update(action_attr[node.name])
+        oa = ObjectAction(name=node.name, meta=action_attr[node.name])
 
-        for arg in node.args.args:
+        for aarg in node.args.args:
 
-            if arg.arg == "self":
+            if aarg.arg == "self":
                 continue
 
-            d["action_args"].append({"name": arg.arg, "type": arg.annotation.id})
+            if aarg.annotation is None:
+                raise GenerateSourceException(f"Argument {aarg.arg} of method {node.name} not annotated.")
 
-        ret.append(d)
+            oa.action_args.append(ObjectActionArgs(name=aarg.arg, type=aarg.annotation.id))
+
+        ret.append(oa)
 
     return ret
 
@@ -94,25 +102,25 @@ def check_object_type(object_type_source: str):
     get_object_actions(object_type_source)
 
 
-def object_type_info(object_source: str) -> Dict:
+def object_type_info(object_source: str) -> ObjectType:
 
     tree = object_cls_def(object_source)
-
-    d = {"base": "", "description": ""}
 
     if len(tree.bases) > 1:
         raise GenerateSourceException("Only one base class is supported!")
 
+    obj = ObjectType(tree.name)
+
     if tree.bases:
-        d["base"] = tree.bases[0].id
+        obj.base = tree.bases[0].id
 
     for node in tree.body:
         if not isinstance(node, Assign):
             continue
         if len(node.targets) == 1 and isinstance(node.targets[0], Name) and node.targets[0].id == "__DESCRIPTION__":
-            d["description"] = node.value.s
+            obj.description = node.value.s
 
-    return d
+    return obj
 
 
 def object_cls_def(object_source: str) -> ClassDef:
@@ -140,7 +148,7 @@ def fix_object_name(object_id: str) -> str:
     return convert_cc(object_id).replace(' ', '_')
 
 
-def program_src(project: Dict, scene: Dict, built_in_objects: Set) -> str:
+def program_src(project: Project, scene: Scene, built_in_objects: Set) -> str:
 
     tree = empty_script_tree()
     add_import(tree, "resources", "Resources", try_to_import=False)
@@ -148,21 +156,21 @@ def program_src(project: Dict, scene: Dict, built_in_objects: Set) -> str:
 
     # TODO api???
     # get object instances from resources object
-    for obj in scene["objects"]:
+    for obj in scene.objects:
 
-        if obj["type"] in built_in_objects:
-            add_import(tree, "arcor2.object_types", obj["type"], try_to_import=False)
+        if obj.type in built_in_objects:
+            add_import(tree, "arcor2.object_types", obj.type, try_to_import=False)
         else:
-            add_import(tree, "object_types." + convert_cc(obj["type"]), obj["type"], try_to_import=False)
+            add_import(tree, "object_types." + convert_cc(obj.type), obj.type, try_to_import=False)
 
-        object_instance_from_res(tree, obj["id"], obj["type"])
+        object_instance_from_res(tree, obj.id, obj.type)
 
     add_logic_to_loop(tree, project)
 
     return tree_to_str(tree)
 
 
-def add_logic_to_loop(tree, project: Dict):
+def add_logic_to_loop(tree, project: Project):
 
     loop = main_loop_body(tree)
 
@@ -170,14 +178,14 @@ def add_logic_to_loop(tree, project: Dict):
     first_action_id = None
     last_action_id = None
 
-    for obj in project["objects"]:
-        for aps in obj["action_points"]:
-            for act in aps["actions"]:
-                actions_cache[act["id"]] = act
-                if act["inputs"][0]["default"] == "start":
-                    first_action_id = act["id"]
-                elif act["outputs"][0]["default"] == "end":
-                    last_action_id = act["id"]
+    for obj in project.objects:
+        for aps in obj.action_points:
+            for act in aps.actions:
+                actions_cache[act.id] = act
+                if act.inputs[0].default == "start":
+                    first_action_id = act.id
+                elif act.outputs[0].default == "end":
+                    last_action_id = act.id
 
     if first_action_id is None:
         raise GenerateSourceException("'start' action not found.")
@@ -195,20 +203,20 @@ def add_logic_to_loop(tree, project: Dict):
             # pass is not necessary now
             loop.clear()
 
-        ac_obj, ac_type = act["type"].split('/')
+        ac_obj, ac_type = act.type.split('/')
         append_method_call(loop, fix_object_name(ac_obj), ac_type, [], [keyword(
                                                                       arg=None,
                                                                       value=Attribute(
                                                                         value=Name(
                                                                           id='res',
                                                                           ctx=Load()),
-                                                                        attr=act["id"],
+                                                                        attr=act.id,
                                                                         ctx=Load()))])
 
-        if act["id"] == last_action_id:
+        if act.id == last_action_id:
             break
 
-        next_action_id = act["outputs"][0]["default"]
+        next_action_id = act.outputs[0].default
 
 
 def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
@@ -597,5 +605,5 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
     return tree_to_str(tree)
 
 
-def dump(tree: Module) -> None:
+def dump(tree: Module) -> str:
     return typed_astunparse.dump(tree)

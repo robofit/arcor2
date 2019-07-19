@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Set, Tuple
+from typing import Dict, Set, Union
 from arcor2.exceptions import ResourcesException
-from arcor2.data import Pose
 from arcor2.object_types import Generic
 from arcor2.object_types.utils import print_json
 from pymongo import MongoClient  # type: ignore
 import importlib
 from arcor2.helpers import convert_cc, built_in_types_names
+from arcor2.data import Project, Scene, ActionPoint
+from dataclasses_jsonschema import ValidationError
 
 # TODO for bound methods - check whether provided action point belongs to the object
 
@@ -23,47 +24,52 @@ class ResourcesBase:
         self.project_id = project_id
         self.client = MongoClient('localhost', 27017)
 
-        # TODO program should be parsed from script!
-        self.program = self.client.arcor2.projects.find_one({'_id': project_id})
+        proj_data: Union[None, Dict] = self.client.arcor2.projects.find_one({'id': project_id})
 
-        if not self.program:
+        if not proj_data:
             raise ResourcesException("Could not find project {}!".format(project_id))
 
-        # TODO switch to the "resource" format instead of server-ui format
-        self.scene = self.client.arcor2.scenes.find_one({'_id': self.program["scene_id"]})
+        try:
+            self.project: Project = Project.from_dict(proj_data)
+        except ValidationError as e:
+            raise ResourcesException("Invalid project: {}".format(e))
 
-        if not self.scene:
+        scene_data: Union[None, Dict] = self.client.arcor2.scenes.find_one({'id': self.project.scene_id})
+
+        if not scene_data:
             raise ResourcesException(f"Could not find scene "
-                                     f"{self.program['scene_id']} for project {self.program['_id']}!")
+                                     f"{self.project.scene_id} for project {self.project.id}!")
+
+        try:
+            self.scene: Scene = Scene.from_dict(scene_data)
+        except ValidationError as e:
+            raise ResourcesException("Invalid scene: {}".format(e))
 
         # TODO create instances of all object_types according to the scene
         self.objects: Dict[str, Generic] = {}
 
         built_in = built_in_types_names()
 
-        for obj in self.scene["objects"]:
+        for obj in self.scene.objects:
 
-            if obj["type"] in built_in:
-                module = importlib.import_module("arcor2.object_types." + convert_cc(obj["type"]))
+            if obj.type in built_in:
+                module = importlib.import_module("arcor2.object_types." + convert_cc(obj.type))
             else:
-                module = importlib.import_module("object_types." + convert_cc(obj["type"]))
+                module = importlib.import_module("object_types." + convert_cc(obj.type))
 
-            cls = getattr(module, obj["type"])
+            cls = getattr(module, obj.type)
 
-            assert obj["id"] not in self.objects, "Duplicate object id {}!".format(obj["id"])
+            assert obj.id not in self.objects, "Duplicate object id {}!".format(obj.id)
 
             # TODO handle hierarchy of object_types (tree), e.g. call add_child...
-            inst = cls(obj["id"],
-                       Pose(list(obj["pose"]["position"].values()), list(obj["pose"]["orientation"].values())))
-            self.objects[obj["id"]] = inst
+            inst = cls(obj.id, obj.pose)
+            self.objects[obj.id] = inst
 
         # add action points to the object_types
-        for obj in self.program["objects"]:
+        for obj in self.project.objects:
 
-            for aps in obj["action_points"]:
-                self.objects[obj["id"]].add_action_point(aps["id"],
-                                                         Pose(list(aps["pose"]["position"].values()),
-                                                              list(aps["pose"]["orientation"].values())))
+            for aps in obj.action_points:
+                self.objects[obj.id].add_action_point(aps.id, aps.pose)
 
     @staticmethod
     def print_info(action_id: str, args: Dict) -> None:
@@ -75,15 +81,15 @@ class ResourcesBase:
 
         ids: Set = set()
 
-        for obj in self.program["objects"]:
-            for aps in obj["action_points"]:
-                for act in aps["actions"]:
-                    assert act["id"] not in ids, "Action ID {} not globally unique.".format(act["id"])
-                    ids.add(act["id"])
+        for obj in self.project.objects:
+            for aps in obj.action_points:
+                for act in aps.actions:
+                    assert act.id not in ids, "Action ID {} not globally unique.".format(act.id)
+                    ids.add(act.id)
 
         return ids
 
-    def action_point(self, object_id: str, ap_id: str) -> Tuple["Generic", str]:
+    def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
 
         assert ap_id in self.objects[object_id].action_points
 
@@ -93,19 +99,20 @@ class ResourcesBase:
 
     def parameters(self, action_id: str) -> Dict:
 
-        for obj in self.program["objects"]:
-            for aps in obj["action_points"]:
-                for act in aps["actions"]:
-                    if act["id"] == action_id:
+        for obj in self.project.objects:
+            for aps in obj.action_points:
+                for act in aps.actions:
+                    if act.id == action_id:
 
-                        ret = {}
+                        ret: Dict[str, Union[str, float, ActionPoint]] = {}
 
-                        for param in act["parameters"]:
-                            if param["type"] == "ActionPoint":
-                                object_id, ap_id = param["value"].split('.')
-                                ret[param["id"]] = self.action_point(object_id, ap_id)
+                        for param in act.parameters:
+                            if param.type == "ActionPoint":
+                                assert isinstance(param.value, str)
+                                object_id, ap_id = param.value.split('.')
+                                ret[param.id] = self.action_point(object_id, ap_id)
                             else:
-                                ret[param["id"]] = param["value"]
+                                ret[param.id] = param.value
 
                         return ret
 

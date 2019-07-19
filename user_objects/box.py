@@ -9,4 +9,4 @@ class Box(Generic):
     def test(self) -> None:
         pass
 
-    test.__action__ = ActionMetadata("test")
+    test.__action__ = ActionMetadata()

@@ -55,4 +55,4 @@ class Generic:
     def nop(self) -> None:
         pass
 
-    nop.__action__ = ActionMetadata("nop")
+    nop.__action__ = ActionMetadata()

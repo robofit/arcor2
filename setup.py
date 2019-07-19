@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup  # type: ignore
 
 setup(
     name='arcor2',
@@ -21,8 +21,7 @@ setup(
         'aiologger',
         'motor',
         'aiofiles',
-        'dataclasses_json',
         'undecorated',
-        'fastjsonschema'
+        'dataclasses-jsonschema[fast-validation]'
     ]
 )

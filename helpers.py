@@ -1,16 +1,15 @@
 import inspect
-from typing import Optional, List, Dict, Callable, Tuple, Type
+from typing import Optional, List, Dict, Callable, Tuple, Type, Union
 from types import ModuleType
 import json
 import asyncio
-import websockets
+import websockets  # type: ignore
 import re
-import fastjsonschema
-import os
 
 import arcor2
 import arcor2.object_types
 from arcor2.object_types import Generic
+from arcor2.data import DataClassEncoder
 import importlib
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
@@ -51,12 +50,17 @@ def convert_cc(name):
     return _all_cap_re.sub(r'\1_\2', s1).lower()
 
 
-def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None) -> Dict:
+# TODO define Response dataclass instead?
+def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None,
+             data: Optional[Union[Dict, List]] = None) -> Dict:
 
     if messages is None:
         messages = []
 
-    return {"response": resp_to, "result": result, "messages": messages}
+    if data is None:
+        data = {}
+
+    return {"response": resp_to, "result": result, "messages": messages, "data": data}
 
 
 class RpcPlugin:
@@ -70,12 +74,17 @@ def rpc(logger, plugins: Optional[List[RpcPlugin]] = None):
         async def wrapper(req: str, ui, args: Dict, req_id: Optional[int] = None):
 
             msg = await f(req, ui, args)
+
+            if msg is None:
+                await logger.debug(f"Ignoring invalid RPC request: {req}, args: {args}")
+                return
+
             if req_id is not None:
                 msg["req_id"] = req_id
-            j = json.dumps(msg)
+            j = json.dumps(msg, cls=DataClassEncoder)
 
             await asyncio.wait([ui.send(j)])
-            await logger.debug(f"RPC request: {req}, args: {args}: {req_id}, result: {j}")
+            await logger.debug(f"RPC request: {req}, args: {args}, req_id: {req_id}, result: {j}")
 
             if plugins:
                 for plugin in plugins:
@@ -83,31 +92,6 @@ def rpc(logger, plugins: Optional[List[RpcPlugin]] = None):
 
         return wrapper
     return rpc_inner
-
-
-def validate_event(logger, validate_func: Callable, arg_idx: int = 1):
-    def validate_inner(f: Callable) -> Callable:
-        async def wrapper(*args, **kwargs):
-            try:
-                # validate_func may add default values
-                args[arg_idx].update(validate_func(args[arg_idx]))
-            except fastjsonschema.JsonSchemaException as e:
-                await logger.error(str(e))
-                return
-            return await f(*args, **kwargs)
-        return wrapper
-    return validate_inner
-
-
-def read_schema(schema: str) -> Dict:
-
-    schemas_path = os.path.join(arcor2.__path__[0], "json-schemas")
-
-    with open(os.path.join(schemas_path, schema + ".json"), 'r') as f:
-        schema_str = f.read()
-        # kind of hack - fastjsonschema (probably) does not support local references, only with absolute path
-        schema_str = schema_str.replace("common.json", "file://" + schemas_path + "/common.json")
-        return json.loads(schema_str)
 
 
 async def server(client, path, logger, register, unregister, rpc_dict: Dict, event_dict: Optional[Dict] = None) -> None:
