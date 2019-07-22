@@ -9,6 +9,12 @@ from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
+class ActionIOEnum:
+
+    FIRST: str = "start"
+    LAST: str = "end"
+
+
 class DataClassEncoder(JSONEncoder):
 
     def default(self, o: Any) -> Any:

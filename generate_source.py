@@ -9,13 +9,14 @@ from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, C
 import autopep8  # type: ignore
 import os
 import stat
-from typing import Dict, Optional, List, Set
+from typing import Dict, Optional, List, Set, Union
 import importlib
 import typed_astunparse  # type: ignore
 import static_typing as st  # type: ignore
 from arcor2.resources import ResourcesBase
-from arcor2.helpers import convert_cc
-from arcor2.data import Scene, Project, ObjectType, ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs
+from arcor2.helpers import convert_cc, get_actions_cache
+from arcor2.data import Scene, Project, ObjectType, ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs,\
+    Action, ActionIO, ActionIOEnum
 
 SCRIPT_HEADER = "#!/usr/bin/env python3\n""# -*- coding: utf-8 -*-\n\n"
 
@@ -170,22 +171,77 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set) -> str:
     return tree_to_str(tree)
 
 
+def get_logic_from_source(source_code: str, project: Project) -> None:
+
+    tree = parse(source_code)
+
+    actions_cache, _, _ = get_actions_cache(project)
+    # objects_cache = get_objects_cache(project, id_to_var=True)
+
+    found_actions: Set[str] = set()
+
+    loop = main_loop_body(tree)
+
+    last_action: Union[None, Action] = None
+
+    for node_idx, node in enumerate(loop):
+
+        # simple checks for expected 'syntax' of action calls (e.g. 'robot.move_to(**res.MoveToBoxIN)')
+        if not isinstance(node, Expr):
+            raise GenerateSourceException("Unexpected content.")
+
+        try:
+            val = node.value
+            obj_id = val.func.value.id  # variable name
+            method = val.func.attr
+            action_id = val.keywords[0].value.attr
+        except (AttributeError, IndexError) as e:
+            print(e)
+            raise GenerateSourceException("Script has unexpected content.")
+
+        if action_id in found_actions:
+            raise GenerateSourceException(f"Duplicate action: {action_id}.")
+        found_actions.add(action_id)
+
+        # TODO test if object instance exists
+        # raise GenerateSourceException(f"Unknown object id {obj_id}.")
+
+        try:
+            action = actions_cache[action_id]
+        except KeyError:
+            raise GenerateSourceException(f"Unknown action {action_id}.")
+
+        at_obj, at_method = action.type.split("/")
+        at_obj = convert_cc(at_obj)  # convert obj id into script variable name
+
+        if at_obj != obj_id or at_method != method:
+            raise GenerateSourceException(f"Action type {action.type} does not correspond to source, where it is"
+                                          f" {obj_id}/{method}.")
+
+        action.inputs.clear()
+        action.outputs.clear()
+
+        if node_idx == 0:
+            action.inputs.append(ActionIO(ActionIOEnum.FIRST))
+        else:
+            assert last_action is not None
+            action.inputs.append(ActionIO(last_action.id))
+
+        if node_idx > 0:
+            assert last_action is not None
+            actions_cache[last_action.id].outputs.append(ActionIO(action.id))
+
+        if node_idx == len(loop)-1:
+            action.outputs.append(ActionIO(ActionIOEnum.LAST))
+
+        last_action = action
+
+
 def add_logic_to_loop(tree, project: Project):
 
     loop = main_loop_body(tree)
 
-    actions_cache = {}
-    first_action_id = None
-    last_action_id = None
-
-    for obj in project.objects:
-        for aps in obj.action_points:
-            for act in aps.actions:
-                actions_cache[act.id] = act
-                if act.inputs[0].default == "start":
-                    first_action_id = act.id
-                elif act.outputs[0].default == "end":
-                    last_action_id = act.id
+    actions_cache, first_action_id, last_action_id = get_actions_cache(project)
 
     if first_action_id is None:
         raise GenerateSourceException("'start' action not found.")
@@ -257,9 +313,9 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
 
 def main_loop_body(tree) -> List:
 
-    main_body = find_function("main", tree).body
+    main = find_function("main", tree)
 
-    for node in main_body:
+    for node in main.body:
         if isinstance(node, While):  # TODO more specific condition
             return node.body
 
@@ -315,6 +371,9 @@ def find_function(name, tree) -> FunctionDef:
 
     ff = FindFunction()
     ff.visit(tree)
+
+    if ff.function_node is None:
+        raise GenerateSourceException(f"Function {name} not found.")
 
     return ff.function_node
 
