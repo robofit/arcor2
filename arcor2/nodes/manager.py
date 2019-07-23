@@ -4,19 +4,20 @@
 
 import asyncio
 import json
-import websockets  # type: ignore
 import functools
 import sys
 from typing import Dict, Union, Set, Callable, List
 import argparse
+import os
+
+import websockets  # type: ignore
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
 import motor.motor_asyncio  # type: ignore
-import os
+
 from arcor2.helpers import response, rpc, server, convert_cc, built_in_types_names, RpcPlugin, \
     import_cls, ImportClsException
-from arcor2.generate_source import make_executable
-
+from arcor2.source.utils import make_executable
 
 logger = Logger.with_default_handlers(name='arcor2-manager')
 

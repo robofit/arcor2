@@ -2,14 +2,16 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict, Set, Union
+import importlib
+
+from dataclasses_jsonschema import ValidationError
+from pymongo import MongoClient  # type: ignore
+
+from arcor2.helpers import convert_cc, built_in_types_names
+from arcor2.data import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
 from arcor2.object_types import Generic
 from arcor2.object_types.utils import print_json
-from pymongo import MongoClient  # type: ignore
-import importlib
-from arcor2.helpers import convert_cc, built_in_types_names
-from arcor2.data import Project, Scene, ActionPoint
-from dataclasses_jsonschema import ValidationError
 
 # TODO for bound methods - check whether provided action point belongs to the object
 

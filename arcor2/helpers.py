@@ -1,22 +1,25 @@
 import inspect
-from typing import Optional, List, Dict, Callable, Tuple, Type, Union
+from typing import Optional, List, Dict, Callable, Tuple, Type, Union, Set
 from types import ModuleType
 import json
 import asyncio
-import websockets  # type: ignore
+import importlib
 import re
+
+import websockets  # type: ignore
 
 import arcor2
 import arcor2.object_types
 from arcor2.object_types import Generic
 from arcor2.data import DataClassEncoder, ActionIOEnum, ProjectObject, Project, Action
-import importlib
+from arcor2.exceptions import Arcor2Exception
+
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 _all_cap_re = re.compile('([a-z0-9])([A-Z])')
 
 
-class ImportClsException(Exception):
+class ImportClsException(Arcor2Exception):
     pass
 
 
@@ -148,11 +151,11 @@ def built_in_types():
         yield cls[0], cls[1]
 
 
-def built_in_types_names():
+def built_in_types_names() -> Set:
 
     names = set()
 
-    for type_name, type_def in built_in_types():
+    for type_name, _ in built_in_types():
         names.add(type_name)
 
     return names
@@ -187,3 +190,12 @@ def get_objects_cache(project: Project, id_to_var: bool = False) -> Dict[str, Pr
             cache[obj.id] = obj
 
     return cache
+
+
+def clear_project_logic(project: Project):
+
+    for obj in project.objects:
+        for act_point in obj.action_points:
+            for action in act_point.actions:
+                action.inputs.clear()
+                action.outputs.clear()

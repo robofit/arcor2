@@ -1,278 +1,21 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from horast import parse, unparse  # type: ignore
-import typed_ast.ast3
-from typed_ast.ast3 import If, FunctionDef, Module, While, NameConstant, Pass, Compare, Name, Load, Eq, Expr, Call, \
-    NodeVisitor, NodeTransformer, ImportFrom, Assign, arguments, Str, keyword, fix_missing_locations, Attribute, \
-    alias, ClassDef, arg, AnnAssign, Subscript, Index, Return, Store
-import autopep8  # type: ignore
+import importlib
 import os
 import stat
-from typing import Dict, Optional, List, Set, Union
-import importlib
+from typing import List, Optional, Dict
+
+import autopep8  # type: ignore
 import typed_astunparse  # type: ignore
-import static_typing as st  # type: ignore
+from horast import parse, unparse  # type: ignore
+
+# type/ignore does not work with multi-line import
+from typed_ast._ast3 import Module, Assign, AnnAssign, Name, Store, Load, Subscript, Attribute, Index   # type: ignore
+from typed_ast._ast3 import FunctionDef, NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call   # type: ignore
+from typed_ast._ast3 import alias, keyword, ClassDef, arg, Return, While, Str, ImportFrom  # type: ignore
+from typed_ast.ast3 import NodeVisitor, NodeTransformer, fix_missing_locations  # type: ignore
+
 from arcor2.resources import ResourcesBase
-from arcor2.helpers import convert_cc, get_actions_cache
-from arcor2.data import Scene, Project, ObjectType, ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs,\
-    Action, ActionIO, ActionIOEnum
-
-SCRIPT_HEADER = "#!/usr/bin/env python3\n""# -*- coding: utf-8 -*-\n\n"
-
-validator = st.ast_manipulation.AstValidator[typed_ast.ast3](mode="strict")
-
-
-class GenerateSourceException(Exception):
-    pass
-
-
-def get_object_actions(object_source: str) -> ObjectActions:
-
-    tree = object_cls_def(object_source)
-
-    action_attr: Dict[str, ActionMetadata] = {}
-    ret: ObjectActions = []
-
-    for node in tree.body:
-        if not isinstance(node, Assign):
-            continue
-
-        if not hasattr(node, "targets"):
-            continue
-
-        if not len(node.targets) == 1 or not isinstance(node.targets[0], Attribute):
-            continue
-
-        if node.targets[0].attr != "__action__":
-            continue
-
-        # TODO further checks?
-        meta = ActionMetadata()
-
-        for kwarg in node.value.keywords:
-            try:
-                setattr(meta, kwarg.arg, kwarg.value.value)
-            except AttributeError:
-                raise GenerateSourceException(f"Unknown __action__ attribute {kwarg.arg}.")
-        action_attr[node.targets[0].value.id] = meta
-
-    # TODO add missing attributes (e.g. free, composite, blackbox) to action_attr?
-
-    for node in tree.body:
-
-        if not isinstance(node, FunctionDef):
-            continue
-
-        for decorator in node.decorator_list:
-            if decorator.id == "action":
-                break
-        else:
-            if node.name in action_attr:
-                raise GenerateSourceException(f"Method {node.name} has metadata, but no @action decorator.")
-            continue
-
-        if node.name not in action_attr:
-            raise GenerateSourceException(f"Method {node.name} has @action decorator, but no metadata.")
-
-        oa = ObjectAction(name=node.name, meta=action_attr[node.name])
-
-        for aarg in node.args.args:
-
-            if aarg.arg == "self":
-                continue
-
-            if aarg.annotation is None:
-                raise GenerateSourceException(f"Argument {aarg.arg} of method {node.name} not annotated.")
-
-            oa.action_args.append(ObjectActionArgs(name=aarg.arg, type=aarg.annotation.id))
-
-        ret.append(oa)
-
-    return ret
-
-
-def check_object_type(object_type_source: str):
-    """
-    Checks whether the object type source is a valid one.
-    :param object_type_source:
-    :return:
-    """
-
-    object_type_info(object_type_source)
-    get_object_actions(object_type_source)
-
-
-def object_type_info(object_source: str) -> ObjectType:
-
-    tree = object_cls_def(object_source)
-
-    if len(tree.bases) > 1:
-        raise GenerateSourceException("Only one base class is supported!")
-
-    obj = ObjectType(tree.name)
-
-    if tree.bases:
-        obj.base = tree.bases[0].id
-
-    for node in tree.body:
-        if not isinstance(node, Assign):
-            continue
-        if len(node.targets) == 1 and isinstance(node.targets[0], Name) and node.targets[0].id == "__DESCRIPTION__":
-            obj.description = node.value.s
-
-    return obj
-
-
-def object_cls_def(object_source: str) -> ClassDef:
-
-    tree = parse(object_source)
-
-    cls_def = None
-
-    for node in tree.body:
-
-        if isinstance(node, ClassDef):
-            if cls_def is None:
-                cls_def = node
-                break
-            else:
-                raise GenerateSourceException("Multiple class definition!")
-    else:
-        raise GenerateSourceException("No class definition!")
-
-    return cls_def
-
-
-def fix_object_name(object_id: str) -> str:
-
-    return convert_cc(object_id).replace(' ', '_')
-
-
-def program_src(project: Project, scene: Scene, built_in_objects: Set) -> str:
-
-    tree = empty_script_tree()
-    add_import(tree, "resources", "Resources", try_to_import=False)
-    add_cls_inst(tree, "Resources", "res")
-
-    # TODO api???
-    # get object instances from resources object
-    for obj in scene.objects:
-
-        if obj.type in built_in_objects:
-            add_import(tree, "arcor2.object_types", obj.type, try_to_import=False)
-        else:
-            add_import(tree, "object_types." + convert_cc(obj.type), obj.type, try_to_import=False)
-
-        object_instance_from_res(tree, obj.id, obj.type)
-
-    add_logic_to_loop(tree, project)
-
-    return tree_to_str(tree)
-
-
-def get_logic_from_source(source_code: str, project: Project) -> None:
-
-    tree = parse(source_code)
-
-    actions_cache, _, _ = get_actions_cache(project)
-    # objects_cache = get_objects_cache(project, id_to_var=True)
-
-    found_actions: Set[str] = set()
-
-    loop = main_loop_body(tree)
-
-    last_action: Union[None, Action] = None
-
-    for node_idx, node in enumerate(loop):
-
-        # simple checks for expected 'syntax' of action calls (e.g. 'robot.move_to(**res.MoveToBoxIN)')
-        if not isinstance(node, Expr):
-            raise GenerateSourceException("Unexpected content.")
-
-        try:
-            val = node.value
-            obj_id = val.func.value.id  # variable name
-            method = val.func.attr
-            action_id = val.keywords[0].value.attr
-        except (AttributeError, IndexError) as e:
-            print(e)
-            raise GenerateSourceException("Script has unexpected content.")
-
-        if action_id in found_actions:
-            raise GenerateSourceException(f"Duplicate action: {action_id}.")
-        found_actions.add(action_id)
-
-        # TODO test if object instance exists
-        # raise GenerateSourceException(f"Unknown object id {obj_id}.")
-
-        try:
-            action = actions_cache[action_id]
-        except KeyError:
-            raise GenerateSourceException(f"Unknown action {action_id}.")
-
-        at_obj, at_method = action.type.split("/")
-        at_obj = convert_cc(at_obj)  # convert obj id into script variable name
-
-        if at_obj != obj_id or at_method != method:
-            raise GenerateSourceException(f"Action type {action.type} does not correspond to source, where it is"
-                                          f" {obj_id}/{method}.")
-
-        action.inputs.clear()
-        action.outputs.clear()
-
-        if node_idx == 0:
-            action.inputs.append(ActionIO(ActionIOEnum.FIRST))
-        else:
-            assert last_action is not None
-            action.inputs.append(ActionIO(last_action.id))
-
-        if node_idx > 0:
-            assert last_action is not None
-            actions_cache[last_action.id].outputs.append(ActionIO(action.id))
-
-        if node_idx == len(loop)-1:
-            action.outputs.append(ActionIO(ActionIOEnum.LAST))
-
-        last_action = action
-
-
-def add_logic_to_loop(tree, project: Project):
-
-    loop = main_loop_body(tree)
-
-    actions_cache, first_action_id, last_action_id = get_actions_cache(project)
-
-    if first_action_id is None:
-        raise GenerateSourceException("'start' action not found.")
-
-    if last_action_id is None:
-        raise GenerateSourceException("'end' action not found.")
-
-    next_action_id = first_action_id
-
-    while True:
-
-        act = actions_cache[next_action_id]
-
-        if len(loop) == 1 and isinstance(loop[0], Pass):
-            # pass is not necessary now
-            loop.clear()
-
-        ac_obj, ac_type = act.type.split('/')
-        append_method_call(loop, fix_object_name(ac_obj), ac_type, [], [keyword(
-                                                                      arg=None,
-                                                                      value=Attribute(
-                                                                        value=Name(
-                                                                          id='res',
-                                                                          ctx=Load()),
-                                                                        attr=act.id,
-                                                                        ctx=Load()))])
-
-        if act.id == last_action_id:
-            break
-
-        next_action_id = act.outputs[0].default
+from arcor2.source import SourceException, SCRIPT_HEADER
+from arcor2.source.object_types import fix_object_name
 
 
 def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
@@ -286,7 +29,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
             last_assign_idx = body_idx
 
     if last_assign_idx is None:
-        raise GenerateSourceException()
+        raise SourceException()
 
     assign = AnnAssign(
         target=Name(
@@ -319,7 +62,7 @@ def main_loop_body(tree) -> List:
         if isinstance(node, While):  # TODO more specific condition
             return node.body
 
-    raise GenerateSourceException("Main loop not found.")
+    raise SourceException("Main loop not found.")
 
 
 def empty_script_tree() -> Module:
@@ -373,7 +116,7 @@ def find_function(name, tree) -> FunctionDef:
     ff.visit(tree)
 
     if ff.function_node is None:
-        raise GenerateSourceException(f"Function {name} not found.")
+        raise SourceException(f"Function {name} not found.")
 
     return ff.function_node
 
@@ -416,12 +159,12 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
         try:
             imported_mod = importlib.import_module(module)
         except ModuleNotFoundError as e:
-            raise GenerateSourceException(e)
+            raise SourceException(e)
 
         try:
             getattr(imported_mod, cls)
         except AttributeError as e:
-            raise GenerateSourceException(e)
+            raise SourceException(e)
 
     tr = AddImportTransformer(module, cls)
     node = tr.visit(node)
@@ -462,7 +205,7 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
                     if isinstance(item, Assign) and item.targets[0].id == name:
 
                         if item.value.func.id != cls:
-                            raise GenerateSourceException(
+                            raise SourceException(
                                 "Name '{}' already used for instance of '{}'!".format(name, item.value.func.id))
 
                         self.found = True
@@ -498,7 +241,7 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
     find_import.visit(node)
 
     if not find_import.found:
-        raise GenerateSourceException("Class '{}' not imported!".format(cls))
+        raise SourceException("Class '{}' not imported!".format(cls))
 
     vis = FindClsInst()
     vis.visit(node)
@@ -543,7 +286,7 @@ def add_method_call_in_main(tree: Module, instance: str, method: str, args: List
             last_assign_idx = body_idx
 
     if not last_assign_idx:
-        raise GenerateSourceException()
+        raise SourceException()
 
     # TODO iterate over args/kwargs
     # TODO check actual number of method's arguments (and types?)

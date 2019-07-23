@@ -3,11 +3,19 @@ from setuptools import setup  # type: ignore
 setup(
     name='arcor2',
     version='0.1',
-    packages=['arcor2.tests', 'arcor2.user_objects'],
+    packages=['arcor2', 'arcor2.object_types', 'arcor2.source', 'arcor2.user_objects'],
+    package_data={"arcor2": ["py.typed"]},
+    entry_points={
+                  'console_scripts': [
+                      'arcor2_server = arcor2.nodes.server:main',
+                      'arcor2_manager = arcor2.nodes.manager:main',
+                      'arcor2_upload_ot = arcor2.scripts.upload_object_type:main'
+                  ],
+              },
     url='',
     license='',
     author='Robo@FIT',
-    author_email='',
+    author_email='imaterna@fit.vutbr.cz',
     description='',
     install_requires=[
         'pymongo',
@@ -22,6 +30,8 @@ setup(
         'motor',
         'aiofiles',
         'undecorated',
-        'dataclasses-jsonschema[fast-validation]'
-    ]
+        'dataclasses-jsonschema[fast-validation]',
+        'pytest'
+    ],
+    zip_safe=False
 )

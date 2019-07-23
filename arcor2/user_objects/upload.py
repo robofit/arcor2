@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from arcor2.upload_object_type import upload
+from arcor2.object_types.upload import upload
 
 
 def main():

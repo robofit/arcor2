@@ -2,6 +2,7 @@ import json
 import sys
 from typing import Union, Dict
 import select
+
 from arcor2.data import DataClassEncoder
 
 

@@ -1,0 +1,130 @@
+from typing import Dict
+
+from horast import parse  # type: ignore
+from typed_ast._ast3 import Assign, Attribute, FunctionDef, Name, ClassDef  # type: ignore
+
+from arcor2.data import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectType
+from arcor2.helpers import convert_cc
+from arcor2.source import SourceException
+
+
+def get_object_actions(object_source: str) -> ObjectActions:
+
+    tree = object_cls_def(object_source)
+
+    action_attr: Dict[str, ActionMetadata] = {}
+    ret: ObjectActions = []
+
+    for node in tree.body:
+        if not isinstance(node, Assign):
+            continue
+
+        if not hasattr(node, "targets"):
+            continue
+
+        if not len(node.targets) == 1 or not isinstance(node.targets[0], Attribute):
+            continue
+
+        if node.targets[0].attr != "__action__":
+            continue
+
+        # TODO further checks?
+        meta = ActionMetadata()
+
+        for kwarg in node.value.keywords:
+            try:
+                setattr(meta, kwarg.arg, kwarg.value.value)
+            except AttributeError:
+                raise SourceException(f"Unknown __action__ attribute {kwarg.arg}.")
+        action_attr[node.targets[0].value.id] = meta
+
+    # TODO add missing attributes (e.g. free, composite, blackbox) to action_attr?
+
+    for node in tree.body:
+
+        if not isinstance(node, FunctionDef):
+            continue
+
+        for decorator in node.decorator_list:
+            if decorator.id == "action":
+                break
+        else:
+            if node.name in action_attr:
+                raise SourceException(f"Method {node.name} has metadata, but no @action decorator.")
+            continue
+
+        if node.name not in action_attr:
+            raise SourceException(f"Method {node.name} has @action decorator, but no metadata.")
+
+        oa = ObjectAction(name=node.name, meta=action_attr[node.name])
+
+        for aarg in node.args.args:
+
+            if aarg.arg == "self":
+                continue
+
+            if aarg.annotation is None:
+                raise SourceException(f"Argument {aarg.arg} of method {node.name} not annotated.")
+
+            oa.action_args.append(ObjectActionArgs(name=aarg.arg, type=aarg.annotation.id))
+
+        ret.append(oa)
+
+    return ret
+
+
+def check_object_type(object_type_source: str):
+    """
+    Checks whether the object type source is a valid one.
+    :param object_type_source:
+    :return:
+    """
+
+    object_type_info(object_type_source)
+    get_object_actions(object_type_source)
+
+
+def object_type_info(object_source: str) -> ObjectType:
+
+    tree = object_cls_def(object_source)
+
+    if len(tree.bases) > 1:
+        raise SourceException("Only one base class is supported!")
+
+    obj = ObjectType(tree.name)
+
+    if tree.bases:
+        obj.base = tree.bases[0].id
+
+    for node in tree.body:
+        if not isinstance(node, Assign):
+            continue
+        if len(node.targets) == 1 and isinstance(node.targets[0], Name) and node.targets[0].id == "__DESCRIPTION__":
+            obj.description = node.value.s
+
+    return obj
+
+
+def object_cls_def(object_source: str) -> ClassDef:
+
+    tree = parse(object_source)
+
+    cls_def = None
+
+    for node in tree.body:
+
+        if isinstance(node, ClassDef):
+            if cls_def is None:
+                cls_def = node
+                break
+            else:
+                raise SourceException("Multiple class definition!")
+    else:
+        raise SourceException("No class definition!")
+
+    return cls_def
+
+
+def fix_object_name(object_id: str) -> str:
+
+    return convert_cc(object_id).replace(' ', '_')

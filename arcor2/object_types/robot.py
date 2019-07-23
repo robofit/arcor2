@@ -1,7 +1,8 @@
+import time
+
 from arcor2.object_types.generic import Generic
 from arcor2.object_types.utils import action
 from arcor2.data import ActionMetadata, ActionPoint
-import time
 
 
 class Robot(Generic):

@@ -4,27 +4,31 @@
 
 import asyncio
 import json
-import websockets  # type: ignore
 import functools
 import sys
-from typing import Dict, Set, Union
+from typing import Dict, Set, Union, get_type_hints
 import inspect
-from arcor2 import generate_source
-from arcor2.generate_source import GenerateSourceException
-from typing import get_type_hints
+import copy
+
+import websockets  # type: ignore
 from aiologger import Logger  # type: ignore
 import motor.motor_asyncio  # type: ignore
-from arcor2.manager import RPC_DICT as MANAGER_RPC_DICT
-from arcor2.helpers import response, rpc, server
-from arcor2.data import Scene, Project, ObjectType, ObjectAction, ObjectActionArgs, ObjectActions
 from undecorated import undecorated  # type: ignore
 from dataclasses_jsonschema import ValidationError
-import copy
+
+from arcor2.source.logic import program_src
+from arcor2.source.object_types import object_type_info, get_object_actions
+from arcor2.source.utils import derived_resources_class
+from arcor2.source import SourceException
+from arcor2.exceptions import Arcor2Exception
+from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
+from arcor2.helpers import response, rpc, server
+from arcor2.data import Scene, Project, ObjectType, ObjectAction, ObjectActionArgs, ObjectActions
 
 
 # TODO validation of scene/project -> in thread pool executor (CPU intensive)
 # TODO notify RPC requests to other interfaces to let them know what happened?
-from helpers import built_in_types, built_in_types_names
+from arcor2.helpers import built_in_types, built_in_types_names
 
 logger = Logger.with_default_handlers(name='arcor2-server')
 
@@ -139,7 +143,7 @@ async def notify_project(interface) -> None:
     await asyncio.wait([interface.send(message)])
 
 
-class DataError(Exception):
+class DataError(Arcor2Exception):
     pass
 
 
@@ -183,7 +187,7 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
     cursor = mongo.arcor2.object_types.find({})
     for obj in await cursor.to_list(None):
         try:
-            object_types[obj["id"]] = generate_source.object_type_info(obj["source"])
+            object_types[obj["id"]] = object_type_info(obj["source"])
         except KeyError:
             continue
 
@@ -206,14 +210,14 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
 
 
 @rpc(logger)
-async def get_object_types(req: str, ui, args: Dict) -> Dict:
+async def get_object_types_cb(req: str, ui, args: Dict) -> Dict:
 
     msg = response(req, data=list(OBJECT_TYPES.values()))
     return msg
 
 
 @rpc(logger)
-async def save_scene(req, ui, args) -> Dict:
+async def save_scene_cb(req, ui, args) -> Dict:
 
     if SCENE is None or not SCENE.id:
         return response(req, False, ["Scene not opened or invalid."])
@@ -235,7 +239,7 @@ async def save_scene(req, ui, args) -> Dict:
 
 
 @rpc(logger)
-async def save_project(req, ui, args) -> Dict:
+async def save_project_cb(req, ui, args) -> Dict:
 
     if PROJECT is None or not PROJECT.id:
         return response(req, False, ["Project not opened or invalid."])
@@ -257,9 +261,8 @@ async def save_project(req, ui, args) -> Dict:
     # TODO store sources separately?
     project_db = PROJECT.to_dict()
     project_db["sources"] = {}
-    project_db["sources"]["resources"] = generate_source.derived_resources_class(PROJECT.id, action_names)
-    project_db["sources"]["script"] = generate_source.SCRIPT_HEADER +\
-        generate_source.program_src(PROJECT, SCENE, built_in_types_names())
+    project_db["sources"]["resources"] = derived_resources_class(PROJECT.id, action_names)
+    project_db["sources"]["script"] = program_src(PROJECT, SCENE, built_in_types_names())
 
     db = mongo.arcor2
     # TODO validate project here or in DB?
@@ -330,8 +333,8 @@ async def _get_object_actions():
         obj_db = await db.object_types.find_one({"id": obj_type})
         try:
             # TODO weird - store obj type source separately!
-            object_actions[obj_type] = generate_source.get_object_actions(obj_db["source"])
-        except GenerateSourceException as e:
+            object_actions[obj_type] = get_object_actions(obj_db["source"])
+        except SourceException as e:
             await logger.error(e)
 
     # add actions from ancestors
@@ -368,7 +371,7 @@ def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict):
 
 
 @rpc(logger)
-async def get_object_actions(req, ui, args) -> Union[Dict, None]:
+async def get_object_actions_cb(req, ui, args) -> Union[Dict, None]:
 
     try:
         obj_type = args["type"]
@@ -404,7 +407,7 @@ async def manager_request(req, ui, args) -> Dict:
 
 
 @rpc(logger)
-async def get_schema(req, ui, args) -> Union[Dict, None]:
+async def get_schema_cb(req, ui, args) -> Union[Dict, None]:
 
     try:
         which = args["type"]
@@ -455,11 +458,11 @@ async def project_change(ui, project) -> None:
     await notify_project_change_to_others(ui)
 
 
-RPC_DICT: Dict = {'getObjectTypes': get_object_types,
-                  'getObjectActions': get_object_actions,
-                  'saveProject': save_project,
-                  'saveScene': save_scene,
-                  'getSchema': get_schema}
+RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
+                  'getObjectActions': get_object_actions_cb,
+                  'saveProject': save_project_cb,
+                  'saveScene': save_scene_cb,
+                  'getSchema': get_schema_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():

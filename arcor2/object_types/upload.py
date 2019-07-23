@@ -1,15 +1,15 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+import inspect
 
 from pymongo import MongoClient  # type: ignore
-import sys
-import inspect
+
 from arcor2.object_types import Generic
-from arcor2.generate_source import check_object_type, GenerateSourceException
+from arcor2.source.object_types import check_object_type
+from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
+from arcor2.exceptions import Arcor2Exception
 
 
-class UploadException(Exception):
+class UploadException(Arcor2Exception):
     pass
 
 
@@ -34,30 +34,10 @@ def upload(module_cls: str):
 
         try:
             check_object_type(source)
-        except GenerateSourceException as e:
+        except SourceException as e:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
         print(f"Storing '{cls.__name__}'...")
         # TODO check if it already exists?
         db.object_types.update_one({"id": cls.__name__}, {'$set': {"source": source}}, upsert=True)
-
-
-def main():
-
-    try:
-        arg = sys.argv[1]
-    except IndexError:
-        print("Usage: upload_object_type.py package.module/Cls")
-        return
-
-    try:
-        upload(arg)
-    except UploadException as e:
-        print(e)
-        return
-    print('Done')
-
-
-if __name__ == "__main__":
-    main()
