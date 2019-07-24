@@ -19,7 +19,7 @@ Before running ```arcor2_manager```, please set ```ARCOR2_PROJECT_PATH``` to a d
 
 How to run tests:
 ```bash
-mypy arcor2
+mypy --strict arcor2
 flake8 arcor2
 py.test arcor2
 ```
