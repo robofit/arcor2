@@ -144,7 +144,12 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
     # db-stored (user-created) types
     cursor = mongo.arcor2.object_types.find({})
     for obj_db in await cursor.to_list(None):
-        obj = ObjectType.from_dict(obj_db)
+        try:
+            obj = ObjectType.from_dict(obj_db)
+        except ValidationError as e:
+            await logger.error(f"Failed to load object type: {e}")
+            continue
+
         object_types[obj.id] = object_type_meta(obj.source)
 
     # if description is missing, try to get it from ancestor(s), or forget the object type

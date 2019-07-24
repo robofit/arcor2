@@ -1,7 +1,7 @@
 from typing import Dict
 
 from horast import parse
-from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef
+from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef, Call, keyword, NameConstant, Str, Module
 
 from arcor2.data import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectTypeMeta
 from arcor2.helpers import convert_cc
@@ -31,11 +31,21 @@ def get_object_actions(object_source: str) -> ObjectActions:
         # TODO further checks?
         meta = ActionMetadata()
 
+        assert isinstance(node.value, Call)
+
         for kwarg in node.value.keywords:
+
+            assert isinstance(kwarg, keyword)
+
+            if not kwarg.arg:
+                continue
+
             try:
+                assert isinstance(kwarg.value, NameConstant)
                 setattr(meta, kwarg.arg, kwarg.value.value)
             except AttributeError:
                 raise SourceException(f"Unknown __action__ attribute {kwarg.arg}.")
+        assert isinstance(node.targets[0].value, Name)
         action_attr[node.targets[0].value.id] = meta
 
     # TODO add missing attributes (e.g. free, composite, blackbox) to action_attr?
@@ -46,6 +56,7 @@ def get_object_actions(object_source: str) -> ObjectActions:
             continue
 
         for decorator in node.decorator_list:
+            assert isinstance(decorator, Name)
             if decorator.id == "action":
                 break
         else:
@@ -66,6 +77,7 @@ def get_object_actions(object_source: str) -> ObjectActions:
             if aarg.annotation is None:
                 raise SourceException(f"Argument {aarg.arg} of method {node.name} not annotated.")
 
+            assert isinstance(aarg.annotation, Name)
             oa.action_args.append(ObjectActionArgs(name=aarg.arg, type=aarg.annotation.id))
 
         ret.append(oa)
@@ -94,12 +106,14 @@ def object_type_meta(object_source: str) -> ObjectTypeMeta:
     obj = ObjectTypeMeta(tree.name)
 
     if tree.bases:
+        assert isinstance(tree.bases[0], Name)
         obj.base = tree.bases[0].id
 
     for node in tree.body:
         if not isinstance(node, Assign):
             continue
         if len(node.targets) == 1 and isinstance(node.targets[0], Name) and node.targets[0].id == "__DESCRIPTION__":
+            assert isinstance(node.value, Str)
             obj.description = node.value.s
 
     return obj
@@ -107,7 +121,9 @@ def object_type_meta(object_source: str) -> ObjectTypeMeta:
 
 def object_cls_def(object_source: str) -> ClassDef:
 
-    tree = parse(object_source)
+    tree = parse(object_source)  # TODO figure out if parse is correctly annotated
+
+    assert isinstance(tree, Module)
 
     cls_def = None
 

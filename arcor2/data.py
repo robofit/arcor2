@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Union, Dict
+from typing import List, Any, Union, Dict, Iterator
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
@@ -28,11 +28,13 @@ class DataClassEncoder(JSONEncoder):
 @dataclass
 class IterableIndexable(JsonSchemaMixin):
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int) -> float:
 
-        return getattr(self, tuple(self.__dict__.keys())[item])
+        attr = getattr(self, tuple(self.__dict__.keys())[item])
+        assert isinstance(attr, float)
+        return attr
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[float]:
 
         yield from self.__dict__.values()
 

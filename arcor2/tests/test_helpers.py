@@ -66,5 +66,3 @@ def test_get_actions_cache_empty_project():
     assert not cache
     assert first is None
     assert last is None
-
-

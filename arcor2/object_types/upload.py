@@ -13,7 +13,7 @@ class UploadException(Arcor2Exception):
     pass
 
 
-def upload(module_cls: str):
+def upload(module_cls: str) -> None:
 
     try:
         _, cls = import_cls(module_cls)

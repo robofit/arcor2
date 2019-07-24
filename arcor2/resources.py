@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Union
+from typing import Dict, Union, Any
 import importlib
 
 from dataclasses_jsonschema import ValidationError
@@ -11,7 +11,7 @@ from arcor2.helpers import convert_cc, built_in_types_names
 from arcor2.data import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
 from arcor2.object_types import Generic
-from arcor2.object_types.utils import print_json
+from arcor2.object_types_utils import print_json
 
 # TODO for bound methods - check whether provided action point belongs to the object
 
@@ -52,7 +52,7 @@ class IntResources:
                 self.objects[project_obj.id].add_action_point(aps.id, aps.pose)
 
     @staticmethod
-    def print_info(action_id: str, args: Dict) -> None:
+    def print_info(action_id: str, args: Dict[str, Any]) -> None:  # TODO dataclass for args
         """Helper method used to print out info about the action going to be executed."""
 
         print_json({"event": "currentAction", "data": {"action_id": action_id, "args": args}})
