@@ -200,14 +200,20 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
 
                 for item in node.body:
 
-                    if isinstance(item, Assign) and item.targets[0].id == name:
+                    if isinstance(item, Assign):
 
-                        if item.value.func.id != cls:
-                            raise SourceException(
-                                "Name '{}' already used for instance of '{}'!".format(name, item.value.func.id))
+                        assert isinstance(item.targets[0], Name)
 
-                        self.found = True
-                        # TODO update arguments?
+                        if item.targets[0].id == name:
+
+                            # TODO assert for item.value
+                            if item.value.func.id != cls:  # type: ignore
+                                raise SourceException(
+                                    "Name '{}' already used for instance of '{}'!".
+                                    format(name, item.value.func.id))  # type: ignore
+
+                            self.found = True
+                            # TODO update arguments?
 
             if not self.found:
                 self.generic_visit(node)

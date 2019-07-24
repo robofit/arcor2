@@ -53,10 +53,10 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
             raise SourceException("Unexpected content.")
 
         try:
-            val = node.value
-            obj_id = val.func.value.id  # variable name
-            method = val.func.attr
-            action_id = val.keywords[0].value.attr
+            val = node.value  # type: ignore
+            obj_id = val.func.value.id  # type: ignore
+            method = val.func.attr  # type: ignore
+            action_id = val.keywords[0].value.attr  # type: ignore
         except (AttributeError, IndexError) as e:
             print(e)
             raise SourceException("Script has unexpected content.")

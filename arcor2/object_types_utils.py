@@ -1,20 +1,24 @@
 import json
 import sys
-from typing import Union, Dict
+from typing import Union, Dict, Callable, Any, TYPE_CHECKING
 import select
 
 from arcor2.data import DataClassEncoder
 
+if TYPE_CHECKING:
+    from arcor2.object_types import Generic  # noqa
 
-def read_stdin(timeout=0.0) -> Union[str, None]:
+
+def read_stdin(timeout: float = 0.0) -> Union[str, None]:
 
     if select.select([sys.stdin], [], [], timeout)[0]:
         return sys.stdin.readline().strip()
     return None
 
 
-def handle_action(obj_id, f, where) -> None:
+def handle_action(obj_id: str, f: Callable[..., Any], where: str) -> None:
 
+    # TODO turn following into dataclass
     d = {"event": "actionState", "data": {"method": "{}/{}".format(obj_id, f.__name__), "where": where}}
     print_json(d)
 
@@ -29,14 +33,14 @@ def handle_action(obj_id, f, where) -> None:
                 break
 
 
-def print_json(d: Dict) -> None:
+def print_json(d: Dict[str, Any]) -> None:
 
     print(json.dumps(d, cls=DataClassEncoder))
     sys.stdout.flush()
 
 
-def action(f):  # TODO read stdin and pause if requested
-    def wrapper(*args, **kwargs):
+def action(f: Callable[..., Any]) -> Callable[..., Any]:  # TODO read stdin and pause if requested
+    def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
 
         handle_action(args[0].name, f, "before")
         res = f(*args, **kwargs)

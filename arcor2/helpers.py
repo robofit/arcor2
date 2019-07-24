@@ -1,6 +1,7 @@
 import copy
 import inspect
-from typing import Optional, List, Dict, Callable, Tuple, Type, Union, Set, get_type_hints
+from typing import Optional, List, Dict, Callable, Tuple, Type, Union, Set, get_type_hints, Any, Awaitable, Coroutine, \
+    Iterator
 from types import ModuleType
 import json
 import asyncio
@@ -27,7 +28,7 @@ class ImportClsException(Arcor2Exception):
     pass
 
 
-def import_cls(module_cls: str) -> Tuple[ModuleType, Type]:
+def import_cls(module_cls: str) -> Tuple[ModuleType, Type[Any]]:
     """
     Gets module and class based on string like 'module/Cls'.
     :param module_cls:
@@ -52,14 +53,14 @@ def import_cls(module_cls: str) -> Tuple[ModuleType, Type]:
     return module, cls
 
 
-def convert_cc(name):
+def convert_cc(name: str) -> str:
     s1 = _first_cap_re.sub(r'\1_\2', name)
     return _all_cap_re.sub(r'\1_\2', s1).lower()
 
 
-# TODO define Response dataclass instead?
+# TODO define Response dataclass instead
 def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None,
-             data: Optional[Union[Dict, List]] = None) -> Dict:
+             data: Optional[Union[Dict, List]] = None) -> Dict:  # type: ignore
 
     if messages is None:
         messages = []
@@ -72,13 +73,14 @@ def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = 
 
 class RpcPlugin:
 
-    def post_hook(self, req: str, args: Dict, resp: Dict):
+    def post_hook(self, req: str, args: Dict[str, Any], resp: Dict[str, Any]) -> None:
         pass
 
 
-def rpc(logger, plugins: Optional[List[RpcPlugin]] = None):
-    def rpc_inner(f: Callable) -> Callable:
-        async def wrapper(req: str, ui, args: Dict, req_id: Optional[int] = None):
+def rpc(logger: Any, plugins: Optional[List[RpcPlugin]] = None) -> Callable[..., Any]:
+    def rpc_inner(f: Callable[..., Awaitable[Any]]) -> Callable[[str, Any, Dict[str, Any], Optional[int]],
+                                                                Coroutine[Any, Any, None]]:
+        async def wrapper(req: str, ui: Any, args: Dict[str, Any], req_id: Optional[int] = None) -> None:
 
             msg = await f(req, ui, args)
 
@@ -101,7 +103,13 @@ def rpc(logger, plugins: Optional[List[RpcPlugin]] = None):
     return rpc_inner
 
 
-async def server(client, path, logger, register, unregister, rpc_dict: Dict, event_dict: Optional[Dict] = None) -> None:
+async def server(client: Any,
+                 path: str,
+                 logger: Any,
+                 register: Callable[..., Awaitable[Any]],
+                 unregister: Callable[..., Awaitable[Any]],
+                 rpc_dict: Dict[str, Callable[..., Any]],
+                 event_dict: Optional[Dict[str, Callable[..., Any]]] = None) -> None:
 
     if event_dict is None:
         event_dict = {}
@@ -143,7 +151,7 @@ async def server(client, path, logger, register, unregister, rpc_dict: Dict, eve
         await unregister(client)
 
 
-def built_in_types():
+def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
     """
     Yields class name and class definition tuple
     """
@@ -155,7 +163,7 @@ def built_in_types():
         yield cls[0], cls[1]
 
 
-def built_in_types_names() -> Set:
+def built_in_types_names() -> Set[str]:
 
     names = set()
 
@@ -196,7 +204,7 @@ def get_objects_cache(project: Project, id_to_var: bool = False) -> Dict[str, Pr
     return cache
 
 
-def clear_project_logic(project: Project):
+def clear_project_logic(project: Project) -> None:
 
     for obj in project.objects:
         for act_point in obj.action_points:
@@ -291,7 +299,7 @@ def built_in_types_actions() -> ObjectActionsDict:
     return d
 
 
-def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict, object_types: ObjectTypeMetaDict):
+def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict, object_types: ObjectTypeMetaDict) -> None:
 
     base_name = object_types[obj_type].base
 

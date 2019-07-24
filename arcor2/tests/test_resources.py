@@ -3,7 +3,7 @@
 import pytest  # type: ignore
 
 from arcor2.resources import IntResources, ResourcesException
-from arcor2.source.tests.test_logic import VALID_PROJECT, VALID_PROJECT_WO_LOGIC, VALID_SCENE
+from arcor2.source.tests.test_logic import VALID_PROJECT, VALID_SCENE
 from arcor2.data import ActionPoint
 
 
