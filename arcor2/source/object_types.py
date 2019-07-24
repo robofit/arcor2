@@ -1,9 +1,9 @@
 from typing import Dict
 
-from horast import parse  # type: ignore
-from typed_ast._ast3 import Assign, Attribute, FunctionDef, Name, ClassDef  # type: ignore
+from horast import parse
+from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef
 
-from arcor2.data import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectType
+from arcor2.data import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectTypeMeta
 from arcor2.helpers import convert_cc
 from arcor2.source import SourceException
 
@@ -80,18 +80,18 @@ def check_object_type(object_type_source: str):
     :return:
     """
 
-    object_type_info(object_type_source)
+    object_type_meta(object_type_source)
     get_object_actions(object_type_source)
 
 
-def object_type_info(object_source: str) -> ObjectType:
+def object_type_meta(object_source: str) -> ObjectTypeMeta:
 
     tree = object_cls_def(object_source)
 
     if len(tree.bases) > 1:
         raise SourceException("Only one base class is supported!")
 
-    obj = ObjectType(tree.name)
+    obj = ObjectTypeMeta(tree.name)
 
     if tree.bases:
         obj.base = tree.bases[0].id

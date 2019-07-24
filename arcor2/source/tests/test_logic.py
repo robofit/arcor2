@@ -141,6 +141,12 @@ if (__name__ == '__main__'):
 """
 
 
+@pytest.fixture(params=list(VALID_PROJECTS))
+def valid_project(request):
+
+    return copy.deepcopy(request.param)
+
+
 def delete_first_action_found(project: Project):
 
     for obj in project.objects:
@@ -150,62 +156,47 @@ def delete_first_action_found(project: Project):
                 return
 
 
-def test_valid():
+def test_valid(valid_project):
 
-    for valid_project in VALID_PROJECTS:
-
-        project = copy.deepcopy(valid_project)
-        get_logic_from_source(VALID_SOURCE, project)
-        assert VALID_PROJECT == project
+    get_logic_from_source(VALID_SOURCE, valid_project)
+    assert VALID_PROJECT == valid_project
 
 
-def test_unknown_action():
+def test_unknown_action(valid_project):
 
-    for valid_project in VALID_PROJECTS:
-
-        project = copy.deepcopy(valid_project)
-        invalid_source = VALID_SOURCE.replace("MoveToTester", "MoveToSomewhereElse")
-
-        with pytest.raises(SourceException):
-            get_logic_from_source(invalid_source, project)
-
-
-def test_totally_invalid_source():
-
-    for valid_project in VALID_PROJECTS:
-
-        project = copy.deepcopy(valid_project)
-        with pytest.raises(SourceException):
-            get_logic_from_source("", project)
-
-
-def test_valid_with_different_logic():
-
-    for valid_project in VALID_PROJECTS:
-
-        project = copy.deepcopy(valid_project)
-        get_logic_from_source(VALID_SOURCE_WITH_DIFFERENT_ACTION_ORDER, project)
-        assert valid_project != project
-
-
-def test_missing_action():
-
-    project = copy.deepcopy(VALID_PROJECT)
-    delete_first_action_found(project)
+    invalid_source = VALID_SOURCE.replace("MoveToTester", "MoveToSomewhereElse")
 
     with pytest.raises(SourceException):
-        get_logic_from_source(VALID_SOURCE, project)
+        get_logic_from_source(invalid_source, valid_project)
 
 
-def test_duplicate_action():
+def test_totally_invalid_source(valid_project):
 
-    for valid_project in VALID_PROJECTS:
+    with pytest.raises(SourceException):
+        get_logic_from_source("", valid_project)
 
-        project = copy.deepcopy(valid_project)
-        invalid_source = VALID_SOURCE.replace("MoveToTester", "MoveToBoxOUT")
 
-        with pytest.raises(SourceException):
-            get_logic_from_source(invalid_source, project)
+def test_valid_with_different_logic(valid_project):
+
+    project = copy.deepcopy(valid_project)
+    get_logic_from_source(VALID_SOURCE_WITH_DIFFERENT_ACTION_ORDER, project)
+    assert valid_project != project
+
+
+def test_missing_action(valid_project):
+
+    delete_first_action_found(valid_project)
+
+    with pytest.raises(SourceException):
+        get_logic_from_source(VALID_SOURCE, valid_project)
+
+
+def test_duplicate_action(valid_project):
+
+    invalid_source = VALID_SOURCE.replace("MoveToTester", "MoveToBoxOUT")
+
+    with pytest.raises(SourceException):
+        get_logic_from_source(invalid_source, valid_project)
 
 
 def test_from_source_to_json_and_back():

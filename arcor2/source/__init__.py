@@ -1,5 +1,5 @@
 import static_typing as st  # type: ignore
-import typed_ast.ast3  # type: ignore
+import typed_ast.ast3
 
 from arcor2.exceptions import Arcor2Exception
 

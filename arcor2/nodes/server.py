@@ -6,29 +6,23 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, get_type_hints
-import inspect
-import copy
+from typing import Dict, Set, Union
 
-import websockets  # type: ignore
+import websockets
 from aiologger import Logger  # type: ignore
 import motor.motor_asyncio  # type: ignore
-from undecorated import undecorated  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.source.logic import program_src
-from arcor2.source.object_types import object_type_info, get_object_actions
+from arcor2.source.object_types import object_type_meta, get_object_actions
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
-from arcor2.exceptions import Arcor2Exception
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
-from arcor2.helpers import response, rpc, server
-from arcor2.data import Scene, Project, ObjectType, ObjectAction, ObjectActionArgs, ObjectActions
+from arcor2.helpers import response, rpc, server, obj_description_from_base, DataError, built_in_types_actions, \
+    add_ancestor_actions, built_in_types_names, built_in_types_meta
+from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectType, ObjectActionsDict, \
+    ObjectTypeMetaDict
 
-
-# TODO validation of scene/project -> in thread pool executor (CPU intensive)
-# TODO notify RPC requests to other interfaces to let them know what happened?
-from arcor2.helpers import built_in_types, built_in_types_names
 
 logger = Logger.with_default_handlers(name='arcor2-server')
 
@@ -45,10 +39,8 @@ MANAGER_RPC_REQUEST_QUEUE: asyncio.Queue = asyncio.Queue()
 MANAGER_RPC_RESPONSE_QUEUE: asyncio.Queue = asyncio.Queue()
 MANAGER_RPC_REQ_ID: int = 0
 
-ObjectActionsDict = Dict[str, ObjectActions]
-
 # TODO watch for changes (just clear on change)
-OBJECT_TYPES: Dict[str, ObjectType] = {}
+OBJECT_TYPES: ObjectTypeMetaDict = {}
 OBJECT_ACTIONS: ObjectActionsDict = {}
 
 
@@ -143,54 +135,19 @@ async def notify_project(interface) -> None:
     await asyncio.wait([interface.send(message)])
 
 
-class DataError(Arcor2Exception):
-    pass
-
-
-def obj_description_from_base(data: Dict[str, ObjectType], obj_type: ObjectType) -> str:
-
-    try:
-        obj = data[obj_type.base]
-    except KeyError:
-        raise DataError(f"Unknown object type: {obj_type}.")
-
-    if obj.description:
-        return obj.description
-
-    if not obj.base:
-        return ""
-
-    return obj_description_from_base(data, data[obj.base])
-
-
 async def _get_object_types():  # TODO watch db for changes and call this + notify UI in case of something changed
 
     global OBJECT_TYPES
 
-    object_types: Dict[str, ObjectType] = {}
-
-    # built-in object types
-    for type_name, type_def in built_in_types():
-
-        obj = ObjectType(type_name, type_def.__DESCRIPTION__, True)
-
-        bases = inspect.getmro(type_def)
-
-        assert 1 < len(bases) < 4
-
-        if len(bases) == 3:
-            obj.base = bases[1].__name__
-
-        object_types[type_name] = obj
+    object_types: Dict[str, ObjectTypeMeta] = built_in_types_meta()
 
     # db-stored (user-created) types
     cursor = mongo.arcor2.object_types.find({})
-    for obj in await cursor.to_list(None):
-        try:
-            object_types[obj["id"]] = object_type_info(obj["source"])
-        except KeyError:
-            continue
+    for obj_db in await cursor.to_list(None):
+        obj = ObjectType.from_dict(obj_db)
+        object_types[obj.id] = object_type_meta(obj.source)
 
+    # if description is missing, try to get it from ancestor(s), or forget the object type
     to_delete = set()
 
     for obj_type, obj in object_types.items():
@@ -282,46 +239,7 @@ async def _get_object_actions():
 
     global OBJECT_ACTIONS
 
-    object_actions: ObjectActionsDict = {}
-
-    # built-in object types
-    for type_name, type_def in built_in_types():
-
-        if type_name not in OBJECT_TYPES:
-            continue
-
-        # ...inspect.ismethod does not work on un-initialized classes
-        for method in inspect.getmembers(type_def, predicate=inspect.isfunction):
-
-            # TODO check also if the method has 'action' decorator (ast needed)
-            if not hasattr(method[1], "__action__"):
-                continue
-
-            meta = method[1].__action__
-
-            data = ObjectAction(name=method[0], meta=meta)
-
-            """
-            Methods supposed to be actions have @action decorator, which has to be stripped away in order to get
-            method's arguments / type hints.
-            """
-            undecorated_method = undecorated(method[1])
-
-            for name, ttype in get_type_hints(undecorated_method).items():
-
-                try:
-                    if name == "return":
-                        data.returns = ttype.__name__
-                        continue
-
-                    data.action_args.append(ObjectActionArgs(name=name, type=ttype.__name__))
-
-                except AttributeError:
-                    print(f"Skipping {ttype}")  # TODO make a fix for Union
-
-            if type_name not in object_actions:
-                object_actions[type_name] = []
-            object_actions[type_name].append(data)
+    object_actions: ObjectActionsDict = built_in_types_actions()
 
     for obj_type, obj in OBJECT_TYPES.items():
 
@@ -332,42 +250,15 @@ async def _get_object_actions():
         db = mongo.arcor2
         obj_db = await db.object_types.find_one({"id": obj_type})
         try:
-            # TODO weird - store obj type source separately!
             object_actions[obj_type] = get_object_actions(obj_db["source"])
         except SourceException as e:
             await logger.error(e)
 
     # add actions from ancestors
     for obj_type in OBJECT_TYPES.keys():
-        add_ancestor_actions(obj_type, object_actions)
+        add_ancestor_actions(obj_type, object_actions, OBJECT_TYPES)
 
     OBJECT_ACTIONS = object_actions
-
-
-def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict):
-
-    base_name = OBJECT_TYPES[obj_type].base
-
-    if not base_name:
-        return
-
-    if OBJECT_TYPES[base_name].base:
-        add_ancestor_actions(base_name, object_actions)
-
-    # do not add action from base if it is overridden in child
-    for base_action in object_actions[base_name]:
-        for obj_action in object_actions[obj_type]:
-            if base_action.name == obj_action.name:
-
-                # built-in object has no "origins" yet
-                if not obj_action.origins:
-                    obj_action.origins = base_name
-                break
-        else:
-            action = copy.deepcopy(base_action)
-            if not action.origins:
-                action.origins = base_name
-            object_actions[obj_type].append(action)
 
 
 @rpc(logger)

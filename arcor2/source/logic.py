@@ -1,7 +1,7 @@
 from typing import Set, Union
 
-from horast import parse  # type: ignore
-from typed_ast._ast3 import Expr, Pass, keyword, Attribute, Name, Load  # type: ignore
+from horast import parse
+from typed_ast.ast3 import Expr, Pass, keyword, Attribute, Name, Load
 
 from arcor2.data import Project, Scene, Action, ActionIO, ActionIOEnum
 from arcor2.helpers import convert_cc, get_actions_cache

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Set, Union
+from typing import Dict, Union
 import importlib
 
 from dataclasses_jsonschema import ValidationError
@@ -16,62 +16,40 @@ from arcor2.object_types.utils import print_json
 # TODO for bound methods - check whether provided action point belongs to the object
 
 
-class ResourcesBase:
-    """
-    Wrapper around MongoDB document store API for specific project.
-    """
+class IntResources:
 
-    def __init__(self, project_id):
+    CUSTOM_OBJECT_TYPES_MODULE = "object_types"
 
-        self.project_id = project_id
-        self.client = MongoClient('localhost', 27017)
+    def __init__(self, scene: Scene, project: Project):
 
-        proj_data: Union[None, Dict] = self.client.arcor2.projects.find_one({'id': project_id})
+        self.scene = scene
+        self.project = project
 
-        if not proj_data:
-            raise ResourcesException("Could not find project {}!".format(project_id))
-
-        try:
-            self.project: Project = Project.from_dict(proj_data)
-        except ValidationError as e:
-            raise ResourcesException("Invalid project: {}".format(e))
-
-        scene_data: Union[None, Dict] = self.client.arcor2.scenes.find_one({'id': self.project.scene_id})
-
-        if not scene_data:
-            raise ResourcesException(f"Could not find scene "
-                                     f"{self.project.scene_id} for project {self.project.id}!")
-
-        try:
-            self.scene: Scene = Scene.from_dict(scene_data)
-        except ValidationError as e:
-            raise ResourcesException("Invalid scene: {}".format(e))
-
-        # TODO create instances of all object_types according to the scene
         self.objects: Dict[str, Generic] = {}
 
         built_in = built_in_types_names()
 
-        for obj in self.scene.objects:
+        for scene_obj in self.scene.objects:
 
-            if obj.type in built_in:
-                module = importlib.import_module("arcor2.object_types." + convert_cc(obj.type))
+            if scene_obj.type in built_in:
+                module = importlib.import_module("arcor2.object_types." + convert_cc(scene_obj.type))
             else:
-                module = importlib.import_module("object_types." + convert_cc(obj.type))
+                module = importlib.import_module(IntResources.CUSTOM_OBJECT_TYPES_MODULE + "." +
+                                                 convert_cc(scene_obj.type))
 
-            cls = getattr(module, obj.type)
+            cls = getattr(module, scene_obj.type)
 
-            assert obj.id not in self.objects, "Duplicate object id {}!".format(obj.id)
+            assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
             # TODO handle hierarchy of object_types (tree), e.g. call add_child...
-            inst = cls(obj.id, obj.pose)
-            self.objects[obj.id] = inst
+            inst = cls(scene_obj.id, scene_obj.pose)
+            self.objects[scene_obj.id] = inst
 
         # add action points to the object_types
-        for obj in self.project.objects:
+        for project_obj in self.project.objects:
 
-            for aps in obj.action_points:
-                self.objects[obj.id].add_action_point(aps.id, aps.pose)
+            for aps in project_obj.action_points:
+                self.objects[project_obj.id].add_action_point(aps.id, aps.pose)
 
     @staticmethod
     def print_info(action_id: str, args: Dict) -> None:
@@ -79,25 +57,14 @@ class ResourcesBase:
 
         print_json({"event": "currentAction", "data": {"action_id": action_id, "args": args}})
 
-    def action_ids(self) -> Set:
-
-        ids: Set = set()
-
-        for obj in self.project.objects:
-            for aps in obj.action_points:
-                for act in aps.actions:
-                    assert act.id not in ids, "Action ID {} not globally unique.".format(act.id)
-                    ids.add(act.id)
-
-        return ids
-
     def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
-
-        assert ap_id in self.objects[object_id].action_points
 
         # TODO action point pose should be relative to its parent object pose - how and where to get the absolute pose?
         # ...temporarily, simply return action point as it is
-        return self.objects[object_id].action_points[ap_id]
+        try:
+            return self.objects[object_id].action_points[ap_id]
+        except KeyError:
+            raise ResourcesException("Unknown object id or action point id.")
 
     def parameters(self, action_id: str) -> Dict:
 
@@ -118,4 +85,37 @@ class ResourcesBase:
 
                         return ret
 
-        raise ResourcesException("Action_id {} not found for project {}.".format(action_id, self.project_id))
+        raise ResourcesException("Action_id {} not found for project {}.".format(action_id, self.project.id))
+
+
+class ResourcesBase(IntResources):
+    """
+    Wrapper around MongoDB document store API for specific project.
+    """
+
+    def __init__(self, project_id):
+
+        client = MongoClient('localhost', 27017)
+
+        proj_data: Union[None, Dict] = client.arcor2.projects.find_one({'id': project_id})
+
+        if not proj_data:
+            raise ResourcesException("Could not find project {}!".format(project_id))
+
+        try:
+            project: Project = Project.from_dict(proj_data)
+        except ValidationError as e:
+            raise ResourcesException("Invalid project: {}".format(e))
+
+        scene_data: Union[None, Dict] = client.arcor2.scenes.find_one({'id': project.scene_id})
+
+        if not scene_data:
+            raise ResourcesException(f"Could not find scene "
+                                     f"{project.scene_id} for project {project.id}!")
+
+        try:
+            scene: Scene = Scene.from_dict(scene_data)
+        except ValidationError as e:
+            raise ResourcesException("Invalid scene: {}".format(e))
+
+        super(ResourcesBase, self).__init__(scene, project)

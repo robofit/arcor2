@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Union
+from typing import List, Any, Union, Dict
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
@@ -26,28 +26,32 @@ class DataClassEncoder(JSONEncoder):
 
 
 @dataclass
-class Position(JsonSchemaMixin):
+class IterableIndexable(JsonSchemaMixin):
+
+    def __getitem__(self, item):
+
+        return getattr(self, tuple(self.__dict__.keys())[item])
+
+    def __iter__(self):
+
+        yield from self.__dict__.values()
+
+
+@dataclass
+class Position(IterableIndexable):
 
     x: float
     y: float
     z: float
 
-    def to_list(self) -> List:
-
-        return [self.x, self.y, self.z]
-
 
 @dataclass
-class Orientation(JsonSchemaMixin):
+class Orientation(IterableIndexable):
 
     x: float
     y: float
     z: float
     w: float
-
-    def to_list(self) -> List:
-
-        return [self.x, self.y, self.z, self.w]
 
 
 @dataclass
@@ -134,12 +138,25 @@ class Project(JsonSchemaMixin):
 
 
 @dataclass
-class ObjectType(JsonSchemaMixin):
+class ObjectTypeMeta(JsonSchemaMixin):
+    """
+    Metadata about object type, as it is used in server API.
+    """
 
     type: str
     description: str = field(default_factory=str)
     built_in: bool = False
     base: str = field(default_factory=str)
+
+
+@dataclass
+class ObjectType(JsonSchemaMixin):
+    """
+    Object type, as it is stored in DB.
+    """
+
+    id: str
+    source: str
 
 
 @dataclass
@@ -160,3 +177,5 @@ class ObjectAction(JsonSchemaMixin):
 
 
 ObjectActions = List[ObjectAction]
+ObjectActionsDict = Dict[str, ObjectActions]
+ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]

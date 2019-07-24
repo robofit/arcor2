@@ -10,7 +10,7 @@ from typing import Dict, Union, Set, Callable, List
 import argparse
 import os
 
-import websockets  # type: ignore
+import websockets
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
 import motor.motor_asyncio  # type: ignore
@@ -18,6 +18,7 @@ import motor.motor_asyncio  # type: ignore
 from arcor2.helpers import response, rpc, server, convert_cc, built_in_types_names, RpcPlugin, \
     import_cls, ImportClsException
 from arcor2.source.utils import make_executable
+from arcor2.data import Scene, ObjectType
 
 logger = Logger.with_default_handlers(name='arcor2-manager')
 
@@ -138,8 +139,6 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     db = mongo.arcor2
 
-    print(args)
-
     try:
         project = await db.projects.find_one({"id": args["id"]})
     except KeyError as e:
@@ -155,7 +154,12 @@ async def project_load(req: str, client, args: Dict) -> Dict:
     async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
         await f.write(project["sources"]["resources"])
 
-    scene = await db.scenes.find_one({"id": project["scene_id"]})
+    scene_db = await db.scenes.find_one({"id": project["scene_id"]})
+
+    if scene_db is None:
+        return response(req, False, [f'Failed to retrieve scene {project["scene_id"]}.'])
+
+    scene = Scene.from_dict(scene_db)
 
     objects_path = os.path.join(PROJECT_PATH, "object_types")
 
@@ -171,24 +175,26 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     # in scene, there might be more instances of one type
     # ...here we will get necessary types
-    for obj in scene["objects"]:
+    for obj in scene.objects:
 
         # if built-in, do not attempt to find it in DB
-        if obj["type"] in built_in_types:
+        if obj.type in built_in_types:
             continue
 
-        to_download.add(obj["type"])
+        to_download.add(obj.type)
 
     for obj_type_name in to_download:
 
-        obj_type = await db.object_types.find_one({"id": obj_type_name})
+        obj_type_db = await db.object_types.find_one({"id": obj_type_name})
 
-        if obj_type is None:
+        if obj_type_db is None:
             # TODO cleanup?
             return response(req, False, [f'Failed to retrieve object type {obj_type_name}.'])
 
+        obj_type = ObjectType.from_dict(obj_type_db)
+
         async with aiofiles.open(os.path.join(objects_path, convert_cc(obj_type_name)) + ".py", "w") as f:
-            await f.write(obj_type["source"])
+            await f.write(obj_type.source)
 
     return response(req)
 

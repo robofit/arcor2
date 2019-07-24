@@ -5,13 +5,11 @@ from typing import List, Optional, Dict
 
 import autopep8  # type: ignore
 import typed_astunparse  # type: ignore
-from horast import parse, unparse  # type: ignore
+from horast import parse, unparse
 
-# type/ignore does not work with multi-line import
-from typed_ast._ast3 import Module, Assign, AnnAssign, Name, Store, Load, Subscript, Attribute, Index   # type: ignore
-from typed_ast._ast3 import FunctionDef, NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call   # type: ignore
-from typed_ast._ast3 import alias, keyword, ClassDef, arg, Return, While, Str, ImportFrom  # type: ignore
-from typed_ast.ast3 import NodeVisitor, NodeTransformer, fix_missing_locations  # type: ignore
+from typed_ast.ast3 import Module, Assign, AnnAssign, Name, Store, Load, Subscript, Attribute, Index, FunctionDef,\
+    NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
+    ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations
 
 from arcor2.resources import ResourcesBase
 from arcor2.source import SourceException, SCRIPT_HEADER
