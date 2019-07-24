@@ -23,6 +23,8 @@ How to run tests:
 ```bash
 mypy --strict arcor2
 flake8 arcor2
-py.test arcor2
+py.test --cov arcor2
 ```
+
+After any commit, coverage should not be worse than before.
 
