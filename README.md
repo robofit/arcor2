@@ -1,5 +1,7 @@
 # ARCOR2
 
+[![CircleCI](https://circleci.com/gh/robofit/arcor2.svg?style=svg&circle-token=190cc70ee7baa7b6b1335f85ff71a553cf2c50a2)](https://circleci.com/gh/robofit/arcor2)
+
 Expected environment:
   * Ubuntu 18.04
   * Python 3.6
