@@ -11,4 +11,4 @@ class Tester(Generic):
     def run_test(self) -> None:  # not needed in demo 0, just for test purposes
         pass
 
-    run_test.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    run_test.__action__ = ActionMetadata(blocking=True)
