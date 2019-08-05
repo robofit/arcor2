@@ -1,11 +1,11 @@
 import importlib
 import os
 import stat
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 import autopep8  # type: ignore
-import typed_astunparse  # type: ignore
-from horast import parse, unparse
+import typed_astunparse  # type: ignore  # TODO remove when version with py.typed on pypi
+from horast import parse, unparse  # type: ignore  # TODO remove when version with py.typed on pypi
 
 from typed_ast.ast3 import Module, Assign, AnnAssign, Name, Store, Load, Subscript, Attribute, Index, FunctionDef,\
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
@@ -52,7 +52,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
     main_body.insert(last_assign_idx + 1, assign)
 
 
-def main_loop_body(tree) -> List:
+def main_loop_body(tree: Module) -> List[Any]:
 
     main = find_function("main", tree)
 
@@ -96,11 +96,11 @@ def empty_script_tree() -> Module:
     ])
 
 
-def find_function(name, tree) -> FunctionDef:
+def find_function(name: str, tree: Module) -> FunctionDef:
     class FindFunction(NodeVisitor):
 
-        def __init__(self):
-            self.function_node = None
+        def __init__(self) -> None:
+            self.function_node: Optional[FunctionDef] = None
 
         def visit_FunctionDef(self, node: FunctionDef) -> None:
             if node.name == name:
@@ -136,18 +136,20 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
 
     class AddImportTransformer(NodeTransformer):
 
-        def __init__(self, module, cls):
+        def __init__(self, module: str, cls: str) -> None:
             self.done = False
+            self.module = module
+            self.cls = cls
 
         def visit_ImportFrom(self, node: ImportFrom) -> ImportFrom:
-            if node.module == module:
+            if node.module == self.module:
 
                 for aliass in node.names:
-                    if aliass.name == cls:
+                    if aliass.name == self.cls:
                         self.done = True
                         break
                 else:
-                    node.names.append(alias(name=cls, asname=None))
+                    node.names.append(alias(name=self.cls, asname=None))
                     self.done = True
 
             return node
@@ -175,14 +177,15 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
                  kwargs2parse: Optional[Dict] = None) -> None:
     class FindImport(NodeVisitor):
 
-        def __init__(self, cls: str):
+        def __init__(self, cls: str) -> None:
 
             self.found = False
+            self.cls = cls
 
-        def visit_ImportFrom(self, node: ImportFrom):
+        def visit_ImportFrom(self, node: ImportFrom) -> None:
 
             for node_alias in node.names:
-                if node_alias.name == cls:
+                if node_alias.name == self.cls:
                     self.found = True
 
             if not self.found:
@@ -190,7 +193,7 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
 
     class FindClsInst(NodeVisitor):
 
-        def __init__(self):
+        def __init__(self) -> None:
 
             self.found = False
 
@@ -255,14 +258,14 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
         node = tr.visit(node)
 
 
-def append_method_call(body: List, instance: str, method: str, args: List, kwargs: List):
+def append_method_call(body: List, instance: str, method: str, args: List, kwargs: List) -> None:
 
     body.append(Expr(value=Call(func=Attribute(value=Name(id=instance, ctx=Load()), attr=method, ctx=Load()),
                                 args=args,
                                 keywords=kwargs)))
 
 
-def add_method_call_in_main(tree: Module, instance: str, method: str, args: List, kwargs: List):
+def add_method_call_in_main(tree: Module, instance: str, method: str, args: List, kwargs: List) -> None:
     """
     Places method call after block where instances are created.
 
@@ -301,7 +304,7 @@ def add_method_call_in_main(tree: Module, instance: str, method: str, args: List
                                                           args=args, keywords=[])))
 
 
-def get_name(name):
+def get_name(name: str) -> Name:
     return Name(id=name, ctx=Load())
 
 
@@ -310,7 +313,7 @@ def tree_to_str(tree: Module) -> str:
     # validator.visit(tree)
 
     fix_missing_locations(tree)
-    generated_code = unparse(tree)
+    generated_code: str = unparse(tree)
     generated_code = autopep8.fix_code(generated_code, options={'aggressive': 1})
 
     return generated_code

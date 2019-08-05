@@ -11,16 +11,18 @@ import argparse
 import os
 
 import websockets
+from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
 import motor.motor_asyncio  # type: ignore
 
-from arcor2.helpers import response, rpc, server, convert_cc, built_in_types_names, RpcPlugin, \
-    import_cls, ImportClsException
+from arcor2.helpers import response, rpc, server, convert_cc, RpcPlugin, \
+    import_cls, ImportClsException, aiologger_formatter
+from arcor2.object_types_utils import built_in_types_names
 from arcor2.source.utils import make_executable
 from arcor2.data import Scene, ObjectType
 
-logger = Logger.with_default_handlers(name='arcor2-manager')
+logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
 PROCESS: Union[asyncio.subprocess.Process, None] = None
 TASK = None
@@ -205,13 +207,14 @@ async def send_to_clients(data: Dict) -> None:
         await asyncio.wait([client.send(json.dumps(data)) for client in CLIENTS])
 
 
-async def register(websocket) -> None:
+async def register(websocket: WebSocketServerProtocol) -> None:
+
     await logger.info("Registering new client")
     CLIENTS.add(websocket)
     # TODO send current state
 
 
-async def unregister(websocket) -> None:
+async def unregister(websocket: WebSocketServerProtocol) -> None:
     await logger.info("Unregistering client")
     CLIENTS.remove(websocket)
 
@@ -222,7 +225,7 @@ RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
                                  'loadProject': project_load}
 
 
-def main():
+def main() -> None:
 
     assert sys.version_info >= (3, 6)
 

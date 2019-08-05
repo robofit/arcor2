@@ -6,9 +6,10 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union
+from typing import Dict, Set, Union, Optional
 
 import websockets
+from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 import motor.motor_asyncio  # type: ignore
 from dataclasses_jsonschema import ValidationError
@@ -18,19 +19,20 @@ from arcor2.source.object_types import object_type_meta, get_object_actions
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
-from arcor2.helpers import response, rpc, server, obj_description_from_base, DataError, built_in_types_actions, \
-    add_ancestor_actions, built_in_types_names, built_in_types_meta
+from arcor2.helpers import response, rpc, server, aiologger_formatter
+from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
+    built_in_types_actions, add_ancestor_actions
 from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectType, ObjectActionsDict, \
     ObjectTypeMetaDict
 
 
-logger = Logger.with_default_handlers(name='arcor2-server')
+logger = Logger.with_default_handlers(name='server', formatter=aiologger_formatter())
 
 mongo = motor.motor_asyncio.AsyncIOMotorClient()
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
-INTERFACES: Set = set()
+INTERFACES: Set[WebSocketServerProtocol] = set()
 
 JSON_SCHEMAS = {"scene": Scene.json_schema(),
                 "project": Project.json_schema()}
@@ -63,7 +65,7 @@ async def handle_manager_incoming_messages(manager_client):
         # TODO try to open it again and refuse requests meanwhile
 
 
-async def project_manager_client():
+async def project_manager_client() -> None:
 
     while True:
 
@@ -113,7 +115,7 @@ def project_event() -> str:
     return json.dumps({"event": "projectChanged", "data": data})  # TODO use encoder?
 
 
-async def notify_scene_change_to_others(interface=None) -> None:
+async def notify_scene_change_to_others(interface: Optional[WebSocketServerProtocol] = None) -> None:
     if len(INTERFACES) > 1:
         message = scene_event()
         await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])

@@ -1,17 +1,18 @@
 from typing import Set, Union
 
-from horast import parse
-from typed_ast.ast3 import Expr, Pass, keyword, Attribute, Name, Load
+from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
+from typed_ast.ast3 import Expr, Pass, keyword, Attribute, Name, Load, Module
 
 from arcor2.data import Project, Scene, Action, ActionIO, ActionIOEnum
-from arcor2.helpers import convert_cc, get_actions_cache
+from arcor2.helpers import convert_cc
+from arcor2.project_utils import get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
 from arcor2.source.utils import object_instance_from_res, main_loop_body, empty_script_tree, add_import, add_cls_inst, \
     append_method_call, tree_to_str
 
 
-def program_src(project: Project, scene: Scene, built_in_objects: Set) -> str:
+def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> str:
 
     tree = empty_script_tree()
     add_import(tree, "resources", "Resources", try_to_import=False)
@@ -99,7 +100,7 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
         last_action = action
 
 
-def add_logic_to_loop(tree, project: Project):
+def add_logic_to_loop(tree: Module, project: Project) -> None:
 
     loop = main_loop_body(tree)
 

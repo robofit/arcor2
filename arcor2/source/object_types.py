@@ -1,6 +1,6 @@
 from typing import Dict
 
-from horast import parse
+from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
 from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef, Call, keyword, NameConstant, Str, Module
 
 from arcor2.data import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectTypeMeta
@@ -85,7 +85,7 @@ def get_object_actions(object_source: str) -> ObjectActions:
     return ret
 
 
-def check_object_type(object_type_source: str):
+def check_object_type(object_type_source: str) -> None:
     """
     Checks whether the object type source is a valid one.
     :param object_type_source:

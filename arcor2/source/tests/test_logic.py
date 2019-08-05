@@ -7,7 +7,8 @@ import pytest  # type: ignore
 from arcor2.data import Project, Scene
 from arcor2.source.logic import program_src, get_logic_from_source
 from arcor2.source import SourceException
-from arcor2.helpers import built_in_types_names, clear_project_logic
+from arcor2.project_utils import clear_project_logic
+from arcor2.object_types_utils import built_in_types_names
 
 
 def copy_wo_logic(source_project: Project) -> Project:

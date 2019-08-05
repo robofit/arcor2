@@ -5,7 +5,7 @@ import sys
 from arcor2.object_types.upload import upload, UploadException
 
 
-def main():
+def main() -> None:
 
     try:
         arg = sys.argv[1]

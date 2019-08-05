@@ -4,7 +4,7 @@
 from arcor2.object_types.upload import upload
 
 
-def main():
+def main() -> None:
 
     upload("arcor2.user_objects/Box")
     upload("arcor2.user_objects/Box2")

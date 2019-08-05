@@ -7,11 +7,13 @@ import importlib
 from dataclasses_jsonschema import ValidationError
 from pymongo import MongoClient  # type: ignore
 
-from arcor2.helpers import convert_cc, built_in_types_names
+from arcor2.helpers import convert_cc
+from arcor2.object_types_utils import built_in_types_names
 from arcor2.data import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
 from arcor2.object_types import Generic
-from arcor2.object_types_utils import print_json
+from arcor2.action import print_json
+
 
 # TODO for bound methods - check whether provided action point belongs to the object
 
@@ -20,7 +22,7 @@ class IntResources:
 
     CUSTOM_OBJECT_TYPES_MODULE = "object_types"
 
-    def __init__(self, scene: Scene, project: Project):
+    def __init__(self, scene: Scene, project: Project) -> None:
 
         self.scene = scene
         self.project = project
@@ -93,7 +95,7 @@ class ResourcesBase(IntResources):
     Wrapper around MongoDB document store API for specific project.
     """
 
-    def __init__(self, project_id):
+    def __init__(self, project_id: str) -> None:
 
         client = MongoClient('localhost', 27017)
 
