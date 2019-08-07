@@ -28,7 +28,7 @@ from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectType, ObjectAction
 
 logger = Logger.with_default_handlers(name='server', formatter=aiologger_formatter())
 
-mongo = motor.motor_asyncio.AsyncIOMotorClient()
+mongo = motor.motor_asyncio.AsyncIOMotorClient('database', 27017)
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None

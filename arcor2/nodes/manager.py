@@ -29,7 +29,7 @@ TASK = None
 
 CLIENTS: Set = set()
 
-mongo = motor.motor_asyncio.AsyncIOMotorClient()
+mongo = motor.motor_asyncio.AsyncIOMotorClient('database', 27017)
 
 RPC_PLUGINS: List[RpcPlugin] = []
 

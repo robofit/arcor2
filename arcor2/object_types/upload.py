@@ -25,7 +25,7 @@ def upload(module_cls: str) -> None:
 
     path = inspect.getfile(cls)
 
-    mongo = MongoClient()
+    mongo = MongoClient("database", 27017)
     db = mongo.arcor2
 
     with open(path, "r") as source_file:

@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  arcor:
+    build: ./docker
+    container_name: arcor2
+    command: /bin/bash /root/arcor2/docker/start.sh
+    ports:
+      - "6789:6789"
+  kinali:
+    image: office.kinalisoft.eu:8082/kinalisoft-pickmaster-restserver:0.1.0-alpha.3
+    container_name: kinali
+    ports:
+      - "5000:5000"
+  database:
+    image: mongo:latest
