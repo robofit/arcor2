@@ -12,8 +12,8 @@ RUN chmod 600 /arcor2_deploy \
     && cat /ssh_config >> /etc/ssh/ssh_config
 
 RUN cd ~ \
-	&& git clone git@arcor2.github.com:Kapim/arcor2.git \
-	&& git clone git@arcor2_kinali.github.com:Kapim/arcor2_kinali.git
+	&& git clone git@arcor2.github.com:robofit/arcor2.git \
+	&& git clone git@arcor2_kinali.github.com:robofit/arcor2_kinali.git
 
 RUN cd ~/arcor2 \
 	&& pip install -e .
