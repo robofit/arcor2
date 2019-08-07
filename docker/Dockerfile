@@ -3,11 +3,11 @@ FROM python:3
 
 ## Add deploy keys
 RUN mkdir /root/.ssh/
-ADD deploy_keys/arcor2_kinali_deploy /
-ADD deploy_keys/arcor2_deploy /
+ADD deploy_keys/robofit_arcor2_kinali_deploy /
+ADD deploy_keys/robofit_arcor2_deploy /
 ADD ssh_config /
-RUN chmod 600 /arcor2_deploy \
-	&& chmod 600 /arcor2_kinali_deploy \
+RUN chmod 600 /robofit_arcor2_deploy \
+	&& chmod 600 /robofit_arcor2_kinali_deploy \
     && echo "StrictHostKeyChecking no" >> /etc/ssh/ssh_config \
     && cat /ssh_config >> /etc/ssh/ssh_config
 
