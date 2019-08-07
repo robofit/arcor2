@@ -2,11 +2,11 @@
 Host arcor2.github.com
   HostName github.com
   User git
-  IdentityFile /arcor2_deploy
+  IdentityFile /robofit_arcor2_deploy
   IdentitiesOnly yes
 
 Host arcor2_kinali.github.com
   HostName github.com
   User git
-  IdentityFile /arcor2_kinali_deploy
+  IdentityFile /robofit_arcor2_kinali_deploy
   IdentitiesOnly yes
