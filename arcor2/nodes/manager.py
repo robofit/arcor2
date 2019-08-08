@@ -30,12 +30,12 @@ TASK = None
 CLIENTS: Set = set()
 
 try:
-    MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADRESS"]
+    MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
     mongo = motor.motor_asyncio.AsyncIOMotorClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
 except (ValueError, IndexError) as e:
-    sys.exit("'ARCOR2_MONGO_ADRESS' env. variable not well formated. Correct format is 'hostname:port'")
+    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
 except KeyError:
-    sys.exit("'ARCOR2_MONGO_ADRESS' env. variable not set.")
+    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
 
 RPC_PLUGINS: List[RpcPlugin] = []
 
