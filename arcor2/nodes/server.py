@@ -28,7 +28,13 @@ from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectType, ObjectAction
 
 logger = Logger.with_default_handlers(name='server', formatter=aiologger_formatter())
 
-mongo = motor.motor_asyncio.AsyncIOMotorClient()
+try:
+    MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
+    mongo = motor.motor_asyncio.AsyncIOMotorClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
+except (ValueError, IndexError) as e:
+    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
+except KeyError:
+    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None

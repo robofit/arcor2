@@ -25,7 +25,14 @@ def upload(module_cls: str) -> None:
 
     path = inspect.getfile(cls)
 
-    mongo = MongoClient()
+    
+    try:
+        MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
+        mongo = motor.motor_asyncio.AsyncIOMotorClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
+    except (ValueError, IndexError) as e:
+        sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
+    except KeyError:
+        sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
     db = mongo.arcor2
 
     with open(path, "r") as source_file:
