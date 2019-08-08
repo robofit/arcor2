@@ -1,4 +1,6 @@
 import inspect
+import os
+import sys
 
 from pymongo import MongoClient  # type: ignore
 
@@ -28,7 +30,7 @@ def upload(module_cls: str) -> None:
     
     try:
         MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
-        mongo = motor.motor_asyncio.AsyncIOMotorClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
+        mongo = MongoClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
     except (ValueError, IndexError) as e:
         sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
     except KeyError:
