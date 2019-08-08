@@ -5,7 +5,6 @@ from typing import Dict, Union, Any
 import importlib
 
 from dataclasses_jsonschema import ValidationError
-from pymongo import MongoClient  # type: ignore
 
 from arcor2.helpers import convert_cc
 from arcor2.object_types_utils import built_in_types_names
@@ -13,6 +12,7 @@ from arcor2.data import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
 from arcor2.object_types import Generic
 from arcor2.action import print_json
+from arcor2.persistent_storage_client import PersistentStorageClient
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -97,27 +97,9 @@ class ResourcesBase(IntResources):
 
     def __init__(self, project_id: str) -> None:
 
-        client = MongoClient('localhost', 27017)
+        psc = PersistentStorageClient()
 
-        proj_data: Union[None, Dict] = client.arcor2.projects.find_one({'id': project_id})
-
-        if not proj_data:
-            raise ResourcesException("Could not find project {}!".format(project_id))
-
-        try:
-            project: Project = Project.from_dict(proj_data)
-        except ValidationError as e:
-            raise ResourcesException("Invalid project: {}".format(e))
-
-        scene_data: Union[None, Dict] = client.arcor2.scenes.find_one({'id': project.scene_id})
-
-        if not scene_data:
-            raise ResourcesException(f"Could not find scene "
-                                     f"{project.scene_id} for project {project.id}!")
-
-        try:
-            scene: Scene = Scene.from_dict(scene_data)
-        except ValidationError as e:
-            raise ResourcesException("Invalid scene: {}".format(e))
+        project = psc.get_project(project_id)
+        scene = psc.get_scene(project.scene_id)
 
         super(ResourcesBase, self).__init__(scene, project)

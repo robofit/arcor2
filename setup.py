@@ -9,6 +9,7 @@ setup(
                   'console_scripts': [
                       'arcor2_server = arcor2.nodes.server:main',
                       'arcor2_manager = arcor2.nodes.manager:main',
+                      'arcor2_persistent_storage = arcor2.nodes.persistent_storage:main',
                       'arcor2_upload_ot = arcor2.scripts.upload_object_type:main'
                   ],
               },
@@ -31,7 +32,11 @@ setup(
         'aiofiles',
         'undecorated',
         'dataclasses-jsonschema[fast-validation]',
-        'pytest'
+        'pytest',
+        'apispec',
+        'apispec_webframeworks',
+        'flask',
+        'requests'
     ],
     zip_safe=False
 )

@@ -14,13 +14,13 @@ import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
-import motor.motor_asyncio  # type: ignore
 
 from arcor2.helpers import response, rpc, server, convert_cc, RpcPlugin, \
     import_cls, ImportClsException, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.source.utils import make_executable
 from arcor2.data import Scene, ObjectType
+from arcor2.persistent_storage_client import PersistentStorageClient
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -29,13 +29,7 @@ TASK = None
 
 CLIENTS: Set = set()
 
-try:
-    MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
-    mongo = motor.motor_asyncio.AsyncIOMotorClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
-except (ValueError, IndexError) as e:
-    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
-except KeyError:
-    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
+STORAGE_CLIENT = PersistentStorageClient()
 
 RPC_PLUGINS: List[RpcPlugin] = []
 
@@ -145,29 +139,20 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     # TODO check if there are some modifications in already loaded project (if any)
 
-    db = mongo.arcor2
-
-    try:
-        project = await db.projects.find_one({"id": args["id"]})
-    except KeyError as e:
-        return response(req, False, [str(e)])
+    project = STORAGE_CLIENT.get_project(args["id"])
+    project_sources = STORAGE_CLIENT.get_project_sources(args["id"])
 
     script_path = os.path.join(PROJECT_PATH, "script.py")
 
     # TODO just write out all in sources?
     async with aiofiles.open(script_path, "w") as f:
-        await f.write(project["sources"]["script"])
+        await f.write(project_sources.script)
     make_executable(script_path)
 
     async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
-        await f.write(project["sources"]["resources"])
+        await f.write(project_sources.resources)
 
-    scene_db = await db.scenes.find_one({"id": project["scene_id"]})
-
-    if scene_db is None:
-        return response(req, False, [f'Failed to retrieve scene {project["scene_id"]}.'])
-
-    scene = Scene.from_dict(scene_db)
+    scene = STORAGE_CLIENT.get_scene(project.scene_id)
 
     objects_path = os.path.join(PROJECT_PATH, "object_types")
 
@@ -193,13 +178,7 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     for obj_type_name in to_download:
 
-        obj_type_db = await db.object_types.find_one({"id": obj_type_name})
-
-        if obj_type_db is None:
-            # TODO cleanup?
-            return response(req, False, [f'Failed to retrieve object type {obj_type_name}.'])
-
-        obj_type = ObjectType.from_dict(obj_type_db)
+        obj_type = STORAGE_CLIENT.get_object_type(obj_type_name)
 
         async with aiofiles.open(os.path.join(objects_path, convert_cc(obj_type_name)) + ".py", "w") as f:
             await f.write(obj_type.source)
