@@ -19,8 +19,7 @@ from arcor2.helpers import response, rpc, server, convert_cc, RpcPlugin, \
     import_cls, ImportClsException, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.source.utils import make_executable
-from arcor2.data import Scene, ObjectType
-from arcor2.persistent_storage_client import PersistentStorageClient
+from arcor2.persistent_storage_client import AioPersistentStorageClient
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -29,7 +28,7 @@ TASK = None
 
 CLIENTS: Set = set()
 
-STORAGE_CLIENT = PersistentStorageClient()
+STORAGE_CLIENT = AioPersistentStorageClient()
 
 RPC_PLUGINS: List[RpcPlugin] = []
 
@@ -139,8 +138,9 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     # TODO check if there are some modifications in already loaded project (if any)
 
-    project = STORAGE_CLIENT.get_project(args["id"])
-    project_sources = STORAGE_CLIENT.get_project_sources(args["id"])
+    # TODO do this in parallel
+    project = await STORAGE_CLIENT.get_project(args["id"])
+    project_sources = await STORAGE_CLIENT.get_project_sources(args["id"])
 
     script_path = os.path.join(PROJECT_PATH, "script.py")
 
@@ -152,7 +152,7 @@ async def project_load(req: str, client, args: Dict) -> Dict:
     async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
         await f.write(project_sources.resources)
 
-    scene = STORAGE_CLIENT.get_scene(project.scene_id)
+    scene = await STORAGE_CLIENT.get_scene(project.scene_id)
 
     objects_path = os.path.join(PROJECT_PATH, "object_types")
 
@@ -178,7 +178,7 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
     for obj_type_name in to_download:
 
-        obj_type = STORAGE_CLIENT.get_object_type(obj_type_name)
+        obj_type = await STORAGE_CLIENT.get_object_type(obj_type_name)
 
         async with aiofiles.open(os.path.join(objects_path, convert_cc(obj_type_name)) + ".py", "w") as f:
             await f.write(obj_type.source)

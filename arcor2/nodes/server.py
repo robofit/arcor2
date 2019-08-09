@@ -21,10 +21,10 @@ from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
 from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
-    built_in_types_actions, add_ancestor_actions
+    built_in_types_actions, add_ancestor_actions, get_built_in_type
 from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectActionsDict, \
-    ObjectTypeMetaDict, ProjectSources, ActionPoint
-from arcor2.persistent_storage_client import PersistentStorageClient
+    ObjectTypeMetaDict, ProjectSources
+from arcor2.persistent_storage_client import AioPersistentStorageClient
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
 from arcor2.exceptions import ApNotFound
@@ -49,7 +49,7 @@ MANAGER_RPC_REQ_ID: int = 0
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 OBJECT_ACTIONS: ObjectActionsDict = {}
 
-STORAGE_CLIENT = PersistentStorageClient()
+STORAGE_CLIENT = AioPersistentStorageClient()
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -154,8 +154,10 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
 
     object_types: Dict[str, ObjectTypeMeta] = built_in_types_meta()
 
-    for obj_id in STORAGE_CLIENT.get_object_type_ids().items:
-        obj = STORAGE_CLIENT.get_object_type(obj_id.id)
+    obj_ids = await STORAGE_CLIENT.get_object_type_ids()
+
+    for obj_id in obj_ids.items:
+        obj = await STORAGE_CLIENT.get_object_type(obj_id.id)
         object_types[obj.id] = object_type_meta(obj.source)
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
@@ -191,7 +193,7 @@ async def save_scene_cb(req, ui, args) -> Dict:
         return response(req, False, ["Scene not opened or invalid."])
 
     msg = response(req)
-    STORAGE_CLIENT.update_scene(SCENE)
+    await STORAGE_CLIENT.update_scene(SCENE)
     return msg
 
 
@@ -219,8 +221,9 @@ async def save_project_cb(req, ui, args) -> Dict:
                                      resources=derived_resources_class(PROJECT.id, action_names),
                                      script=program_src(PROJECT, SCENE, built_in_types_names()))
 
-    STORAGE_CLIENT.update_project(PROJECT)
-    STORAGE_CLIENT.update_project_sources(project_sources)
+    # TODO do this in parallel
+    await STORAGE_CLIENT.update_project(PROJECT)
+    await STORAGE_CLIENT.update_project_sources(project_sources)
 
     return response(req)
 
@@ -237,7 +240,7 @@ async def _get_object_actions():
             continue
 
         # db-stored (user-created) object types
-        obj_db = STORAGE_CLIENT.get_object_type(obj_type)
+        obj_db = await STORAGE_CLIENT.get_object_type(obj_type)
         try:
             object_actions[obj_type] = get_object_actions(obj_db.source)
         except SourceException as e:
@@ -311,12 +314,6 @@ async def update_action_point_cb(req, ui, args) -> Union[Dict, None]:
     except ApNotFound:
         return response(req, False, ["Invalid action point."])
 
-    # TODO just for testing - remove
-    if "robot" not in args:
-        args["robot"] = "KinaliRobot"
-    if "end_effector" not in args:
-        args["end_effector"] = "ee_Big"
-
     try:
         robot = SCENE_OBJECT_INSTANCES[args["robot"]]
     except KeyError:
@@ -335,6 +332,8 @@ async def update_action_point_cb(req, ui, args) -> Union[Dict, None]:
 async def register(websocket) -> None:
     await logger.info("Registering new ui")
     INTERFACES.add(websocket)
+
+    # TODO do this in parallel
     await notify_scene(websocket)
     await notify_project(websocket)
 
@@ -362,11 +361,16 @@ async def scene_change(ui, scene) -> None:
 
         if obj.id not in SCENE_OBJECT_INSTANCES:
 
-            obj_type = STORAGE_CLIENT.get_object_type(obj.type)
-            mod = ModuleType('temp_module')
-            exec(obj_type.source, mod.__dict__)
             await logger.debug(f"Creating instance {obj.id} ({obj.type}).")
-            cls = getattr(mod, obj.type)
+
+            if obj.type in built_in_types_names():  # TODO is it ok to create instances of built-in object types?
+                cls = get_built_in_type(obj.type)
+            else:
+                obj_type = await STORAGE_CLIENT.get_object_type(obj.type)
+                mod = ModuleType('temp_module')
+                exec(obj_type.source, mod.__dict__)
+                cls = getattr(mod, obj.type)
+
             SCENE_OBJECT_INSTANCES[obj.id] = cls()  # TODO name, pose, etc.
 
     # delete instances which were deleted from the scene

@@ -22,6 +22,15 @@ def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
         yield cls[0], cls[1]
 
 
+def get_built_in_type(name: str) -> Type[Generic]:
+
+    for bname, cls in built_in_types():
+        if name == bname:
+            return cls
+
+    raise KeyError
+
+
 def built_in_types_names() -> Set[str]:
 
     names = set()

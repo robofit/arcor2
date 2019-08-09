@@ -1,13 +1,12 @@
 import requests
 import os
 import json
-from typing import List
+import asyncio
 
 from arcor2.data import Project, Scene, ProjectSources, ObjectType, DataClassEncoder, IdDescList
 
 URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:5001")
 
-# TODO async version
 # TODO cache?
 # TODO poll changes?
 
@@ -58,3 +57,40 @@ class PersistentStorageClient:
 
         assert object_type.id
         requests.post(f"{URL}/object_type", json=json.dumps(object_type, cls=DataClassEncoder))
+
+
+loop = asyncio.get_event_loop()
+
+
+class AioPersistentStorageClient(PersistentStorageClient):
+
+    async def get_project(self, project_id: str) -> Project:
+
+        res:Project = await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_project, project_id)
+        return res
+
+    async def get_project_sources(self, project_id: str) -> ProjectSources:
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_project_sources, project_id)
+
+    async def get_scene(self, scene_id: str) -> Scene:
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_scene, scene_id)
+
+    async def get_object_type(self, object_type_id: str) -> ObjectType:
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_object_type, object_type_id)
+
+    async def get_object_type_ids(self) -> IdDescList:
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_object_type_ids)
+
+    async def update_project(self, project: Project):
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).update_project, project)
+
+    async def update_scene(self, scene: Scene):
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).update_scene, scene)
+
+    async def update_project_sources(self, project_sources: ProjectSources):
+        return await loop.run_in_executor(None,
+                                          super(AioPersistentStorageClient, self).update_project_sources,
+                                          project_sources)
+
+    async def update_object_type(self, object_type: ObjectType):
+        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).update_object_type, object_type)
