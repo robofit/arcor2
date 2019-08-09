@@ -26,6 +26,7 @@ def upload(module_cls: str) -> None:
         raise UploadException(f"'{cls.__name__}' not derived from 'Generic' object type.")
 
     path = inspect.getfile(cls)
+
     storage_client = PersistentStorageClient()
 
     with open(path, "r") as source_file:
@@ -41,4 +42,4 @@ def upload(module_cls: str) -> None:
         obj_type = ObjectType(id=cls.__name__, source=source)
 
         print(f"Storing '{obj_type.id}'...")
-        storage_client.update_object_type(obj_type)        
+        storage_client.update_object_type(obj_type)
