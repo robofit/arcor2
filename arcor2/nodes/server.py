@@ -228,7 +228,7 @@ async def _get_object_actions():
         # db-stored (user-created) object types
         obj_db = STORAGE_CLIENT.get_object_type(obj_type)
         try:
-            object_actions[obj_type] = get_object_actions(obj_db["source"])
+            object_actions[obj_type] = get_object_actions(obj_db.source)
         except SourceException as e:
             await logger.error(e)
 
