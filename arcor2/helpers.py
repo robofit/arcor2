@@ -123,8 +123,8 @@ async def server(client: Any,
             if "request" in data:  # ...then it is RPC
                 try:
                     rpc_func = rpc_dict[data['request']]
-                except KeyError as e:
-                    await logger.error(f"Unknown RPC request: {e}.")
+                except KeyError:
+                    await logger.error(f"Unknown RPC request: {data}.")
                     continue
 
                 await rpc_func(data['request'], client, data.get("args", {}), data.get("req_id", None))

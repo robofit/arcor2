@@ -15,3 +15,7 @@ class RobotException(Arcor2Exception):
 
 class ResourcesException(Arcor2Exception):
     pass
+
+
+class ApNotFound(Arcor2Exception):
+    pass

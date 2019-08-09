@@ -1,7 +1,8 @@
 from typing import Tuple, Dict, Union
 
-from arcor2.data import Project, Action, ActionIOEnum, ProjectObject
+from arcor2.data import Project, Action, ActionIOEnum, ProjectObject, ActionPoint
 from arcor2.helpers import convert_cc
+from arcor2.exceptions import ApNotFound
 
 
 def get_actions_cache(project: Project) -> Tuple[Dict[str, Action], Union[str, None], Union[str, None]]:
@@ -42,3 +43,13 @@ def clear_project_logic(project: Project) -> None:
             for action in act_point.actions:
                 action.inputs.clear()
                 action.outputs.clear()
+
+
+def get_action_point(project: Project, ap_id: str) -> ActionPoint:
+
+    for obj in project.objects:
+        for ap in obj.action_points:
+            if ap.id == ap_id:
+                return ap
+
+    raise ApNotFound

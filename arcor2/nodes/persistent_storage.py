@@ -42,8 +42,8 @@ except KeyError:
 
 app = Flask(__name__)
 
-# app.config['APISPEC_SPEC'] = spec
-# app.config['APISPEC_SWAGGER_URL'] = '/swagger/'
+app.config['APISPEC_SPEC'] = spec
+app.config['APISPEC_SWAGGER_URL'] = '/swagger/'
 
 
 def get_data(data_cls, collection, obj_id):

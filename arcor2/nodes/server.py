@@ -7,6 +7,7 @@ import json
 import functools
 import sys
 from typing import Dict, Set, Union, Optional
+from types import ModuleType
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -21,15 +22,20 @@ from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
 from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions
-from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectType, ObjectActionsDict, \
-    ObjectTypeMetaDict, ProjectSources
+from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectActionsDict, \
+    ObjectTypeMetaDict, ProjectSources, ActionPoint
 from arcor2.persistent_storage_client import PersistentStorageClient
+from arcor2.object_types import Generic, Robot
+from arcor2.project_utils import get_action_point
+from arcor2.exceptions import ApNotFound
 
 
 logger = Logger.with_default_handlers(name='server', formatter=aiologger_formatter())
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
+SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
+
 INTERFACES: Set[WebSocketServerProtocol] = set()
 
 JSON_SCHEMAS = {"scene": Scene.json_schema(),
@@ -115,16 +121,21 @@ def project_event() -> str:
     return json.dumps({"event": "projectChanged", "data": data})  # TODO use encoder?
 
 
-async def notify_scene_change_to_others(interface: Optional[WebSocketServerProtocol] = None) -> None:
-    if len(INTERFACES) > 1:
-        message = scene_event()
+async def _notify(interface, msg_source):
+
+    if (interface is None and INTERFACES) or (interface and len(INTERFACES) > 1):
+        message = msg_source()
         await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])
+
+
+async def notify_scene_change_to_others(interface: Optional[WebSocketServerProtocol] = None) -> None:
+
+    await _notify(interface, scene_event)
 
 
 async def notify_project_change_to_others(interface=None) -> None:
-    if len(INTERFACES) > 1:
-        message = project_event()
-        await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])
+
+    await _notify(interface, project_event)
 
 
 async def notify_scene(interface) -> None:
@@ -289,6 +300,38 @@ async def get_schema_cb(req, ui, args) -> Union[Dict, None]:
     return response(req, data=JSON_SCHEMAS[which])
 
 
+@rpc(logger)
+async def update_action_point_cb(req, ui, args) -> Union[Dict, None]:
+
+    if not (SCENE and PROJECT and SCENE.id and PROJECT.id):
+        return response(req, False, ["Scene/project has to be loaded first."])
+
+    try:
+        ap = get_action_point(PROJECT, args["id"])
+    except ApNotFound:
+        return response(req, False, ["Invalid action point."])
+
+    # TODO just for testing - remove
+    if "robot" not in args:
+        args["robot"] = "KinaliRobot"
+    if "end_effector" not in args:
+        args["end_effector"] = "ee_Big"
+
+    try:
+        robot = SCENE_OBJECT_INSTANCES[args["robot"]]
+    except KeyError:
+        return response(req, False, ["Unknown robot id."])
+
+    if not isinstance(robot, Robot):
+        return response(req, False, [f"Object {args['robot']} is not instance of Robot!"])
+
+    # TODO transform pose from robot to the object
+    ap.pose = await asyncio.get_event_loop().run_in_executor(None, robot.get_pose, args["end_effector"])
+
+    await notify_project_change_to_others()
+    return response(req)
+
+
 async def register(websocket) -> None:
     await logger.info("Registering new ui")
     INTERFACES.add(websocket)
@@ -311,6 +354,26 @@ async def scene_change(ui, scene) -> None:
         await logger.error(e)
         return
 
+    scene_obj_ids = set()
+
+    for obj in SCENE.objects:
+
+        scene_obj_ids.add(obj.id)
+
+        if obj.id not in SCENE_OBJECT_INSTANCES:
+
+            obj_type = STORAGE_CLIENT.get_object_type(obj.type)
+            mod = ModuleType('temp_module')
+            exec(obj_type.source, mod.__dict__)
+            await logger.debug(f"Creating instance {obj.id} ({obj.type}).")
+            cls = getattr(mod, obj.type)
+            SCENE_OBJECT_INSTANCES[obj.id] = cls()  # TODO name, pose, etc.
+
+    # delete instances which were deleted from the scene
+    for obj_id in set(SCENE_OBJECT_INSTANCES.keys()) - scene_obj_ids:
+        await logger.debug(f"Deleting {obj_id} instance.")
+        del SCENE_OBJECT_INSTANCES[obj_id]
+
     await notify_scene_change_to_others(ui)
 
 
@@ -331,7 +394,8 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'getObjectActions': get_object_actions_cb,
                   'saveProject': save_project_cb,
                   'saveScene': save_scene_cb,
-                  'getSchema': get_schema_cb}
+                  'getSchema': get_schema_cb,
+                  'updateActionPointPose': update_action_point_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():
