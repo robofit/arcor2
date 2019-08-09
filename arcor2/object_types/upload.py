@@ -1,6 +1,4 @@
 import inspect
-import os
-import sys
 
 from pymongo import MongoClient  # type: ignore
 
