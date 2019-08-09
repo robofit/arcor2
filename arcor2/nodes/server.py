@@ -6,7 +6,6 @@ import asyncio
 import json
 import functools
 import sys
-import os
 from typing import Dict, Set, Union, Optional
 
 import websockets
