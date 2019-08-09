@@ -12,7 +12,6 @@ from typing import Dict, Set, Union, Optional
 import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
-import motor.motor_asyncio  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.source.logic import program_src
@@ -24,18 +23,11 @@ from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions
 from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectType, ObjectActionsDict, \
-    ObjectTypeMetaDict
+    ObjectTypeMetaDict, ProjectSources
+from arcor2.persistent_storage_client import PersistentStorageClient
 
 
 logger = Logger.with_default_handlers(name='server', formatter=aiologger_formatter())
-
-try:
-    MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
-    mongo = motor.motor_asyncio.AsyncIOMotorClient(MONGO_ADDRESS.split(':')[0], int(MONGO_ADDRESS.split(':')[1]))
-except (ValueError, IndexError) as e:
-    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
-except KeyError:
-    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
@@ -51,6 +43,8 @@ MANAGER_RPC_REQ_ID: int = 0
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 OBJECT_ACTIONS: ObjectActionsDict = {}
+
+STORAGE_CLIENT = PersistentStorageClient()
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -150,15 +144,8 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
 
     object_types: Dict[str, ObjectTypeMeta] = built_in_types_meta()
 
-    # db-stored (user-created) types
-    cursor = mongo.arcor2.object_types.find({})
-    for obj_db in await cursor.to_list(None):
-        try:
-            obj = ObjectType.from_dict(obj_db)
-        except ValidationError as e:
-            await logger.error(f"Failed to load object type: {e}")
-            continue
-
+    for obj_id in STORAGE_CLIENT.get_object_type_ids().items:
+        obj = STORAGE_CLIENT.get_object_type(obj_id.id)
         object_types[obj.id] = object_type_meta(obj.source)
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
@@ -194,18 +181,7 @@ async def save_scene_cb(req, ui, args) -> Dict:
         return response(req, False, ["Scene not opened or invalid."])
 
     msg = response(req)
-
-    db = mongo.arcor2
-
-    old_scene_data = await db.scenes.find_one({"id": SCENE.id})
-    if old_scene_data:
-        old_scene = Scene.from_dict(old_scene_data)
-        await db.scenes.replace_one({'id': old_scene.id}, SCENE.to_dict())
-        await logger.debug("scene updated")
-    else:
-        await db.scenes.insert_one(SCENE.to_dict())
-        await logger.debug("scene created")
-
+    STORAGE_CLIENT.update_scene(SCENE)
     return msg
 
 
@@ -229,22 +205,12 @@ async def save_project_cb(req, ui, args) -> Dict:
         await logger.error(f"Project data invalid: {e}")
         return response(req, False, ["Project data invalid!", str(e)])
 
-    # TODO store sources separately?
-    project_db = PROJECT.to_dict()
-    project_db["sources"] = {}
-    project_db["sources"]["resources"] = derived_resources_class(PROJECT.id, action_names)
-    project_db["sources"]["script"] = program_src(PROJECT, SCENE, built_in_types_names())
+    project_sources = ProjectSources(id=PROJECT.id,
+                                     resources=derived_resources_class(PROJECT.id, action_names),
+                                     script=program_src(PROJECT, SCENE, built_in_types_names()))
 
-    db = mongo.arcor2
-    # TODO validate project here or in DB?
-
-    old_project = await db.projects.find_one({"id": project_db["id"]})  # TODO how to get only id?
-    if old_project:
-        await db.projects.replace_one({'id': old_project["id"]}, project_db)
-        await logger.debug("project updated")
-    else:
-        await db.projects.insert_one(project_db)
-        await logger.debug("project created")
+    STORAGE_CLIENT.update_project(PROJECT)
+    STORAGE_CLIENT.update_project_sources(project_sources)
 
     return response(req)
 
@@ -261,10 +227,9 @@ async def _get_object_actions():
             continue
 
         # db-stored (user-created) object types
-        db = mongo.arcor2
-        obj_db = await db.object_types.find_one({"id": obj_type})
+        obj_db = STORAGE_CLIENT.get_object_type(obj_type)
         try:
-            object_actions[obj_type] = get_object_actions(obj_db["source"])
+            object_actions[obj_type] = get_object_actions(obj_db.source)
         except SourceException as e:
             await logger.error(e)
 

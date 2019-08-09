@@ -92,6 +92,7 @@ class Scene(JsonSchemaMixin):
 
     id: str
     objects: List[SceneObject] = field(default_factory=list)
+    desc: str = field(default_factory=str)
 
 
 @dataclass
@@ -137,6 +138,15 @@ class Project(JsonSchemaMixin):
     id: str
     scene_id: str
     objects: List[ProjectObject] = field(default_factory=list)
+    desc: str = field(default_factory=str)
+
+
+@dataclass
+class ProjectSources(JsonSchemaMixin):
+
+    id: str  # project_id
+    resources: str
+    script: str
 
 
 @dataclass
@@ -176,6 +186,18 @@ class ObjectAction(JsonSchemaMixin):
     returns: str = "NoneType"
     origins: str = ""
     meta: ActionMetadata = field(default_factory=ActionMetadata)
+
+
+@dataclass
+class IdDesc(JsonSchemaMixin):
+    id: str
+    desc: str
+
+
+@dataclass
+class IdDescList(JsonSchemaMixin):
+
+    items: List[IdDesc] = field(default_factory=list)
 
 
 ObjectActions = List[ObjectAction]

@@ -9,6 +9,8 @@ from arcor2.source.object_types import check_object_type
 from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
+from arcor2.persistent_storage_client import PersistentStorageClient
+from arcor2.data import ObjectType
 
 
 class UploadException(Arcor2Exception):
@@ -27,6 +29,7 @@ def upload(module_cls: str) -> None:
 
     path = inspect.getfile(cls)
 
+<<<<<<< HEAD
     
     try:
         MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
@@ -36,6 +39,9 @@ def upload(module_cls: str) -> None:
     except KeyError:
         sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
     db = mongo.arcor2
+=======
+    storage_client = PersistentStorageClient()
+>>>>>>> 7dd0733cfb69bb40b3cd2814de41c881888aa0fb
 
     with open(path, "r") as source_file:
 
@@ -47,6 +53,7 @@ def upload(module_cls: str) -> None:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
-        print(f"Storing '{cls.__name__}'...")
-        # TODO check if it already exists?
-        db.object_types.update_one({"id": cls.__name__}, {'$set': {"source": source}}, upsert=True)
+        obj_type = ObjectType(id=cls.__name__, source=source)
+
+        print(f"Storing '{obj_type.id}'...")
+        storage_client.update_object_type(obj_type)
