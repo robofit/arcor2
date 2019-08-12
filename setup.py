@@ -38,5 +38,8 @@ setup(
         'flask',
         'requests'
     ],
+    tests_require=[
+        'websocket'
+    ],
     zip_safe=False
 )

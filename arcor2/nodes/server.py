@@ -161,7 +161,7 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
         object_types[obj.id] = object_type_meta(obj.source)
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
-    to_delete = set()
+    to_delete: Set[str] = set()
 
     for obj_type, obj in object_types.items():
         if not obj.description:
@@ -353,7 +353,7 @@ async def scene_change(ui, scene) -> None:
         await logger.error(e)
         return
 
-    scene_obj_ids = set()
+    scene_obj_ids: Set[str] = set()
 
     for obj in SCENE.objects:
 

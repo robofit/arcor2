@@ -34,11 +34,18 @@ spec.components.schema(ObjectType.__name__, schema=ObjectType)
 
 try:
     MONGO_ADDRESS = os.environ["ARCOR2_MONGO_ADDRESS"]
-    DB = MongoClient(f"mongodb://{MONGO_ADDRESS}").arcor2
-except (ValueError, IndexError) as e:
-    sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not well formated. Correct format is 'hostname:port'")
 except KeyError:
     sys.exit("'ARCOR2_MONGO_ADDRESS' env. variable not set.")
+
+TESTING = os.getenv("ARCOR2_TESTING", False)
+
+CLIENT = MongoClient(f"mongodb://{MONGO_ADDRESS}")
+
+if not TESTING:
+    DB = CLIENT.arcor2
+else:
+    print("Using test database! All data will be lost.")
+    DB = CLIENT.arcor2_test
 
 app = Flask(__name__)
 
@@ -339,6 +346,10 @@ with app.test_request_context():
 def main():
     # print(spec.to_yaml())
     app.run(host='0.0.0.0', port=5001)
+
+    if TESTING:
+        print("Cleaning up after testing...")
+        CLIENT.drop_database(DB)
 
 
 if __name__ == '__main__':
