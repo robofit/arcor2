@@ -4,7 +4,7 @@
 import copy
 import pytest  # type: ignore
 
-from arcor2.data import Project, Scene
+from arcor2.data.common import Project, Scene
 from arcor2.source.logic import program_src, get_logic_from_source
 from arcor2.source import SourceException
 from arcor2.project_utils import clear_project_logic

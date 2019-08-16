@@ -3,7 +3,7 @@ from typing import Set, Union
 from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
 from typed_ast.ast3 import Expr, Pass, keyword, Attribute, Name, Load, Module
 
-from arcor2.data import Project, Scene, Action, ActionIO, ActionIOEnum
+from arcor2.data.common import Project, Scene, Action, ActionIO, ActionIOEnum
 from arcor2.helpers import convert_cc
 from arcor2.project_utils import get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException

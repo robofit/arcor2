@@ -8,7 +8,7 @@ from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
 from arcor2.persistent_storage_client import PersistentStorageClient
-from arcor2.data import ObjectType
+from arcor2.data.common import ObjectType
 
 
 class UploadException(Arcor2Exception):

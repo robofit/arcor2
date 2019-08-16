@@ -3,12 +3,18 @@ import os
 import json
 import asyncio
 
-from arcor2.data import Project, Scene, ProjectSources, ObjectType, DataClassEncoder, IdDescList
+from arcor2.data.common import Project, Scene, ProjectSources, ObjectType, DataClassEncoder, IdDescList
+from arcor2.exceptions import Arcor2Exception
 
 URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:5001")
 
+# TODO handle errors
 # TODO cache?
 # TODO poll changes?
+
+
+class PersistentStorageClientException(Arcor2Exception):
+    pass
 
 
 class PersistentStorageClient:
@@ -66,7 +72,7 @@ class AioPersistentStorageClient(PersistentStorageClient):
 
     async def get_project(self, project_id: str) -> Project:
 
-        res:Project = await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_project, project_id)
+        res: Project = await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_project, project_id)
         return res
 
     async def get_project_sources(self, project_id: str) -> ProjectSources:

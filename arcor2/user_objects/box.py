@@ -1,5 +1,5 @@
 from arcor2.object_types import Generic
-from arcor2.data import ActionMetadata
+from arcor2.data.common import ActionMetadata
 from arcor2.action import action
 
 

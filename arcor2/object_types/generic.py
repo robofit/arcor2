@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Set, FrozenSet
 
-from arcor2.data import Pose, ActionPoint, ActionMetadata
+from arcor2.data.common import Pose, ActionPoint, ActionMetadata
 from arcor2.exceptions import GenericException
 from arcor2.action import action
 

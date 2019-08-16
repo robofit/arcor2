@@ -1,6 +1,6 @@
 from typing import Tuple, Dict, Union
 
-from arcor2.data import Project, Action, ActionIOEnum, ProjectObject, ActionPoint
+from arcor2.data.common import Project, Action, ActionIOEnum, ProjectObject, ActionPoint
 from arcor2.helpers import convert_cc
 from arcor2.exceptions import ApNotFound
 

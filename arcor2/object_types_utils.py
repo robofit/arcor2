@@ -5,7 +5,7 @@ from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints
 from undecorated import undecorated  # type: ignore
 
 import arcor2
-from arcor2.data import ObjectTypeMeta, ObjectTypeMetaDict, ObjectActionsDict, ObjectAction, ObjectActionArgs
+from arcor2.data.common import ObjectTypeMeta, ObjectTypeMetaDict, ObjectActionsDict, ObjectAction, ObjectActionArgs
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 

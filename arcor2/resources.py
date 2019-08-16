@@ -8,7 +8,7 @@ from dataclasses_jsonschema import ValidationError
 
 from arcor2.helpers import convert_cc
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.data import Project, Scene, ActionPoint
+from arcor2.data.common import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
 from arcor2.object_types import Generic
 from arcor2.action import print_json

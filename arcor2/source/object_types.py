@@ -3,7 +3,7 @@ from typing import Dict
 from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
 from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef, Call, keyword, NameConstant, Str, Module
 
-from arcor2.data import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectTypeMeta
+from arcor2.data.common import ObjectActions, ActionMetadata, ObjectAction, ObjectActionArgs, ObjectTypeMeta
 from arcor2.helpers import convert_cc
 from arcor2.source import SourceException
 

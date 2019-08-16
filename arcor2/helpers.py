@@ -8,7 +8,7 @@ import re
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data import DataClassEncoder
+from arcor2.data.common import DataClassEncoder
 from arcor2.exceptions import Arcor2Exception
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')

@@ -7,7 +7,7 @@ import pytest  # type: ignore
 from arcor2.helpers import import_cls, ImportClsException, convert_cc
 from arcor2.project_utils import get_actions_cache
 from arcor2.source.tests.test_logic import VALID_PROJECT, VALID_PROJECT_WO_LOGIC
-from arcor2.data import Project
+from arcor2.data.common import Project
 
 
 def test_import_cls_valid():

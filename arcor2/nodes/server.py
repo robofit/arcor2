@@ -14,7 +14,7 @@ from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
-from arcor2.source.logic import program_src
+from arcor2.source.logic import program_src, get_logic_from_source
 from arcor2.source.object_types import object_type_meta, get_object_actions
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
@@ -22,7 +22,7 @@ from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
 from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type
-from arcor2.data import Scene, Project, ObjectTypeMeta, ObjectActionsDict, \
+from arcor2.data.common import Scene, Project, ObjectTypeMeta, ObjectActionsDict, \
     ObjectTypeMetaDict, ProjectSources
 from arcor2.persistent_storage_client import AioPersistentStorageClient
 from arcor2.object_types import Generic, Robot
@@ -217,13 +217,45 @@ async def save_project_cb(req, ui, args) -> Dict:
         await logger.error(f"Project data invalid: {e}")
         return response(req, False, ["Project data invalid!", str(e)])
 
-    project_sources = ProjectSources(id=PROJECT.id,
-                                     resources=derived_resources_class(PROJECT.id, action_names),
-                                     script=program_src(PROJECT, SCENE, built_in_types_names()))
+    try:
+        project_sources = ProjectSources(id=PROJECT.id,
+                                         resources=derived_resources_class(PROJECT.id, action_names),
+                                         script=program_src(PROJECT, SCENE, built_in_types_names()))
+    except SourceException as e:
+        await logger.error(e)
+        return response(req, False, ["Failed to generate project sources."])
 
     # TODO do this in parallel
     await STORAGE_CLIENT.update_project(PROJECT)
     await STORAGE_CLIENT.update_project_sources(project_sources)
+
+    return response(req)
+
+
+@rpc(logger)
+async def open_project_cb(req, ui, args) -> Dict:
+
+    global PROJECT
+    global SCENE
+
+    PROJECT = await STORAGE_CLIENT.get_project(args["id"])
+    SCENE = await STORAGE_CLIENT.get_scene(PROJECT.scene_id)
+
+    project_sources = await STORAGE_CLIENT.get_project_sources(PROJECT.id)
+
+    load_logic_failed = False
+
+    try:
+        get_logic_from_source(project_sources.script, PROJECT)
+    except SourceException as e:
+        load_logic_failed = True
+        await logger.error(e)
+
+    await notify_project_change_to_others()
+    await notify_scene_change_to_others()
+
+    if load_logic_failed:
+        return response(req, True, ["Failed to load logic from source."])
 
     return response(req)
 
@@ -399,7 +431,8 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'saveProject': save_project_cb,
                   'saveScene': save_scene_cb,
                   'getSchema': get_schema_cb,
-                  'updateActionPointPose': update_action_point_cb}
+                  'updateActionPointPose': update_action_point_cb,
+                  'openProject': open_project_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():

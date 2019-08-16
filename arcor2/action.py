@@ -3,7 +3,7 @@ import select
 import sys
 from typing import Union, Callable, Any, Dict, TYPE_CHECKING
 
-from arcor2.data import DataClassEncoder
+from arcor2.data.common import DataClassEncoder
 
 if TYPE_CHECKING:
     from arcor2.object_types import Generic
