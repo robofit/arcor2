@@ -19,6 +19,16 @@ class PersistentStorageClientException(Arcor2Exception):
 
 class PersistentStorageClient:
 
+    def get_projects(self) -> IdDescList:
+
+        resp = requests.get(f"{URL}/projects")
+        return IdDescList.from_dict(json.loads(resp.text))
+
+    def get_scenes(self) -> IdDescList:
+
+        resp = requests.get(f"{URL}/scenes")
+        return IdDescList.from_dict(json.loads(resp.text))
+
     def get_project(self, project_id: str) -> Project:
 
         resp = requests.get(f"{URL}/project/{project_id}")
@@ -68,35 +78,48 @@ class PersistentStorageClient:
 loop = asyncio.get_event_loop()
 
 
-class AioPersistentStorageClient(PersistentStorageClient):
+class AioPersistentStorageClient:
+
+    def __init__(self):
+
+        self._cl = PersistentStorageClient()
+
+    async def get_projects(self) -> IdDescList:
+
+        res: IdDescList = await loop.run_in_executor(None, self._cl.get_projects)
+        return res
+
+    async def get_scenes(self) -> IdDescList:
+        res: IdDescList = await loop.run_in_executor(None, self._cl.get_scenes)
+        return res
 
     async def get_project(self, project_id: str) -> Project:
 
-        res: Project = await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_project, project_id)
+        res: Project = await loop.run_in_executor(None, self._cl.get_project, project_id)
         return res
 
     async def get_project_sources(self, project_id: str) -> ProjectSources:
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_project_sources, project_id)
+        return await loop.run_in_executor(None, self._cl.get_project_sources, project_id)
 
     async def get_scene(self, scene_id: str) -> Scene:
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_scene, scene_id)
+        return await loop.run_in_executor(None, self._cl.get_scene, scene_id)
 
     async def get_object_type(self, object_type_id: str) -> ObjectType:
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_object_type, object_type_id)
+        return await loop.run_in_executor(None, self._cl.get_object_type, object_type_id)
 
     async def get_object_type_ids(self) -> IdDescList:
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).get_object_type_ids)
+        return await loop.run_in_executor(None, self._cl.get_object_type_ids)
 
     async def update_project(self, project: Project):
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).update_project, project)
+        return await loop.run_in_executor(None, self._cl.update_project, project)
 
     async def update_scene(self, scene: Scene):
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).update_scene, scene)
+        return await loop.run_in_executor(None, self._cl.update_scene, scene)
 
     async def update_project_sources(self, project_sources: ProjectSources):
         return await loop.run_in_executor(None,
-                                          super(AioPersistentStorageClient, self).update_project_sources,
+                                          self._cl.update_project_sources,
                                           project_sources)
 
     async def update_object_type(self, object_type: ObjectType):
-        return await loop.run_in_executor(None, super(AioPersistentStorageClient, self).update_object_type, object_type)
+        return await loop.run_in_executor(None, self._cl.update_object_type, object_type)

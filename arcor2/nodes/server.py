@@ -361,6 +361,20 @@ async def update_action_point_cb(req, ui, args) -> Union[Dict, None]:
     return response(req)
 
 
+@rpc(logger)
+async def list_projects_cb(req, ui, args) -> Union[Dict, None]:
+
+    projects = await STORAGE_CLIENT.get_projects()
+    return response(req, data=projects.items)
+
+
+@rpc(logger)
+async def list_scenes_cb(req, ui, args) -> Union[Dict, None]:
+
+    projects = await STORAGE_CLIENT.get_scenes()
+    return response(req, data=projects.items)
+
+
 async def register(websocket) -> None:
     await logger.info("Registering new ui")
     INTERFACES.add(websocket)
@@ -432,7 +446,9 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'saveScene': save_scene_cb,
                   'getSchema': get_schema_cb,
                   'updateActionPointPose': update_action_point_cb,
-                  'openProject': open_project_cb}
+                  'openProject': open_project_cb,
+                  'listProjects': list_projects_cb,
+                  'listScenes': list_scenes_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():
