@@ -50,6 +50,8 @@ async def read_proc_stdout() -> None:
     assert PROCESS is not None
     assert PROCESS.stdout is not None
 
+    await send_to_clients({"event": "projectState", "data": {"state": "running"}})
+
     while process_running():
         try:
             stdout = await PROCESS.stdout.readuntil()
@@ -61,6 +63,8 @@ async def read_proc_stdout() -> None:
             await send_to_clients(data)
         except json.decoder.JSONDecodeError as e:
             await logger.error(e)
+
+    await send_to_clients({"event": "projectState", "data": {"state": "stopped"}})
 
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 

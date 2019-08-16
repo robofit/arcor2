@@ -9,7 +9,7 @@ from horast import parse, unparse  # type: ignore  # TODO remove when version wi
 
 from typed_ast.ast3 import Module, Assign, AnnAssign, Name, Store, Load, Subscript, Attribute, Index, FunctionDef,\
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
-    ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations
+    ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler
 
 from arcor2.resources import ResourcesBase
 from arcor2.source import SourceException, SCRIPT_HEADER
@@ -57,8 +57,10 @@ def main_loop_body(tree: Module) -> List[Any]:
     main = find_function("main", tree)
 
     for node in main.body:
-        if isinstance(node, While):  # TODO more specific condition
-            return node.body
+        if isinstance(node, Try):
+            for bnode in node.body:
+                if isinstance(bnode, While):  # TODO more specific condition
+                    return bnode.body
 
     raise SourceException("Main loop not found.")
 
@@ -72,9 +74,27 @@ def empty_script_tree() -> Module:
 
     """
 
-    return Module(body=[
+    # TODO helper function for try ... except
+
+    tree = Module(body=[
         FunctionDef(name="main",
-                    body=[While(test=NameConstant(value=True), body=[Pass()], orelse=[])],
+                    body=[
+                        Try(body=[While(test=NameConstant(value=True), body=[Pass()], orelse=[])],
+                            handlers=[ExceptHandler(type=Name(id="Arcor2Exception", ctx=Load()),
+                                                    name='e',
+                                                    body=[Expr(value=Call(
+                                                        func=Name(
+                                                            id='print_exception',
+                                                            ctx=Load()),
+                                                        args=[Name(
+                                                            id='e',
+                                                            ctx=Load())],
+                                                        keywords=[]))]
+                                                    )],
+                            orelse=[],
+                            finalbody=[],
+                            )
+                        ],
                     decorator_list=[],
                     args=arguments(args=[],
                                    vararg=None,
@@ -84,16 +104,44 @@ def empty_script_tree() -> Module:
                                    defaults=[]),
                     returns=NameConstant(value=None)),
 
-        If(test=Compare(left=Name(id='__name__', ctx=Load()),
-                        ops=[Eq()],
-                        comparators=[Str(s='__main__')],
-                        ),
-           body=[Expr(value=Call(func=Name(id='main', ctx=Load()),
-                                 args=[],
-                                 keywords=[]))],
-           orelse=[]
-           )
+        If(
+            test=Compare(
+                left=Name(
+                    id='__name__',
+                    ctx=Load()),
+                ops=[Eq()],
+                comparators=[Str(
+                    s='__main__',
+                    kind='')]),
+            body=[Try(
+                body=[Expr(value=Call(
+                    func=Name(
+                        id='main',
+                        ctx=Load()),
+                    args=[],
+                    keywords=[]))],
+                handlers=[ExceptHandler(
+                    type=Name(
+                        id='Exception',
+                        ctx=Load()),
+                    name='e',
+                    body=[Expr(value=Call(
+                        func=Name(
+                            id='print_exception',
+                            ctx=Load()),
+                        args=[Name(
+                            id='e',
+                            ctx=Load())],
+                        keywords=[]))])],
+                orelse=[],
+                finalbody=[])],
+            orelse=[])
     ])
+
+    add_import(tree, "arcor2.exceptions", "Arcor2Exception")
+    add_import(tree, "arcor2.exceptions", "print_exception")
+
+    return tree
 
 
 def find_function(name: str, tree: Module) -> FunctionDef:
