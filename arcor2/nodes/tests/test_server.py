@@ -6,7 +6,7 @@ import json
 import time
 
 import pytest  # type: ignore
-import websocket
+import websocket  # type: ignore
 
 # TODO upload some user object types
 # TODO save project/scene

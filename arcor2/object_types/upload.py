@@ -1,7 +1,5 @@
 import inspect
 
-from pymongo import MongoClient  # type: ignore
-
 from arcor2.object_types import Generic
 from arcor2.source.object_types import check_object_type
 from arcor2.source import SourceException

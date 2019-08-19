@@ -6,7 +6,7 @@ from typing import Union, Callable, Any, Dict, TYPE_CHECKING
 from arcor2.data.common import DataClassEncoder
 
 if TYPE_CHECKING:
-    from arcor2.object_types import Generic
+    from arcor2.object_types import Generic  # NOQA
 
 
 def read_stdin(timeout: float = 0.0) -> Union[str, None]:

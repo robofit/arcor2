@@ -4,8 +4,6 @@
 from typing import Dict, Union, Any
 import importlib
 
-from dataclasses_jsonschema import ValidationError
-
 from arcor2.helpers import convert_cc
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint

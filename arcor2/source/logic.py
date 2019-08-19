@@ -38,6 +38,8 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
 
     tree = parse(source_code)
 
+    assert isinstance(tree, Module)
+
     actions_cache, _, _ = get_actions_cache(project)
     # objects_cache = get_objects_cache(project, id_to_var=True)
 
