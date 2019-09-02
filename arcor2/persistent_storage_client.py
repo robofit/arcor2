@@ -15,7 +15,7 @@ URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:5001")
 # TODO rename to PersistentStorage (and remove nodes/persistent_storage.py)
 # TODO thread to poll changes? how to "detect" changes?
 
-TIMEOUT = (0.1, 0.25)  # connect, read
+TIMEOUT = (1.0, 1.0)  # connect, read
 
 
 class PersistentStorageClientException(Arcor2Exception):
@@ -30,7 +30,9 @@ class PersistentStorageClient:
     def _post(self, url: str, data: JsonSchemaMixin):
 
         try:
-            resp = requests.post(url, json=json.dumps(data, cls=DataClassEncoder), timeout=TIMEOUT)
+            resp = requests.post(url, data=json.dumps(data, cls=DataClassEncoder),
+                                 timeout=TIMEOUT,
+                                 headers={'Content-Type': 'application/json'})
             resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(e)
@@ -54,7 +56,7 @@ class PersistentStorageClient:
         try:
             return data_cls.from_dict(data)
         except ValidationError as e:
-            print(e)
+            print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
             raise PersistentStorageClientException("Invalid data.")
 
     def get_projects(self) -> IdDescList:
