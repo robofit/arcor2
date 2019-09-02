@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Union, Dict, Iterator
+from typing import List, Any, Union, Dict, Iterator, Optional
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
@@ -191,7 +191,7 @@ class ObjectAction(JsonSchemaMixin):
 @dataclass
 class IdDesc(JsonSchemaMixin):
     id: str
-    desc: str
+    desc: Optional[str] = None
 
 
 @dataclass
