@@ -59,6 +59,15 @@ def remove_none_values(d: Dict) -> None:  # temporary workaround for a bug in pe
 
 class PersistentStorageClient:
 
+    def _handle_response(self, resp):
+
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(e)
+            raise PersistentStorageClientException(f"Status code: {resp.status_code}, "
+                                                   f"body: {json.loads(resp.content)}.")
+
     def _post(self, url: str, data: JsonSchemaMixin):
 
         d = convert_keys(data.to_dict(), snake_case_to_camel_case)
@@ -67,19 +76,21 @@ class PersistentStorageClient:
             resp = requests.post(url, data=json.dumps(d),
                                  timeout=TIMEOUT,
                                  headers={'Content-Type': 'application/json'})
-            resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException(f"Catastrophic error: {json.loads(resp.content)}")
+            raise PersistentStorageClientException(f"Catastrophic error: {e}")
+
+        self._handle_response(resp)
 
     def _get(self, url: str, data_cls: Type[T]) -> T:
 
         try:
             resp = requests.get(url, timeout=TIMEOUT)
-            resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException(f"Catastrophic error: {json.loads(resp.content)}")
+            raise PersistentStorageClientException(f"Catastrophic error: {e}")
+
+        self._handle_response(resp)
 
         try:
             data = json.loads(resp.text)
