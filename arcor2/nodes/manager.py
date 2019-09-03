@@ -15,7 +15,7 @@ from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 import aiofiles  # type: ignore
 
-from arcor2.helpers import response, rpc, server, convert_cc, RpcPlugin, \
+from arcor2.helpers import response, rpc, server, camel_case_to_snake_case, RpcPlugin, \
     import_cls, ImportClsException, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.source.utils import make_executable
@@ -184,7 +184,7 @@ async def project_load(req: str, client, args: Dict) -> Dict:
 
         obj_type = await STORAGE_CLIENT.get_object_type(obj_type_name)
 
-        async with aiofiles.open(os.path.join(objects_path, convert_cc(obj_type_name)) + ".py", "w") as f:
+        async with aiofiles.open(os.path.join(objects_path, camel_case_to_snake_case(obj_type_name)) + ".py", "w") as f:
             await f.write(obj_type.source)
 
     return response(req)

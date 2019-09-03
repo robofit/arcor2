@@ -91,6 +91,7 @@ class SceneObject(JsonSchemaMixin):
 class Scene(JsonSchemaMixin):
 
     id: str
+    robot_system_id: str
     objects: List[SceneObject] = field(default_factory=list)
     desc: str = field(default_factory=str)
 

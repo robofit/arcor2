@@ -4,7 +4,7 @@ from horast import parse  # type: ignore  # TODO remove when version with py.typ
 from typed_ast.ast3 import Expr, Pass, keyword, Attribute, Name, Load, Module
 
 from arcor2.data.common import Project, Scene, Action, ActionIO, ActionIOEnum
-from arcor2.helpers import convert_cc
+from arcor2.helpers import camel_case_to_snake_case
 from arcor2.project_utils import get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
@@ -25,7 +25,7 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> s
         if obj.type in built_in_objects:
             add_import(tree, "arcor2.object_types", obj.type, try_to_import=False)
         else:
-            add_import(tree, "object_types." + convert_cc(obj.type), obj.type, try_to_import=False)
+            add_import(tree, "object_types." + camel_case_to_snake_case(obj.type), obj.type, try_to_import=False)
 
         object_instance_from_res(tree, obj.id, obj.type)
 
@@ -77,7 +77,7 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
             raise SourceException(f"Unknown action {action_id}.")
 
         at_obj, at_method = action.type.split("/")
-        at_obj = convert_cc(at_obj)  # convert obj id into script variable name
+        at_obj = camel_case_to_snake_case(at_obj)  # convert obj id into script variable name
 
         if at_obj != obj_id or at_method != method:
             raise SourceException(f"Action type {action.type} does not correspond to source, where it is"

@@ -4,7 +4,7 @@
 from typing import Dict, Union, Any
 import importlib
 
-from arcor2.helpers import convert_cc
+from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
@@ -32,10 +32,10 @@ class IntResources:
         for scene_obj in self.scene.objects:
 
             if scene_obj.type in built_in:
-                module = importlib.import_module("arcor2.object_types." + convert_cc(scene_obj.type))
+                module = importlib.import_module("arcor2.object_types." + camel_case_to_snake_case(scene_obj.type))
             else:
                 module = importlib.import_module(IntResources.CUSTOM_OBJECT_TYPES_MODULE + "." +
-                                                 convert_cc(scene_obj.type))
+                                                 camel_case_to_snake_case(scene_obj.type))
 
             cls = getattr(module, scene_obj.type)
 

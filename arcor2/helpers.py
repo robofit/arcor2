@@ -49,9 +49,16 @@ def import_cls(module_cls: str) -> Tuple[ModuleType, Type[Any]]:
     return module, cls
 
 
-def convert_cc(name: str) -> str:
-    s1 = _first_cap_re.sub(r'\1_\2', name)
+def camel_case_to_snake_case(camel_str: str) -> str:
+
+    s1 = _first_cap_re.sub(r'\1_\2', camel_str)
     return _all_cap_re.sub(r'\1_\2', s1).lower()
+
+
+def snake_case_to_camel_case(snake_str: str) -> str:
+
+    first, *others = snake_str.split('_')
+    return ''.join([first.lower(), *map(str.title, others)])
 
 
 # TODO define Response dataclass instead

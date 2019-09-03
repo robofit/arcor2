@@ -1,7 +1,7 @@
 from typing import Tuple, Dict, Union
 
 from arcor2.data.common import Project, Action, ActionIOEnum, ProjectObject, ActionPoint
-from arcor2.helpers import convert_cc
+from arcor2.helpers import camel_case_to_snake_case
 from arcor2.exceptions import ApNotFound
 
 
@@ -29,7 +29,7 @@ def get_objects_cache(project: Project, id_to_var: bool = False) -> Dict[str, Pr
 
     for obj in project.objects:
         if id_to_var:
-            cache[convert_cc(obj.id)] = obj
+            cache[camel_case_to_snake_case(obj.id)] = obj
         else:
             cache[obj.id] = obj
 

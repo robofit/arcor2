@@ -2,14 +2,15 @@ import requests
 import os
 import json
 import asyncio
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Dict, Callable
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 
-from arcor2.data.common import Project, Scene, ProjectSources, ObjectType, DataClassEncoder, IdDescList
+from arcor2.data.common import Project, Scene, ProjectSources, ObjectType, IdDescList
 from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case
 
-URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:5001")
+URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:11000")
 
 # TODO logger
 # TODO rename to PersistentStorage (and remove nodes/persistent_storage.py)
@@ -25,18 +26,51 @@ class PersistentStorageClientException(Arcor2Exception):
 T = TypeVar('T', bound=JsonSchemaMixin)
 
 
+def convert_keys(d: Dict, func: Callable[[str], str]) -> Dict:
+
+    new = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = convert_keys(v, func)
+        elif isinstance(v, list):
+            for idx in range(len(v)):
+                v[idx] = convert_keys(v[idx], func)
+        new[func(k)] = v
+    return new
+
+
+def remove_none_values(d: Dict) -> None:  # temporary workaround for a bug in persistent storage
+
+    to_delete = []
+
+    for k, v in d.items():
+
+        if v is None:
+            to_delete.append(k)
+        elif isinstance(v, dict):
+            remove_none_values(v)
+        elif isinstance(v, list):
+            for l in v:
+                remove_none_values(l)
+
+    for td in to_delete:
+        del d[td]
+
+
 class PersistentStorageClient:
 
     def _post(self, url: str, data: JsonSchemaMixin):
 
+        d = convert_keys(data.to_dict(), snake_case_to_camel_case)
+
         try:
-            resp = requests.post(url, data=json.dumps(data, cls=DataClassEncoder),
+            resp = requests.post(url, data=json.dumps(d),
                                  timeout=TIMEOUT,
                                  headers={'Content-Type': 'application/json'})
             resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException("Catastrophic error.")
+            raise PersistentStorageClientException(f"Catastrophic error: {json.loads(resp.content)}")
 
     def _get(self, url: str, data_cls: Type[T]) -> T:
 
@@ -45,13 +79,16 @@ class PersistentStorageClient:
             resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException("Catastrophic error.")
+            raise PersistentStorageClientException(f"Catastrophic error: {json.loads(resp.content)}")
 
         try:
             data = json.loads(resp.text)
         except (json.JSONDecodeError, TypeError) as e:
             print(e)
             raise PersistentStorageClientException("Invalid JSON.")
+
+        data = convert_keys(data, camel_case_to_snake_case)
+        remove_none_values(data)
 
         try:
             return data_cls.from_dict(data)
