@@ -15,15 +15,15 @@ from aiologger import Logger  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.source.logic import program_src, get_logic_from_source
-from arcor2.source.object_types import object_type_meta, get_object_actions
+from arcor2.source.object_types import object_type_meta, get_object_actions, new_object_type_source
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
 from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type
-from arcor2.data.common import Scene, Project, ObjectTypeMeta, ObjectActionsDict, \
-    ObjectTypeMetaDict, ProjectSources
+from arcor2.data.common import Scene, Project, ProjectSources
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta
 from arcor2.persistent_storage_client import AioPersistentStorageClient
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
@@ -159,6 +159,9 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
     for obj_id in obj_ids.items:
         obj = await STORAGE_CLIENT.get_object_type(obj_id.id)
         object_types[obj.id] = object_type_meta(obj.source)
+
+        if obj.model:
+            object_types[obj.id].model = await STORAGE_CLIENT.get_model(obj.model.id, obj.model.type)
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
     to_delete: Set[str] = set()
@@ -375,6 +378,33 @@ async def list_scenes_cb(req, ui, args) -> Union[Dict, None]:
     return response(req, data=projects.items)
 
 
+@rpc(logger)
+async def new_object_type_cb(req, ui, args) -> Union[Dict, None]:
+
+    meta = ObjectTypeMeta.from_dict(args)
+
+    if meta.model:
+        assert meta.type == meta.model.model().id
+
+    if meta.type in OBJECT_TYPES:
+        return response(req, False, ["Object type already exists."])
+
+    if meta.base not in OBJECT_TYPES:
+        return response(req, False, ["Unknown base object type."])
+
+    obj = meta.to_object_type()
+    obj.source = new_object_type_source(OBJECT_TYPES[meta.base], meta)
+
+    if meta.model:
+        await STORAGE_CLIENT.put_model(meta.model.model())
+
+    await STORAGE_CLIENT.update_object_type(obj)
+    OBJECT_TYPES[meta.type] = meta
+    # TODO notify new object type somehow?
+
+    return response(req)
+
+
 async def register(websocket) -> None:
     await logger.info("Registering new ui")
     INTERFACES.add(websocket)
@@ -448,7 +478,8 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'updateActionPointPose': update_action_point_cb,
                   'openProject': open_project_cb,
                   'listProjects': list_projects_cb,
-                  'listScenes': list_scenes_cb}
+                  'listScenes': list_scenes_cb,
+                  'newObjectType': new_object_type_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():

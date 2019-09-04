@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Union, Dict, Iterator, Optional
-from typing_extensions import Literal
+from typing import List, Any, Union, Iterator, Optional
+from enum import Enum
+
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
@@ -10,10 +11,17 @@ from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
-class ActionIOEnum:
+class ActionIOEnum(Enum):
 
     FIRST: str = "start"
     LAST: str = "end"
+
+
+class ActionParameterTypeEnum(Enum):
+
+    STRING: str = "string"
+    DOUBLE: str = "double"
+    ACTION_POINT: str = "ActionPoint"
 
 
 class DataClassEncoder(JSONEncoder):
@@ -100,20 +108,16 @@ class Scene(JsonSchemaMixin):
 @dataclass
 class ActionParameter(JsonSchemaMixin):
 
-    STRING = "string"
-    DOUBLE = "double"  # double precision in Python == float
-    ACTION_POINT = "ActionPoint"
-
     id: str
-    type: Literal[STRING, DOUBLE, ACTION_POINT]
+    type: ActionParameterTypeEnum
     value_string: str = ""
     value_double: float = 0.0
 
     def __post_init__(self):
 
-        self._mapping = {ActionParameter.STRING: self.value_string,
-                         ActionParameter.DOUBLE: self.value_double,
-                         ActionParameter.ACTION_POINT: self.value_string}
+        self._mapping = {ActionParameterTypeEnum.STRING: self.value_string,
+                         ActionParameterTypeEnum.DOUBLE: self.value_double,
+                         ActionParameterTypeEnum.ACTION_POINT: self.value_string}
 
     @property
     def value(self) -> Union[str, float]:
@@ -168,46 +172,6 @@ class ProjectSources(JsonSchemaMixin):
 
 
 @dataclass
-class ObjectTypeMeta(JsonSchemaMixin):
-    """
-    Metadata about object type, as it is used in server API.
-    """
-
-    type: str
-    description: str = field(default_factory=str)
-    built_in: bool = False
-    base: str = field(default_factory=str)
-
-
-@dataclass
-class ObjectType(JsonSchemaMixin):
-    """
-    Object type, as it is stored in DB.
-    """
-
-    id: str
-    source: str
-    desc: Optional[str] = ""
-
-
-@dataclass
-class ObjectActionArgs(JsonSchemaMixin):
-
-    name: str
-    type: str
-
-
-@dataclass
-class ObjectAction(JsonSchemaMixin):
-
-    name: str
-    action_args: List[ObjectActionArgs] = field(default_factory=list)
-    returns: str = "NoneType"
-    origins: str = ""
-    meta: ActionMetadata = field(default_factory=ActionMetadata)
-
-
-@dataclass
 class IdDesc(JsonSchemaMixin):
     id: str
     desc: Optional[str] = None
@@ -217,8 +181,3 @@ class IdDesc(JsonSchemaMixin):
 class IdDescList(JsonSchemaMixin):
 
     items: List[IdDesc] = field(default_factory=list)
-
-
-ObjectActions = List[ObjectAction]
-ObjectActionsDict = Dict[str, ObjectActions]
-ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]

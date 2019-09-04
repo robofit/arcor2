@@ -6,7 +6,8 @@ from typing import Type, TypeVar, Dict, Callable
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 
-from arcor2.data.common import Project, Scene, ProjectSources, ObjectType, IdDescList
+from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
+from arcor2.data.object_type import ObjectType, Models, MODEL_MAPPING, ModelTypeEnum
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case
 
@@ -68,14 +69,12 @@ class PersistentStorageClient:
             raise PersistentStorageClientException(f"Status code: {resp.status_code}, "
                                                    f"body: {json.loads(resp.content)}.")
 
-    def _post(self, url: str, data: JsonSchemaMixin):
+    def _post(self, url: str, data: JsonSchemaMixin, op=requests.post) -> None:
 
         d = convert_keys(data.to_dict(), snake_case_to_camel_case)
 
         try:
-            resp = requests.post(url, data=json.dumps(d),
-                                 timeout=TIMEOUT,
-                                 headers={'Content-Type': 'application/json'})
+            resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'})
         except requests.exceptions.RequestException as e:
             print(e)
             raise PersistentStorageClientException(f"Catastrophic error: {e}")
@@ -106,6 +105,12 @@ class PersistentStorageClient:
         except ValidationError as e:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
             raise PersistentStorageClientException("Invalid data.")
+
+    def get_model(self, model_id: str, model_type: ModelTypeEnum) -> Models:
+        return self._get(f"{URL}/models/{model_id}/{model_type.value}", MODEL_MAPPING[model_type])
+
+    def put_model(self, model: Models) -> None:
+        self._post(f"{URL}/models/{model.__class__.__name__.lower()}", model, op=requests.put)
 
     def get_projects(self) -> IdDescList:
         return self._get(f"{URL}/projects", IdDescList)
@@ -157,6 +162,12 @@ class AioPersistentStorageClient:
     def __init__(self):
 
         self._cl = PersistentStorageClient()
+
+    async def get_model(self, model_id: str, model_type: str) -> Models:
+        return await loop.run_in_executor(None, self._cl.get_model, model_id, model_type)
+
+    async def put_model(self, model: Models):
+        return await loop.run_in_executor(None, self._cl.put_model, model)
 
     async def get_projects(self) -> IdDescList:
         return await loop.run_in_executor(None, self._cl.get_projects)

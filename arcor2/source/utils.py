@@ -7,49 +7,12 @@ import autopep8  # type: ignore
 import typed_astunparse  # type: ignore  # TODO remove when version with py.typed on pypi
 from horast import parse, unparse  # type: ignore  # TODO remove when version with py.typed on pypi
 
-from typed_ast.ast3 import Module, Assign, AnnAssign, Name, Store, Load, Subscript, Attribute, Index, FunctionDef,\
+from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef,\
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
     ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler
 
 from arcor2.resources import ResourcesBase
 from arcor2.source import SourceException, SCRIPT_HEADER
-from arcor2.source.object_types import fix_object_name
-
-
-def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
-
-    main_body = find_function("main", tree).body
-    last_assign_idx = None
-
-    for body_idx, body_item in enumerate(main_body):
-
-        if isinstance(body_item, (Assign, AnnAssign)):
-            last_assign_idx = body_idx
-
-    if last_assign_idx is None:
-        raise SourceException()
-
-    assign = AnnAssign(
-        target=Name(
-            id=fix_object_name(object_id),
-            ctx=Store()),
-        annotation=Name(
-            id=cls_name,
-            ctx=Load()),
-        value=Subscript(
-            value=Attribute(
-                value=Name(
-                    id='res',
-                    ctx=Load()),
-                attr='objects',
-                ctx=Load()),
-            slice=Index(value=Str(
-                s=object_id,
-                kind='')),
-            ctx=Load()),
-        simple=1)
-
-    main_body.insert(last_assign_idx + 1, assign)
 
 
 def main_loop_body(tree: Module) -> List[Any]:

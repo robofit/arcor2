@@ -8,8 +8,9 @@ from arcor2.helpers import camel_case_to_snake_case
 from arcor2.project_utils import get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
-from arcor2.source.utils import object_instance_from_res, main_loop_body, empty_script_tree, add_import, add_cls_inst, \
+from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, add_cls_inst, \
     append_method_call, tree_to_str
+from arcor2.source.object_types import object_instance_from_res
 
 
 def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> str:
@@ -87,7 +88,7 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
         action.outputs.clear()
 
         if node_idx == 0:
-            action.inputs.append(ActionIO(ActionIOEnum.FIRST))
+            action.inputs.append(ActionIO(ActionIOEnum.FIRST.value))
         else:
             assert last_action is not None
             action.inputs.append(ActionIO(last_action.id))
@@ -97,7 +98,7 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
             actions_cache[last_action.id].outputs.append(ActionIO(action.id))
 
         if node_idx == len(loop)-1:
-            action.outputs.append(ActionIO(ActionIOEnum.LAST))
+            action.outputs.append(ActionIO(ActionIOEnum.LAST.value))
 
         last_action = action
 

@@ -20,7 +20,7 @@ def copy_wo_logic(source_project: Project) -> Project:
 
 VALID_PROJECT = Project.from_dict(
     {'id': 'demo_v0',
-     'scene_id': 'jabloPCB/scenes/default',
+     'scene_id': 'scene1',
      'objects': [
          {'id': 'BoxIN',
           'action_points': [
@@ -68,7 +68,8 @@ VALID_PROJECT = Project.from_dict(
 VALID_PROJECT_WO_LOGIC = copy_wo_logic(VALID_PROJECT)
 
 VALID_SCENE = Scene.from_dict(
-    {'id': 'jabloPCB/scenes/default',
+    {'id': 'scene1',
+     'robot_system_id': 'test',
      'objects': [
          {'id': 'Robot',
           'type': 'Robot',

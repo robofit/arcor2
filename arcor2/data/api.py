@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ObjectAction, ObjectTypeMeta
+from arcor2.data.object_type import ObjectTypeMeta, ObjectAction
 
 
 @dataclass

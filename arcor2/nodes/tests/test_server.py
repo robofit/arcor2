@@ -16,12 +16,14 @@ import websocket  # type: ignore
 @pytest.fixture()
 def ws_client(request):
 
+    # TODO run everything (including storage) using docker-compose?
+
     my_env = os.environ.copy()
     my_env["ARCOR2_TESTING"] = "1"
 
     processes = []
 
-    for cmd in ("arcor2_persistent_storage", "arcor2_manager", "arcor2_server"):
+    for cmd in ("arcor2_manager", "arcor2_server"):
         processes.append(subprocess.Popen(cmd, env=my_env, stdout=subprocess.PIPE))
 
     ws = websocket.WebSocket()

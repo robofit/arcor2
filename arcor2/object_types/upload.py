@@ -1,4 +1,5 @@
 import inspect
+from typing import Optional
 
 from arcor2.object_types import Generic
 from arcor2.source.object_types import check_object_type
@@ -6,14 +7,14 @@ from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
 from arcor2.persistent_storage_client import PersistentStorageClient
-from arcor2.data.common import ObjectType
+from arcor2.data.object_type import ObjectType, Models
 
 
 class UploadException(Arcor2Exception):
     pass
 
 
-def upload(module_cls: str) -> None:
+def upload(module_cls: str, model: Optional[Models] = None) -> None:
 
     try:
         _, cls = import_cls(module_cls)
@@ -38,6 +39,10 @@ def upload(module_cls: str) -> None:
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
         obj_type = ObjectType(id=cls.__name__, source=source)
+
+        if model:
+            obj_type.model = model.metamodel()
+            storage_client.put_model(model)
 
         print(f"Storing '{obj_type.id}'...")
         storage_client.update_object_type(obj_type)

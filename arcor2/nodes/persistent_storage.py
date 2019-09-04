@@ -14,7 +14,8 @@ from dataclasses_jsonschema import ValidationError
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 from pymongo import MongoClient  # type: ignore
 
-from arcor2.data.common import Scene, Project, IdDesc, IdDescList, ProjectSources, ObjectType
+from arcor2.data.common import Scene, Project, IdDesc, IdDescList, ProjectSources
+from arcor2.data.object_type import ObjectType
 
 # Create an APISpec
 spec = APISpec(
