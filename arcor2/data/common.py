@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import List, Any, Union, Dict, Iterator, Optional
+from typing_extensions import Literal
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
@@ -99,9 +100,25 @@ class Scene(JsonSchemaMixin):
 @dataclass
 class ActionParameter(JsonSchemaMixin):
 
+    STRING = "string"
+    DOUBLE = "double"  # double precision in Python == float
+    ACTION_POINT = "ActionPoint"
+
     id: str
-    type: str
-    value: Union[str, float]
+    type: Literal[STRING, DOUBLE, ACTION_POINT]
+    value_string: str = ""
+    value_double: float = 0.0
+
+    def __post_init__(self):
+
+        self._mapping = {ActionParameter.STRING: self.value_string,
+                         ActionParameter.DOUBLE: self.value_double,
+                         ActionParameter.ACTION_POINT: self.value_string}
+
+    @property
+    def value(self) -> Union[str, float]:
+
+        return self._mapping[self.type]
 
 
 @dataclass
@@ -170,6 +187,7 @@ class ObjectType(JsonSchemaMixin):
 
     id: str
     source: str
+    desc: Optional[str] = ""
 
 
 @dataclass
