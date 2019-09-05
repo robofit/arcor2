@@ -1,7 +1,7 @@
 import importlib
 import os
 import stat
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union, Type
 
 import autopep8  # type: ignore
 import typed_astunparse  # type: ignore  # TODO remove when version with py.typed on pypi
@@ -271,7 +271,7 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
 
 def append_method_call(body: List, instance: str, method: str, args: List, kwargs: List) -> None:
 
-    body.append(Expr(value=Call(func=Attribute(value=Name(id=instance, ctx=Load()), attr=method, ctx=Load()),
+    body.append(Expr(value=Call(func=get_name_attr(instance, method),
                                 args=args,
                                 keywords=kwargs)))
 
@@ -308,15 +308,20 @@ def add_method_call_in_main(tree: Module, instance: str, method: str, args: List
 
     # TODO iterate over args/kwargs
     # TODO check actual number of method's arguments (and types?)
-    main_body.insert(last_assign_idx + 1, Expr(value=Call(func=Attribute(value=Name(id=instance,
-                                                                                    ctx=Load()),
-                                                                         attr=method,
-                                                                         ctx=Load()),
+    main_body.insert(last_assign_idx + 1, Expr(value=Call(func=get_name_attr(instance, method),
                                                           args=args, keywords=[])))
 
 
 def get_name(name: str) -> Name:
     return Name(id=name, ctx=Load())
+
+
+def get_name_attr(name: str, attr: str, ctx: Union[Type[Load], Type[Store]] = Load) -> Attribute:
+
+    return Attribute(
+        value=get_name(name),
+        attr=attr,
+        ctx=ctx())
 
 
 def tree_to_str(tree: Module) -> str:
@@ -362,9 +367,9 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
         keywords=[]))]
 
     for param in parameters:
-        init_body.append(Assign(targets=[Attribute(value=Name(id='self', ctx=Load()), attr="_" + param, ctx=Store())],
+        init_body.append(Assign(targets=[get_name_attr("self", "_" + param, Store)],
                                 value=Call(
-                                    func=Attribute(value=Name(id='self', ctx=Load()), attr='parameters', ctx=Load()),
+                                    func=get_name_attr("self", "parameters"),
                                     args=[Str(s=param)], keywords=[])))
 
     cls_def = ClassDef(name=derived_cls_name,
@@ -393,29 +398,14 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
                 defaults=[]),
             body=[
                 Expr(value=Call(
-                    func=Attribute(
-                        value=Name(
-                            id='Resources',
-                            ctx=Load()),
-                        attr='print_info',
-                        ctx=Load()),
+                    func=get_name_attr('Resources', 'print_info'),
                     args=[
                         Str(
                             s=param,
                             kind=''),
-                        Attribute(
-                            value=Name(
-                                id='self',
-                                ctx=Load()),
-                            attr='_' + param,
-                            ctx=Load())],
+                        get_name_attr('self', '_' + param)],
                     keywords=[])),
-                Return(value=Attribute(
-                    value=Name(
-                        id='self',
-                        ctx=Load()),
-                    attr='_' + param,
-                    ctx=Load()))],
+                Return(value=get_name_attr('self', '_' + param))],
             decorator_list=[Name(
                 id='property',
                 ctx=Load())],

@@ -2,7 +2,7 @@ import inspect
 
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
-from apispec.exceptions import DuplicateComponentNameError
+from apispec.exceptions import DuplicateComponentNameError  # type: ignore
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 
 # import arcor2.data.api

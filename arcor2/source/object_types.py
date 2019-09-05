@@ -8,7 +8,7 @@ from arcor2.data.common import ActionMetadata
 from arcor2.data.object_type import ObjectTypeMeta, ObjectActionArgs, ObjectAction, ObjectActions
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.source import SourceException
-from arcor2.source.utils import get_name, tree_to_str, find_function
+from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr
 from arcor2.object_types_utils import built_in_types_names
 import arcor2.object_types
 
@@ -205,12 +205,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
             id=cls_name,
             ctx=Load()),
         value=Subscript(
-            value=Attribute(
-                value=Name(
-                    id='res',
-                    ctx=Load()),
-                attr='objects',
-                ctx=Load()),
+            value=get_name_attr('res', 'objects'),
             slice=Index(value=Str(
                 s=object_id,
                 kind='')),

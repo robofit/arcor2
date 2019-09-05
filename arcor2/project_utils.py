@@ -15,9 +15,9 @@ def get_actions_cache(project: Project) -> Tuple[Dict[str, Action], Union[str, N
         for aps in obj.action_points:
             for act in aps.actions:
                 actions_cache[act.id] = act
-                if act.inputs and act.inputs[0].default == ActionIOEnum.FIRST:
+                if act.inputs and act.inputs[0].default == ActionIOEnum.FIRST.value:
                     first_action_id = act.id
-                elif act.outputs and act.outputs[0].default == ActionIOEnum.LAST:
+                elif act.outputs and act.outputs[0].default == ActionIOEnum.LAST.value:
                     last_action_id = act.id
 
     return actions_cache, first_action_id, last_action_id

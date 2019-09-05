@@ -30,9 +30,9 @@ VALID_PROJECT = Project.from_dict(
                    {'id': 'MoveToBoxIN',
                     'type': 'robot/move_to',
                     'parameters': [
-                        {'id': 'end_effector', 'type': 'string', 'value': 'gripper1'},
-                        {'id': 'target', 'type': 'ActionPoint', 'value': 'BoxIN.transfer'},
-                        {'id': 'speed', 'type': 'double', 'value': 15}],
+                        {'id': 'end_effector', 'type': 'string', 'value_string': 'gripper1'},
+                        {'id': 'target', 'type': 'ActionPoint', 'value_string': 'BoxIN.transfer'},
+                        {'id': 'speed', 'type': 'double', 'value_double': 15}],
                     'inputs': [{'default': 'start'}],
                     'outputs': [{'default': 'MoveToTester'}]}]}]},
          {'id': 'Tester',
@@ -43,9 +43,9 @@ VALID_PROJECT = Project.from_dict(
                    {'id': 'MoveToTester',
                     'type': 'robot/move_to',
                     'parameters': [
-                        {'id': 'end_effector', 'type': 'string', 'value': 'gripper1'},
-                        {'id': 'target', 'type': 'ActionPoint', 'value': 'Tester.input'},
-                        {'id': 'speed', 'type': 'double', 'value': 15}],
+                        {'id': 'end_effector', 'type': 'string', 'value_string': 'gripper1'},
+                        {'id': 'target', 'type': 'ActionPoint', 'value_string': 'Tester.input'},
+                        {'id': 'speed', 'type': 'double', 'value_double': 15}],
                     'inputs': [{'default': 'MoveToBoxIN'}],
                     'outputs': [{'default': 'MoveToBoxOUT'}]}]}]},
          {'id': 'BoxOUT',
@@ -56,9 +56,9 @@ VALID_PROJECT = Project.from_dict(
                    {'id': 'MoveToBoxOUT',
                     'type': 'robot/move_to',
                     'parameters': [
-                        {'id': 'end_effector', 'type': 'string', 'value': 'suction1'},
-                        {'id': 'target', 'type': 'ActionPoint', 'value': 'Tester.input'},
-                        {'id': 'speed', 'type': 'double', 'value': 15}],
+                        {'id': 'end_effector', 'type': 'string', 'value_string': 'suction1'},
+                        {'id': 'target', 'type': 'ActionPoint', 'value_string': 'Tester.input'},
+                        {'id': 'speed', 'type': 'double', 'value_double': 15}],
                     'inputs': [{'default': 'MoveToTester'}],
                     'outputs': [{'default': 'end'}]}]}]}]
      }
@@ -96,6 +96,7 @@ from object_types.box import Box
 from object_types.tester import Tester
 from arcor2.object_types import Robot
 from resources import Resources
+from arcor2.exceptions import Arcor2Exception, print_exception
 
 
 def main() -> None:
@@ -104,24 +105,30 @@ def main() -> None:
     tester: Tester = res.objects['Tester']
     box_in: Box = res.objects['BoxIN']
     box_out: Box = res.objects['BoxOUT']
-    while True:
-        robot.move_to(**res.MoveToBoxIN)
-        robot.move_to(**res.MoveToTester)
-        robot.move_to(**res.MoveToBoxOUT)
+    try:
+        while True:
+            robot.move_to(res.MoveToBoxIN)
+            robot.move_to(res.MoveToTester)
+            robot.move_to(res.MoveToBoxOUT)
+    except Arcor2Exception as e:
+        print_exception(e)
 
 
 if (__name__ == '__main__'):
-    main()
+    try:
+        main()
+    except Exception as e:
+        print_exception(e)
 """
 
-VALID_SOURCE_WITH_DIFFERENT_ACTION_ORDER = """
-#!/usr/bin/env python3
+VALID_SOURCE_WITH_DIFFERENT_ACTION_ORDER = """#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 from object_types.box import Box
 from object_types.tester import Tester
 from arcor2.object_types import Robot
 from resources import Resource
+from arcor2.exceptions import Arcor2Exception, print_exception
 
 
 def main() -> None:
@@ -132,14 +139,20 @@ def main() -> None:
     box_in: Box = res.objects['BoxIN']
     box_out: Box = res.objects['BoxOUT']
 
-    while True:
-        robot.move_to(**res.MoveToBoxOUT)
-        robot.move_to(**res.MoveToBoxIN)
-        robot.move_to(**res.MoveToTester)
+    try:
+        while True:
+            robot.move_to(res.MoveToBoxOUT)
+            robot.move_to(res.MoveToBoxIN)
+            robot.move_to(res.MoveToTester)
+    except Arcor2Exception as e:
+        print_exception(e)
 
 
 if (__name__ == '__main__'):
-    main()
+    try:
+        main()
+    except Exception as e:
+        print_exception(e)
 """
 
 

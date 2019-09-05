@@ -1,7 +1,7 @@
 from typing import Set, Union
 
 from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
-from typed_ast.ast3 import Expr, Pass, keyword, Attribute, Name, Load, Module
+from typed_ast.ast3 import Expr, Pass, Module, Call, Attribute
 
 from arcor2.data.common import Project, Scene, Action, ActionIO, ActionIOEnum
 from arcor2.helpers import camel_case_to_snake_case
@@ -9,8 +9,9 @@ from arcor2.project_utils import get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
 from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, add_cls_inst, \
-    append_method_call, tree_to_str
+    append_method_call, tree_to_str, get_name_attr
 from arcor2.source.object_types import object_instance_from_res
+import arcor2.object_types
 
 
 def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> str:
@@ -24,7 +25,7 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> s
     for obj in scene.objects:
 
         if obj.type in built_in_objects:
-            add_import(tree, "arcor2.object_types", obj.type, try_to_import=False)
+            add_import(tree, arcor2.object_types.__name__, obj.type, try_to_import=False)
         else:
             add_import(tree, "object_types." + camel_case_to_snake_case(obj.type), obj.type, try_to_import=False)
 
@@ -53,17 +54,29 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
     for node_idx, node in enumerate(loop):
 
         # simple checks for expected 'syntax' of action calls (e.g. 'robot.move_to(**res.MoveToBoxIN)')
-        if not isinstance(node, Expr):
+        if not isinstance(node, Expr) or not isinstance(node.value, Call) or not isinstance(node.value.func, Attribute):
             raise SourceException("Unexpected content.")
 
         try:
-            val = node.value  # type: ignore
+            val = node.value
             obj_id = val.func.value.id  # type: ignore
             method = val.func.attr  # type: ignore
-            action_id = val.keywords[0].value.attr  # type: ignore
         except (AttributeError, IndexError) as e:
             print(e)
             raise SourceException("Script has unexpected content.")
+
+        """
+        Support for both:
+            robot.move_to(res.MoveToBoxIN)  # args
+        ...as well as
+            robot.move_to(**res.MoveToBoxIN)  # kwargs
+        """
+        if len(val.args) == 1 and not val.keywords:
+            action_id = val.args[0].attr  # type: ignore
+        elif len(val.keywords) == 1 and not val.args:
+            action_id = val.keywords[0].value.attr  # type: ignore
+        else:
+            raise SourceException("Unexpected argument(s) to the action.")
 
         if action_id in found_actions:
             raise SourceException(f"Duplicate action: {action_id}.")
@@ -126,14 +139,7 @@ def add_logic_to_loop(tree: Module, project: Project) -> None:
             loop.clear()
 
         ac_obj, ac_type = act.type.split('/')
-        append_method_call(loop, fix_object_name(ac_obj), ac_type, [], [keyword(
-                                                                      arg=None,
-                                                                      value=Attribute(
-                                                                        value=Name(
-                                                                          id='res',
-                                                                          ctx=Load()),
-                                                                        attr=act.id,
-                                                                        ctx=Load()))])
+        append_method_call(loop, fix_object_name(ac_obj), ac_type, [get_name_attr("res", act.id)], [])
 
         if act.id == last_action_id:
             break

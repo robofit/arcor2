@@ -67,7 +67,7 @@ class PersistentStorage:
         except requests.exceptions.RequestException as e:
             print(e)
             raise PersistentStorageException(f"Status code: {resp.status_code}, "
-                                                   f"body: {json.loads(resp.content)}.")
+                                             f"body: {json.loads(resp.content)}.")
 
     def _post(self, url: str, data: JsonSchemaMixin, op=requests.post) -> None:
 
