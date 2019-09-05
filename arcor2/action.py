@@ -42,6 +42,11 @@ def print_json(d: Dict[str, Any]) -> None:
 def action(f: Callable[..., Any]) -> Callable[..., Any]:  # TODO read stdin and pause if requested
     def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
 
+        # automagical overload for dictionary (allow to get rid of ** in script).
+        if len(args) == 2 and isinstance(args[1], dict) and not kwargs:
+            kwargs = args[1]
+            args = (args[0],)
+
         handle_action(args[0].name, f, "before")
         res = f(*args, **kwargs)
         handle_action(args[0].name, f, "after")
