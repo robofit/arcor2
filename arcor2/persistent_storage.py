@@ -20,7 +20,7 @@ URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:11000")
 TIMEOUT = (1.0, 1.0)  # connect, read
 
 
-class PersistentStorageClientException(Arcor2Exception):
+class PersistentStorageException(Arcor2Exception):
     pass
 
 
@@ -58,7 +58,7 @@ def remove_none_values(d: Dict) -> None:  # temporary workaround for a bug in pe
         del d[td]
 
 
-class PersistentStorageClient:
+class PersistentStorage:
 
     def _handle_response(self, resp):
 
@@ -66,7 +66,7 @@ class PersistentStorageClient:
             resp.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException(f"Status code: {resp.status_code}, "
+            raise PersistentStorageException(f"Status code: {resp.status_code}, "
                                                    f"body: {json.loads(resp.content)}.")
 
     def _post(self, url: str, data: JsonSchemaMixin, op=requests.post) -> None:
@@ -77,7 +77,7 @@ class PersistentStorageClient:
             resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'})
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException(f"Catastrophic error: {e}")
+            raise PersistentStorageException(f"Catastrophic error: {e}")
 
         self._handle_response(resp)
 
@@ -87,7 +87,7 @@ class PersistentStorageClient:
             resp = requests.get(url, timeout=TIMEOUT)
         except requests.exceptions.RequestException as e:
             print(e)
-            raise PersistentStorageClientException(f"Catastrophic error: {e}")
+            raise PersistentStorageException(f"Catastrophic error: {e}")
 
         self._handle_response(resp)
 
@@ -95,7 +95,7 @@ class PersistentStorageClient:
             data = json.loads(resp.text)
         except (json.JSONDecodeError, TypeError) as e:
             print(e)
-            raise PersistentStorageClientException("Invalid JSON.")
+            raise PersistentStorageException("Invalid JSON.")
 
         data = convert_keys(data, camel_case_to_snake_case)
         remove_none_values(data)
@@ -104,7 +104,7 @@ class PersistentStorageClient:
             return data_cls.from_dict(data)
         except ValidationError as e:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
-            raise PersistentStorageClientException("Invalid data.")
+            raise PersistentStorageException("Invalid data.")
 
     def get_model(self, model_id: str, model_type: ModelTypeEnum) -> Models:
         return self._get(f"{URL}/models/{model_id}/{model_type.value}", MODEL_MAPPING[model_type])
@@ -157,11 +157,11 @@ class PersistentStorageClient:
 loop = asyncio.get_event_loop()
 
 
-class AioPersistentStorageClient:
+class AioPersistentStorage:
 
     def __init__(self):
 
-        self._cl = PersistentStorageClient()
+        self._cl = PersistentStorage()
 
     async def get_model(self, model_id: str, model_type: str) -> Models:
         return await loop.run_in_executor(None, self._cl.get_model, model_id, model_type)

@@ -10,7 +10,7 @@ from arcor2.data.common import Project, Scene, ActionPoint
 from arcor2.exceptions import ResourcesException
 from arcor2.object_types import Generic
 from arcor2.action import print_json
-from arcor2.persistent_storage_client import PersistentStorageClient
+from arcor2.persistent_storage import PersistentStorage
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -95,7 +95,7 @@ class ResourcesBase(IntResources):
 
     def __init__(self, project_id: str) -> None:
 
-        psc = PersistentStorageClient()
+        psc = PersistentStorage()
 
         project = psc.get_project(project_id)
         scene = psc.get_scene(project.scene_id)

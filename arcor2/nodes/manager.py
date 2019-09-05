@@ -19,7 +19,7 @@ from arcor2.helpers import response, rpc, server, camel_case_to_snake_case, RpcP
     import_cls, ImportClsException, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.source.utils import make_executable
-from arcor2.persistent_storage_client import AioPersistentStorageClient
+from arcor2.persistent_storage import AioPersistentStorage
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -28,7 +28,7 @@ TASK = None
 
 CLIENTS: Set = set()
 
-STORAGE_CLIENT = AioPersistentStorageClient()
+STORAGE_CLIENT = AioPersistentStorage()
 
 RPC_PLUGINS: List[RpcPlugin] = []
 

@@ -24,7 +24,7 @@ from arcor2.object_types_utils import built_in_types_names, DataError, obj_descr
     built_in_types_actions, add_ancestor_actions, get_built_in_type
 from arcor2.data.common import Scene, Project, ProjectSources
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta
-from arcor2.persistent_storage_client import AioPersistentStorageClient
+from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
 from arcor2.exceptions import ApNotFound
@@ -49,7 +49,7 @@ MANAGER_RPC_REQ_ID: int = 0
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 OBJECT_ACTIONS: ObjectActionsDict = {}
 
-STORAGE_CLIENT = AioPersistentStorageClient()
+STORAGE_CLIENT = AioPersistentStorage()
 
 
 async def handle_manager_incoming_messages(manager_client):

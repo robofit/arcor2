@@ -6,7 +6,7 @@ from arcor2.source.object_types import check_object_type
 from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
-from arcor2.persistent_storage_client import PersistentStorageClient
+from arcor2.persistent_storage import PersistentStorage
 from arcor2.data.object_type import ObjectType, Models
 
 
@@ -26,7 +26,7 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
 
     path = inspect.getfile(cls)
 
-    storage_client = PersistentStorageClient()
+    storage_client = PersistentStorage()
 
     with open(path, "r") as source_file:
 
