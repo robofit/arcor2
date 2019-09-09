@@ -356,7 +356,10 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
     # TODO validate end-effector
 
     # TODO transform pose from robot somehow
-    return await asyncio.get_event_loop().run_in_executor(None, robot.get_pose, end_effector)
+    try:
+        return await asyncio.get_event_loop().run_in_executor(None, robot.get_pose, end_effector)
+    except NotImplementedError:
+        raise RobotPoseException("The robot does not support getting pose.")
 
 
 @rpc(logger)
@@ -384,6 +387,9 @@ async def update_action_object_cb(req, ui, args) -> Union[Dict, None]:
 
     if not (SCENE and SCENE.id):
         return response(req, False, ["Scene has to be loaded first."])
+
+    if args["id"] == args["robot"]:
+        return response(req, False, ["Robot cannot update its own pose."])
 
     try:
         scene_object = get_scene_object(SCENE, args["id"])
