@@ -537,7 +537,7 @@ async def multiple_tasks():
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
     input_coroutines = [websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
                         _get_object_types()]
-    res = await asyncio.gather(*input_coroutines, return_exceptions=True)
+    res = await asyncio.gather(*input_coroutines)
     return res
 
 
