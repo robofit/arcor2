@@ -2,7 +2,7 @@ from typing import Tuple, Dict, Union
 
 from arcor2.data.common import Project, Action, ActionIOEnum, ProjectObject, ActionPoint
 from arcor2.helpers import camel_case_to_snake_case
-from arcor2.exceptions import ApNotFound
+from arcor2.exceptions import ActionPointNotFound
 
 
 def get_actions_cache(project: Project) -> Tuple[Dict[str, Action], Union[str, None], Union[str, None]]:
@@ -45,11 +45,11 @@ def clear_project_logic(project: Project) -> None:
                 action.outputs.clear()
 
 
-def get_action_point(project: Project, ap_id: str) -> ActionPoint:
+def get_action_point(project: Project, ap_id: str) -> ActionPoint:  # TODO cache it somehow?
 
     for obj in project.objects:
         for ap in obj.action_points:
             if ap.id == ap_id:
                 return ap
 
-    raise ApNotFound
+    raise ActionPointNotFound

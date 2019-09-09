@@ -22,12 +22,13 @@ from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
 from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type
-from arcor2.data.common import Scene, Project, ProjectSources
+from arcor2.data.common import Scene, Project, ProjectSources, Pose
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
-from arcor2.exceptions import ApNotFound
+from arcor2.scene_utils import get_scene_object
+from arcor2.exceptions import ActionPointNotFound, SceneObjectNotFound, Arcor2Exception
 
 
 logger = Logger.with_default_handlers(name='server', formatter=aiologger_formatter())
@@ -50,6 +51,10 @@ OBJECT_TYPES: ObjectTypeMetaDict = {}
 OBJECT_ACTIONS: ObjectActionsDict = {}
 
 STORAGE_CLIENT = AioPersistentStorage()
+
+
+class RobotPoseException(Arcor2Exception):
+    pass
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -338,29 +343,59 @@ async def get_schema_cb(req, ui, args) -> Union[Dict, None]:
     return response(req, data=JSON_SCHEMAS[which])
 
 
+async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
+
+    try:
+        robot = SCENE_OBJECT_INSTANCES[robot_id]
+    except KeyError:
+        raise RobotPoseException("Unknown robot.")
+
+    if not isinstance(robot, Robot):
+        raise RobotPoseException(f"Object {robot_id} is not instance of Robot!")
+
+    # TODO validate end-effector
+
+    # TODO transform pose from robot somehow
+    return await asyncio.get_event_loop().run_in_executor(None, robot.get_pose, end_effector)
+
+
 @rpc(logger)
 async def update_action_point_cb(req, ui, args) -> Union[Dict, None]:
 
-    if not (SCENE and PROJECT and SCENE.id and PROJECT.id):
+    if not (SCENE and PROJECT and SCENE.id and PROJECT.id):  # TODO use decorator for this
         return response(req, False, ["Scene/project has to be loaded first."])
 
     try:
         ap = get_action_point(PROJECT, args["id"])
-    except ApNotFound:
+    except ActionPointNotFound:
         return response(req, False, ["Invalid action point."])
 
     try:
-        robot = SCENE_OBJECT_INSTANCES[args["robot"]]
-    except KeyError:
-        return response(req, False, ["Unknown robot id."])
-
-    if not isinstance(robot, Robot):
-        return response(req, False, [f"Object {args['robot']} is not instance of Robot!"])
-
-    # TODO transform pose from robot to the object
-    ap.pose = await asyncio.get_event_loop().run_in_executor(None, robot.get_pose, args["end_effector"])
+        ap.pose = await get_end_effector_pose(args["robot"], args["end_effector"])
+    except RobotPoseException as e:
+        return response(req, False, [str(e)])
 
     await notify_project_change_to_others()
+    return response(req)
+
+
+@rpc(logger)
+async def update_action_object_cb(req, ui, args) -> Union[Dict, None]:
+
+    if not (SCENE and SCENE.id):
+        return response(req, False, ["Scene has to be loaded first."])
+
+    try:
+        scene_object = get_scene_object(SCENE, args["id"])
+    except SceneObjectNotFound:
+        return response(req, False, ["Invalid action object."])
+
+    try:
+        scene_object.pose = await get_end_effector_pose(args["robot"], args["end_effector"])
+    except RobotPoseException as e:
+        return response(req, False, [str(e)])
+
+    await notify_scene_change_to_others()
     return response(req)
 
 
@@ -476,6 +511,7 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'saveScene': save_scene_cb,
                   'getSchema': get_schema_cb,
                   'updateActionPointPose': update_action_point_cb,
+                  'updateActionObjectPose': update_action_object_cb,
                   'openProject': open_project_cb,
                   'listProjects': list_projects_cb,
                   'listScenes': list_scenes_cb,

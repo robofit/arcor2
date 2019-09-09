@@ -21,7 +21,11 @@ class ResourcesException(Arcor2Exception):
     pass
 
 
-class ApNotFound(Arcor2Exception):
+class ActionPointNotFound(Arcor2Exception):
+    pass
+
+
+class SceneObjectNotFound(Arcor2Exception):
     pass
 
 
