@@ -30,9 +30,9 @@ VALID_PROJECT = Project.from_dict(
                    {'id': 'MoveToBoxIN',
                     'type': 'robot/move_to',
                     'parameters': [
-                        {'id': 'end_effector', 'type': 'string', 'value_string': 'gripper1'},
-                        {'id': 'target', 'type': 'ActionPoint', 'value_string': 'BoxIN.transfer'},
-                        {'id': 'speed', 'type': 'double', 'value_double': 15}],
+                        {'id': 'end_effector', 'type': 'string', 'value': 'gripper1'},
+                        {'id': 'target', 'type': 'ActionPoint', 'value': 'BoxIN.transfer'},
+                        {'id': 'speed', 'type': 'double', 'value': 15}],
                     'inputs': [{'default': 'start'}],
                     'outputs': [{'default': 'MoveToTester'}]}]}]},
          {'id': 'Tester',
@@ -43,9 +43,9 @@ VALID_PROJECT = Project.from_dict(
                    {'id': 'MoveToTester',
                     'type': 'robot/move_to',
                     'parameters': [
-                        {'id': 'end_effector', 'type': 'string', 'value_string': 'gripper1'},
-                        {'id': 'target', 'type': 'ActionPoint', 'value_string': 'Tester.input'},
-                        {'id': 'speed', 'type': 'double', 'value_double': 15}],
+                        {'id': 'end_effector', 'type': 'string', 'value': 'gripper1'},
+                        {'id': 'target', 'type': 'ActionPoint', 'value': 'Tester.input'},
+                        {'id': 'speed', 'type': 'double', 'value': 15}],
                     'inputs': [{'default': 'MoveToBoxIN'}],
                     'outputs': [{'default': 'MoveToBoxOUT'}]}]}]},
          {'id': 'BoxOUT',
@@ -56,9 +56,9 @@ VALID_PROJECT = Project.from_dict(
                    {'id': 'MoveToBoxOUT',
                     'type': 'robot/move_to',
                     'parameters': [
-                        {'id': 'end_effector', 'type': 'string', 'value_string': 'suction1'},
-                        {'id': 'target', 'type': 'ActionPoint', 'value_string': 'Tester.input'},
-                        {'id': 'speed', 'type': 'double', 'value_double': 15}],
+                        {'id': 'end_effector', 'type': 'string', 'value': 'suction1'},
+                        {'id': 'target', 'type': 'ActionPoint', 'value': 'Tester.input'},
+                        {'id': 'speed', 'type': 'double', 'value': 15}],
                     'inputs': [{'default': 'MoveToTester'}],
                     'outputs': [{'default': 'end'}]}]}]}]
      }

@@ -110,19 +110,7 @@ class ActionParameter(JsonSchemaMixin):
 
     id: str
     type: ActionParameterTypeEnum
-    value_string: str = ""
-    value_double: float = 0.0
-
-    def __post_init__(self):
-
-        self._mapping = {ActionParameterTypeEnum.STRING: self.value_string,
-                         ActionParameterTypeEnum.DOUBLE: self.value_double,
-                         ActionParameterTypeEnum.ACTION_POINT: self.value_string}
-
-    @property
-    def value(self) -> Union[str, float]:
-
-        return self._mapping[self.type]
+    value: Union[str, float]
 
 
 @dataclass
