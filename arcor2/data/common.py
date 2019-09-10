@@ -21,6 +21,7 @@ class ActionParameterTypeEnum(Enum):
 
     STRING: str = "string"
     DOUBLE: str = "double"
+    INTEGER: str = "integer"
     ACTION_POINT: str = "ActionPoint"
 
 
@@ -110,7 +111,11 @@ class ActionParameter(JsonSchemaMixin):
 
     id: str
     type: ActionParameterTypeEnum
-    value: Union[float, str]
+    value: Any
+
+    def __post_init__(self):
+        # TODO implement value type check
+        pass
 
 
 @dataclass
