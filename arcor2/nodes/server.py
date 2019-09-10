@@ -23,7 +23,7 @@ from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type
 from arcor2.data.common import Scene, Project, ProjectSources, Pose
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
@@ -420,12 +420,14 @@ async def list_scenes_cb(req, ui, args) -> Union[Dict, None]:
 
 
 @rpc(logger)
+async def list_meshes_cb(req, ui, args) -> Union[Dict, None]:
+    return response(req, data=await STORAGE_CLIENT.get_meshes())
+
+
+@rpc(logger)
 async def new_object_type_cb(req, ui, args) -> Union[Dict, None]:
 
     meta = ObjectTypeMeta.from_dict(args)
-
-    if meta.model:
-        assert meta.type == meta.model.model().id
 
     if meta.type in OBJECT_TYPES:
         return response(req, False, ["Object type already exists."])
@@ -436,10 +438,18 @@ async def new_object_type_cb(req, ui, args) -> Union[Dict, None]:
     obj = meta.to_object_type()
     obj.source = new_object_type_source(OBJECT_TYPES[meta.base], meta)
 
-    if meta.model:
+    if meta.model and meta.model.type != ModelTypeEnum.MESH:
+        assert meta.type == meta.model.model().id
         await STORAGE_CLIENT.put_model(meta.model.model())
 
+    # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
+    if meta.model and meta.model.type == ModelTypeEnum.MESH:
+        # ...get whole mesh (focus_points) based on mesh id
+        assert meta.model.mesh
+        meta.model.mesh = await STORAGE_CLIENT.get_mesh(meta.model.mesh.id)
+
     await STORAGE_CLIENT.update_object_type(obj)
+
     OBJECT_TYPES[meta.type] = meta
     # TODO notify new object type somehow?
 
@@ -521,7 +531,8 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'openProject': open_project_cb,
                   'listProjects': list_projects_cb,
                   'listScenes': list_scenes_cb,
-                  'newObjectType': new_object_type_cb}
+                  'newObjectType': new_object_type_cb,
+                  'listMeshes': list_meshes_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():

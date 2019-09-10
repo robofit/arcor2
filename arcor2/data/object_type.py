@@ -1,16 +1,19 @@
 from typing import Optional, List, Dict, Union
 from enum import Enum
 
-from arcor2.data.common import ActionMetadata, Pose, Position, Orientation
+from arcor2.data import DataException
+from arcor2.data.common import ActionMetadata, Pose
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
 class ModelTypeEnum(Enum):
 
+    NONE: str = "none"
     BOX: str = "box"
     CYLINDER: str = "cylinder"
     SPHERE: str = "sphere"
+    MESH: str = "mesh"
 
 
 @dataclass
@@ -44,7 +47,6 @@ class Box(Model):
     size_x: float
     size_y: float
     size_z: float
-    pose: Pose = Pose(Position(0, 0, 0), Orientation(0, 0, 0, 1))  # TODO remove!!!
 
 
 @dataclass
@@ -52,20 +54,27 @@ class Cylinder(Model):
 
     radius: float
     height: float
-    pose: Pose = Pose(Position(0, 0, 0), Orientation(0, 0, 0, 1))  # TODO remove!!!
 
 
 @dataclass
 class Sphere(Model):
     radius: float
-    pose: Pose = Pose(Position(0, 0, 0), Orientation(0, 0, 0, 1))  # TODO remove!!!
 
 
-Models = Union[Box, Sphere, Cylinder]
+@dataclass
+class Mesh(Model):
+
+    focus_points: Optional[List[Pose]] = None
+
+
+MeshList = List[Mesh]
+
+Models = Union[Box, Sphere, Cylinder, Mesh]
 
 MODEL_MAPPING = {Box.type(): Box,
                  Sphere.type(): Sphere,
-                 Cylinder.type(): Cylinder}
+                 Cylinder.type(): Cylinder,
+                 Mesh.type(): Mesh}
 
 
 @dataclass
@@ -79,6 +88,11 @@ class ObjectType(JsonSchemaMixin):
     desc: Optional[str] = ""
     model: Optional[MetaModel3d] = None
 
+    def __post_init__(self):  # TODO workaround for bug (?) in Storage
+
+        if self.model and self.model.type == ModelTypeEnum.NONE:
+            self.model = None
+
 
 @dataclass
 class ObjectModel(JsonSchemaMixin):
@@ -87,9 +101,17 @@ class ObjectModel(JsonSchemaMixin):
     box: Optional[Box] = None
     cylinder: Optional[Cylinder] = None
     sphere: Optional[Sphere] = None
+    mesh: Optional[Mesh] = None
 
     def model(self) -> Models:
         return getattr(self, str(self.type.value))
+
+    def __post_init__(self):
+
+        models_list = [self.box, self.cylinder, self.sphere, self.mesh]
+
+        if models_list.count(None) != len(models_list)-1:
+            raise DataException("No model specified!")
 
 
 @dataclass
@@ -109,7 +131,14 @@ class ObjectTypeMeta(JsonSchemaMixin):
         ot = ObjectType(self.type, "", self.description)
 
         if self.model:
-            ot.model = MetaModel3d(self.type, self.model.type)
+
+            if self.model.type == ModelTypeEnum.MESH:
+                assert self.model.mesh
+                m_id = self.model.mesh.id
+            else:
+                m_id = self.type
+
+            ot.model = MetaModel3d(m_id, self.model.type)
 
         return ot
 

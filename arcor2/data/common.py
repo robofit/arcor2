@@ -110,7 +110,7 @@ class ActionParameter(JsonSchemaMixin):
 
     id: str
     type: ActionParameterTypeEnum
-    value: Union[str, float]
+    value: Union[float, str]
 
 
 @dataclass

@@ -2,12 +2,12 @@ import requests
 import os
 import json
 import asyncio
-from typing import Type, TypeVar, Dict, Callable
+from typing import Type, TypeVar, Dict, Callable, List, Union
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 
 from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
-from arcor2.data.object_type import ObjectType, Models, MODEL_MAPPING, ModelTypeEnum
+from arcor2.data.object_type import ObjectType, Models, MODEL_MAPPING, ModelTypeEnum, Mesh, MeshList
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case
 
@@ -27,35 +27,20 @@ class PersistentStorageException(Arcor2Exception):
 T = TypeVar('T', bound=JsonSchemaMixin)
 
 
-def convert_keys(d: Dict, func: Callable[[str], str]) -> Dict:
+def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict, List]:
 
-    new = {}
-    for k, v in d.items():
-        if isinstance(v, dict):
-            v = convert_keys(v, func)
-        elif isinstance(v, list):
-            for idx in range(len(v)):
-                v[idx] = convert_keys(v[idx], func)
-        new[func(k)] = v
-    return new
+    if isinstance(d, dict):
+        new = {}
+        for k, v in d.items():
+            if isinstance(v, dict):
+                v = convert_keys(v, func)
+            new[func(k)] = v
+        return new
+    elif isinstance(d, list):
+        for idx in range(len(d)):
+            d[idx] = convert_keys(d[idx], func)
 
-
-def remove_none_values(d: Dict) -> None:  # temporary workaround for a bug in persistent storage
-
-    to_delete = []
-
-    for k, v in d.items():
-
-        if v is None:
-            to_delete.append(k)
-        elif isinstance(v, dict):
-            remove_none_values(v)
-        elif isinstance(v, list):
-            for l in v:
-                remove_none_values(l)
-
-    for td in to_delete:
-        del d[td]
+    return d
 
 
 class PersistentStorage:
@@ -81,7 +66,7 @@ class PersistentStorage:
 
         self._handle_response(resp)
 
-    def _get(self, url: str, data_cls: Type[T]) -> T:
+    def _get_data(self, url: str) -> Union[Dict, List]:
 
         try:
             resp = requests.get(url, timeout=TIMEOUT)
@@ -97,14 +82,40 @@ class PersistentStorage:
             print(e)
             raise PersistentStorageException("Invalid JSON.")
 
-        data = convert_keys(data, camel_case_to_snake_case)
-        remove_none_values(data)
+        return convert_keys(data, camel_case_to_snake_case)
+
+    def _get_list(self, url: str, data_cls: Type[T]) -> List[T]:
+
+        data = self._get_data(url)
+
+        ret: List[T] = []
+
+        for val in data:
+            try:
+                ret.append(data_cls.from_dict(val))
+            except ValidationError as e:
+                print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
+                raise PersistentStorageException("Invalid data.")
+
+        return ret
+
+    def _get(self, url: str, data_cls: Type[T]) -> T:
+
+        data = self._get_data(url)
+
+        assert isinstance(data, dict)
 
         try:
             return data_cls.from_dict(data)
         except ValidationError as e:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
             raise PersistentStorageException("Invalid data.")
+
+    def get_mesh(self, mesh_id) -> Mesh:
+        return self._get(f"{URL}/models/{mesh_id}/mesh", Mesh)
+
+    def get_meshes(self) -> MeshList:
+        return self._get_list(f"{URL}/models/meshes", Mesh)
 
     def get_model(self, model_id: str, model_type: ModelTypeEnum) -> Models:
         return self._get(f"{URL}/models/{model_id}/{model_type.value}", MODEL_MAPPING[model_type])
@@ -128,7 +139,7 @@ class PersistentStorage:
         return self._get(f"{URL}/scene/{scene_id}", Scene)
 
     def get_object_type(self, object_type_id: str) -> ObjectType:
-        return self._get(f"{URL}/object_type/{object_type_id}", ObjectType)
+        return self._get(f"{URL}/object_types/{object_type_id}", ObjectType)
 
     def get_object_type_ids(self) -> IdDescList:
         return self._get(f"{URL}/object_types", IdDescList)
@@ -162,6 +173,12 @@ class AioPersistentStorage:
     def __init__(self):
 
         self._cl = PersistentStorage()
+
+    async def get_mesh(self, mesh_id: str) -> Mesh:
+        return await loop.run_in_executor(None, self._cl.get_mesh, mesh_id)
+
+    async def get_meshes(self) -> MeshList:
+        return await loop.run_in_executor(None, self._cl.get_meshes)
 
     async def get_model(self, model_id: str, model_type: str) -> Models:
         return await loop.run_in_executor(None, self._cl.get_model, model_id, model_type)

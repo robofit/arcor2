@@ -4,6 +4,7 @@ import json
 import asyncio
 import importlib
 import re
+from dataclasses_jsonschema import JsonSchemaMixin
 
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
@@ -63,7 +64,7 @@ def snake_case_to_camel_case(snake_str: str) -> str:
 
 # TODO define Response dataclass instead
 def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None,
-             data: Optional[Union[Dict, List]] = None) -> Dict:  # type: ignore
+             data: Optional[Union[Dict, List, JsonSchemaMixin]] = None) -> Dict:  # type: ignore
 
     if messages is None:
         messages = []
