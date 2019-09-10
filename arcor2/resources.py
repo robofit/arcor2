@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Dict, Union, Any
-import importlib
 
-from arcor2.helpers import camel_case_to_snake_case
+from os import path
+from typing import Dict, Union, Any, Type, TypeVar
+import importlib
+import json
+
+from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
+
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, ActionPoint
+from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum
 from arcor2.exceptions import ResourcesException
+import arcor2.object_types
 from arcor2.object_types import Generic
 from arcor2.action import print_json
-from arcor2.persistent_storage import PersistentStorage
+from arcor2.settings import PROJECT_PATH
+from arcor2.persistent_storage import convert_keys
+from arcor2.helpers import camel_case_to_snake_case
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -22,8 +29,11 @@ class IntResources:
 
     def __init__(self, scene: Scene, project: Project) -> None:
 
-        self.scene = scene
         self.project = project
+        self.scene = scene
+
+        if self.project.scene_id != self.scene.id:
+            raise ResourcesException("Project/scene not consistent!")
 
         self.objects: Dict[str, Generic] = {}
 
@@ -32,9 +42,10 @@ class IntResources:
         for scene_obj in self.scene.objects:
 
             if scene_obj.type in built_in:
-                module = importlib.import_module("arcor2.object_types." + camel_case_to_snake_case(scene_obj.type))
+                module = importlib.import_module(arcor2.object_types.__name__ + "." +
+                                                 camel_case_to_snake_case(scene_obj.type))
             else:
-                module = importlib.import_module(IntResources.CUSTOM_OBJECT_TYPES_MODULE + "." +
+                module = importlib.import_module(ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." +
                                                  camel_case_to_snake_case(scene_obj.type))
 
             cls = getattr(module, scene_obj.type)
@@ -76,7 +87,7 @@ class IntResources:
                         ret: Dict[str, Union[str, float, ActionPoint]] = {}
 
                         for param in act.parameters:
-                            if param.type == "ActionPoint":
+                            if param.type == ActionParameterTypeEnum.ACTION_POINT:
                                 assert isinstance(param.value, str)
                                 object_id, ap_id = param.value.split('.')
                                 ret[param.id] = self.action_point(object_id, ap_id)
@@ -88,16 +99,44 @@ class IntResources:
         raise ResourcesException("Action_id {} not found for project {}.".format(action_id, self.project.id))
 
 
+T = TypeVar('T', bound=JsonSchemaMixin)
+
+
+def lower(s: str) -> str:
+
+    return s.lower()
+
+
 class ResourcesBase(IntResources):
-    """
-    Wrapper around MongoDB document store API for specific project.
-    """
+
+    def read_project_data(self, cls: Type[T]) -> T:
+
+        try:
+
+            with open(path.join(PROJECT_PATH, "data", cls.__name__.lower() + ".json")) as scene_file:
+                cont = scene_file.read()
+
+                # TODO temp ugly hack due to bug in Storage
+                cont = cont.replace("_id", "id")
+                cont = cont.replace("NumberLong(", "")
+                cont = cont.replace(") }],", "}],")
+
+                data_dict = json.loads(cont)
+                data_dict = convert_keys(data_dict, camel_case_to_snake_case)
+
+                return cls.from_dict(data_dict)
+
+        except JsonSchemaValidationError as e:
+            raise ResourcesException(f"Invalid project/scene: {e}")
+        except IOError as e:
+            raise ResourcesException(f"Failed to read project/scene: {e}")
 
     def __init__(self, project_id: str) -> None:
 
-        psc = PersistentStorage()
+        scene = self.read_project_data(Scene)
+        project = self.read_project_data(Project)
 
-        project = psc.get_project(project_id)
-        scene = psc.get_scene(project.scene_id)
+        if project_id != project.id:
+            raise ResourcesException("Resources were generated for different project!")
 
         super(ResourcesBase, self).__init__(scene, project)

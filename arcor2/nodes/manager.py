@@ -9,17 +9,19 @@ import sys
 from typing import Dict, Union, Set, Callable, List
 import argparse
 import os
+import tempfile
+import zipfile
+import shutil
 
 import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
-import aiofiles  # type: ignore
 
-from arcor2.helpers import response, rpc, server, camel_case_to_snake_case, RpcPlugin, \
+from arcor2.helpers import response, rpc, server, RpcPlugin, \
     import_cls, ImportClsException, aiologger_formatter
-from arcor2.object_types_utils import built_in_types_names
 from arcor2.source.utils import make_executable
 from arcor2.persistent_storage import AioPersistentStorage
+from arcor2.settings import PROJECT_PATH
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -31,11 +33,6 @@ CLIENTS: Set = set()
 STORAGE_CLIENT = AioPersistentStorage()
 
 RPC_PLUGINS: List[RpcPlugin] = []
-
-try:
-    PROJECT_PATH = os.environ["ARCOR2_PROJECT_PATH"]
-except KeyError:
-    sys.exit("'ARCOR2_PROJECT_PATH' env. variable not set.")
 
 
 def process_running() -> bool:
@@ -77,6 +74,21 @@ async def project_run(req: str, client, args: Dict) -> Dict:
 
     if process_running():
         return response(req, False, ["Already running!"])
+
+    with tempfile.TemporaryDirectory() as tmpdirname:
+
+        path = os.path.join(tmpdirname, "project.zip")
+
+        await STORAGE_CLIENT.publish_project(args["id"], path)
+
+        with zipfile.ZipFile(path, 'r') as zip_ref:
+            zip_ref.extractall(tmpdirname)
+
+        shutil.rmtree(PROJECT_PATH)
+        shutil.move(os.path.join(tmpdirname, "arcor2_project"), PROJECT_PATH)
+
+    script_path = os.path.join(PROJECT_PATH, "script.py")
+    make_executable(script_path)
 
     path = os.path.join(PROJECT_PATH, "script.py")
 
@@ -137,59 +149,6 @@ async def project_resume(req: str, client, args: Dict) -> Dict:
     return response(req)
 
 
-@rpc(logger, RPC_PLUGINS)
-async def project_load(req: str, client, args: Dict) -> Dict:
-
-    # TODO check if there are some modifications in already loaded project (if any)
-
-    # TODO do this in parallel
-    project = await STORAGE_CLIENT.get_project(args["id"])
-    project_sources = await STORAGE_CLIENT.get_project_sources(args["id"])
-
-    script_path = os.path.join(PROJECT_PATH, "script.py")
-
-    # TODO just write out all in sources?
-    async with aiofiles.open(script_path, "w") as f:
-        await f.write(project_sources.script)
-    make_executable(script_path)
-
-    async with aiofiles.open(os.path.join(PROJECT_PATH, "resources.py"), "w") as f:
-        await f.write(project_sources.resources)
-
-    scene = await STORAGE_CLIENT.get_scene(project.scene_id)
-
-    objects_path = os.path.join(PROJECT_PATH, "object_types")
-
-    if not os.path.exists(objects_path):
-        os.makedirs(objects_path)
-
-        async with aiofiles.open(os.path.join(objects_path, "__init__.py"), mode='w') as f:
-            pass
-
-    built_in_types = built_in_types_names()
-
-    to_download = set()
-
-    # in scene, there might be more instances of one type
-    # ...here we will get necessary types
-    for obj in scene.objects:
-
-        # if built-in, do not attempt to find it in DB
-        if obj.type in built_in_types:
-            continue
-
-        to_download.add(obj.type)
-
-    for obj_type_name in to_download:
-
-        obj_type = await STORAGE_CLIENT.get_object_type(obj_type_name)
-
-        async with aiofiles.open(os.path.join(objects_path, camel_case_to_snake_case(obj_type_name)) + ".py", "w") as f:
-            await f.write(obj_type.source)
-
-    return response(req)
-
-
 async def send_to_clients(data: Dict) -> None:
 
     if CLIENTS:
@@ -210,8 +169,7 @@ async def unregister(websocket: WebSocketServerProtocol) -> None:
 RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
                                  'stopProject': project_stop,
                                  'pauseProject': project_pause,
-                                 'resumeProject': project_resume,
-                                 'loadProject': project_load}
+                                 'resumeProject': project_resume}
 
 
 def main() -> None:

@@ -2,7 +2,7 @@ import requests
 import os
 import json
 import asyncio
-from typing import Type, TypeVar, Dict, Callable, List, Union
+from typing import Type, TypeVar, Dict, Callable, List, Union, Any
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 
@@ -30,15 +30,15 @@ T = TypeVar('T', bound=JsonSchemaMixin)
 def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict, List]:
 
     if isinstance(d, dict):
-        new = {}
+        new_dict = {}
         for k, v in d.items():
-            if isinstance(v, dict):
-                v = convert_keys(v, func)
-            new[func(k)] = v
-        return new
+            new_dict[func(k)] = convert_keys(v, func)
+        return new_dict
     elif isinstance(d, list):
-        for idx in range(len(d)):
-            d[idx] = convert_keys(d[idx], func)
+        new_list: List[Any] = []
+        for dd in d:
+            new_list.append(convert_keys(dd, func))
+        return new_list
 
     return d
 
@@ -111,6 +111,17 @@ class PersistentStorage:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
             raise PersistentStorageException("Invalid data.")
 
+    def _download(self, url: str, path: str):
+
+        # TODO check content type
+
+        r = requests.get(url, allow_redirects=True)
+        with open(path, 'wb') as file:
+            file.write(r.content)
+
+    def publish_project(self, project_id: str, path: str):
+        self._download(f"{URL}/project/{project_id}/publish", path)
+
     def get_mesh(self, mesh_id) -> Mesh:
         return self._get(f"{URL}/models/{mesh_id}/mesh", Mesh)
 
@@ -173,6 +184,9 @@ class AioPersistentStorage:
     def __init__(self):
 
         self._cl = PersistentStorage()
+
+    async def publish_project(self, project_id: str, path: str) -> None:
+        return await loop.run_in_executor(None, self._cl.publish_project, project_id, path)
 
     async def get_mesh(self, mesh_id: str) -> Mesh:
         return await loop.run_in_executor(None, self._cl.get_mesh, mesh_id)
