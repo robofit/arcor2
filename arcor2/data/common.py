@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Union, Iterator, Optional
+from typing import List, Any, Iterator, Optional
 from enum import Enum
 
 from json import JSONEncoder

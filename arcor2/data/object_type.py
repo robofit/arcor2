@@ -3,6 +3,7 @@ from enum import Enum
 
 from arcor2.data import DataException
 from arcor2.data.common import ActionMetadata, Pose
+from arcor2.data.common import Position
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -124,21 +125,21 @@ class ObjectTypeMeta(JsonSchemaMixin):
     description: str = field(default_factory=str)
     built_in: bool = False
     base: str = field(default_factory=str)
-    model: Optional[ObjectModel] = None
+    object_model: Optional[ObjectModel] = None
 
     def to_object_type(self) -> ObjectType:
 
         ot = ObjectType(self.type, "", self.description)
 
-        if self.model:
+        if self.object_model:
 
-            if self.model.type == ModelTypeEnum.MESH:
-                assert self.model.mesh
-                m_id = self.model.mesh.id
+            if self.object_model.type == ModelTypeEnum.MESH:
+                assert self.object_model.mesh
+                m_id = self.object_model.mesh.id
             else:
                 m_id = self.type
 
-            ot.model = MetaModel3d(m_id, self.model.type)
+            ot.model = MetaModel3d(m_id, self.object_model.type)
 
         return ot
 
@@ -163,3 +164,14 @@ class ObjectAction(JsonSchemaMixin):
 ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]
 ObjectActions = List[ObjectAction]
 ObjectActionsDict = Dict[str, ObjectActions]
+
+
+@dataclass
+class MeshFocusAction(JsonSchemaMixin):
+
+    mesh_focus_points: List[Position]
+    robot_space_points: List[Position]
+
+    def __post_init__(self):
+
+        assert len(self.mesh_focus_points) == len(self.robot_space_points)

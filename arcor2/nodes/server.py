@@ -6,7 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, Optional
+from typing import Dict, Set, Union, Optional, List, Tuple
 from types import ModuleType
 
 import websockets
@@ -22,8 +22,9 @@ from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
 from arcor2.helpers import response, rpc, server, aiologger_formatter
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type
-from arcor2.data.common import Scene, Project, ProjectSources, Pose
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum
+from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
+    MeshFocusAction, ObjectModel
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
@@ -49,6 +50,9 @@ MANAGER_RPC_REQ_ID: int = 0
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 OBJECT_ACTIONS: ObjectActionsDict = {}
+
+FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
+FOCUS_OBJECT_ROBOT: Dict[str, Tuple[str, str]] = {}  # object_id / robot, end_effector
 
 STORAGE_CLIENT = AioPersistentStorage()
 
@@ -166,7 +170,9 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
         object_types[obj.id] = object_type_meta(obj.source)
 
         if obj.model:
-            object_types[obj.id].model = await STORAGE_CLIENT.get_model(obj.model.id, obj.model.type)
+            model = await STORAGE_CLIENT.get_model(obj.model.id, obj.model.type)
+            kwargs = {model.type().value.lower(): model}
+            object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
     to_delete: Set[str] = set()
@@ -438,15 +444,15 @@ async def new_object_type_cb(req, ui, args) -> Union[Dict, None]:
     obj = meta.to_object_type()
     obj.source = new_object_type_source(OBJECT_TYPES[meta.base], meta)
 
-    if meta.model and meta.model.type != ModelTypeEnum.MESH:
-        assert meta.type == meta.model.model().id
-        await STORAGE_CLIENT.put_model(meta.model.model())
+    if meta.object_model and meta.object_model.type != ModelTypeEnum.MESH:
+        assert meta.type == meta.object_model.model().id
+        await STORAGE_CLIENT.put_model(meta.object_model.model())
 
     # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
-    if meta.model and meta.model.type == ModelTypeEnum.MESH:
+    if meta.object_model and meta.object_model.type == ModelTypeEnum.MESH:
         # ...get whole mesh (focus_points) based on mesh id
-        assert meta.model.mesh
-        meta.model.mesh = await STORAGE_CLIENT.get_mesh(meta.model.mesh.id)
+        assert meta.object_model.mesh
+        meta.object_model.mesh = await STORAGE_CLIENT.get_mesh(meta.object_model.mesh.id)
 
     await STORAGE_CLIENT.update_object_type(obj)
 
@@ -454,6 +460,156 @@ async def new_object_type_cb(req, ui, args) -> Union[Dict, None]:
     # TODO notify new object type somehow?
 
     return response(req)
+
+
+@rpc(logger)
+async def focus_object_start_cb(req, ui, args) -> Union[Dict, None]:  # TODO decorator to check if scene is loaded
+
+    global FOCUS_OBJECT
+    global FOCUS_OBJECT_ROBOT
+
+    assert "object_id" in args
+    assert "robot_id" in args
+    assert "end_effector" in args
+
+    if not SCENE or not SCENE.id:
+        return response(req, False, ["Scene not loaded."])
+
+    if args["object_id"] in FOCUS_OBJECT_ROBOT:
+        return response(req, False, ["Focusing already started."])
+
+    if args["robot_id"] not in SCENE_OBJECT_INSTANCES:
+        return response(req, False, ["Unknown robot."])
+
+    if args["object_id"] not in SCENE_OBJECT_INSTANCES:
+        return response(req, False, ["Unknown object."])
+
+    # TODO check if the robot supports (implements) focusing (how?)
+    # TODO check if end effector exists
+
+    obj_type = OBJECT_TYPES[get_obj_type_name(args["object_id"])]
+
+    if not obj_type.object_model or obj_type.object_model.type != ModelTypeEnum.MESH:
+        return response(req, False, ["Only available for objects with mesh model."])
+
+    assert obj_type.object_model.mesh
+
+    focus_points = obj_type.object_model.mesh.focus_points
+
+    if not focus_points:
+        return response(req, False, ["focusPoints not defined for the mesh."])
+
+    FOCUS_OBJECT_ROBOT[args["object_id"]] = args["robot_id"], args["end_effector"]
+    FOCUS_OBJECT[args["object_id"]] = {}
+    await logger.info(f'Start of focusing for {args["object_id"]}.')
+
+    return response(req)
+
+
+def get_obj_type_name(object_id: str) -> str:
+
+    return SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
+
+
+@rpc(logger)
+async def focus_object_cb(req, ui, args) -> Union[Dict, None]:
+
+    assert "object_id" in args
+    assert "point_idx" in args
+
+    if args["object_id"] not in SCENE_OBJECT_INSTANCES:
+        return response(req, False, ["Unknown object_id."])
+
+    obj_type = OBJECT_TYPES[get_obj_type_name(args["object_id"])]
+
+    assert obj_type.object_model and obj_type.object_model.mesh
+
+    focus_points = obj_type.object_model.mesh.focus_points
+
+    assert focus_points
+
+    if args["point_idx"] < 0 or args["point_idx"] > len(focus_points)-1:
+        return response(req, False, ["Index out of range."])
+
+    if args["object_id"] not in FOCUS_OBJECT:
+        await logger.info(f'Start of focusing for {args["object_id"]}.')
+        FOCUS_OBJECT[args["object_id"]] = {}
+
+    robot_id, end_effector = FOCUS_OBJECT_ROBOT[args["object_id"]]
+
+    FOCUS_OBJECT[args["object_id"]][args["point_idx"]] = await get_end_effector_pose(robot_id, end_effector)
+
+    return response(req, data={"finished_indexes": list(FOCUS_OBJECT[args["object_id"]].keys())})
+
+
+@rpc(logger)
+async def focus_object_done_cb(req, ui, args) -> Union[Dict, None]:  # TODO decorator to check if scene is loaded
+
+    global FOCUS_OBJECT
+    global FOCUS_OBJECT_ROBOT
+
+    if args["object_id"] not in FOCUS_OBJECT:
+        return response(req, False, ["focusObjectStart/focusObject has to be called first."])
+
+    obj_type = OBJECT_TYPES[get_obj_type_name(args["object_id"])]
+
+    assert obj_type.object_model and obj_type.object_model.mesh
+
+    focus_points = obj_type.object_model.mesh.focus_points
+
+    assert focus_points
+
+    if len(FOCUS_OBJECT[args["object_id"]]) < len(focus_points):
+        clean_up_after_focus(args["object_id"])
+        return response(req, True, ["Focusing cancelled."])
+
+    robot_id, end_effector = FOCUS_OBJECT_ROBOT[args["object_id"]]
+
+    robot_inst = SCENE_OBJECT_INSTANCES[robot_id]
+
+    assert isinstance(robot_inst, Robot)
+    assert SCENE
+
+    obj = get_scene_object(SCENE, args["object_id"])
+
+    fp: List[Position] = []
+    rp: List[Position] = []
+
+    for idx, pose in FOCUS_OBJECT[args["object_id"]].items():
+
+        fp.append(focus_points[idx].position)
+        rp.append(pose.position)
+
+    mfa = MeshFocusAction(fp, rp)
+
+    await logger.debug(f'Attempt to focus for object {args["object_id"]}, data: {mfa}')
+
+    try:
+        obj.pose = await asyncio.get_event_loop().run_in_executor(None, robot_inst.focus, mfa)
+    except NotImplementedError:  # TODO it is too late to realize it here!
+        clean_up_after_focus(args["object_id"])
+        return response(req, False, ["The robot does not support focussing."])
+
+    await logger.info(f"Done focusing for {args['object_id']}.")
+
+    clean_up_after_focus(args["object_id"])
+
+    await notify_scene_change_to_others()
+
+    return response(req)
+
+
+def clean_up_after_focus(obj_id: str) -> None:
+
+    try:
+        del FOCUS_OBJECT[obj_id]
+    except KeyError:
+        pass
+
+    try:
+        del FOCUS_OBJECT_ROBOT[obj_id]
+    except KeyError:
+        pass
 
 
 async def register(websocket) -> None:
@@ -532,7 +688,10 @@ RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
                   'listProjects': list_projects_cb,
                   'listScenes': list_scenes_cb,
                   'newObjectType': new_object_type_cb,
-                  'listMeshes': list_meshes_cb}
+                  'listMeshes': list_meshes_cb,
+                  'focusObject': focus_object_cb,
+                  'focusObjectStart': focus_object_start_cb,
+                  'focusObjectDone': focus_object_done_cb}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():

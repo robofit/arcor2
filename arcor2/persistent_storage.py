@@ -194,7 +194,7 @@ class AioPersistentStorage:
     async def get_meshes(self) -> MeshList:
         return await loop.run_in_executor(None, self._cl.get_meshes)
 
-    async def get_model(self, model_id: str, model_type: str) -> Models:
+    async def get_model(self, model_id: str, model_type: ModelTypeEnum) -> Models:
         return await loop.run_in_executor(None, self._cl.get_model, model_id, model_type)
 
     async def put_model(self, model: Models):
