@@ -128,9 +128,11 @@ def built_in_types_actions() -> ObjectActionsDict:
     return d
 
 
-def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict, object_types: ObjectTypeMetaDict) -> None:
+def add_ancestor_actions(obj_type_name: str,
+                         object_actions: ObjectActionsDict,
+                         object_types: ObjectTypeMetaDict) -> None:
 
-    base_name = object_types[obj_type].base
+    base_name = object_types[obj_type_name].base
 
     if not base_name:
         return
@@ -140,7 +142,7 @@ def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict, objec
 
     # do not add action from base if it is overridden in child
     for base_action in object_actions[base_name]:
-        for obj_action in object_actions[obj_type]:
+        for obj_action in object_actions[obj_type_name]:
             if base_action.name == obj_action.name:
 
                 # built-in object has no "origins" yet
@@ -151,4 +153,4 @@ def add_ancestor_actions(obj_type: str, object_actions: ObjectActionsDict, objec
             action = copy.deepcopy(base_action)
             if not action.origins:
                 action.origins = base_name
-            object_actions[obj_type].append(action)
+            object_actions[obj_type_name].append(action)

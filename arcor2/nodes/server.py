@@ -222,14 +222,10 @@ async def save_project_cb(req, ui, args) -> Dict:
 
     action_names = []
 
-    try:
-        for obj in PROJECT.objects:
-            for aps in obj.action_points:
-                for act in aps.actions:
-                    action_names.append(act.id)
-    except KeyError as e:
-        await logger.error(f"Project data invalid: {e}")
-        return response(req, False, ["Project data invalid!", str(e)])
+    for obj in PROJECT.objects:
+        for aps in obj.action_points:
+            for act in aps.actions:
+                action_names.append(act.id)
 
     try:
         project_sources = ProjectSources(id=PROJECT.id,
@@ -310,7 +306,7 @@ async def get_object_actions_cb(req, ui, args) -> Union[Dict, None]:
     try:
         return response(req, data=OBJECT_ACTIONS[obj_type])
     except KeyError:
-        return response(req, False, [f'Unknown object type: {obj_type}.'])
+        return response(req, False, [f"Unknown object type: '{obj_type}'."])
 
 
 @rpc(logger)
@@ -457,7 +453,10 @@ async def new_object_type_cb(req, ui, args) -> Union[Dict, None]:
     await STORAGE_CLIENT.update_object_type(obj)
 
     OBJECT_TYPES[meta.type] = meta
-    # TODO notify new object type somehow?
+    OBJECT_ACTIONS[meta.type] = get_object_actions(obj.source)
+    add_ancestor_actions(meta.type, OBJECT_ACTIONS, OBJECT_TYPES)
+
+    # TODO notify new object type somehow
 
     return response(req)
 

@@ -114,14 +114,8 @@ class ResourcesBase(IntResources):
         try:
 
             with open(path.join(PROJECT_PATH, "data", cls.__name__.lower() + ".json")) as scene_file:
-                cont = scene_file.read()
 
-                # TODO temp ugly hack due to bug in Storage
-                cont = cont.replace("_id", "id")
-                cont = cont.replace("NumberLong(", "")
-                cont = cont.replace(") }],", "}],")
-
-                data_dict = json.loads(cont)
+                data_dict = json.loads(scene_file.read())
                 data_dict = convert_keys(data_dict, camel_case_to_snake_case)
 
                 return cls.from_dict(data_dict)
