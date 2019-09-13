@@ -6,8 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Union, Set, Callable, List
-import argparse
+from typing import Union, Set, Callable, Dict
 import os
 import tempfile
 import zipfile
@@ -17,11 +16,12 @@ import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 
-from arcor2.helpers import response, rpc, server, RpcPlugin, \
-    import_cls, ImportClsException, aiologger_formatter
+from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES
 from arcor2.source.utils import make_executable
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.settings import PROJECT_PATH
+from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectResponse, \
+    PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, API_MAPPING
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -31,8 +31,6 @@ TASK = None
 CLIENTS: Set = set()
 
 STORAGE_CLIENT = AioPersistentStorage()
-
-RPC_PLUGINS: List[RpcPlugin] = []
 
 
 def process_running() -> bool:
@@ -66,20 +64,19 @@ async def read_proc_stdout() -> None:
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-@rpc(logger, RPC_PLUGINS)
-async def project_run(req: str, client, args: Dict) -> Dict:
+async def project_run(req: RunProjectRequest) -> Union[RunProjectRequest, RPC_RETURN_TYPES]:
 
     global PROCESS
     global TASK
 
     if process_running():
-        return response(req, False, ["Already running!"])
+        return False, "Already running!"
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
         path = os.path.join(tmpdirname, "project.zip")
 
-        await STORAGE_CLIENT.publish_project(args["id"], path)
+        await STORAGE_CLIENT.publish_project(req.args.id, path)
 
         with zipfile.ZipFile(path, 'r') as zip_ref:
             zip_ref.extractall(tmpdirname)
@@ -95,18 +92,15 @@ async def project_run(req: str, client, args: Dict) -> Dict:
     await logger.info(f"Starting script: {path}")
     PROCESS = await asyncio.create_subprocess_exec(path, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.STDOUT)
-    if PROCESS.returncode is None:
-        TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
-        return response(req)
-    else:
-        return response(req, False, ["Failed to start project."])
+    if PROCESS.returncode is not None:
+        return False, "Failed to start project."
+    TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
-@rpc(logger, RPC_PLUGINS)
-async def project_stop(req: str, client, args: Dict) -> Dict:
+async def project_stop(req: StopProjectRequest) -> Union[StopProjectResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
-        return response(req, False, ["Project not running."])
+        return False, "Project not running."
 
     assert PROCESS is not None
     assert TASK is not None
@@ -115,14 +109,12 @@ async def project_stop(req: str, client, args: Dict) -> Dict:
     PROCESS.terminate()
     await logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
-    return response(req)
 
 
-@rpc(logger, RPC_PLUGINS)
-async def project_pause(req: str, client, args: Dict) -> Dict:
+async def project_pause(req: PauseProjectRequest) -> Union[PauseProjectResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
-        return response(req, False, ["Project not running."])
+        return False, "Project not running."
 
     assert PROCESS is not None
     assert PROCESS.stdin is not None
@@ -131,14 +123,12 @@ async def project_pause(req: str, client, args: Dict) -> Dict:
 
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
-    return response(req)
 
 
-@rpc(logger, RPC_PLUGINS)
-async def project_resume(req: str, client, args: Dict) -> Dict:
+async def project_resume(req: ResumeProjectRequest) -> Union[ResumeProjectResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
-        return response(req, False, ["Project not running."])
+        return False, "Project not running."
 
     assert PROCESS is not None and PROCESS.stdin is not None
 
@@ -146,7 +136,6 @@ async def project_resume(req: str, client, args: Dict) -> Dict:
 
     PROCESS.stdin.write("r\n".encode())
     await PROCESS.stdin.drain()
-    return response(req)
 
 
 async def send_to_clients(data: Dict) -> None:
@@ -171,32 +160,13 @@ RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
                                  'pauseProject': project_pause,
                                  'resumeProject': project_resume}
 
+for key in RPC_DICT.keys():
+    assert key in API_MAPPING
+
 
 def main() -> None:
 
     assert sys.version_info >= (3, 6)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--rpc-plugins', nargs='*')
-
-    for k, v in parser.parse_args()._get_kwargs():
-
-        if not v:
-            continue
-
-        if k == "rpc_plugins":
-            for plugin in v:
-                try:
-                    _, cls = import_cls(plugin)
-                except ImportClsException as e:
-                    print(e)
-                    continue
-
-                if not issubclass(cls, RpcPlugin):
-                    print(f"{cls.__name__} not subclass of RpcPlugin, ignoring.")
-                    continue
-
-                RPC_PLUGINS.append(cls())
 
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT)

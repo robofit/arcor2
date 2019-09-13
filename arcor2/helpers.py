@@ -1,19 +1,21 @@
-from typing import Optional, List, Dict, Callable, Tuple, Type, Union, Any, Awaitable, Coroutine
+from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable
 from types import ModuleType
 import json
 import asyncio
 import importlib
 import re
-from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema import ValidationError
 
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data.common import DataClassEncoder
+from arcor2.data.rpc import API_MAPPING
 from arcor2.exceptions import Arcor2Exception
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 _all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+RPC_RETURN_TYPES = Union[None, Tuple[bool, str]]
 
 
 class ImportClsException(Arcor2Exception):
@@ -62,51 +64,6 @@ def snake_case_to_camel_case(snake_str: str) -> str:
     return ''.join([first.lower(), *map(str.title, others)])
 
 
-# TODO define Response dataclass instead
-def response(resp_to: str, result: bool = True, messages: Optional[List[str]] = None,
-             data: Optional[Union[Dict, List, JsonSchemaMixin]] = None) -> Dict:  # type: ignore
-
-    if messages is None:
-        messages = []
-
-    if data is None:
-        data = {}
-
-    return {"response": resp_to, "result": result, "messages": messages, "data": data}
-
-
-class RpcPlugin:
-
-    def post_hook(self, req: str, args: Dict[str, Any], resp: Dict[str, Any]) -> None:
-        pass
-
-
-def rpc(logger: Any, plugins: Optional[List[RpcPlugin]] = None) -> Callable[..., Any]:
-    def rpc_inner(f: Callable[..., Awaitable[Any]]) -> Callable[[str, Any, Dict[str, Any], Optional[int]],
-                                                                Coroutine[Any, Any, None]]:
-        async def wrapper(req: str, ui: Any, args: Dict[str, Any], req_id: Optional[int] = None) -> None:
-
-            msg = await f(req, ui, args)
-
-            if msg is None:
-                await logger.debug(f"Ignoring invalid RPC request: {req}, args: {args}")
-                return
-
-            if req_id is not None:
-                msg["req_id"] = req_id
-            j = json.dumps(msg, cls=DataClassEncoder)
-
-            await asyncio.wait([ui.send(j)])
-            await logger.debug(f"RPC request: {req}, args: {args}, req_id: {req_id}, result: {j}")
-
-            if plugins:
-                for plugin in plugins:
-                    await asyncio.get_event_loop().run_in_executor(None, plugin.post_hook, req, args, msg)
-
-        return wrapper
-    return rpc_inner
-
-
 async def server(client: Any,
                  path: str,
                  logger: Any,
@@ -129,13 +86,32 @@ async def server(client: Any,
                 continue
 
             if "request" in data:  # ...then it is RPC
+
                 try:
                     rpc_func = rpc_dict[data['request']]
+                    req_cls, resp_cls = API_MAPPING[data['request']]
                 except KeyError:
                     await logger.error(f"Unknown RPC request: {data}.")
                     continue
 
-                await rpc_func(data['request'], client, data.get("args", {}), data.get("req_id", None))
+                try:
+                    req = req_cls.from_dict(data)
+                except ValidationError as e:
+                    await logger.error(f"Invalid RPC: {data}, error: {e}")
+                    continue
+
+                resp = await rpc_func(req)
+
+                if resp is None:  # default response
+                    resp = resp_cls()
+                elif isinstance(resp, tuple):
+                    resp = resp_cls(result=resp[0], messages=[resp[1]])
+                else:
+                    assert isinstance(resp, resp_cls)
+
+                resp.id = req.id
+                await asyncio.wait([client.send(resp.to_json())])
+                await logger.debug(f"RPC request: {req}, result: {resp}")
 
             elif "event" in data:  # ...event from UI
 
