@@ -4,8 +4,8 @@ import stat
 from typing import List, Optional, Dict, Any, Union, Type
 
 import autopep8  # type: ignore
-import typed_astunparse  # type: ignore  # TODO remove when version with py.typed on pypi
-from horast import parse, unparse  # type: ignore  # TODO remove when version with py.typed on pypi
+import typed_astunparse
+from horast import parse, unparse
 
 from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef,\
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\

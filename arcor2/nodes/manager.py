@@ -123,6 +123,7 @@ async def project_pause(req: PauseProjectRequest) -> Union[PauseProjectResponse,
 
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
+    return None
 
 
 async def project_resume(req: ResumeProjectRequest) -> Union[ResumeProjectResponse, RPC_RETURN_TYPES]:
@@ -136,6 +137,7 @@ async def project_resume(req: ResumeProjectRequest) -> Union[ResumeProjectRespon
 
     PROCESS.stdin.write("r\n".encode())
     await PROCESS.stdin.drain()
+    return None
 
 
 async def send_to_clients(data: Dict) -> None:

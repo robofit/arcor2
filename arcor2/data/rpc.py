@@ -19,7 +19,6 @@ Common stuff
 @dataclass
 class Request(JsonSchemaMixin):
 
-    request: str
     id: int
 
 
@@ -48,7 +47,7 @@ class RobotArg(JsonSchemaMixin):
     id: str
     end_effector: str
 
-    def as_tuple(self):
+    def as_tuple(self) -> Tuple[str, str]:
         return self.id, self.end_effector
 
 
@@ -64,7 +63,7 @@ Objects
 @dataclass
 class GetObjectTypesRequest(Request):
 
-    request: Literal["getObjectTypes"]
+    request: Final[str] = "getObjectTypes"
 
 
 @dataclass
@@ -82,8 +81,8 @@ API_MAPPING["getObjectTypes"] = (GetObjectTypesRequest, GetObjectTypesResponse)
 @dataclass
 class GetObjectActionsRequest(Request):
 
-    request: Literal["getObjectActions"]
     args: TypeArgs
+    request: Final[str] = "getObjectActions"
 
 
 @dataclass
@@ -101,8 +100,8 @@ API_MAPPING["getObjectActions"] = (GetObjectActionsRequest, GetObjectActionsResp
 @dataclass
 class NewObjectTypeRequest(Request):
 
-    request: Literal["newObjectType"]
     args: ObjectTypeMeta
+    request: Final[str] = "newObjectType"
 
 
 @dataclass
@@ -126,8 +125,8 @@ class FocusObjectStartRequestArgs(JsonSchemaMixin):
 @dataclass
 class FocusObjectStartRequest(Request):
 
-    request: Literal["focusObjectStart"]
     args: FocusObjectStartRequestArgs
+    request: Final[str] = "focusObjectStart"
 
 
 @dataclass
@@ -151,8 +150,8 @@ class FocusObjectRequestArgs(JsonSchemaMixin):
 @dataclass
 class FocusObjectRequest(Request):
 
-    request: Literal["focusObject"]
     args: FocusObjectRequestArgs
+    request: Final[str] = "focusObject"
 
 
 @dataclass
@@ -176,8 +175,8 @@ API_MAPPING["focusObject"] = (FocusObjectRequest, FocusObjectResponse)
 @dataclass
 class FocusObjectDoneRequest(Request):
 
-    request: Literal["focusObjectDone"]
     args: IdArgs
+    request: Final[str] = "focusObjectDone"
 
 
 @dataclass
@@ -202,8 +201,8 @@ class UpdateActionPointPoseRequestArgs(IdArgs):
 @dataclass
 class UpdateActionPointPoseRequest(Request):
 
-    request: Literal["updateActionPointPose"]
     args: UpdateActionPointPoseRequestArgs
+    request: Final[str] = "updateActionPointPose"
 
 
 @dataclass
@@ -227,8 +226,8 @@ class UpdateActionObjectPoseRequestArgs(IdArgs):
 @dataclass
 class UpdateActionObjectPoseRequest(Request):
 
-    request: Literal["updateActionObjectPose"]
     args: UpdateActionObjectPoseRequestArgs
+    request: Final[str] = "updateActionObjectPose"
 
 
 @dataclass
@@ -250,7 +249,7 @@ Scene / project
 @dataclass
 class SaveSceneRequest(Request):
 
-    request: Literal["saveScene"]
+    request: Final[str] = "saveScene"
 
 
 @dataclass
@@ -267,7 +266,7 @@ API_MAPPING["saveScene"] = (SaveSceneRequest, SaveSceneResponse)
 @dataclass
 class SaveProjectRequest(Request):
 
-    request: Literal["saveProject"]
+    request: Final[str] = "saveProject"
 
 
 @dataclass
@@ -284,8 +283,8 @@ API_MAPPING["saveProject"] = (SaveProjectRequest, SaveProjectResponse)
 @dataclass
 class OpenProjectRequest(Request):
 
-    request: Literal["openProject"]
     args: IdArgs
+    request: Final[str] = "openProject"
 
 
 @dataclass
@@ -320,7 +319,7 @@ API_MAPPING["listProjects"] = (ListProjectsRequest, ListProjectsResponse)
 @dataclass
 class ListScenesRequest(Request):
 
-    request: Literal["listScenes"]
+    request: Final[str] = "listScenes"
 
 
 @dataclass
@@ -338,8 +337,8 @@ API_MAPPING["listScenes"] = (ListScenesRequest, ListScenesResponse)
 @dataclass
 class RunProjectRequest(Request):
 
-    request: Literal["runProject"]
     args: IdArgs
+    request: Final[str] = "runProject"
 
 
 @dataclass
@@ -356,7 +355,7 @@ API_MAPPING["runProject"] = (RunProjectRequest, RunProjectResponse)
 @dataclass
 class StopProjectRequest(Request):
 
-    request: Literal["stopProject"]
+    request: Final[str] = "stopProject"
 
 
 @dataclass
@@ -373,7 +372,7 @@ API_MAPPING["stopProject"] = (StopProjectRequest, StopProjectResponse)
 @dataclass
 class PauseProjectRequest(Request):
 
-    request: Literal["pauseProject"]
+    request: Final[str] = "pauseProject"
 
 
 @dataclass
@@ -390,7 +389,7 @@ API_MAPPING["pauseProject"] = (PauseProjectRequest, PauseProjectResponse)
 @dataclass
 class ResumeProjectRequest(Request):
 
-    request: Literal["resumeProject"]
+    request: Final[str] = "resumeProject"
 
 
 @dataclass
@@ -414,7 +413,7 @@ Storage / data
 @dataclass
 class ListMeshesRequest(Request):
 
-    request: Literal["listMeshes"]
+    request: Final[str] = "listMeshes"
 
 
 @dataclass

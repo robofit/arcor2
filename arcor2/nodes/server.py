@@ -6,7 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List
+from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable
 from types import ModuleType
 
 import websockets
@@ -170,7 +170,7 @@ async def notify_project(interface) -> None:
     await asyncio.wait([interface.send(message)])
 
 
-async def _get_object_types():  # TODO watch db for changes and call this + notify UI in case of something changed
+async def _get_object_types() -> None:  # TODO watch db for changes and call this + notify UI in case of something changed
 
     global OBJECT_TYPES
 
@@ -189,15 +189,15 @@ async def _get_object_types():  # TODO watch db for changes and call this + noti
         if obj.model:
             model = await STORAGE_CLIENT.get_model(obj.model.id, obj.model.type)
             kwargs = {model.type().value.lower(): model}
-            object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)
+            object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
     to_delete: Set[str] = set()
 
-    for obj_type, obj in object_types.items():
-        if not obj.description:
+    for obj_type, obj_meta in object_types.items():
+        if not obj_meta.description:
             try:
-                obj.description = obj_description_from_base(object_types, obj)
+                obj_meta.description = obj_description_from_base(object_types, obj_meta)
             except DataError as e:
                 await logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
                 to_delete.add(obj_type)
@@ -220,6 +220,7 @@ async def save_scene_cb(req: SaveSceneRequest) -> Union[SaveSceneResponse, RPC_R
         return False, "Scene not opened or invalid."
 
     await STORAGE_CLIENT.update_scene(SCENE)
+    return None
 
 
 async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse, RPC_RETURN_TYPES]:
@@ -280,8 +281,10 @@ async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse,
     if load_logic_failed:
         return True, "Failed to load logic from source."
 
+    return None
 
-async def _get_object_actions():
+
+async def _get_object_actions() -> None:
 
     global OBJECT_ACTIONS
 
@@ -364,6 +367,7 @@ async def update_action_point_cb(req: UpdateActionPointPoseRequest) -> Union[Upd
         return False, str(e)
 
     await notify_project_change_to_others()
+    return None
 
 
 async def update_action_object_cb(req: UpdateActionObjectPoseRequest) -> Union[UpdateActionObjectPoseRequest,
@@ -386,6 +390,7 @@ async def update_action_object_cb(req: UpdateActionObjectPoseRequest) -> Union[U
         return False, str(e)
 
     await notify_scene_change_to_others()
+    return None
 
 
 async def list_projects_cb(req: ListProjectsRequest) -> Union[ListProjectsResponse, RPC_RETURN_TYPES]:
@@ -434,6 +439,7 @@ async def new_object_type_cb(req: NewObjectTypeRequest) -> Union[NewObjectTypeRe
     add_ancestor_actions(meta.type, OBJECT_ACTIONS, OBJECT_TYPES)
 
     # TODO notify new object type somehow
+    return None
 
 
 async def focus_object_start_cb(req: FocusObjectStartRequest) -> Union[FocusObjectStartResponse, RPC_RETURN_TYPES]:
@@ -474,6 +480,7 @@ async def focus_object_start_cb(req: FocusObjectStartRequest) -> Union[FocusObje
     FOCUS_OBJECT_ROBOT[req.args.object_id] = req.args.robot.as_tuple()
     FOCUS_OBJECT[obj_id] = {}
     await logger.info(f'Start of focusing for {obj_id}.')
+    return None
 
 
 def get_obj_type_name(object_id: str) -> str:
@@ -567,6 +574,7 @@ async def focus_object_done_cb(req: FocusObjectDoneRequest) -> Union[FocusObject
     clean_up_after_focus(obj_id)
 
     await notify_scene_change_to_others()
+    return None
 
 
 def clean_up_after_focus(obj_id: str) -> None:
@@ -599,6 +607,8 @@ async def unregister(websocket) -> None:
 async def update_scene_instances() -> None:
 
     scene_obj_ids: Set[str] = set()
+
+    assert SCENE
 
     for obj in SCENE.objects:
 
@@ -651,20 +661,22 @@ async def project_change(ui, project) -> None:
     await notify_project_change_to_others(ui)
 
 
-RPC_DICT: Dict = {'getObjectTypes': get_object_types_cb,
-                  'getObjectActions': get_object_actions_cb,
-                  'saveProject': save_project_cb,
-                  'saveScene': save_scene_cb,
-                  'updateActionPointPose': update_action_point_cb,
-                  'updateActionObjectPose': update_action_object_cb,
-                  'openProject': open_project_cb,
-                  'listProjects': list_projects_cb,
-                  'listScenes': list_scenes_cb,
-                  'newObjectType': new_object_type_cb,
-                  'listMeshes': list_meshes_cb,
-                  'focusObject': focus_object_cb,
-                  'focusObjectStart': focus_object_start_cb,
-                  'focusObjectDone': focus_object_done_cb}
+RPC_DICT: Dict[str, Callable] = {
+    'getObjectTypes': get_object_types_cb,
+    'getObjectActions': get_object_actions_cb,
+    'saveProject': save_project_cb,
+    'saveScene': save_scene_cb,
+    'updateActionPointPose': update_action_point_cb,
+    'updateActionObjectPose': update_action_object_cb,
+    'openProject': open_project_cb,
+    'listProjects': list_projects_cb,
+    'listScenes': list_scenes_cb,
+    'newObjectType': new_object_type_cb,
+    'listMeshes': list_meshes_cb,
+    'focusObject': focus_object_cb,
+    'focusObjectStart': focus_object_start_cb,
+    'focusObjectDone': focus_object_done_cb
+}
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():

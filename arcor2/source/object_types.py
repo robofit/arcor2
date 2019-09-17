@@ -1,16 +1,23 @@
 from typing import Dict
 
-from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
+from horast import parse
 from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef, Call, keyword, NameConstant, Str, Module, \
     ImportFrom, alias, Pass, AnnAssign, Store, Load, Subscript, Index
 
-from arcor2.data.common import ActionMetadata
+from arcor2.data.common import ActionMetadata, ActionParameterTypeEnum
 from arcor2.data.object_type import ObjectTypeMeta, ObjectActionArgs, ObjectAction, ObjectActions
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.source import SourceException
 from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr
 from arcor2.object_types_utils import built_in_types_names
 import arcor2.object_types
+
+PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {
+    "str": ActionParameterTypeEnum.STRING,
+    "float": ActionParameterTypeEnum.DOUBLE,
+    "int": ActionParameterTypeEnum.INTEGER,
+    "ActionPoint": ActionParameterTypeEnum.ACTION_POINT
+}
 
 
 def get_object_actions(object_source: str) -> ObjectActions:
@@ -83,7 +90,13 @@ def get_object_actions(object_source: str) -> ObjectActions:
                 raise SourceException(f"Argument {aarg.arg} of method {node.name} not annotated.")
 
             assert isinstance(aarg.annotation, Name)
-            oa.action_args.append(ObjectActionArgs(name=aarg.arg, type=aarg.annotation.id))
+
+            try:
+                param_type = PARAM_MAPPING[aarg.annotation.id]
+            except KeyError:
+                raise SourceException(f"Unsupported type of action parameter: {aarg.annotation.id}.")
+
+            oa.action_args.append(ObjectActionArgs(name=aarg.arg, type=param_type))
 
         ret.append(oa)
 

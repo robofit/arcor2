@@ -77,14 +77,14 @@ class IntResources:
         except KeyError:
             raise ResourcesException("Unknown object id or action point id.")
 
-    def parameters(self, action_id: str) -> Dict:
+    def parameters(self, action_id: str) -> Dict[str, Union[str, float, int, ActionPoint]]:
 
         for obj in self.project.objects:
             for aps in obj.action_points:
                 for act in aps.actions:
                     if act.id == action_id:
 
-                        ret: Dict[str, Union[str, float, ActionPoint]] = {}
+                        ret: Dict[str, Union[str, float, int, ActionPoint]] = {}
 
                         for param in act.parameters:
                             if param.type == ActionParameterTypeEnum.ACTION_POINT:

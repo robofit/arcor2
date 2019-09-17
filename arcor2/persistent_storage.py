@@ -45,7 +45,7 @@ def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict
 
 class PersistentStorage:
 
-    def _handle_response(self, resp):
+    def _handle_response(self, resp: requests.Response) -> None:
 
         try:
             resp.raise_for_status()
@@ -54,7 +54,7 @@ class PersistentStorage:
             raise PersistentStorageException(f"Status code: {resp.status_code}, "
                                              f"body: {json.loads(resp.content)}.")
 
-    def _post(self, url: str, data: JsonSchemaMixin, op=requests.post) -> None:
+    def _post(self, url: str, data: JsonSchemaMixin, op: Callable = requests.post) -> None:
 
         d = convert_keys(data.to_dict(), snake_case_to_camel_case)
 
@@ -111,7 +111,7 @@ class PersistentStorage:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
             raise PersistentStorageException("Invalid data.")
 
-    def _download(self, url: str, path: str):
+    def _download(self, url: str, path: str) -> None:
 
         # TODO check content type
 
@@ -119,7 +119,7 @@ class PersistentStorage:
         with open(path, 'wb') as file:
             file.write(r.content)
 
-    def publish_project(self, project_id: str, path: str):
+    def publish_project(self, project_id: str, path: str) -> None:
         self._download(f"{URL}/project/{project_id}/publish", path)
 
     def get_mesh(self, mesh_id) -> Mesh:
@@ -181,7 +181,7 @@ loop = asyncio.get_event_loop()
 
 class AioPersistentStorage:
 
-    def __init__(self):
+    def __init__(self) -> None:
 
         self._cl = PersistentStorage()
 
@@ -197,8 +197,8 @@ class AioPersistentStorage:
     async def get_model(self, model_id: str, model_type: ModelTypeEnum) -> Models:
         return await loop.run_in_executor(None, self._cl.get_model, model_id, model_type)
 
-    async def put_model(self, model: Models):
-        return await loop.run_in_executor(None, self._cl.put_model, model)
+    async def put_model(self, model: Models) -> None:
+        await loop.run_in_executor(None, self._cl.put_model, model)
 
     async def get_projects(self) -> IdDescList:
         return await loop.run_in_executor(None, self._cl.get_projects)
@@ -221,16 +221,16 @@ class AioPersistentStorage:
     async def get_object_type_ids(self) -> IdDescList:
         return await loop.run_in_executor(None, self._cl.get_object_type_ids)
 
-    async def update_project(self, project: Project):
-        return await loop.run_in_executor(None, self._cl.update_project, project)
+    async def update_project(self, project: Project) -> None:
+        await loop.run_in_executor(None, self._cl.update_project, project)
 
-    async def update_scene(self, scene: Scene):
-        return await loop.run_in_executor(None, self._cl.update_scene, scene)
+    async def update_scene(self, scene: Scene) -> None:
+        await loop.run_in_executor(None, self._cl.update_scene, scene)
 
-    async def update_project_sources(self, project_sources: ProjectSources):
-        return await loop.run_in_executor(None,
+    async def update_project_sources(self, project_sources: ProjectSources) -> None:
+        await loop.run_in_executor(None,
                                           self._cl.update_project_sources,
                                           project_sources)
 
-    async def update_object_type(self, object_type: ObjectType):
-        return await loop.run_in_executor(None, self._cl.update_object_type, object_type)
+    async def update_object_type(self, object_type: ObjectType) -> None:
+        await loop.run_in_executor(None, self._cl.update_object_type, object_type)

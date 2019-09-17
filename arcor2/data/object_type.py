@@ -2,8 +2,7 @@ from typing import Optional, List, Dict, Union
 from enum import Enum
 
 from arcor2.data import DataException
-from arcor2.data.common import ActionMetadata, Pose
-from arcor2.data.common import Position
+from arcor2.data.common import ActionMetadata, Pose, Position, ActionParameterTypeEnum
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -23,7 +22,7 @@ class MetaModel3d(JsonSchemaMixin):
     id: str
     type: ModelTypeEnum
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
 
         if isinstance(self.type, str):
             self.type = ModelTypeEnum[self.type.upper()]
@@ -89,7 +88,7 @@ class ObjectType(JsonSchemaMixin):
     desc: Optional[str] = ""
     model: Optional[MetaModel3d] = None
 
-    def __post_init__(self):  # TODO workaround for bug (?) in Storage
+    def __post_init__(self) -> None:  # TODO workaround for bug (?) in Storage
 
         if self.model and self.model.type == ModelTypeEnum.NONE:
             self.model = None
@@ -107,7 +106,7 @@ class ObjectModel(JsonSchemaMixin):
     def model(self) -> Models:
         return getattr(self, str(self.type.value))
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
 
         models_list = [self.box, self.cylinder, self.sphere, self.mesh]
 
@@ -148,7 +147,7 @@ class ObjectTypeMeta(JsonSchemaMixin):
 class ObjectActionArgs(JsonSchemaMixin):
 
     name: str
-    type: str
+    type: ActionParameterTypeEnum
 
 
 @dataclass
@@ -172,6 +171,6 @@ class MeshFocusAction(JsonSchemaMixin):
     mesh_focus_points: List[Position]
     robot_space_points: List[Position]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
 
         assert len(self.mesh_focus_points) == len(self.robot_space_points)

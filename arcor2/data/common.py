@@ -113,7 +113,7 @@ class ActionParameter(JsonSchemaMixin):
     type: ActionParameterTypeEnum
     value: Any
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # TODO implement value type check
         pass
 

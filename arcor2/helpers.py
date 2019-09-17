@@ -22,7 +22,7 @@ class ImportClsException(Arcor2Exception):
     pass
 
 
-def aiologger_formatter():
+def aiologger_formatter() -> Formatter:
 
     return Formatter('%(name)s - %(levelname)-8s: %(message)s')
 

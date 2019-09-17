@@ -1,6 +1,6 @@
 from typing import Set, Union
 
-from horast import parse  # type: ignore  # TODO remove when version with py.typed on pypi
+from horast import parse
 from typed_ast.ast3 import Expr, Pass, Module, Call, Attribute
 
 from arcor2.data.common import Project, Scene, Action, ActionIO, ActionIOEnum
