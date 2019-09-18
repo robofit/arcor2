@@ -4,20 +4,13 @@ from horast import parse
 from typed_ast.ast3 import Assign, Attribute, FunctionDef, Name, ClassDef, Call, keyword, NameConstant, Str, Module, \
     ImportFrom, alias, Pass, AnnAssign, Store, Load, Subscript, Index
 
-from arcor2.data.common import ActionMetadata, ActionParameterTypeEnum
+from arcor2.data.common import ActionMetadata
 from arcor2.data.object_type import ObjectTypeMeta, ObjectActionArgs, ObjectAction, ObjectActions
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.source import SourceException
 from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr
-from arcor2.object_types_utils import built_in_types_names
+from arcor2.object_types_utils import built_in_types_names, PARAM_MAPPING
 import arcor2.object_types
-
-PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {
-    "str": ActionParameterTypeEnum.STRING,
-    "float": ActionParameterTypeEnum.DOUBLE,
-    "int": ActionParameterTypeEnum.INTEGER,
-    "ActionPoint": ActionParameterTypeEnum.ACTION_POINT
-}
 
 
 def get_object_actions(object_source: str) -> ObjectActions:

@@ -238,7 +238,7 @@ async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse,
             for act in aps.actions:
                 action_names.append(act.id)
 
-    msgs = []
+    msgs: List[str] = []
     project_sources = None
 
     try:

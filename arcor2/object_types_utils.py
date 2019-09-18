@@ -7,8 +7,17 @@ from undecorated import undecorated  # type: ignore
 import arcor2
 from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArgs, \
     ObjectAction
+from arcor2.data.common import ActionParameterTypeEnum
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
+
+
+PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {
+    "str": ActionParameterTypeEnum.STRING,
+    "float": ActionParameterTypeEnum.DOUBLE,
+    "int": ActionParameterTypeEnum.INTEGER,
+    "ActionPoint": ActionParameterTypeEnum.ACTION_POINT
+}
 
 
 def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
@@ -113,10 +122,10 @@ def built_in_types_actions() -> ObjectActionsDict:
 
                 try:
                     if name == "return":
-                        data.returns = ttype.__name__
+                        data.returns = ttype.__name__  # TODO define enum for this
                         continue
 
-                    data.action_args.append(ObjectActionArgs(name=name, type=ttype.__name__))
+                    data.action_args.append(ObjectActionArgs(name=name, type=PARAM_MAPPING[ttype.__name__]))
 
                 except AttributeError:
                     print(f"Skipping {ttype}")  # TODO make a fix for Union

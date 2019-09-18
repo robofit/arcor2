@@ -110,6 +110,7 @@ async def server(client: Any,
                     assert isinstance(resp, resp_cls)
 
                 resp.id = req.id
+
                 await asyncio.wait([client.send(resp.to_json())])
                 await logger.debug(f"RPC request: {req}, result: {resp}")
 
