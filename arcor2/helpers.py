@@ -9,7 +9,8 @@ from dataclasses_jsonschema import ValidationError
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data.rpc import API_MAPPING
+from arcor2.data.rpc import RPC_MAPPING, Request, Response
+from arcor2.data.events import EVENT_MAPPING, Event
 from arcor2.exceptions import Arcor2Exception
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
@@ -67,10 +68,10 @@ def snake_case_to_camel_case(snake_str: str) -> str:
 async def server(client: Any,
                  path: str,
                  logger: Any,
-                 register: Callable[..., Awaitable[Any]],
-                 unregister: Callable[..., Awaitable[Any]],
-                 rpc_dict: Dict[str, Callable[..., Any]],
-                 event_dict: Optional[Dict[str, Callable[..., Any]]] = None) -> None:
+                 register: Callable[[Any], Awaitable[None]],
+                 unregister: Callable[[Any], Awaitable[None]],
+                 rpc_dict: Dict[Type[Request], Callable[[Request], Awaitable[Response]]],
+                 event_dict: Optional[Dict[Type[Event], Callable[[Event], Awaitable[None]]]] = None) -> None:
 
     if event_dict is None:
         event_dict = {}
@@ -88,10 +89,13 @@ async def server(client: Any,
             if "request" in data:  # ...then it is RPC
 
                 try:
-                    rpc_func = rpc_dict[data['request']]
-                    req_cls, resp_cls = API_MAPPING[data['request']]
+                    req_cls, resp_cls = RPC_MAPPING[data['request']]
                 except KeyError:
                     await logger.error(f"Unknown RPC request: {data}.")
+                    continue
+
+                if req_cls not in rpc_dict:
+                    await logger.debug(f"Ignoring RPC request: {data}.")
                     continue
 
                 try:
@@ -100,7 +104,7 @@ async def server(client: Any,
                     await logger.error(f"Invalid RPC: {data}, error: {e}")
                     continue
 
-                resp = await rpc_func(req)
+                resp = await rpc_dict[req_cls](req)
 
                 if resp is None:  # default response
                     resp = resp_cls()
@@ -117,12 +121,22 @@ async def server(client: Any,
             elif "event" in data:  # ...event from UI
 
                 try:
-                    event_func = event_dict[data["event"]]
+                    event_cls = EVENT_MAPPING[data["event"]]
                 except KeyError as e:
                     await logger.error(f"Unknown event type: {e}.")
                     continue
 
-                await event_func(client, data["data"])
+                if event_cls not in event_dict:
+                    await logger.debug(f"Ignoring event: {data}.")
+                    continue
+
+                try:
+                    event = event_cls.from_dict(data)
+                except ValidationError as e:
+                    await logger.error(f"Invalid event: {data}, error: {e}")
+                    continue
+
+                await event_dict[event_cls](event)
 
             else:
                 await logger.error(f"unsupported format of message: {data}")

@@ -21,7 +21,8 @@ from arcor2.source.utils import make_executable
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.settings import PROJECT_PATH
 from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectResponse, \
-    PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, API_MAPPING
+    PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, RPC_MAPPING
+from arcor2.data.events import Event, ProjectStateEvent, ProjectStateEventData, ProjectStateEnum
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -45,7 +46,7 @@ async def read_proc_stdout() -> None:
     assert PROCESS is not None
     assert PROCESS.stdout is not None
 
-    await send_to_clients({"event": "projectState", "data": {"state": "running"}})
+    await send_to_clients(ProjectStateEvent(data=ProjectStateEventData(ProjectStateEnum.RUNNING)))
 
     while process_running():
         try:
@@ -59,7 +60,7 @@ async def read_proc_stdout() -> None:
         except json.decoder.JSONDecodeError as e:
             await logger.error(e)
 
-    await send_to_clients({"event": "projectState", "data": {"state": "stopped"}})
+    await send_to_clients(ProjectStateEvent(data=ProjectStateEventData(ProjectStateEnum.STOPPED)))
 
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
@@ -140,10 +141,11 @@ async def project_resume(req: ResumeProjectRequest) -> Union[ResumeProjectRespon
     return None
 
 
-async def send_to_clients(data: Dict) -> None:
+async def send_to_clients(event: Event) -> None:
 
     if CLIENTS:
-        await asyncio.wait([client.send(json.dumps(data)) for client in CLIENTS])
+        data = event.to_json()
+        await asyncio.wait([client.send(data) for client in CLIENTS])
 
 
 async def register(websocket: WebSocketServerProtocol) -> None:
@@ -163,7 +165,7 @@ RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
                                  'resumeProject': project_resume}
 
 for key in RPC_DICT.keys():
-    assert key in API_MAPPING
+    assert key in RPC_MAPPING
 
 
 def main() -> None:

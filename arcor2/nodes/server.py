@@ -6,7 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable
+from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, Type
 from types import ModuleType
 
 import websockets
@@ -27,11 +27,12 @@ from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, Objec
     MeshFocusAction, ObjectModel
 from arcor2.data.rpc import GetObjectActionsRequest, GetObjectTypesResponse, GetObjectTypesRequest, \
     GetObjectActionsResponse, NewObjectTypeRequest, NewObjectTypeResponse, ListMeshesRequest, ListMeshesResponse, \
-    Request, Response, API_MAPPING, SaveSceneRequest, SaveSceneResponse, SaveProjectRequest, SaveProjectResponse, \
+    Request, Response, RPC_MAPPING, SaveSceneRequest, SaveSceneResponse, SaveProjectRequest, SaveProjectResponse, \
     OpenProjectRequest, OpenProjectResponse, UpdateActionPointPoseRequest, UpdateActionPointPoseResponse,\
     UpdateActionObjectPoseRequest, ListProjectsRequest, ListProjectsResponse, ListScenesRequest, ListScenesResponse,\
     FocusObjectStartRequest, FocusObjectStartResponse, FocusObjectRequest, FocusObjectResponse, \
     FocusObjectDoneRequest, FocusObjectDoneResponse, FocusObjectResponseData
+from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
@@ -85,7 +86,7 @@ async def handle_manager_incoming_messages(manager_client):
             elif "response" in msg:
 
                 # TODO handle potential errors
-                _, resp_cls = API_MAPPING[msg["response"]]
+                _, resp_cls = RPC_MAPPING[msg["response"]]
                 await MANAGER_RPC_RESPONSE_QUEUE.put(resp_cls.from_dict(msg))
 
     except websockets.exceptions.ConnectionClosed:
@@ -123,30 +124,20 @@ async def project_manager_client() -> None:
                     break
 
 
-def scene_event() -> str:
+def scene_event() -> SceneChangedEvent:
 
-    data: Dict = {}
-
-    if SCENE is not None:
-        data = SCENE.to_dict()
-
-    return json.dumps({"event": "sceneChanged", "data": data})  # TODO use encoder?
+    return SceneChangedEvent(data=SCENE)
 
 
-def project_event() -> str:
+def project_event() -> ProjectChangedEvent:
 
-    data: Dict = {}
-
-    if PROJECT is not None:
-        data = PROJECT.to_dict()
-
-    return json.dumps({"event": "projectChanged", "data": data})  # TODO use encoder?
+    return ProjectChangedEvent(data=PROJECT)
 
 
-async def _notify(interface, msg_source):
+async def _notify(interface, msg_source: Callable[[], Event]):
 
     if (interface is None and INTERFACES) or (interface and len(INTERFACES) > 1):
-        message = msg_source()
+        message = msg_source().to_json()
         await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])
 
 
@@ -161,12 +152,12 @@ async def notify_project_change_to_others(interface=None) -> None:
 
 
 async def notify_scene(interface) -> None:
-    message = scene_event()
+    message = scene_event().to_json()
     await asyncio.wait([interface.send(message)])
 
 
 async def notify_project(interface) -> None:
-    message = project_event()
+    message = project_event().to_json()
     await asyncio.wait([interface.send(message)])
 
 
@@ -634,15 +625,11 @@ async def update_scene_instances() -> None:
         del SCENE_OBJECT_INSTANCES[obj_id]
 
 
-async def scene_change(ui, scene) -> None:
+async def scene_change(ui, event: SceneChangedEvent) -> None:
 
     global SCENE
 
-    try:
-        SCENE = Scene.from_dict(scene)
-    except ValidationError as e:
-        await logger.error(e)
-        return
+    SCENE = event.data
 
     await update_scene_instances()
     await notify_scene_change_to_others(ui)
@@ -661,28 +648,28 @@ async def project_change(ui, project) -> None:
     await notify_project_change_to_others(ui)
 
 
-RPC_DICT: Dict[str, Callable] = {
-    'getObjectTypes': get_object_types_cb,
-    'getObjectActions': get_object_actions_cb,
-    'saveProject': save_project_cb,
-    'saveScene': save_scene_cb,
-    'updateActionPointPose': update_action_point_cb,
-    'updateActionObjectPose': update_action_object_cb,
-    'openProject': open_project_cb,
-    'listProjects': list_projects_cb,
-    'listScenes': list_scenes_cb,
-    'newObjectType': new_object_type_cb,
-    'listMeshes': list_meshes_cb,
-    'focusObject': focus_object_cb,
-    'focusObjectStart': focus_object_start_cb,
-    'focusObjectDone': focus_object_done_cb
+RPC_DICT: Dict[Type[Request], Callable[[Request], Response]] = {
+    GetObjectTypesRequest: get_object_types_cb,
+    GetObjectActionsRequest: get_object_actions_cb,
+    SaveProjectRequest: save_project_cb,
+    SaveSceneRequest: save_scene_cb,
+    UpdateActionPointPoseResponse: update_action_point_cb,
+    UpdateActionObjectPoseRequest: update_action_object_cb,
+    OpenProjectRequest: open_project_cb,
+    ListProjectsRequest: list_projects_cb,
+    ListScenesRequest: list_scenes_cb,
+    NewObjectTypeRequest: new_object_type_cb,
+    ListMeshesRequest: list_meshes_cb,
+    FocusObjectRequest: focus_object_cb,
+    FocusObjectStartRequest: focus_object_start_cb,
+    FocusObjectDoneRequest: focus_object_done_cb
 }
 
 # add Project Manager RPC API
 for k, v in MANAGER_RPC_DICT.items():
     RPC_DICT[k] = manager_request
 
-assert RPC_DICT.keys() == API_MAPPING.keys()
+assert RPC_DICT.keys() == RPC_MAPPING.keys()
 
 EVENT_DICT: Dict = {'sceneChanged': scene_change,
                     'projectChanged': project_change}
