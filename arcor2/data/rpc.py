@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List, Optional, Tuple, Type
-from typing_extensions import Literal, Final
-import inspect
-import sys
+from typing import List, Optional, Tuple
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -28,7 +25,7 @@ class Request(JsonSchemaMixin):
 @dataclass
 class Response(JsonSchemaMixin):
 
-    response: str
+    response: str = ""
     id: int = 0
     result: bool = True
     messages: Optional[List[str]] = None
@@ -55,7 +52,6 @@ class RobotArg(JsonSchemaMixin):
         return self.id, self.end_effector
 
 
-
 """
 ------------------------------------------------------------------------------------------------------------------------
 Objects
@@ -66,14 +62,14 @@ Objects
 @dataclass
 class GetObjectTypesRequest(Request):
 
-    request: Final[str] = "getObjectTypes"
+    request: str = field(default="getObjectTypes", init=False)
 
 
 @dataclass
 class GetObjectTypesResponse(Response):
 
-    response: Final[str] = GetObjectTypesRequest.request
     data: List[ObjectTypeMeta] = field(default_factory=list)
+    response: str = field(default=GetObjectTypesRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -83,14 +79,14 @@ class GetObjectTypesResponse(Response):
 class GetObjectActionsRequest(Request):
 
     args: TypeArgs
-    request: Final[str] = "getObjectActions"
+    request: str = field(default="getObjectActions", init=False)
 
 
 @dataclass
 class GetObjectActionsResponse(Response):
 
-    response: Final[str] = GetObjectActionsRequest.request
     data: ObjectActions = field(default_factory=list)
+    response: str = field(default=GetObjectActionsRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -100,13 +96,13 @@ class GetObjectActionsResponse(Response):
 class NewObjectTypeRequest(Request):
 
     args: ObjectTypeMeta
-    request: Final[str] = "newObjectType"
+    request: str = field(default="newObjectType", init=False)
 
 
 @dataclass
 class NewObjectTypeResponse(Response):
 
-    response: Final[str] = NewObjectTypeRequest.request
+    response: str = field(default=NewObjectTypeRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -123,13 +119,13 @@ class FocusObjectStartRequestArgs(JsonSchemaMixin):
 class FocusObjectStartRequest(Request):
 
     args: FocusObjectStartRequestArgs
-    request: Final[str] = "focusObjectStart"
+    request: str = field(default="focusObjectStart", init=False)
 
 
 @dataclass
 class FocusObjectStartResponse(Response):
 
-    response: Final[str] = FocusObjectStartRequest.request
+    response: str = field(default=FocusObjectStartRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -146,7 +142,7 @@ class FocusObjectRequestArgs(JsonSchemaMixin):
 class FocusObjectRequest(Request):
 
     args: FocusObjectRequestArgs
-    request: Final[str] = "focusObject"
+    request: str = field(default="focusObject", init=False)
 
 
 @dataclass
@@ -158,8 +154,8 @@ class FocusObjectResponseData(JsonSchemaMixin):
 @dataclass
 class FocusObjectResponse(Response):
 
-    response: Final[str] = FocusObjectRequest.request
     data: FocusObjectResponseData = field(default_factory=FocusObjectResponseData)
+    response: str = field(default=FocusObjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -169,14 +165,14 @@ class FocusObjectResponse(Response):
 class FocusObjectDoneRequest(Request):
 
     args: IdArgs
-    request: Final[str] = "focusObjectDone"
+    request: str = field(default="focusObjectDone", init=False)
 
 
 @dataclass
 class FocusObjectDoneResponse(Response):
 
-    response: Final[str] = FocusObjectDoneRequest.request
     data: FocusObjectResponseData = field(default_factory=FocusObjectResponseData)
+    response: str = field(default=FocusObjectDoneRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -192,13 +188,13 @@ class UpdateActionPointPoseRequestArgs(IdArgs):
 class UpdateActionPointPoseRequest(Request):
 
     args: UpdateActionPointPoseRequestArgs
-    request: Final[str] = "updateActionPointPose"
+    request: str = field(default="focusObjectDone", init=False)
 
 
 @dataclass
 class UpdateActionPointPoseResponse(Response):
 
-    response: Final[str] = UpdateActionPointPoseRequest.request
+    response: str = field(default=UpdateActionPointPoseRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -214,13 +210,13 @@ class UpdateActionObjectPoseRequestArgs(IdArgs):
 class UpdateActionObjectPoseRequest(Request):
 
     args: UpdateActionObjectPoseRequestArgs
-    request: Final[str] = "updateActionObjectPose"
+    request: str = field(default="updateActionObjectPose", init=False)
 
 
 @dataclass
 class UpdateActionObjectPoseResponse(Response):
 
-    response: Final[str] = UpdateActionObjectPoseRequest.request
+    response: str = field(default=UpdateActionObjectPoseRequest.request, init=False)
 
 
 """
@@ -233,13 +229,13 @@ Scene / project
 @dataclass
 class SaveSceneRequest(Request):
 
-    request: Final[str] = "saveScene"
+    request: str = field(default="saveScene", init=False)
 
 
 @dataclass
 class SaveSceneResponse(Response):
 
-    response: Final[str] = SaveSceneRequest.request
+    response: str = field(default=SaveSceneRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -248,13 +244,13 @@ class SaveSceneResponse(Response):
 @dataclass
 class SaveProjectRequest(Request):
 
-    request: Final[str] = "saveProject"
+    request: str = field(default="saveProject", init=False)
 
 
 @dataclass
 class SaveProjectResponse(Response):
 
-    response: Final[str] = SaveProjectRequest.request
+    response: str = field(default=SaveProjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -264,13 +260,13 @@ class SaveProjectResponse(Response):
 class OpenProjectRequest(Request):
 
     args: IdArgs
-    request: Final[str] = "openProject"
+    request: str = field(default="openProject", init=False)
 
 
 @dataclass
 class OpenProjectResponse(Response):
 
-    response: Final[str] = OpenProjectRequest.request
+    response: str = field(default=OpenProjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -279,14 +275,14 @@ class OpenProjectResponse(Response):
 @dataclass
 class ListProjectsRequest(Request):
 
-    request: Final[str] = "listProjects"
+    request: str = field(default="listProjects", init=False)
 
 
 @dataclass
 class ListProjectsResponse(Response):
 
-    response: Final[str] = ListProjectsRequest.request
     data: List[IdDesc] = field(default_factory=list)
+    response: str = field(default=ListProjectsRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -295,14 +291,14 @@ class ListProjectsResponse(Response):
 @dataclass
 class ListScenesRequest(Request):
 
-    request: Final[str] = "listScenes"
+    request: str = field(default="listScenes", init=False)
 
 
 @dataclass
 class ListScenesResponse(Response):
 
-    response: Final[str] = ListScenesRequest.request
     data: List[IdDesc] = field(default_factory=list)
+    response: str = field(default=ListScenesRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -312,13 +308,13 @@ class ListScenesResponse(Response):
 class RunProjectRequest(Request):
 
     args: IdArgs
-    request: Final[str] = "runProject"
+    request: str = field(default="runProject", init=False)
 
 
 @dataclass
 class RunProjectResponse(Response):
 
-    response: Final[str] = RunProjectRequest.request
+    response: str = field(default=RunProjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -327,13 +323,13 @@ class RunProjectResponse(Response):
 @dataclass
 class StopProjectRequest(Request):
 
-    request: Final[str] = "stopProject"
+    request: str = field(default="stopProject", init=False)
 
 
 @dataclass
 class StopProjectResponse(Response):
 
-    response: Final[str] = StopProjectRequest.request
+    response: str = field(default=StopProjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -342,13 +338,13 @@ class StopProjectResponse(Response):
 @dataclass
 class PauseProjectRequest(Request):
 
-    request: Final[str] = "pauseProject"
+    request: str = field(default="pauseProject", init=False)
 
 
 @dataclass
 class PauseProjectResponse(Response):
 
-    response: Final[str] = PauseProjectRequest.request
+    response: str = field(default=PauseProjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -357,13 +353,13 @@ class PauseProjectResponse(Response):
 @dataclass
 class ResumeProjectRequest(Request):
 
-    request: Final[str] = "resumeProject"
+    request: str = field(default="resumeProject", init=False)
 
 
 @dataclass
 class ResumeProjectResponse(Response):
 
-    response: Final[str] = ResumeProjectRequest.request
+    response: str = field(default=ResumeProjectRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -379,29 +375,11 @@ Storage / data
 @dataclass
 class ListMeshesRequest(Request):
 
-    request: Final[str] = "listMeshes"
+    request: str = field(default="listMeshes", init=False)
 
 
 @dataclass
 class ListMeshesResponse(Response):
 
-    response: Final[str] = ListMeshesRequest.request
     data: MeshList = field(default_factory=list)
-
-
-RPC_MAPPING: Dict[str, Tuple[Type[Request], Type[Response]]] = {}
-
-for name, obj in inspect.getmembers(sys.modules[__name__]):
-
-    requests: Dict[str, Type[Request]] = {}
-    responses: Dict[str, Type[Response]] = {}
-
-    if inspect.isclass(obj) and issubclass(obj, Request) and obj != Request:
-        requests[obj.request] = obj
-    elif inspect.isclass(obj) and issubclass(obj, Response) and obj != Response:
-        responses[obj.response] = obj
-
-    assert requests.keys() == responses.keys()
-
-    for k, v in requests.items():
-        RPC_MAPPING[k] = (v, responses[k])
+    response: str = field(default=ListMeshesRequest.request, init=False)

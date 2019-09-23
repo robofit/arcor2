@@ -1,22 +1,34 @@
+import sys
 from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable
 from types import ModuleType
 import json
 import asyncio
 import importlib
 import re
+
 from dataclasses_jsonschema import ValidationError
 
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data.rpc import RPC_MAPPING, Request, Response
-from arcor2.data.events import EVENT_MAPPING, Event
+from arcor2.data.rpc import Request
+from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
+from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
+
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 _all_cap_re = re.compile('([a-z0-9])([A-Z])')
 
 RPC_RETURN_TYPES = Union[None, Tuple[bool, str]]
+
+# TODO what's wrong with following type?
+# RPC_DICT_TYPE = Dict[Type[Request], Callable[[Request], Coroutine[Any, Any, Union[Response, RPC_RETURN_TYPES]]]]
+RPC_DICT_TYPE = Dict[Type[Request], Any]
+
+# TODO replace Any with WebsocketSomething
+# EVENT_DICT_TYPE = Dict[Type[Event], Callable[[Any, Event], Coroutine[Any, Any, None]]]
+EVENT_DICT_TYPE = Dict[Type[Event], Any]
 
 
 class ImportClsException(Arcor2Exception):
@@ -70,8 +82,8 @@ async def server(client: Any,
                  logger: Any,
                  register: Callable[[Any], Awaitable[None]],
                  unregister: Callable[[Any], Awaitable[None]],
-                 rpc_dict: Dict[Type[Request], Callable[[Request], Awaitable[Response]]],
-                 event_dict: Optional[Dict[Type[Event], Callable[[Event], Awaitable[None]]]] = None) -> None:
+                 rpc_dict: RPC_DICT_TYPE,
+                 event_dict: Optional[EVENT_DICT_TYPE] = None) -> None:
 
     if event_dict is None:
         event_dict = {}
@@ -136,7 +148,7 @@ async def server(client: Any,
                     await logger.error(f"Invalid event: {data}, error: {e}")
                     continue
 
-                await event_dict[event_cls](event)
+                await event_dict[event_cls](client, event)
 
             else:
                 await logger.error(f"unsupported format of message: {data}")
@@ -144,3 +156,12 @@ async def server(client: Any,
         pass
     finally:
         await unregister(client)
+
+
+def print_exception(e: Exception) -> None:
+
+    pee = ProjectExceptionEvent(data=ProjectExceptionEventData(str(e),
+                                                               e.__class__.__name__,
+                                                               isinstance(e, Arcor2Exception)))
+    print(pee.to_json())
+    sys.stdout.flush()

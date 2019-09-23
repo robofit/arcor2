@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional
+from typing import List, Any, Iterator, Optional, Union
 from enum import Enum
 
 from json import JSONEncoder
@@ -174,3 +174,13 @@ class IdDesc(JsonSchemaMixin):
 class IdDescList(JsonSchemaMixin):
 
     items: List[IdDesc] = field(default_factory=list)
+
+
+SUPPORTED_ARGS = Union[str, float, int, ActionPoint]
+
+ARGS_MAPPING = {
+    str: ActionParameterTypeEnum.STRING,
+    float: ActionParameterTypeEnum.DOUBLE,
+    int: ActionParameterTypeEnum.INTEGER,
+    ActionPoint: ActionParameterTypeEnum.ACTION_POINT
+}

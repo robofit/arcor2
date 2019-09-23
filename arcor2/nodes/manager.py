@@ -6,7 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Union, Set, Callable, Dict
+from typing import Union, Set
 import os
 import tempfile
 import zipfile
@@ -15,14 +15,16 @@ import shutil
 import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
+from dataclasses_jsonschema import ValidationError
 
-from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES
+from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE
 from arcor2.source.utils import make_executable
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.settings import PROJECT_PATH
 from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectResponse, \
-    PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, RPC_MAPPING
+    PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, RunProjectResponse
 from arcor2.data.events import Event, ProjectStateEvent, ProjectStateEventData, ProjectStateEnum
+from arcor2.data.helpers import EVENT_MAPPING
 
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
@@ -46,7 +48,7 @@ async def read_proc_stdout() -> None:
     assert PROCESS is not None
     assert PROCESS.stdout is not None
 
-    await send_to_clients(ProjectStateEvent(data=ProjectStateEventData(ProjectStateEnum.RUNNING)))
+    await send_to_clients(ProjectStateEvent(ProjectStateEventData(ProjectStateEnum.RUNNING)))
 
     while process_running():
         try:
@@ -56,16 +58,28 @@ async def read_proc_stdout() -> None:
 
         try:
             data = json.loads(stdout.decode("utf-8").strip())
-            await send_to_clients(data)
         except json.decoder.JSONDecodeError as e:
             await logger.error(e)
+            continue
 
-    await send_to_clients(ProjectStateEvent(data=ProjectStateEventData(ProjectStateEnum.STOPPED)))
+        if "event" not in data:
+            await logger.error("Strange data from script: {}".format(data))
+            continue
+
+        try:
+            evt = EVENT_MAPPING[data["event"]].from_dict(data)
+        except ValidationError as e:
+            await logger.error("Invalid event: {}, error: {}".format(data, e))
+            continue
+
+        await send_to_clients(evt)
+
+    await send_to_clients(ProjectStateEvent(ProjectStateEventData(ProjectStateEnum.STOPPED)))
 
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-async def project_run(req: RunProjectRequest) -> Union[RunProjectRequest, RPC_RETURN_TYPES]:
+async def project_run(req: RunProjectRequest) -> Union[RunProjectResponse, RPC_RETURN_TYPES]:
 
     global PROCESS
     global TASK
@@ -159,13 +173,12 @@ async def unregister(websocket: WebSocketServerProtocol) -> None:
     await logger.info("Unregistering client")
     CLIENTS.remove(websocket)
 
-RPC_DICT: Dict[str, Callable] = {'runProject': project_run,
-                                 'stopProject': project_stop,
-                                 'pauseProject': project_pause,
-                                 'resumeProject': project_resume}
-
-for key in RPC_DICT.keys():
-    assert key in RPC_MAPPING
+RPC_DICT: RPC_DICT_TYPE = {
+    RunProjectRequest: project_run,
+    StopProjectRequest: project_stop,
+    PauseProjectRequest: project_pause,
+    ResumeProjectRequest: project_resume
+}
 
 
 def main() -> None:

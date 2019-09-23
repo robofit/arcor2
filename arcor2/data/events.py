@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional, Dict, Type
-from typing_extensions import Final
+from typing import List, Optional
 from enum import Enum
-import inspect
-import sys
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -21,12 +18,12 @@ Common stuff
 @dataclass
 class Event(JsonSchemaMixin):
 
-    event: str = ""
+    event: str = field(default="", init=False)
 
 
 @dataclass
 class ObjectTypesUpdatedEvent(Event):
-    event: Final[str] = "objectTypesUpdated"
+    event: str = field(default="objectTypesUpdated", init=False)
 
 
 """
@@ -40,14 +37,14 @@ Project / scene
 class SceneChangedEvent(Event):
 
     data: Optional[Scene] = None
-    event: Final[str] = "sceneChanged"
+    event: str = field(default="sceneChanged", init=False)
 
 
 @dataclass
 class ProjectChangedEvent(Event):
 
     data: Optional[Project] = None
-    event: Final[str] = "projectChanged"
+    event: str = field(default="projectChanged", init=False)
 
 
 """
@@ -69,7 +66,7 @@ class ProjectExceptionEventData(JsonSchemaMixin):
 class ProjectExceptionEvent(Event):
 
     data: ProjectExceptionEventData = field(default_factory=ProjectExceptionEventData)
-    event: Final[str] = "projectException"
+    event: str = field(default="projectException", init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -78,7 +75,7 @@ class ProjectExceptionEvent(Event):
 @dataclass
 class CurrentActionEventData(JsonSchemaMixin):
 
-    action_id: str
+    action_id: str = ""
     args: List[ActionParameter] = field(default_factory=list)
 
 
@@ -86,7 +83,7 @@ class CurrentActionEventData(JsonSchemaMixin):
 class CurrentActionEvent(Event):
 
     data: CurrentActionEventData = field(default_factory=CurrentActionEventData)
-    event: Final[str] = "currentAction"
+    event: str = field(default="currentAction", init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -103,14 +100,14 @@ class ProjectStateEnum(Enum):
 @dataclass
 class ProjectStateEventData(JsonSchemaMixin):
 
-    state: ProjectStateEnum
+    state: ProjectStateEnum = ProjectStateEnum.STOPPED
 
 
 @dataclass
 class ProjectStateEvent(Event):
 
     data: ProjectStateEventData = field(default_factory=ProjectStateEventData)
-    event: Final[str] = "projectState"
+    event: str = field(default="projectState", init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -124,19 +121,13 @@ class ActionStateEnum(Enum):
 @dataclass
 class ActionStateEventData(JsonSchemaMixin):
 
-    method: str
-    where: ActionStateEnum
+    object_id: str = ""
+    method: str = ""
+    where: ActionStateEnum = ActionStateEnum.BEFORE
 
 
 @dataclass
 class ActionStateEvent(Event):
 
     data: ActionStateEventData = field(default_factory=ActionStateEventData)
-    event: Final[str] = "actionState"
-
-
-EVENT_MAPPING: Dict[str, Type[Event]] = {}
-
-for name, obj in inspect.getmembers(sys.modules[__name__]):
-    if inspect.isclass(obj) and issubclass(obj, Event) and obj != Event:
-        EVENT_MAPPING[obj.event] = obj
+    event: str = field(default="actionState", init=False)
