@@ -3,24 +3,29 @@
 
 
 from os import path
-from typing import Dict, Union, Any, Type, TypeVar
+from typing import Dict, Union, Type, TypeVar, List
 import importlib
 import json
 
 from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum
+from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
+    ARGS_MAPPING, SUPPORTED_ARGS
+from arcor2.data.events import CurrentActionEvent, CurrentActionEventData
 from arcor2.exceptions import ResourcesException
 import arcor2.object_types
 from arcor2.object_types import Generic
-from arcor2.action import print_json
+from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.persistent_storage import convert_keys
 from arcor2.helpers import camel_case_to_snake_case
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
+
+
+ARGS_DICT = Dict[str, SUPPORTED_ARGS]
 
 
 class IntResources:
@@ -63,10 +68,21 @@ class IntResources:
                 self.objects[project_obj.id].add_action_point(aps.id, aps.pose)
 
     @staticmethod
-    def print_info(action_id: str, args: Dict[str, Any]) -> None:  # TODO dataclass for args
+    def print_info(action_id: str, args: ARGS_DICT) -> None:
         """Helper method used to print out info about the action going to be executed."""
 
-        print_json({"event": "currentAction", "data": {"action_id": action_id, "args": args}})
+        args_list: List[ActionParameter] = []
+
+        for k, v in args.items():
+
+            vv: Union[SUPPORTED_ARGS, Dict] = v
+
+            if isinstance(v, ActionPoint):  # this is needed because of "value: Any"
+                vv = v.to_dict()
+
+            args_list.append(ActionParameter(k, ARGS_MAPPING[type(v)], vv))
+
+        print_event(CurrentActionEvent(data=CurrentActionEventData(action_id, args_list)))
 
     def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
 
@@ -77,7 +93,7 @@ class IntResources:
         except KeyError:
             raise ResourcesException("Unknown object id or action point id.")
 
-    def parameters(self, action_id: str) -> Dict[str, Union[str, float, int, ActionPoint]]:
+    def parameters(self, action_id: str) -> ARGS_DICT:
 
         for obj in self.project.objects:
             for aps in obj.action_points:

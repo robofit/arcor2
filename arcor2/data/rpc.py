@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List, Optional, Tuple, Type
-from typing_extensions import Literal, Final
+from typing import List, Optional, Tuple
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -20,11 +19,13 @@ Common stuff
 class Request(JsonSchemaMixin):
 
     id: int
+    request: str
 
 
 @dataclass
 class Response(JsonSchemaMixin):
 
+    response: str = ""
     id: int = 0
     result: bool = True
     messages: Optional[List[str]] = None
@@ -51,8 +52,6 @@ class RobotArg(JsonSchemaMixin):
         return self.id, self.end_effector
 
 
-API_MAPPING: Dict[str, Tuple[Type[Request], Type[Response]]] = {}
-
 """
 ------------------------------------------------------------------------------------------------------------------------
 Objects
@@ -63,17 +62,15 @@ Objects
 @dataclass
 class GetObjectTypesRequest(Request):
 
-    request: Final[str] = "getObjectTypes"
+    request: str = field(default="getObjectTypes", init=False)
 
 
 @dataclass
 class GetObjectTypesResponse(Response):
 
-    response: Final[str] = "getObjectTypes"
     data: List[ObjectTypeMeta] = field(default_factory=list)
+    response: str = field(default=GetObjectTypesRequest.request, init=False)
 
-
-API_MAPPING["getObjectTypes"] = (GetObjectTypesRequest, GetObjectTypesResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -82,17 +79,15 @@ API_MAPPING["getObjectTypes"] = (GetObjectTypesRequest, GetObjectTypesResponse)
 class GetObjectActionsRequest(Request):
 
     args: TypeArgs
-    request: Final[str] = "getObjectActions"
+    request: str = field(default="getObjectActions", init=False)
 
 
 @dataclass
 class GetObjectActionsResponse(Response):
 
-    response: Final[str] = "getObjectActions"
     data: ObjectActions = field(default_factory=list)
+    response: str = field(default=GetObjectActionsRequest.request, init=False)
 
-
-API_MAPPING["getObjectActions"] = (GetObjectActionsRequest, GetObjectActionsResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -101,16 +96,14 @@ API_MAPPING["getObjectActions"] = (GetObjectActionsRequest, GetObjectActionsResp
 class NewObjectTypeRequest(Request):
 
     args: ObjectTypeMeta
-    request: Final[str] = "newObjectType"
+    request: str = field(default="newObjectType", init=False)
 
 
 @dataclass
 class NewObjectTypeResponse(Response):
 
-    response: Final[str] = "newObjectType"
+    response: str = field(default=NewObjectTypeRequest.request, init=False)
 
-
-API_MAPPING["newObjectType"] = (NewObjectTypeRequest, NewObjectTypeResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -126,16 +119,14 @@ class FocusObjectStartRequestArgs(JsonSchemaMixin):
 class FocusObjectStartRequest(Request):
 
     args: FocusObjectStartRequestArgs
-    request: Final[str] = "focusObjectStart"
+    request: str = field(default="focusObjectStart", init=False)
 
 
 @dataclass
 class FocusObjectStartResponse(Response):
 
-    response: Final[str] = "focusObjectStart"
+    response: str = field(default=FocusObjectStartRequest.request, init=False)
 
-
-API_MAPPING["focusObjectStart"] = (FocusObjectStartRequest, FocusObjectStartResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -151,7 +142,7 @@ class FocusObjectRequestArgs(JsonSchemaMixin):
 class FocusObjectRequest(Request):
 
     args: FocusObjectRequestArgs
-    request: Final[str] = "focusObject"
+    request: str = field(default="focusObject", init=False)
 
 
 @dataclass
@@ -163,11 +154,9 @@ class FocusObjectResponseData(JsonSchemaMixin):
 @dataclass
 class FocusObjectResponse(Response):
 
-    response: Final[str] = "focusObject"
     data: FocusObjectResponseData = field(default_factory=FocusObjectResponseData)
+    response: str = field(default=FocusObjectRequest.request, init=False)
 
-
-API_MAPPING["focusObject"] = (FocusObjectRequest, FocusObjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -176,17 +165,14 @@ API_MAPPING["focusObject"] = (FocusObjectRequest, FocusObjectResponse)
 class FocusObjectDoneRequest(Request):
 
     args: IdArgs
-    request: Final[str] = "focusObjectDone"
+    request: str = field(default="focusObjectDone", init=False)
 
 
 @dataclass
 class FocusObjectDoneResponse(Response):
 
-    response: Final[str] = "focusObjectDone"
     data: FocusObjectResponseData = field(default_factory=FocusObjectResponseData)
-
-
-API_MAPPING["focusObjectDone"] = (FocusObjectDoneRequest, FocusObjectDoneResponse)
+    response: str = field(default=FocusObjectDoneRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -202,16 +188,13 @@ class UpdateActionPointPoseRequestArgs(IdArgs):
 class UpdateActionPointPoseRequest(Request):
 
     args: UpdateActionPointPoseRequestArgs
-    request: Final[str] = "updateActionPointPose"
+    request: str = field(default="focusObjectDone", init=False)
 
 
 @dataclass
 class UpdateActionPointPoseResponse(Response):
 
-    response: Final[str] = "updateActionPointPose"
-
-
-API_MAPPING["updateActionPointPose"] = (UpdateActionPointPoseRequest, UpdateActionPointPoseResponse)
+    response: str = field(default=UpdateActionPointPoseRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -227,16 +210,13 @@ class UpdateActionObjectPoseRequestArgs(IdArgs):
 class UpdateActionObjectPoseRequest(Request):
 
     args: UpdateActionObjectPoseRequestArgs
-    request: Final[str] = "updateActionObjectPose"
+    request: str = field(default="updateActionObjectPose", init=False)
 
 
 @dataclass
 class UpdateActionObjectPoseResponse(Response):
 
-    response: Final[str] = "updateActionObjectPose"
-
-
-API_MAPPING["updateActionObjectPose"] = (UpdateActionPointPoseRequest, UpdateActionPointPoseResponse)
+    response: str = field(default=UpdateActionObjectPoseRequest.request, init=False)
 
 
 """
@@ -249,16 +229,14 @@ Scene / project
 @dataclass
 class SaveSceneRequest(Request):
 
-    request: Final[str] = "saveScene"
+    request: str = field(default="saveScene", init=False)
 
 
 @dataclass
 class SaveSceneResponse(Response):
 
-    response: Final[str] = "saveScene"
+    response: str = field(default=SaveSceneRequest.request, init=False)
 
-
-API_MAPPING["saveScene"] = (SaveSceneRequest, SaveSceneResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -266,16 +244,14 @@ API_MAPPING["saveScene"] = (SaveSceneRequest, SaveSceneResponse)
 @dataclass
 class SaveProjectRequest(Request):
 
-    request: Final[str] = "saveProject"
+    request: str = field(default="saveProject", init=False)
 
 
 @dataclass
 class SaveProjectResponse(Response):
 
-    response: Final[str] = "saveProject"
+    response: str = field(default=SaveProjectRequest.request, init=False)
 
-
-API_MAPPING["saveProject"] = (SaveProjectRequest, SaveProjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -284,16 +260,14 @@ API_MAPPING["saveProject"] = (SaveProjectRequest, SaveProjectResponse)
 class OpenProjectRequest(Request):
 
     args: IdArgs
-    request: Final[str] = "openProject"
+    request: str = field(default="openProject", init=False)
 
 
 @dataclass
 class OpenProjectResponse(Response):
 
-    response: Final[str] = "openProject"
+    response: str = field(default=OpenProjectRequest.request, init=False)
 
-
-API_MAPPING["openProject"] = (OpenProjectRequest, OpenProjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -301,17 +275,15 @@ API_MAPPING["openProject"] = (OpenProjectRequest, OpenProjectResponse)
 @dataclass
 class ListProjectsRequest(Request):
 
-    request: Literal["listProjects"]
+    request: str = field(default="listProjects", init=False)
 
 
 @dataclass
 class ListProjectsResponse(Response):
 
-    response: Final[str] = "listProjects"
     data: List[IdDesc] = field(default_factory=list)
+    response: str = field(default=ListProjectsRequest.request, init=False)
 
-
-API_MAPPING["listProjects"] = (ListProjectsRequest, ListProjectsResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -319,17 +291,15 @@ API_MAPPING["listProjects"] = (ListProjectsRequest, ListProjectsResponse)
 @dataclass
 class ListScenesRequest(Request):
 
-    request: Final[str] = "listScenes"
+    request: str = field(default="listScenes", init=False)
 
 
 @dataclass
 class ListScenesResponse(Response):
 
-    response: Final[str] = "listScenes"
     data: List[IdDesc] = field(default_factory=list)
+    response: str = field(default=ListScenesRequest.request, init=False)
 
-
-API_MAPPING["listScenes"] = (ListScenesRequest, ListScenesResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -338,16 +308,14 @@ API_MAPPING["listScenes"] = (ListScenesRequest, ListScenesResponse)
 class RunProjectRequest(Request):
 
     args: IdArgs
-    request: Final[str] = "runProject"
+    request: str = field(default="runProject", init=False)
 
 
 @dataclass
 class RunProjectResponse(Response):
 
-    response: Final[str] = "runProject"
+    response: str = field(default=RunProjectRequest.request, init=False)
 
-
-API_MAPPING["runProject"] = (RunProjectRequest, RunProjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -355,16 +323,14 @@ API_MAPPING["runProject"] = (RunProjectRequest, RunProjectResponse)
 @dataclass
 class StopProjectRequest(Request):
 
-    request: Final[str] = "stopProject"
+    request: str = field(default="stopProject", init=False)
 
 
 @dataclass
 class StopProjectResponse(Response):
 
-    response: Final[str] = "stopProject"
+    response: str = field(default=StopProjectRequest.request, init=False)
 
-
-API_MAPPING["stopProject"] = (StopProjectRequest, StopProjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -372,16 +338,14 @@ API_MAPPING["stopProject"] = (StopProjectRequest, StopProjectResponse)
 @dataclass
 class PauseProjectRequest(Request):
 
-    request: Final[str] = "pauseProject"
+    request: str = field(default="pauseProject", init=False)
 
 
 @dataclass
 class PauseProjectResponse(Response):
 
-    response: Final[str] = "pauseProject"
+    response: str = field(default=PauseProjectRequest.request, init=False)
 
-
-API_MAPPING["pauseProject"] = (PauseProjectRequest, PauseProjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -389,16 +353,14 @@ API_MAPPING["pauseProject"] = (PauseProjectRequest, PauseProjectResponse)
 @dataclass
 class ResumeProjectRequest(Request):
 
-    request: Final[str] = "resumeProject"
+    request: str = field(default="resumeProject", init=False)
 
 
 @dataclass
 class ResumeProjectResponse(Response):
 
-    response: Final[str] = "resumeProject"
+    response: str = field(default=ResumeProjectRequest.request, init=False)
 
-
-API_MAPPING["resumeProject"] = (ResumeProjectRequest, ResumeProjectResponse)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -413,14 +375,11 @@ Storage / data
 @dataclass
 class ListMeshesRequest(Request):
 
-    request: Final[str] = "listMeshes"
+    request: str = field(default="listMeshes", init=False)
 
 
 @dataclass
 class ListMeshesResponse(Response):
 
-    response: Final[str] = "listMeshes"
     data: MeshList = field(default_factory=list)
-
-
-API_MAPPING["listMeshes"] = (ListMeshesRequest, ListMeshesResponse)
+    response: str = field(default=ListMeshesRequest.request, init=False)

@@ -102,7 +102,7 @@ def empty_script_tree() -> Module:
     ])
 
     add_import(tree, "arcor2.exceptions", "Arcor2Exception")
-    add_import(tree, "arcor2.exceptions", "print_exception")
+    add_import(tree, "arcor2.helpers", "print_exception")
 
     return tree
 

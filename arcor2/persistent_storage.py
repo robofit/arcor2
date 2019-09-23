@@ -228,9 +228,7 @@ class AioPersistentStorage:
         await loop.run_in_executor(None, self._cl.update_scene, scene)
 
     async def update_project_sources(self, project_sources: ProjectSources) -> None:
-        await loop.run_in_executor(None,
-                                          self._cl.update_project_sources,
-                                          project_sources)
+        await loop.run_in_executor(None, self._cl.update_project_sources, project_sources)
 
     async def update_object_type(self, object_type: ObjectType) -> None:
         await loop.run_in_executor(None, self._cl.update_object_type, object_type)

@@ -1,21 +1,34 @@
+import sys
 from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable
 from types import ModuleType
 import json
 import asyncio
 import importlib
 import re
+
 from dataclasses_jsonschema import ValidationError
 
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data.rpc import API_MAPPING
+from arcor2.data.rpc import Request
+from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
+from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
+
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 _all_cap_re = re.compile('([a-z0-9])([A-Z])')
 
 RPC_RETURN_TYPES = Union[None, Tuple[bool, str]]
+
+# TODO what's wrong with following type?
+# RPC_DICT_TYPE = Dict[Type[Request], Callable[[Request], Coroutine[Any, Any, Union[Response, RPC_RETURN_TYPES]]]]
+RPC_DICT_TYPE = Dict[Type[Request], Any]
+
+# TODO replace Any with WebsocketSomething
+# EVENT_DICT_TYPE = Dict[Type[Event], Callable[[Any, Event], Coroutine[Any, Any, None]]]
+EVENT_DICT_TYPE = Dict[Type[Event], Any]
 
 
 class ImportClsException(Arcor2Exception):
@@ -67,10 +80,10 @@ def snake_case_to_camel_case(snake_str: str) -> str:
 async def server(client: Any,
                  path: str,
                  logger: Any,
-                 register: Callable[..., Awaitable[Any]],
-                 unregister: Callable[..., Awaitable[Any]],
-                 rpc_dict: Dict[str, Callable[..., Any]],
-                 event_dict: Optional[Dict[str, Callable[..., Any]]] = None) -> None:
+                 register: Callable[[Any], Awaitable[None]],
+                 unregister: Callable[[Any], Awaitable[None]],
+                 rpc_dict: RPC_DICT_TYPE,
+                 event_dict: Optional[EVENT_DICT_TYPE] = None) -> None:
 
     if event_dict is None:
         event_dict = {}
@@ -88,10 +101,13 @@ async def server(client: Any,
             if "request" in data:  # ...then it is RPC
 
                 try:
-                    rpc_func = rpc_dict[data['request']]
-                    req_cls, resp_cls = API_MAPPING[data['request']]
+                    req_cls, resp_cls = RPC_MAPPING[data['request']]
                 except KeyError:
                     await logger.error(f"Unknown RPC request: {data}.")
+                    continue
+
+                if req_cls not in rpc_dict:
+                    await logger.debug(f"Ignoring RPC request: {data}.")
                     continue
 
                 try:
@@ -100,7 +116,7 @@ async def server(client: Any,
                     await logger.error(f"Invalid RPC: {data}, error: {e}")
                     continue
 
-                resp = await rpc_func(req)
+                resp = await rpc_dict[req_cls](req)
 
                 if resp is None:  # default response
                     resp = resp_cls()
@@ -117,12 +133,22 @@ async def server(client: Any,
             elif "event" in data:  # ...event from UI
 
                 try:
-                    event_func = event_dict[data["event"]]
+                    event_cls = EVENT_MAPPING[data["event"]]
                 except KeyError as e:
                     await logger.error(f"Unknown event type: {e}.")
                     continue
 
-                await event_func(client, data["data"])
+                if event_cls not in event_dict:
+                    await logger.debug(f"Ignoring event: {data}.")
+                    continue
+
+                try:
+                    event = event_cls.from_dict(data)
+                except ValidationError as e:
+                    await logger.error(f"Invalid event: {data}, error: {e}")
+                    continue
+
+                await event_dict[event_cls](client, event)
 
             else:
                 await logger.error(f"unsupported format of message: {data}")
@@ -130,3 +156,12 @@ async def server(client: Any,
         pass
     finally:
         await unregister(client)
+
+
+def print_exception(e: Exception) -> None:
+
+    pee = ProjectExceptionEvent(data=ProjectExceptionEventData(str(e),
+                                                               e.__class__.__name__,
+                                                               isinstance(e, Arcor2Exception)))
+    print(pee.to_json())
+    sys.stdout.flush()
