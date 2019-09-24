@@ -31,7 +31,7 @@ from arcor2.data.rpc import GetObjectActionsRequest, GetObjectTypesResponse, Get
     UpdateActionObjectPoseRequest, ListProjectsRequest, ListProjectsResponse, ListScenesRequest, ListScenesResponse,\
     FocusObjectStartRequest, FocusObjectStartResponse, FocusObjectRequest, FocusObjectResponse, \
     FocusObjectDoneRequest, FocusObjectDoneResponse
-from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event
+from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
@@ -138,11 +138,16 @@ def project_event() -> ProjectChangedEvent:
     return ProjectChangedEvent(PROJECT)
 
 
+async def notify(event: Event, exclude_ui=None):
+
+    if (exclude_ui is None and INTERFACES) or (exclude_ui and len(INTERFACES) > 1):
+        message = event.to_json()
+        await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != exclude_ui])
+
+
 async def _notify(interface, msg_source: Callable[[], Event]):
 
-    if (interface is None and INTERFACES) or (interface and len(INTERFACES) > 1):
-        message = msg_source().to_json()
-        await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != interface])
+    await notify(msg_source(), interface)
 
 
 async def notify_scene_change_to_others(interface: Optional[WebSocketServerProtocol] = None) -> None:
@@ -305,6 +310,8 @@ async def _get_object_actions() -> None:
 
     OBJECT_ACTIONS = object_actions
 
+    await notify(ObjectTypesChangedEvent(data=list(object_actions.keys())))
+
 
 async def get_object_actions_cb(req: GetObjectActionsRequest) -> Union[GetObjectActionsResponse, RPC_RETURN_TYPES]:
 
@@ -435,7 +442,7 @@ async def new_object_type_cb(req: NewObjectTypeRequest) -> Union[NewObjectTypeRe
     OBJECT_ACTIONS[meta.type] = get_object_actions(obj.source)
     add_ancestor_actions(meta.type, OBJECT_ACTIONS, OBJECT_TYPES)
 
-    # TODO notify new object type somehow
+    await notify(ObjectTypesChangedEvent(data=[meta.type]))
     return None
 
 

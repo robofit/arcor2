@@ -21,11 +21,6 @@ class Event(JsonSchemaMixin):
     event: str = field(default="", init=False)
 
 
-@dataclass
-class ObjectTypesUpdatedEvent(Event):
-    event: str = field(default="objectTypesUpdated", init=False)
-
-
 """
 ------------------------------------------------------------------------------------------------------------------------
 Project / scene
@@ -131,3 +126,17 @@ class ActionStateEvent(Event):
 
     data: ActionStateEventData = field(default_factory=ActionStateEventData)
     event: str = field(default="actionState", init=False)
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+Objects
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+@dataclass
+class ObjectTypesChangedEvent(Event):
+
+    data: List[str] = field(default_factory=list)  # changed object types
+    event: str = field(default="objectTypesChanged", init=False)
