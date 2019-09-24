@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc
+from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
 
 """
@@ -345,6 +345,30 @@ class PauseProjectRequest(Request):
 class PauseProjectResponse(Response):
 
     response: str = field(default=PauseProjectRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class ProjectStateRequest(Request):
+
+    request: str = field(default="projectState", init=False)
+
+
+@dataclass
+class ProjectStateData(JsonSchemaMixin):
+
+    id: Optional[str] = None
+    project: ProjectState = field(default_factory=ProjectState)
+    action: Optional[ActionState] = None
+    action_args: Optional[CurrentAction] = None
+
+
+@dataclass
+class ProjectStateResponse(Response):
+
+    data: ProjectStateData = field(default_factory=ProjectStateData)
+    response: str = field(default=ProjectStateRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

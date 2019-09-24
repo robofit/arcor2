@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from typing import List, Optional
-from enum import Enum
 
+from arcor2.data.common import ActionState, ProjectState, CurrentAction
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import Scene, Project, ActionParameter
+from arcor2.data.common import Scene, Project
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -68,63 +68,28 @@ class ProjectExceptionEvent(Event):
 
 
 @dataclass
-class CurrentActionEventData(JsonSchemaMixin):
-
-    action_id: str = ""
-    args: List[ActionParameter] = field(default_factory=list)
-
-
-@dataclass
 class CurrentActionEvent(Event):
 
-    data: CurrentActionEventData = field(default_factory=CurrentActionEventData)
+    data: CurrentAction = field(default_factory=CurrentAction)
     event: str = field(default="currentAction", init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class ProjectStateEnum(Enum):
-
-    RUNNING: str = "running"
-    STOPPED: str = "stopped"
-    PAUSED: str = "paused"
-    RESUMED: str = "resumed"
-
-
-@dataclass
-class ProjectStateEventData(JsonSchemaMixin):
-
-    state: ProjectStateEnum = ProjectStateEnum.STOPPED
-
-
 @dataclass
 class ProjectStateEvent(Event):
 
-    data: ProjectStateEventData = field(default_factory=ProjectStateEventData)
+    data: ProjectState = field(default_factory=ProjectState)
     event: str = field(default="projectState", init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class ActionStateEnum(Enum):
-
-    BEFORE: str = "before"
-    AFTER: str = "after"
-
-
-@dataclass
-class ActionStateEventData(JsonSchemaMixin):
-
-    object_id: str = ""
-    method: str = ""
-    where: ActionStateEnum = ActionStateEnum.BEFORE
-
-
 @dataclass
 class ActionStateEvent(Event):
 
-    data: ActionStateEventData = field(default_factory=ActionStateEventData)
+    data: ActionState = field(default_factory=ActionState)
     event: str = field(default="actionState", init=False)
 
 

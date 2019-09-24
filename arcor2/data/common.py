@@ -184,3 +184,38 @@ ARGS_MAPPING = {
     int: ActionParameterTypeEnum.INTEGER,
     ActionPoint: ActionParameterTypeEnum.ACTION_POINT
 }
+
+
+class ProjectStateEnum(Enum):
+
+    RUNNING: str = "running"
+    STOPPED: str = "stopped"
+    PAUSED: str = "paused"
+    RESUMED: str = "resumed"
+
+
+class ActionStateEnum(Enum):
+
+    BEFORE: str = "before"
+    AFTER: str = "after"
+
+
+@dataclass
+class ActionState(JsonSchemaMixin):
+
+    object_id: str = ""
+    method: str = ""
+    where: ActionStateEnum = ActionStateEnum.BEFORE
+
+
+@dataclass
+class ProjectState(JsonSchemaMixin):
+
+    state: ProjectStateEnum = ProjectStateEnum.STOPPED
+
+
+@dataclass
+class CurrentAction(JsonSchemaMixin):
+
+    action_id: str = ""
+    args: List[ActionParameter] = field(default_factory=list)

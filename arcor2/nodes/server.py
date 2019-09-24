@@ -6,8 +6,9 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable
+from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast
 from types import ModuleType
+import uuid
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -30,8 +31,9 @@ from arcor2.data.rpc import GetObjectActionsRequest, GetObjectTypesResponse, Get
     OpenProjectRequest, OpenProjectResponse, UpdateActionPointPoseRequest, UpdateActionPointPoseResponse,\
     UpdateActionObjectPoseRequest, ListProjectsRequest, ListProjectsResponse, ListScenesRequest, ListScenesResponse,\
     FocusObjectStartRequest, FocusObjectStartResponse, FocusObjectRequest, FocusObjectResponse, \
-    FocusObjectDoneRequest, FocusObjectDoneResponse
-from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent
+    FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse
+from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
+    ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
@@ -81,7 +83,7 @@ async def handle_manager_incoming_messages(manager_client):
             msg = json.loads(message)
             await logger.info(f"Message from manager: {msg}")
 
-            if "event" in msg:
+            if "event" in msg and INTERFACES:
                 await asyncio.wait([intf.send(json.dumps(msg)) for intf in INTERFACES])
             elif "response" in msg:
 
@@ -170,6 +172,13 @@ async def notify_project(interface) -> None:
     await asyncio.wait([interface.send(message)])
 
 
+async def _initialize_server() -> None:
+
+    await _get_object_types()
+    await _get_object_actions()
+    await _check_manager()
+
+
 async def _get_object_types() -> None:
 
     # TODO watch db for changes and call this + notify UI in case of something changed
@@ -208,8 +217,6 @@ async def _get_object_types() -> None:
         del object_types[obj_type]
 
     OBJECT_TYPES = object_types
-
-    await _get_object_actions()
 
 
 async def get_object_types_cb(req: GetObjectTypesRequest) -> GetObjectTypesResponse:
@@ -258,12 +265,12 @@ async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse,
     return SaveProjectResponse(messages=msgs)
 
 
-async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse, RPC_RETURN_TYPES]:
+async def open_project(project_id: str) -> bool:
 
     global PROJECT
     global SCENE
 
-    PROJECT = await STORAGE_CLIENT.get_project(req.args.id)
+    PROJECT = await STORAGE_CLIENT.get_project(project_id)
     SCENE = await STORAGE_CLIENT.get_scene(PROJECT.scene_id)
 
     project_sources = await STORAGE_CLIENT.get_project_sources(PROJECT.id)
@@ -280,7 +287,14 @@ async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse,
     await notify_project_change_to_others()
     await notify_scene_change_to_others()
 
-    if load_logic_failed:
+    return not load_logic_failed
+
+
+async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse, RPC_RETURN_TYPES]:
+
+    logic_loaded = await open_project(req.args.id)
+
+    if not logic_loaded:
         return True, "Failed to load logic from source."
 
     return None
@@ -311,6 +325,15 @@ async def _get_object_actions() -> None:
     OBJECT_ACTIONS = object_actions
 
     await notify(ObjectTypesChangedEvent(data=list(object_actions.keys())))
+
+
+async def _check_manager() -> None:
+
+    # TODO avoid cast
+    resp = cast(ProjectStateResponse, await manager_request(ProjectStateRequest(id=uuid.uuid4().int)))
+
+    if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
+        await open_project(resp.data.id)
 
 
 async def get_object_actions_cb(req: GetObjectActionsRequest) -> Union[GetObjectActionsResponse, RPC_RETURN_TYPES]:
@@ -597,12 +620,21 @@ def clean_up_after_focus(obj_id: str) -> None:
 
 
 async def register(websocket) -> None:
+
     await logger.info("Registering new ui")
     INTERFACES.add(websocket)
 
-    # TODO do this in parallel
     await notify_scene(websocket)
     await notify_project(websocket)
+
+    # TODO avoid cast
+    resp = cast(ProjectStateResponse, await manager_request(ProjectStateRequest(id=uuid.uuid4().int)))
+
+    await asyncio.wait([websocket.send(ProjectStateEvent(data=resp.data.project).to_json())])
+    if resp.data.action:
+        await asyncio.wait([websocket.send(ActionStateEvent(data=resp.data.action).to_json())])
+    if resp.data.action_args:
+        await asyncio.wait([websocket.send(CurrentActionEvent(data=resp.data.action_args).to_json())])
 
 
 async def unregister(websocket) -> None:
@@ -692,7 +724,7 @@ async def multiple_tasks():
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
     input_coroutines = [websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
-                        _get_object_types()]
+                        _initialize_server()]
     res = await asyncio.gather(*input_coroutines)
     return res
 

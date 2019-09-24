@@ -11,8 +11,8 @@ from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
-    ARGS_MAPPING, SUPPORTED_ARGS
-from arcor2.data.events import CurrentActionEvent, CurrentActionEventData
+    ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction
+from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException
 import arcor2.object_types
 from arcor2.object_types import Generic
@@ -82,7 +82,7 @@ class IntResources:
 
             args_list.append(ActionParameter(k, ARGS_MAPPING[type(v)], vv))
 
-        print_event(CurrentActionEvent(data=CurrentActionEventData(action_id, args_list)))
+        print_event(CurrentActionEvent(data=CurrentAction(action_id, args_list)))
 
     def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
 

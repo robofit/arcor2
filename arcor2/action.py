@@ -1,8 +1,8 @@
 import select
 import sys
 from typing import Union, Callable, Any, TYPE_CHECKING
-from arcor2.data.events import Event, ProjectStateEvent, ProjectStateEventData, ProjectStateEnum, ActionStateEvent, \
-    ActionStateEventData, ActionStateEnum
+from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent
+from arcor2.data.common import ProjectStateEnum, ActionStateEnum, ActionState, ProjectState
 
 if TYPE_CHECKING:
     from arcor2.object_types import Generic  # NOQA
@@ -17,16 +17,16 @@ def read_stdin(timeout: float = 0.0) -> Union[str, None]:
 
 def handle_action(obj_id: str, f: Callable[..., Any], where: ActionStateEnum) -> None:
 
-    print_event(ActionStateEvent(data=ActionStateEventData(obj_id, f.__name__, where)))
+    print_event(ActionStateEvent(data=ActionState(obj_id, f.__name__, where)))
 
     ctrl_cmd = read_stdin()
 
     if ctrl_cmd == "p":
-        print_event(ProjectStateEvent(data=ProjectStateEventData(ProjectStateEnum.PAUSED)))
+        print_event(ProjectStateEvent(data=ProjectState(ProjectStateEnum.PAUSED)))
         while True:
             ctrl_cmd = read_stdin(0.1)
             if ctrl_cmd == "r":
-                print_event(ProjectStateEvent(data=ProjectStateEventData(ProjectStateEnum.RESUMED)))
+                print_event(ProjectStateEvent(data=ProjectState(ProjectStateEnum.RESUMED)))
                 break
 
 
