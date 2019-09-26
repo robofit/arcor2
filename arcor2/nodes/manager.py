@@ -28,6 +28,8 @@ from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent, Curre
 from arcor2.data.common import ProjectStateEnum, ProjectState
 from arcor2.data.helpers import EVENT_MAPPING
 
+PORT = 6790
+
 logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
 
 PROCESS: Union[asyncio.subprocess.Process, None] = None
@@ -92,6 +94,7 @@ async def read_proc_stdout() -> None:
 
         if isinstance(evt, ProjectStateEvent):
             await project_state(evt)
+            continue
         elif isinstance(evt, ActionStateEvent):
             ACTION_EVENT = evt
         elif isinstance(evt, CurrentActionEvent):
@@ -235,7 +238,7 @@ def main() -> None:
                                       rpc_dict=RPC_DICT)
     asyncio.get_event_loop().set_debug(enabled=True)
     asyncio.get_event_loop().run_until_complete(
-        websockets.serve(bound_handler, '0.0.0.0', 6790))
+        websockets.serve(bound_handler, '0.0.0.0', PORT))
     asyncio.get_event_loop().run_forever()
 
 

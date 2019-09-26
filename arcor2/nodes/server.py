@@ -18,7 +18,7 @@ from arcor2.source.logic import program_src, get_logic_from_source
 from arcor2.source.object_types import object_type_meta, get_object_actions, new_object_type_source
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
-from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT
+from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
 from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, EVENT_DICT_TYPE
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type
@@ -58,7 +58,7 @@ SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
 INTERFACES: Set[WebSocketServerProtocol] = set()
 
 MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
-MANAGER_RPC_RESPONSE_QUEUE: RespQueue = RespQueue()
+MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: ObjectTypeMetaDict = {}
@@ -81,19 +81,18 @@ async def handle_manager_incoming_messages(manager_client):
         async for message in manager_client:
 
             msg = json.loads(message)
-            await logger.info(f"Message from manager: {msg}")
 
             if "event" in msg and INTERFACES:
-                await asyncio.wait([intf.send(json.dumps(msg)) for intf in INTERFACES])
+                await asyncio.wait([intf.send(message) for intf in INTERFACES])
             elif "response" in msg:
 
                 # TODO handle potential errors
                 _, resp_cls = RPC_MAPPING[msg["response"]]
-                await MANAGER_RPC_RESPONSE_QUEUE.put(resp_cls.from_dict(msg))
+                resp = resp_cls.from_dict(msg)
+                MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
     except websockets.exceptions.ConnectionClosed:
         await logger.error("Connection to manager closed.")
-        # TODO try to open it again and refuse requests meanwhile
 
 
 async def project_manager_client() -> None:
@@ -102,9 +101,8 @@ async def project_manager_client() -> None:
 
         await logger.info("Attempting connection to manager...")
 
-        # TODO if manager does not run initially, this won't connect even if the manager gets started afterwards
         try:
-            async with websockets.connect("ws://localhost:6790") as manager_client:
+            async with websockets.connect(f"ws://localhost:{MANAGER_PORT}") as manager_client:
 
                 await logger.info("Connected to manager.")
 
@@ -346,16 +344,14 @@ async def get_object_actions_cb(req: GetObjectActionsRequest) -> Union[GetObject
 
 async def manager_request(req: Request) -> Response:
 
-    await MANAGER_RPC_REQUEST_QUEUE.put(req)
-    # TODO process request
+    assert req.id not in MANAGER_RPC_RESPONSES
 
-    # TODO better way to get correct response based on req_id?
-    while True:
-        resp = await MANAGER_RPC_RESPONSE_QUEUE.get()
-        if resp.id == req.id:
-            return resp
-        else:
-            await MANAGER_RPC_RESPONSE_QUEUE.put(resp)
+    MANAGER_RPC_RESPONSES[req.id] = RespQueue(maxsize=1)
+    await MANAGER_RPC_REQUEST_QUEUE.put(req)
+
+    resp = await MANAGER_RPC_RESPONSES[req.id].get()
+    del MANAGER_RPC_RESPONSES[req.id]
+    return resp
 
 
 async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
