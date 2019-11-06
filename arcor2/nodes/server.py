@@ -354,7 +354,7 @@ async def manager_request(req: Request) -> Response:
     return resp
 
 
-async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
+async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:  # TODO should be ordinary action?
 
     try:
         robot = SCENE_OBJECT_INSTANCES[robot_id]
