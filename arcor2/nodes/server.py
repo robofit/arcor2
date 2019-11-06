@@ -25,13 +25,15 @@ from arcor2.object_types_utils import built_in_types_names, DataError, obj_descr
 from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
     MeshFocusAction, ObjectModel
+from arcor2.data.services import ServiceMeta
 from arcor2.data.rpc import GetObjectActionsRequest, GetObjectTypesResponse, GetObjectTypesRequest, \
     GetObjectActionsResponse, NewObjectTypeRequest, NewObjectTypeResponse, ListMeshesRequest, ListMeshesResponse, \
     Request, Response, SaveSceneRequest, SaveSceneResponse, SaveProjectRequest, SaveProjectResponse, \
     OpenProjectRequest, OpenProjectResponse, UpdateActionPointPoseRequest, UpdateActionPointPoseResponse,\
     UpdateActionObjectPoseRequest, ListProjectsRequest, ListProjectsResponse, ListScenesRequest, ListScenesResponse,\
     FocusObjectStartRequest, FocusObjectStartResponse, FocusObjectRequest, FocusObjectResponse, \
-    FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse
+    FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse, GetServicesRequest, \
+    GetServicesResponse
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
@@ -40,6 +42,9 @@ from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
 from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import ActionPointNotFound, SceneObjectNotFound, Arcor2Exception
+
+# TODO remove - construct it from source code from Storage
+from arcor2_kinali.services.rest_robot_service import RestRobotService
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[Request]
@@ -62,7 +67,11 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: ObjectTypeMetaDict = {}
-OBJECT_ACTIONS: ObjectActionsDict = {}
+OBJECT_ACTIONS: ObjectActionsDict = {}  # TODO this will be used for actions of both object_types / services
+
+# TODO remove initialization - read services from DB
+SERVICES: Dict[str, ServiceMeta] = {"RestRobotService": ServiceMeta("RestRobotService", "Robotí služba")}
+
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
 FOCUS_OBJECT_ROBOT: Dict[str, Tuple[str, str]] = {}  # object_id / robot, end_effector
@@ -219,6 +228,10 @@ async def _get_object_types() -> None:
 
 async def get_object_types_cb(req: GetObjectTypesRequest) -> GetObjectTypesResponse:
     return GetObjectTypesResponse(data=list(OBJECT_TYPES.values()))
+
+
+async def get_services_cb(req: GetServicesRequest) -> GetServicesResponse:
+    return GetServicesResponse(data=list(SERVICES.values()))
 
 
 async def save_scene_cb(req: SaveSceneRequest) -> Union[SaveSceneResponse, RPC_RETURN_TYPES]:
@@ -701,7 +714,8 @@ RPC_DICT: RPC_DICT_TYPE = {
     ListMeshesRequest: list_meshes_cb,
     FocusObjectRequest: focus_object_cb,
     FocusObjectStartRequest: focus_object_start_cb,
-    FocusObjectDoneRequest: focus_object_done_cb
+    FocusObjectDoneRequest: focus_object_done_cb,
+    GetServicesRequest: get_services_cb
 }
 
 # add Project Manager RPC API

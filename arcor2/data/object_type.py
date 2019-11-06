@@ -122,7 +122,7 @@ class ObjectTypeMeta(JsonSchemaMixin):
 
     type: str
     description: str = field(default_factory=str)
-    built_in: bool = False
+    built_in: bool = False  # TODO change to abstract
     base: str = field(default_factory=str)
     object_model: Optional[ObjectModel] = None
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Union
+from typing import List, Any, Iterator, Optional, Union, Set
 from enum import Enum
 
 from json import JSONEncoder
@@ -87,6 +87,7 @@ class ActionPoint(JsonSchemaMixin):
 
     id: str
     pose: Pose
+    parent_object_id: Optional[str] = None  # action point is relative to this object
 
 
 @dataclass
@@ -98,11 +99,18 @@ class SceneObject(JsonSchemaMixin):
 
 
 @dataclass
+class SceneService(JsonSchemaMixin):
+
+    type: str
+
+
+@dataclass
 class Scene(JsonSchemaMixin):
 
     id: str
     robot_system_id: str
     objects: List[SceneObject] = field(default_factory=list)
+    services: Set[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
 
 

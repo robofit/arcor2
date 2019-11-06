@@ -7,6 +7,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
+from arcor2.data.services import ServiceMeta
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -50,6 +51,26 @@ class RobotArg(JsonSchemaMixin):
 
     def as_tuple(self) -> Tuple[str, str]:
         return self.id, self.end_effector
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+Services
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+@dataclass
+class GetServicesRequest(Request):
+
+    request: str = field(default="getServices", init=False)
+
+
+@dataclass
+class GetServicesResponse(Response):
+
+    data: List[ServiceMeta] = field(default_factory=list)
+    response: str = field(default=GetServicesRequest.request, init=False)
 
 
 """
