@@ -1,5 +1,6 @@
 import abc
-from typing import Optional, Dict, Iterator
+from typing import Optional, Dict
+import time
 
 from arcor2.data.common import Pose, ActionPoint, ActionMetadata
 from arcor2.action import action
@@ -31,4 +32,11 @@ class Generic(metaclass=abc.ABCMeta):
     def nop(self) -> None:
         pass
 
+    @action
+    def sleep(self, seconds: float) -> None:
+        time.sleep(seconds)
+
+    # TODO more "general" actions like store_value, get_value, etc.
+
     nop.__action__ = ActionMetadata()  # type: ignore
+    sleep.__action__ = ActionMetadata(blocking=True)  # type: ignore

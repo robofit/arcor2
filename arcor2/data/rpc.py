@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction
+from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction, SceneObject, SceneService
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
 from arcor2.data.services import ServiceMeta
 
@@ -97,17 +97,17 @@ class GetObjectTypesResponse(Response):
 
 
 @dataclass
-class GetObjectActionsRequest(Request):
+class GetActionsRequest(Request):
 
     args: TypeArgs
-    request: str = field(default="getObjectActions", init=False)
+    request: str = field(default="getActions", init=False)
 
 
 @dataclass
-class GetObjectActionsResponse(Response):
+class GetActionsResponse(Response):
 
     data: ObjectActions = field(default_factory=list)
-    response: str = field(default=GetObjectActionsRequest.request, init=False)
+    response: str = field(default=GetActionsRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -245,6 +245,66 @@ class UpdateActionObjectPoseResponse(Response):
 Scene / project
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+
+@dataclass
+class AutoAddObjectToSceneRequest(Request):
+
+    args: TypeArgs
+    request: str = field(default="autoAddObjectToScene", init=False)
+
+
+@dataclass
+class AutoAddObjectToSceneResponse(Response):
+
+    response: str = field(default=AutoAddObjectToSceneRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class AddObjectToSceneRequest(Request):
+
+    args: SceneObject
+    request: str = field(default="addObjectToScene", init=False)
+
+
+@dataclass
+class AddObjectToSceneResponse(Response):
+
+    response: str = field(default=AddObjectToSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class AddServiceToSceneRequest(Request):
+
+    args: SceneService
+    request: str = field(default="addServiceToScene", init=False)
+
+
+@dataclass
+class AddServiceToSceneResponse(Response):
+
+    response: str = field(default=AddServiceToSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RemoveFromSceneRequest(Request):
+
+    args: IdArgs
+    request: str = field(default="removeFromScene", init=False)
+
+
+@dataclass
+class RemoveFromSceneResponse(Response):
+    response: str = field(default=RemoveFromSceneRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass

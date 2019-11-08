@@ -87,7 +87,6 @@ class ActionPoint(JsonSchemaMixin):
 
     id: str
     pose: Pose
-    parent_object_id: Optional[str] = None  # action point is relative to this object
 
 
 @dataclass
@@ -102,15 +101,15 @@ class SceneObject(JsonSchemaMixin):
 class SceneService(JsonSchemaMixin):
 
     type: str
+    configuration_id: str
 
 
 @dataclass
 class Scene(JsonSchemaMixin):
 
     id: str
-    robot_system_id: str
     objects: List[SceneObject] = field(default_factory=list)
-    services: Set[SceneService] = field(default_factory=list)
+    services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
 
 

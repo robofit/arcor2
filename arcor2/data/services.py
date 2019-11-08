@@ -1,17 +1,15 @@
-from typing import Optional, List, Dict, Union
-from enum import Enum
+from typing import Set
 
-from arcor2.data import DataException
-from arcor2.data.common import ActionMetadata, Pose, Position, ActionParameterTypeEnum
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
 @dataclass
-class ServiceMeta(JsonSchemaMixin):  # TODO ObjecTypeMeta could be probably derived from this
+class ServiceMeta(JsonSchemaMixin):
     """
     Metadata about object type, as it is used in server API.
     """
 
     type: str
     description: str = field(default_factory=str)
+    configuration_ids: Set[str] = field(default_factory=list)

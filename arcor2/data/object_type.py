@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Union
+from typing import Optional, List, Dict, Union, Set
 from enum import Enum
 
 from arcor2.data import DataException
@@ -122,9 +122,11 @@ class ObjectTypeMeta(JsonSchemaMixin):
 
     type: str
     description: str = field(default_factory=str)
-    built_in: bool = False  # TODO change to abstract
+    built_in: bool = False
     base: str = field(default_factory=str)
     object_model: Optional[ObjectModel] = None
+    needs_services: Set[str] = field(default_factory=set)
+    abstract: bool = False
 
     def to_object_type(self) -> ObjectType:
 

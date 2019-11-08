@@ -33,7 +33,7 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
         source = source_file.read()
 
         try:
-            check_object_type(source)
+            check_object_type(source, cls.__name__)
         except SourceException as e:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")

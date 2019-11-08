@@ -18,7 +18,7 @@ import arcor2.object_types
 from arcor2.object_types import Generic
 from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
-from arcor2.persistent_storage import convert_keys
+from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case
 
 

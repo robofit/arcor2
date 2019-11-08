@@ -7,7 +7,6 @@ import json
 import functools
 import sys
 from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast
-from types import ModuleType
 import uuid
 
 import websockets
@@ -15,25 +14,28 @@ from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 
 from arcor2.source.logic import program_src, get_logic_from_source
-from arcor2.source.object_types import object_type_meta, get_object_actions, new_object_type_source
+from arcor2.source.object_types import new_object_type_source
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
 from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, EVENT_DICT_TYPE
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
-    built_in_types_actions, add_ancestor_actions, get_built_in_type
-from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position
+    built_in_types_actions, add_ancestor_actions, get_built_in_type, meta_from_def, type_def_from_source, \
+    object_actions, ObjectTypeException, SERVICES_METHOD_NAME
+from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position, SceneObject, SceneService
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
     MeshFocusAction, ObjectModel
 from arcor2.data.services import ServiceMeta
-from arcor2.data.rpc import GetObjectActionsRequest, GetObjectTypesResponse, GetObjectTypesRequest, \
-    GetObjectActionsResponse, NewObjectTypeRequest, NewObjectTypeResponse, ListMeshesRequest, ListMeshesResponse, \
+from arcor2.data.rpc import GetActionsRequest, GetObjectTypesResponse, GetObjectTypesRequest, \
+    GetActionsResponse, NewObjectTypeRequest, NewObjectTypeResponse, ListMeshesRequest, ListMeshesResponse, \
     Request, Response, SaveSceneRequest, SaveSceneResponse, SaveProjectRequest, SaveProjectResponse, \
     OpenProjectRequest, OpenProjectResponse, UpdateActionPointPoseRequest, UpdateActionPointPoseResponse,\
     UpdateActionObjectPoseRequest, ListProjectsRequest, ListProjectsResponse, ListScenesRequest, ListScenesResponse,\
     FocusObjectStartRequest, FocusObjectStartResponse, FocusObjectRequest, FocusObjectResponse, \
     FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse, GetServicesRequest, \
-    GetServicesResponse
+    GetServicesResponse, AddObjectToSceneRequest, AddObjectToSceneResponse, AddServiceToSceneRequest, \
+    AddServiceToSceneResponse, RemoveFromSceneRequest, RemoveFromSceneResponse, AutoAddObjectToSceneRequest, \
+    AutoAddObjectToSceneResponse
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
@@ -42,9 +44,7 @@ from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_action_point
 from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import ActionPointNotFound, SceneObjectNotFound, Arcor2Exception
-
-# TODO remove - construct it from source code from Storage
-from arcor2_kinali.services.rest_robot_service import RestRobotService
+from arcor2.services import Service
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[Request]
@@ -67,10 +67,19 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 # TODO watch for changes (just clear on change)
 OBJECT_TYPES: ObjectTypeMetaDict = {}
-OBJECT_ACTIONS: ObjectActionsDict = {}  # TODO this will be used for actions of both object_types / services
 
+# TODO temporary hack --------------------------------------------------------------------------------------------------
+from arcor2_kinali.services import rest_robot_service
 # TODO remove initialization - read services from DB
-SERVICES: Dict[str, ServiceMeta] = {"RestRobotService": ServiceMeta("RestRobotService", "Robotí služba")}
+SERVICES: Dict[str, ServiceMeta] = {"RestRobotService":
+                                    ServiceMeta("RestRobotService",
+                                                "Robotí služba",
+                                                rest_robot_service.RestRobotService.get_configuration_ids())}
+# ----------------------------------------------------------------------------------------------------------------------
+SERVICES_INSTANCES: Dict[str, Service] = {}
+
+
+ACTIONS: ObjectActionsDict = {}  # TODO this will be used for actions of both object_types / services
 
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
@@ -199,8 +208,8 @@ async def _get_object_types() -> None:
     for obj_id in obj_ids.items:
         obj = await STORAGE_CLIENT.get_object_type(obj_id.id)
         try:
-            object_types[obj.id] = object_type_meta(obj.source)
-        except SourceException as e:
+            object_types[obj.id] = meta_from_def(type_def_from_source(obj.source, obj.id))
+        except ObjectTypeException as e:
             await logger.error(f"Ignoring object type {obj.id}: {e}")
             continue
 
@@ -294,9 +303,14 @@ async def open_project(project_id: str) -> bool:
         load_logic_failed = True
         await logger.error(e)
 
-    await update_scene_instances()
-    await notify_project_change_to_others()
-    await notify_scene_change_to_others()
+    for srv in SCENE.services:
+        await add_service_to_scene(srv)
+
+    for obj in SCENE.objects:
+        await add_object_to_scene(obj)
+
+    asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(notify_project_change_to_others())
 
     return not load_logic_failed
 
@@ -313,9 +327,9 @@ async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse,
 
 async def _get_object_actions() -> None:
 
-    global OBJECT_ACTIONS
+    global ACTIONS
 
-    object_actions: ObjectActionsDict = built_in_types_actions()
+    object_actions_dict: ObjectActionsDict = built_in_types_actions()
 
     for obj_type, obj in OBJECT_TYPES.items():
 
@@ -325,17 +339,27 @@ async def _get_object_actions() -> None:
         # db-stored (user-created) object types
         obj_db = await STORAGE_CLIENT.get_object_type(obj_type)
         try:
-            object_actions[obj_type] = get_object_actions(obj_db.source)
-        except SourceException as e:
+            object_actions_dict[obj_type] = object_actions(type_def_from_source(obj_db.source, obj_db.id))
+        except ObjectTypeException as e:
             await logger.error(e)
 
     # add actions from ancestors
     for obj_type in OBJECT_TYPES.keys():
-        add_ancestor_actions(obj_type, object_actions, OBJECT_TYPES)
+        add_ancestor_actions(obj_type, object_actions_dict, OBJECT_TYPES)
 
-    OBJECT_ACTIONS = object_actions
+    # get services' actions
+    for service_type, service_meta in SERVICES.items():
+        # TODO read services from storage
+        pass
 
-    await notify(ObjectTypesChangedEvent(data=list(object_actions.keys())))
+    # TODO temporary hack ----------------------------------------------------------------------------------------------
+    from arcor2_kinali.services.rest_robot_service import RestRobotService
+    object_actions_dict["RestRobotService"] = object_actions(RestRobotService)
+    # ------------------------------------------------------------------------------------------------------------------
+
+    ACTIONS = object_actions_dict
+
+    await notify(ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
 
 
 async def _check_manager() -> None:
@@ -347,10 +371,10 @@ async def _check_manager() -> None:
         await open_project(resp.data.id)
 
 
-async def get_object_actions_cb(req: GetObjectActionsRequest) -> Union[GetObjectActionsResponse, RPC_RETURN_TYPES]:
+async def get_object_actions_cb(req: GetActionsRequest) -> Union[GetActionsResponse, RPC_RETURN_TYPES]:
 
     try:
-        return GetObjectActionsResponse(data=OBJECT_ACTIONS[req.args.type])
+        return GetActionsResponse(data=ACTIONS[req.args.type])
     except KeyError:
         return False, f"Unknown object type: '{req.args.type}'."
 
@@ -402,7 +426,7 @@ async def update_action_point_cb(req: UpdateActionPointPoseRequest) -> Union[Upd
     except RobotPoseException as e:
         return False, str(e)
 
-    await notify_project_change_to_others()
+    asyncio.ensure_future(notify_project_change_to_others())
     return None
 
 
@@ -425,7 +449,7 @@ async def update_action_object_cb(req: UpdateActionObjectPoseRequest) -> Union[U
     except RobotPoseException as e:
         return False, str(e)
 
-    await notify_scene_change_to_others()
+    asyncio.ensure_future(notify_scene_change_to_others())
     return None
 
 
@@ -471,10 +495,10 @@ async def new_object_type_cb(req: NewObjectTypeRequest) -> Union[NewObjectTypeRe
     await STORAGE_CLIENT.update_object_type(obj)
 
     OBJECT_TYPES[meta.type] = meta
-    OBJECT_ACTIONS[meta.type] = get_object_actions(obj.source)
-    add_ancestor_actions(meta.type, OBJECT_ACTIONS, OBJECT_TYPES)
+    ACTIONS[meta.type] = object_actions(type_def_from_source(obj.source, obj.id))
+    add_ancestor_actions(meta.type, ACTIONS, OBJECT_TYPES)
 
-    await notify(ObjectTypesChangedEvent(data=[meta.type]))
+    asyncio.ensure_future(notify(ObjectTypesChangedEvent(data=[meta.type])))
     return None
 
 
@@ -611,7 +635,7 @@ async def focus_object_done_cb(req: FocusObjectDoneRequest) -> Union[FocusObject
 
     clean_up_after_focus(obj_id)
 
-    await notify_scene_change_to_others()
+    asyncio.ensure_future(notify_scene_change_to_others())
     return None
 
 
@@ -651,43 +675,203 @@ async def unregister(websocket) -> None:
     INTERFACES.remove(websocket)
 
 
-async def update_scene_instances() -> None:
+async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
 
-    scene_obj_ids: Set[str] = set()
+    if obj.type not in OBJECT_TYPES:
+        return False, "Unknown object type."
 
-    assert SCENE
+    obj_meta = OBJECT_TYPES[obj.type]
 
-    for obj in SCENE.objects:
+    if obj_meta.needs_services:
+        return False, "Service(s)-based object."
 
-        scene_obj_ids.add(obj.id)
+    if obj_meta.abstract:
+        return False, "Cannot instantiate abstract type."
 
-        if obj.id not in SCENE_OBJECT_INSTANCES:
+    if obj.id in SCENE_OBJECT_INSTANCES:
+        return False, "Object with that id already exists."
 
-            await logger.debug(f"Creating instance {obj.id} ({obj.type}).")
+    await logger.debug(f"Creating instance {obj.id} ({obj.type}).")
 
-            if obj.type in built_in_types_names():  # TODO is it ok to create instances of built-in object types?
-                cls = get_built_in_type(obj.type)
-            else:
-                obj_type = await STORAGE_CLIENT.get_object_type(obj.type)
-                mod = ModuleType('temp_module')
-                exec(obj_type.source, mod.__dict__)
-                cls = getattr(mod, obj.type)
+    try:
 
-            SCENE_OBJECT_INSTANCES[obj.id] = cls()  # TODO name, pose, etc.
+        if obj.type in built_in_types_names():
+            cls = get_built_in_type(obj.type)
+        else:
+            obj_type = await STORAGE_CLIENT.get_object_type(obj.type)
+            cls = type_def_from_source(obj_type.source, obj_type.id)
 
-    # delete instances which were deleted from the scene
-    for obj_id in set(SCENE_OBJECT_INSTANCES.keys()) - scene_obj_ids:
-        await logger.debug(f"Deleting {obj_id} instance.")
-        del SCENE_OBJECT_INSTANCES[obj_id]
+        SCENE_OBJECT_INSTANCES[obj.id] = cls(obj.id, obj.pose)
+        SCENE.objects.append(obj)
+
+    except Arcor2Exception as e:
+        await logger.error(e)
+        return False, "System error"
+
+    return True, "ok"
+
+
+async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
+
+    if obj_type_name not in OBJECT_TYPES:
+        return False, "Unknown object type."
+
+    obj_meta = OBJECT_TYPES[obj_type_name]
+
+    if not obj_meta.needs_services:
+        return False, "Ordinary object."
+
+    if obj_meta.abstract:
+        return False, "Cannot instantiate abstract type."
+
+    if not obj_meta.needs_services <= SERVICES.keys():
+        return False, "Some of required services is not available."
+
+    if not obj_meta.needs_services <= SERVICES_INSTANCES.keys():
+        return False, "Some of required services is not in the scene."
+
+    try:
+
+        obj_type = await STORAGE_CLIENT.get_object_type(obj_type_name)
+        cls = type_def_from_source(obj_type.source, obj_type.id)
+
+        args: List[Service] = []
+
+        for srv_name in obj_meta.needs_services:
+            args.append(SERVICES_INSTANCES[srv_name])
+
+        assert hasattr(cls, SERVICES_METHOD_NAME)
+        for obj_inst in cls.from_services(*args):
+
+            if obj_inst.name in SCENE_OBJECT_INSTANCES:
+                await logger.warning(f"Object id {obj_inst.name} already in scene.")
+                continue
+
+            SCENE_OBJECT_INSTANCES[obj_inst.name] = obj_inst
+            SCENE.objects.append(SceneObject(id=obj_inst.name, type=obj_type_name, pose=obj_inst.pose))
+
+    except Arcor2Exception as e:
+        await logger.error(e)
+        return False, "System error"
+
+    return True, "ok"
+
+
+async def add_object_to_scene_cb(req: AddObjectToSceneRequest) -> Union[AddObjectToSceneResponse, RPC_RETURN_TYPES]:
+
+    if not SCENE:
+        return False, "Scene not opened."
+
+    obj = req.args
+    res, msg = await add_object_to_scene(obj)
+
+    if not res:
+        return res, msg
+
+    asyncio.ensure_future(notify_scene_change_to_others())
+
+
+async def auto_add_object_to_scene_cb(req: AutoAddObjectToSceneRequest) -> Union[AutoAddObjectToSceneResponse, RPC_RETURN_TYPES]:
+
+    if not SCENE:
+        return False, "Scene not opened."
+
+    obj = req.args
+    res, msg = await auto_add_object_to_scene(obj.type)
+
+    if not res:
+        return res, msg
+
+    asyncio.ensure_future(notify_scene_change_to_others())
+
+
+async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
+
+    if not SCENE:
+        return False, "Scene not opened."
+
+    if srv.type not in SERVICES:
+        return False, "Unknown service type."
+
+    if srv.type in SCENE_OBJECT_INSTANCES:
+        return False, "Service already in scene."
+
+    # TODO hack
+    try:
+        SERVICES_INSTANCES[srv.type] = rest_robot_service.RestRobotService(srv.configuration_id)
+    except Arcor2Exception as e:
+        await logger.error(e)
+        return False, "System error"
+
+    return True, "ok"
+
+
+async def add_service_to_scene_cb(req: AddServiceToSceneRequest) -> Union[AddServiceToSceneResponse, RPC_RETURN_TYPES]:
+
+    srv = req.args
+    res, msg = await add_service_to_scene(srv)
+
+    if not res:
+        return res, msg
+
+    SCENE.services.append(srv)
+    asyncio.ensure_future(notify_scene_change_to_others())
+
+
+async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromSceneResponse, RPC_RETURN_TYPES]:
+
+    if req.args.id in SCENE_OBJECT_INSTANCES:
+
+        for obj in SCENE.objects:
+            if obj.id == req.args.id:
+                obj_to_delete = obj
+                break
+        else:
+            return False, "Inconsistency!"
+
+        SCENE.objects.remove(obj_to_delete)
+        del SCENE_OBJECT_INSTANCES[req.args.id]
+
+    elif req.args.id in SERVICES_INSTANCES:
+
+        # first check if some object is not using it
+        for obj in SCENE.objects:
+            if req.args.id in OBJECT_TYPES[obj.type].needs_services:
+                return False, f"Object {obj.id} ({obj.type}) relies on the service to be removed: {req.args.id}."
+
+        for srv in SCENE.services:
+            if srv.type == req.args.id:
+                srv_to_delete = srv
+                break
+        else:
+            return False, "Inconsistency!"
+
+        SCENE.services.remove(srv_to_delete)
+        del SERVICES_INSTANCES[req.args.id]
+
+    else:
+        return False, "Unknown id."
+
+    asyncio.ensure_future(notify_scene_change_to_others())
 
 
 async def scene_change(ui, event: SceneChangedEvent) -> None:
 
     global SCENE
 
-    SCENE = event.data
+    for srv in event.data.services:
+        if srv.type not in SERVICES_INSTANCES:
+            await notify_scene(ui)
+            await logger.warning("Ignoring scene changes: service added.")
+            return
 
-    await update_scene_instances()
+    for obj in event.data.objects:
+        if obj.id not in SCENE_OBJECT_INSTANCES:
+            await notify_scene(ui)
+            await logger.warning("Ignoring scene changes: object added.")
+            return
+
+    SCENE = event.data
     await notify_scene_change_to_others(ui)
 
 
@@ -702,7 +886,7 @@ async def project_change(ui, event: ProjectChangedEvent) -> None:
 
 RPC_DICT: RPC_DICT_TYPE = {
     GetObjectTypesRequest: get_object_types_cb,
-    GetObjectActionsRequest: get_object_actions_cb,
+    GetActionsRequest: get_object_actions_cb,
     SaveProjectRequest: save_project_cb,
     SaveSceneRequest: save_scene_cb,
     UpdateActionPointPoseRequest: update_action_point_cb,
@@ -715,7 +899,11 @@ RPC_DICT: RPC_DICT_TYPE = {
     FocusObjectRequest: focus_object_cb,
     FocusObjectStartRequest: focus_object_start_cb,
     FocusObjectDoneRequest: focus_object_done_cb,
-    GetServicesRequest: get_services_cb
+    GetServicesRequest: get_services_cb,
+    AddObjectToSceneRequest: add_object_to_scene_cb,
+    AutoAddObjectToSceneRequest: auto_add_object_to_scene_cb,
+    AddServiceToSceneRequest: add_service_to_scene_cb,
+    RemoveFromSceneRequest: remove_from_scene_cb
 }
 
 # add Project Manager RPC API
