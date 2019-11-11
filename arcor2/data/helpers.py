@@ -26,7 +26,6 @@ assert _requests.keys() == _responses.keys()
 for k, v in _requests.items():
     RPC_MAPPING[k] = (v, _responses[k])
 
-
 EVENT_MAPPING: Dict[str, Type[Event]] = {}
 
 for name, obj in inspect.getmembers(arcor2.data.events):

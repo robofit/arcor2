@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import List, Optional, Tuple
+import re
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -8,6 +9,17 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction, SceneObject, SceneService
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
 from arcor2.data.services import ServiceMeta
+
+"""
+mypy does not recognize __qualname__ so far: https://github.com/python/mypy/issues/6473
+flake8 sucks here as well: https://bugs.launchpad.net/pyflakes/+bug/1648651
+TODO: remove type: ignore once it is fixed
+"""
+
+
+def wo_suffix(name: str) -> str:
+    return re.sub('Request$', '', name)
+
 
 """
 ------------------------------------------------------------------------------------------------------------------------
@@ -63,7 +75,7 @@ Services
 @dataclass
 class GetServicesRequest(Request):
 
-    request: str = field(default="getServices", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -83,7 +95,7 @@ Objects
 @dataclass
 class GetObjectTypesRequest(Request):
 
-    request: str = field(default="getObjectTypes", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -100,7 +112,7 @@ class GetObjectTypesResponse(Response):
 class GetActionsRequest(Request):
 
     args: TypeArgs
-    request: str = field(default="getActions", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -117,7 +129,7 @@ class GetActionsResponse(Response):
 class NewObjectTypeRequest(Request):
 
     args: ObjectTypeMeta
-    request: str = field(default="newObjectType", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -140,7 +152,7 @@ class FocusObjectStartRequestArgs(JsonSchemaMixin):
 class FocusObjectStartRequest(Request):
 
     args: FocusObjectStartRequestArgs
-    request: str = field(default="focusObjectStart", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -163,7 +175,7 @@ class FocusObjectRequestArgs(JsonSchemaMixin):
 class FocusObjectRequest(Request):
 
     args: FocusObjectRequestArgs
-    request: str = field(default="focusObject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -186,7 +198,7 @@ class FocusObjectResponse(Response):
 class FocusObjectDoneRequest(Request):
 
     args: IdArgs
-    request: str = field(default="focusObjectDone", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -209,7 +221,7 @@ class UpdateActionPointPoseRequestArgs(IdArgs):
 class UpdateActionPointPoseRequest(Request):
 
     args: UpdateActionPointPoseRequestArgs
-    request: str = field(default="focusObjectDone", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -231,7 +243,7 @@ class UpdateActionObjectPoseRequestArgs(IdArgs):
 class UpdateActionObjectPoseRequest(Request):
 
     args: UpdateActionObjectPoseRequestArgs
-    request: str = field(default="updateActionObjectPose", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -251,7 +263,7 @@ Scene / project
 class AutoAddObjectToSceneRequest(Request):
 
     args: TypeArgs
-    request: str = field(default="autoAddObjectToScene", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -266,7 +278,7 @@ class AutoAddObjectToSceneResponse(Response):
 class AddObjectToSceneRequest(Request):
 
     args: SceneObject
-    request: str = field(default="addObjectToScene", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -281,7 +293,7 @@ class AddObjectToSceneResponse(Response):
 class AddServiceToSceneRequest(Request):
 
     args: SceneService
-    request: str = field(default="addServiceToScene", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -296,7 +308,7 @@ class AddServiceToSceneResponse(Response):
 class RemoveFromSceneRequest(Request):
 
     args: IdArgs
-    request: str = field(default="removeFromScene", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -310,7 +322,7 @@ class RemoveFromSceneResponse(Response):
 @dataclass
 class SaveSceneRequest(Request):
 
-    request: str = field(default="saveScene", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -325,7 +337,7 @@ class SaveSceneResponse(Response):
 @dataclass
 class SaveProjectRequest(Request):
 
-    request: str = field(default="saveProject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -341,7 +353,7 @@ class SaveProjectResponse(Response):
 class OpenProjectRequest(Request):
 
     args: IdArgs
-    request: str = field(default="openProject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -356,7 +368,7 @@ class OpenProjectResponse(Response):
 @dataclass
 class ListProjectsRequest(Request):
 
-    request: str = field(default="listProjects", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -372,7 +384,7 @@ class ListProjectsResponse(Response):
 @dataclass
 class ListScenesRequest(Request):
 
-    request: str = field(default="listScenes", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -389,7 +401,7 @@ class ListScenesResponse(Response):
 class RunProjectRequest(Request):
 
     args: IdArgs
-    request: str = field(default="runProject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -404,7 +416,7 @@ class RunProjectResponse(Response):
 @dataclass
 class StopProjectRequest(Request):
 
-    request: str = field(default="stopProject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -419,7 +431,7 @@ class StopProjectResponse(Response):
 @dataclass
 class PauseProjectRequest(Request):
 
-    request: str = field(default="pauseProject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -433,7 +445,7 @@ class PauseProjectResponse(Response):
 @dataclass
 class ProjectStateRequest(Request):
 
-    request: str = field(default="projectState", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -458,7 +470,7 @@ class ProjectStateResponse(Response):
 @dataclass
 class ResumeProjectRequest(Request):
 
-    request: str = field(default="resumeProject", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
@@ -480,7 +492,7 @@ Storage / data
 @dataclass
 class ListMeshesRequest(Request):
 
-    request: str = field(default="listMeshes", init=False)
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass

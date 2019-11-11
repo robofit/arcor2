@@ -381,7 +381,7 @@ async def _get_object_actions() -> None:
 async def _check_manager() -> None:
 
     # TODO avoid cast
-    resp = cast(ProjectStateResponse, await manager_request(ProjectStateRequest(id=uuid.uuid4().int)))
+    resp = cast(ProjectStateResponse, await manager_request(ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
         await open_project(resp.data.id)
@@ -698,7 +698,7 @@ async def register(websocket) -> None:
     await notify_project(websocket)
 
     # TODO avoid cast
-    resp = cast(ProjectStateResponse, await manager_request(ProjectStateRequest(id=uuid.uuid4().int)))
+    resp = cast(ProjectStateResponse, await manager_request(ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     await asyncio.wait([websocket.send(ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
