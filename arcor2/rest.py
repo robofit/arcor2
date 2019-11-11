@@ -41,11 +41,15 @@ def handle_response(resp: requests.Response) -> None:
     except requests.exceptions.RequestException as e:
         print(e)
         raise RestException(f"Status code: {resp.status_code}, "
-                                         f"body: {json.loads(resp.content)}.")
+                            f"body: {json.loads(resp.content)}.")
 
 
-def _send(url: str, data: JsonSchemaMixin, op: Callable) -> None:
-    d = convert_keys(data.to_dict(), snake_case_to_camel_case)
+def _send(url: str, op: Callable, data: Optional[JsonSchemaMixin] = None) -> None:
+
+    if data:
+        d = convert_keys(data.to_dict(), snake_case_to_camel_case)
+    else:
+        d = {}
 
     try:
         resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'})
@@ -57,11 +61,11 @@ def _send(url: str, data: JsonSchemaMixin, op: Callable) -> None:
 
 
 def post(url: str, data: JsonSchemaMixin):
-    _send(url, data, op=requests.post)
+    _send(url, requests.post, data)
 
 
-def put(url: str, data: Optional[JsonSchemaMixin]=None):
-    _send(url, data, op=requests.put)
+def put(url: str, data: Optional[JsonSchemaMixin] = None):
+    _send(url, requests.put, data)
 
 
 def get_data(url: str) -> Union[Dict, List]:

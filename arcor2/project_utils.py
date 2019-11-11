@@ -45,11 +45,11 @@ def clear_project_logic(project: Project) -> None:
                 action.outputs.clear()
 
 
-def get_action_point(project: Project, ap_id: str) -> ActionPoint:  # TODO cache it somehow?
+def get_object_ap(project: Project, ap_id: str) -> Tuple[ProjectObject, ActionPoint]:
 
     for obj in project.objects:
         for ap in obj.action_points:
             if ap.id == ap_id:
-                return ap
+                return obj, ap
 
     raise ActionPointNotFound

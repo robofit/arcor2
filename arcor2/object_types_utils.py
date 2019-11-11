@@ -1,6 +1,6 @@
 import copy
 import inspect
-from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union, Callable, List
+from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
 from types import ModuleType
 
 from undecorated import undecorated  # type: ignore

@@ -19,7 +19,7 @@ from arcor2.object_types import Generic
 from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
-from arcor2.helpers import camel_case_to_snake_case
+from arcor2.helpers import camel_case_to_snake_case, make_pose_abs
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -65,7 +65,9 @@ class IntResources:
         for project_obj in self.project.objects:
 
             for aps in project_obj.action_points:
-                self.objects[project_obj.id].add_action_point(aps.id, aps.pose)
+                # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
+                abs_pose = make_pose_abs(self.objects[project_obj.id].pose, aps.pose)
+                self.objects[project_obj.id].add_action_point(aps.id, abs_pose)
 
     @staticmethod
     def print_info(action_id: str, args: ARGS_DICT) -> None:
@@ -86,8 +88,6 @@ class IntResources:
 
     def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
 
-        # TODO action point pose should be relative to its parent object pose - how and where to get the absolute pose?
-        # ...temporarily, simply return action point as it is
         try:
             return self.objects[object_id].action_points[ap_id]
         except KeyError:

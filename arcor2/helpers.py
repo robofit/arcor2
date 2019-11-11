@@ -15,6 +15,7 @@ from arcor2.data.rpc import Request
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
+from arcor2.data.common import Pose
 
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')
@@ -165,3 +166,43 @@ def print_exception(e: Exception) -> None:
                                                                isinstance(e, Arcor2Exception)))
     print(pee.to_json())
     sys.stdout.flush()
+
+
+async def run_in_executor(func, *args):
+    return await asyncio.get_event_loop().run_in_executor(None, func, *args)
+
+
+def make_pose_rel(parent: Pose, child: Pose) -> Pose:
+    """
+    :param parent: e.g. scene object
+    :param child:  e.g. action point
+    :return: relative pose
+    """
+
+    p = Pose()
+
+    p.position.x = child.position.x - parent.position.x
+    p.position.y = child.position.y - parent.position.y
+    p.position.z = child.position.z - parent.position.z
+
+    p.orientation.set_from_quaternion(child.orientation.as_quaternion()/parent.orientation.as_quaternion())
+
+    return p
+
+
+def make_pose_abs(parent: Pose, child: Pose) -> Pose:
+    """
+    :param parent: e.g. scene object
+    :param child:  e.g. action point
+    :return: absolute pose
+    """
+
+    p = Pose()
+
+    p.position.x = child.position.x + parent.position.x
+    p.position.y = child.position.y + parent.position.y
+    p.position.z = child.position.z + parent.position.z
+
+    p.orientation.set_from_quaternion(child.orientation.as_quaternion()*parent.orientation.as_quaternion())
+
+    return p

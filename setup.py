@@ -19,7 +19,6 @@ setup(
     author_email='imaterna@fit.vutbr.cz',
     description='',
     install_requires=[
-        'pymongo',
         'dataclasses',
         'horast',
         'typed_ast',
@@ -28,7 +27,6 @@ setup(
         'static_typing',
         'websockets',
         'aiologger',
-        'motor',
         'aiofiles',
         'undecorated',
         'dataclasses-jsonschema[fast-validation]',
@@ -36,7 +34,8 @@ setup(
         'apispec',
         'apispec_webframeworks',
         'flask',
-        'requests'
+        'requests',
+        'numpy-quaternion'
     ],
     tests_require=[
         'websocket'

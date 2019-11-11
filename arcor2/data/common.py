@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Union, Set
+from typing import List, Any, Iterator, Optional, Union
 from enum import Enum
 
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
-# latest release (with to_dict()) not yet available through pip, install it from git!
+import numpy as np  # type: ignore
+import quaternion  # type: ignore
+
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
@@ -52,25 +54,37 @@ class IterableIndexable(JsonSchemaMixin):
 @dataclass
 class Position(IterableIndexable):
 
-    x: float
-    y: float
-    z: float
+    x: float = 0
+    y: float = 0
+    z: float = 0
 
 
 @dataclass
 class Orientation(IterableIndexable):
 
-    x: float
-    y: float
-    z: float
-    w: float
+    x: float = 0
+    y: float = 0
+    z: float = 0
+    w: float = 1.0
+
+    def as_quaternion(self) -> quaternion.quaternion:
+
+        return np.quaternion(self.x, self.y, self.z, self.w)
+
+    def set_from_quaternion(self, q: quaternion.quaternion) -> None:
+
+        arr = quaternion.as_float_array(q)
+        self.x = arr[0]
+        self.y = arr[1]
+        self.z = arr[2]
+        self.w = arr[3]
 
 
 @dataclass
 class Pose(JsonSchemaMixin):
 
-    position: Position
-    orientation: Orientation
+    position: Position = field(default_factory=Position)
+    orientation: Orientation = field(default_factory=Orientation)
 
 
 @dataclass

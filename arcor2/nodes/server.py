@@ -18,7 +18,8 @@ from arcor2.source.object_types import new_object_type_source
 from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
-from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, EVENT_DICT_TYPE
+from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, EVENT_DICT_TYPE, \
+    run_in_executor, make_pose_rel
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type, meta_from_def, type_def_from_source, \
     object_actions, ObjectTypeException, SERVICES_METHOD_NAME
@@ -41,10 +42,10 @@ from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, Ob
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.persistent_storage import AioPersistentStorage
 from arcor2.object_types import Generic, Robot
-from arcor2.project_utils import get_action_point
+from arcor2.project_utils import get_object_ap
 from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import ActionPointNotFound, SceneObjectNotFound, Arcor2Exception
-from arcor2.services import Service
+from arcor2.services import Service, RobotService
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[Request]
@@ -79,7 +80,7 @@ SERVICES: Dict[str, ServiceMeta] = {"RestRobotService":
 SERVICES_INSTANCES: Dict[str, Service] = {}
 
 
-ACTIONS: ObjectActionsDict = {}  # TODO this will be used for actions of both object_types / services
+ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / services
 
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
@@ -90,6 +91,24 @@ STORAGE_CLIENT = AioPersistentStorage()
 
 class RobotPoseException(Arcor2Exception):
     pass
+
+
+def scene_needed(coro):
+    @functools.wraps(coro)
+    async def async_wrapper(*args, **kwargs):
+
+        if SCENE is None or not SCENE.id:
+            return False, "Scene not opened or has invalid id."
+        return await coro(*args, **kwargs)
+
+
+def project_needed(coro):
+    @functools.wraps(coro)
+    async def async_wrapper(*args, **kwargs):
+
+        if PROJECT is None or not PROJECT.id:
+            return False, "Project not opened or has invalid id."
+        return await coro(*args, **kwargs)
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -243,22 +262,19 @@ async def get_services_cb(req: GetServicesRequest) -> GetServicesResponse:
     return GetServicesResponse(data=list(SERVICES.values()))
 
 
+@scene_needed
 async def save_scene_cb(req: SaveSceneRequest) -> Union[SaveSceneResponse, RPC_RETURN_TYPES]:
 
-    if SCENE is None or not SCENE.id:
-        return False, "Scene not opened or invalid."
-
+    assert SCENE
     await STORAGE_CLIENT.update_scene(SCENE)
     return None
 
 
+@scene_needed
+@project_needed
 async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse, RPC_RETURN_TYPES]:
 
-    if PROJECT is None or not PROJECT.id:
-        return False, "Project not opened or invalid."
-
-    if SCENE is None or not SCENE.id:
-        return False, "Scene not opened or invalid."
+    assert SCENE and PROJECT
 
     action_names = []
 
@@ -391,50 +407,74 @@ async def manager_request(req: Request) -> Response:
     return resp
 
 
-async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:  # TODO should be ordinary action?
+async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
+    """
+    :param robot_id:
+    :param end_effector:
+    :return: Global pose
+    """
 
-    try:
+    if robot_id in SCENE_OBJECT_INSTANCES:
+
         robot = SCENE_OBJECT_INSTANCES[robot_id]
-    except KeyError:
-        raise RobotPoseException("Unknown robot.")
 
-    if not isinstance(robot, Robot):
-        raise RobotPoseException(f"Object {robot_id} is not instance of Robot!")
+        if not isinstance(robot, Robot):
+            raise RobotPoseException(f"Object {robot_id} is not instance of Robot!")
 
-    # TODO validate end-effector
+        if end_effector not in await run_in_executor(robot.get_end_effectors_ids):
+            raise RobotPoseException(f"Unknown end effector.")
 
-    # TODO transform pose from robot somehow
-    try:
-        return await asyncio.get_event_loop().run_in_executor(None, robot.get_pose, end_effector)
-    except NotImplementedError:
-        raise RobotPoseException("The robot does not support getting pose.")
+        try:
+            return await run_in_executor(robot.get_end_effector_pose, end_effector)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting pose.")
+
+    else:
+
+        for service in SERVICES_INSTANCES.values():
+            if isinstance(service, RobotService) and robot_id in await run_in_executor(service.get_robot_ids):
+                robot_service = service
+                break
+        else:
+            raise RobotPoseException("Robot ID invalid or robot service not available.")
+
+        if end_effector not in run_in_executor(robot_service.get_end_effectors_ids, robot_id):
+            raise RobotPoseException(f"Unknown end effector.")
+
+        try:
+            return await run_in_executor(robot_service.get_end_effector_pose, robot_id, end_effector)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting pose.")
 
 
+@scene_needed
+@project_needed
 async def update_action_point_cb(req: UpdateActionPointPoseRequest) -> Union[UpdateActionPointPoseResponse,
                                                                              RPC_RETURN_TYPES]:
 
-    if not (SCENE and PROJECT and SCENE.id and PROJECT.id):  # TODO use decorator for this
-        return False, "Scene/project has to be loaded first."
+    assert SCENE and PROJECT
 
     try:
-        ap = get_action_point(PROJECT, req.args.id)
+        proj_obj, ap = get_object_ap(PROJECT, req.args.id)
     except ActionPointNotFound:
         return False, "Invalid action point."
 
     try:
-        ap.pose = await get_end_effector_pose(req.args.robot.id, req.args.robot.end_effector)
+        new_pose = await get_end_effector_pose(req.args.robot.id, req.args.robot.end_effector)
     except RobotPoseException as e:
         return False, str(e)
+
+    ap.pose = make_pose_rel(SCENE_OBJECT_INSTANCES[proj_obj.id].pose, new_pose)
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
 
 
+@scene_needed
 async def update_action_object_cb(req: UpdateActionObjectPoseRequest) -> Union[UpdateActionObjectPoseRequest,
                                                                                RPC_RETURN_TYPES]:
 
-    if not (SCENE and SCENE.id):
-        return False, "Scene has to be loaded first."
+    assert SCENE
 
     if req.args.id == req.args.robot.id:
         return False, "Robot cannot update its own pose."
@@ -502,14 +542,11 @@ async def new_object_type_cb(req: NewObjectTypeRequest) -> Union[NewObjectTypeRe
     return None
 
 
+@scene_needed
 async def focus_object_start_cb(req: FocusObjectStartRequest) -> Union[FocusObjectStartResponse, RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
     global FOCUS_OBJECT_ROBOT
-
-    # TODO decorator to check if scene is loaded
-    if not SCENE or not SCENE.id:
-        return False, "Scene not loaded."
 
     obj_id = req.args.object_id
 
@@ -626,7 +663,7 @@ async def focus_object_done_cb(req: FocusObjectDoneRequest) -> Union[FocusObject
     await logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
 
     try:
-        obj.pose = await asyncio.get_event_loop().run_in_executor(None, robot_inst.focus, mfa)
+        obj.pose = await run_in_executor(robot_inst.focus, mfa)
     except NotImplementedError:  # TODO it is too late to realize it here!
         clean_up_after_focus(obj_id)
         return False, "The robot does not support focussing."
@@ -675,7 +712,10 @@ async def unregister(websocket) -> None:
     INTERFACES.remove(websocket)
 
 
+@scene_needed
 async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
+
+    assert SCENE
 
     if obj.type not in OBJECT_TYPES:
         return False, "Unknown object type."
@@ -711,7 +751,10 @@ async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
     return True, "ok"
 
 
+@scene_needed
 async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
+
+    assert SCENE
 
     if obj_type_name not in OBJECT_TYPES:
         return False, "Unknown object type."
@@ -757,10 +800,8 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
     return True, "ok"
 
 
+@scene_needed
 async def add_object_to_scene_cb(req: AddObjectToSceneRequest) -> Union[AddObjectToSceneResponse, RPC_RETURN_TYPES]:
-
-    if not SCENE:
-        return False, "Scene not opened."
 
     obj = req.args
     res, msg = await add_object_to_scene(obj)
@@ -769,12 +810,12 @@ async def add_object_to_scene_cb(req: AddObjectToSceneRequest) -> Union[AddObjec
         return res, msg
 
     asyncio.ensure_future(notify_scene_change_to_others())
+    return None
 
 
-async def auto_add_object_to_scene_cb(req: AutoAddObjectToSceneRequest) -> Union[AutoAddObjectToSceneResponse, RPC_RETURN_TYPES]:
-
-    if not SCENE:
-        return False, "Scene not opened."
+@scene_needed
+async def auto_add_object_to_scene_cb(req: AutoAddObjectToSceneRequest) -> Union[AutoAddObjectToSceneResponse,
+                                                                                 RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await auto_add_object_to_scene(obj.type)
@@ -783,12 +824,11 @@ async def auto_add_object_to_scene_cb(req: AutoAddObjectToSceneRequest) -> Union
         return res, msg
 
     asyncio.ensure_future(notify_scene_change_to_others())
+    return None
 
 
+@scene_needed
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
-
-    if not SCENE:
-        return False, "Scene not opened."
 
     if srv.type not in SERVICES:
         return False, "Unknown service type."
@@ -806,7 +846,10 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
     return True, "ok"
 
 
+@scene_needed
 async def add_service_to_scene_cb(req: AddServiceToSceneRequest) -> Union[AddServiceToSceneResponse, RPC_RETURN_TYPES]:
+
+    assert SCENE
 
     srv = req.args
     res, msg = await add_service_to_scene(srv)
@@ -816,9 +859,13 @@ async def add_service_to_scene_cb(req: AddServiceToSceneRequest) -> Union[AddSer
 
     SCENE.services.append(srv)
     asyncio.ensure_future(notify_scene_change_to_others())
+    return None
 
 
+@scene_needed
 async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromSceneResponse, RPC_RETURN_TYPES]:
+
+    assert SCENE
 
     if req.args.id in SCENE_OBJECT_INSTANCES:
 
@@ -853,23 +900,26 @@ async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromS
         return False, "Unknown id."
 
     asyncio.ensure_future(notify_scene_change_to_others())
+    return None
 
 
 async def scene_change(ui, event: SceneChangedEvent) -> None:
 
     global SCENE
 
-    for srv in event.data.services:
-        if srv.type not in SERVICES_INSTANCES:
-            await notify_scene(ui)
-            await logger.warning("Ignoring scene changes: service added.")
-            return
+    if event.data:
+        for srv in event.data.services:
+            if srv.type not in SERVICES_INSTANCES:
+                await notify_scene(ui)
+                await logger.warning("Ignoring scene changes: service added.")
+                return
 
-    for obj in event.data.objects:
-        if obj.id not in SCENE_OBJECT_INSTANCES:
-            await notify_scene(ui)
-            await logger.warning("Ignoring scene changes: object added.")
-            return
+        # TODO don't allow change of pose for service-based objects
+        for obj in event.data.objects:
+            if obj.id not in SCENE_OBJECT_INSTANCES:
+                await notify_scene(ui)
+                await logger.warning("Ignoring scene changes: object added.")
+                return
 
     SCENE = event.data
     await notify_scene_change_to_others(ui)

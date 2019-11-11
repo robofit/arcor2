@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Dict
+from typing import Dict
 import time
 
 from arcor2.data.common import Pose, ActionPoint, ActionMetadata
@@ -10,14 +10,9 @@ class Generic(metaclass=abc.ABCMeta):
 
     __DESCRIPTION__ = "Generic object"
 
-    def __init__(self, name: Optional[str] = None,
-                 pose: Optional[Pose] = None) -> None:
+    def __init__(self, name: str, pose: Pose) -> None:
 
-        if name is None:
-            self.name = type(self).__name__
-        else:
-            self.name = name
-
+        self.name = name
         self.pose = pose
         self.action_points: Dict[str, ActionPoint] = {}
 

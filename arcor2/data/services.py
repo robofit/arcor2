@@ -12,4 +12,4 @@ class ServiceMeta(JsonSchemaMixin):
 
     type: str
     description: str = field(default_factory=str)
-    configuration_ids: Set[str] = field(default_factory=list)
+    configuration_ids: Set[str] = field(default_factory=set)

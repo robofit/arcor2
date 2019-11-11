@@ -1,9 +1,9 @@
 import os
-import asyncio
 
 from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
 from arcor2.data.object_type import ObjectType, Models, MODEL_MAPPING, ModelTypeEnum, Mesh, MeshList
 from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import run_in_executor
 from arcor2 import rest
 
 URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://127.0.0.1:11000")
@@ -76,9 +76,6 @@ class PersistentStorage:
         rest.post(f"{URL}/object_type", object_type)
 
 
-loop = asyncio.get_event_loop()
-
-
 class AioPersistentStorage:
 
     def __init__(self) -> None:
@@ -86,49 +83,49 @@ class AioPersistentStorage:
         self._cl = PersistentStorage()
 
     async def publish_project(self, project_id: str, path: str) -> None:
-        return await loop.run_in_executor(None, self._cl.publish_project, project_id, path)
+        return await run_in_executor(self._cl.publish_project, project_id, path)
 
     async def get_mesh(self, mesh_id: str) -> Mesh:
-        return await loop.run_in_executor(None, self._cl.get_mesh, mesh_id)
+        return await run_in_executor(self._cl.get_mesh, mesh_id)
 
     async def get_meshes(self) -> MeshList:
-        return await loop.run_in_executor(None, self._cl.get_meshes)
+        return await run_in_executor(self._cl.get_meshes)
 
     async def get_model(self, model_id: str, model_type: ModelTypeEnum) -> Models:
-        return await loop.run_in_executor(None, self._cl.get_model, model_id, model_type)
+        return await run_in_executor(self._cl.get_model, model_id, model_type)
 
     async def put_model(self, model: Models) -> None:
-        await loop.run_in_executor(None, self._cl.put_model, model)
+        await run_in_executor(self._cl.put_model, model)
 
     async def get_projects(self) -> IdDescList:
-        return await loop.run_in_executor(None, self._cl.get_projects)
+        return await run_in_executor(self._cl.get_projects)
 
     async def get_scenes(self) -> IdDescList:
-        return await loop.run_in_executor(None, self._cl.get_scenes)
+        return await run_in_executor(self._cl.get_scenes)
 
     async def get_project(self, project_id: str) -> Project:
-        return await loop.run_in_executor(None, self._cl.get_project, project_id)
+        return await run_in_executor(self._cl.get_project, project_id)
 
     async def get_project_sources(self, project_id: str) -> ProjectSources:
-        return await loop.run_in_executor(None, self._cl.get_project_sources, project_id)
+        return await run_in_executor(self._cl.get_project_sources, project_id)
 
     async def get_scene(self, scene_id: str) -> Scene:
-        return await loop.run_in_executor(None, self._cl.get_scene, scene_id)
+        return await run_in_executor(self._cl.get_scene, scene_id)
 
     async def get_object_type(self, object_type_id: str) -> ObjectType:
-        return await loop.run_in_executor(None, self._cl.get_object_type, object_type_id)
+        return await run_in_executor(self._cl.get_object_type, object_type_id)
 
     async def get_object_type_ids(self) -> IdDescList:
-        return await loop.run_in_executor(None, self._cl.get_object_type_ids)
+        return await run_in_executor(self._cl.get_object_type_ids)
 
     async def update_project(self, project: Project) -> None:
-        await loop.run_in_executor(None, self._cl.update_project, project)
+        await run_in_executor(self._cl.update_project, project)
 
     async def update_scene(self, scene: Scene) -> None:
-        await loop.run_in_executor(None, self._cl.update_scene, scene)
+        await run_in_executor(self._cl.update_scene, scene)
 
     async def update_project_sources(self, project_sources: ProjectSources) -> None:
-        await loop.run_in_executor(None, self._cl.update_project_sources, project_sources)
+        await run_in_executor(self._cl.update_project_sources, project_sources)
 
     async def update_object_type(self, object_type: ObjectType) -> None:
-        await loop.run_in_executor(None, self._cl.update_object_type, object_type)
+        await run_in_executor(self._cl.update_object_type, object_type)
