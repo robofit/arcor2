@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 import re
 
 from dataclasses import dataclass, field
@@ -257,6 +257,30 @@ class UpdateActionObjectPoseResponse(Response):
 Scene / project
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+
+@dataclass
+class SceneObjectUsageRequestArgs(JsonSchemaMixin):
+
+    scene_id: str
+    id: str  # could be object or service
+
+
+@dataclass
+class SceneObjectUsageRequest(Request):
+
+    args: SceneObjectUsageRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class SceneObjectUsageResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=SceneObjectUsageRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass

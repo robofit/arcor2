@@ -36,7 +36,7 @@ from arcor2.data.rpc import GetActionsRequest, GetObjectTypesResponse, GetObject
     FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse, GetServicesRequest, \
     GetServicesResponse, AddObjectToSceneRequest, AddObjectToSceneResponse, AddServiceToSceneRequest, \
     AddServiceToSceneResponse, RemoveFromSceneRequest, RemoveFromSceneResponse, AutoAddObjectToSceneRequest, \
-    AutoAddObjectToSceneResponse
+    AutoAddObjectToSceneResponse, SceneObjectUsageRequest, SceneObjectUsageResponse
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
@@ -862,10 +862,72 @@ async def add_service_to_scene_cb(req: AddServiceToSceneRequest) -> Union[AddSer
     return None
 
 
+def _check_project_for_usage_of_object(scene_id: str, project: Project, obj_id: str) -> bool:
+    """
+
+    :param scene_id:
+    :param project:
+    :param obj_id: Could be object or service.
+    :return:
+    """
+
+    if project.scene_id != scene_id:
+        return False
+
+    for obj in project.objects:
+
+        if obj.id == obj_id:
+            return True
+
+        for ap in obj.action_points:
+            for action in ap.actions:
+                action_obj_id, _ = action.type.split("/")
+
+                if action_obj_id == obj_id:
+                    return True
+
+    return False
+
+
+async def scene_object_usage_request_cb(req: SceneObjectUsageRequest) -> Union[SceneObjectUsageResponse,
+                                                                               RPC_RETURN_TYPES]:
+    """
+    Works for both services and objects.
+    :param req:
+    :return:
+    """
+
+    scene_id_list = await STORAGE_CLIENT.get_scenes()
+
+    for scene_meta in scene_id_list.items:
+        if scene_meta.id == req.args.scene_id:
+            break
+    else:
+        return False, "Invalid scene id."
+
+    resp = SceneObjectUsageResponse()
+
+    id_list = await STORAGE_CLIENT.get_projects()
+
+    for project_meta in id_list.items:
+
+        project = await STORAGE_CLIENT.get_project(project_meta.id)
+
+        if _check_project_for_usage_of_object(req.args.scene_id, project, req.args.id):
+            resp.data.add(project.id)
+
+    if PROJECT and _check_project_for_usage_of_object(req.args.scene_id, PROJECT, req.args.id):
+        resp.data.add(PROJECT.id)
+
+    return resp
+
+
 @scene_needed
 async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromSceneResponse, RPC_RETURN_TYPES]:
 
     assert SCENE
+
+    # TODO remove object references from all projects
 
     if req.args.id in SCENE_OBJECT_INSTANCES:
 
@@ -953,7 +1015,8 @@ RPC_DICT: RPC_DICT_TYPE = {
     AddObjectToSceneRequest: add_object_to_scene_cb,
     AutoAddObjectToSceneRequest: auto_add_object_to_scene_cb,
     AddServiceToSceneRequest: add_service_to_scene_cb,
-    RemoveFromSceneRequest: remove_from_scene_cb
+    RemoveFromSceneRequest: remove_from_scene_cb,
+    SceneObjectUsageRequest: scene_object_usage_request_cb
 }
 
 # add Project Manager RPC API
