@@ -6,7 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast
+from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator
 import uuid
 
 import websockets
@@ -862,31 +862,30 @@ async def add_service_to_scene_cb(req: AddServiceToSceneRequest) -> Union[AddSer
     return None
 
 
-def _check_project_for_usage_of_object(scene_id: str, project: Project, obj_id: str) -> bool:
-    """
+async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
 
-    :param scene_id:
-    :param project:
-    :param obj_id: Could be object or service.
-    :return:
-    """
+    id_list = await STORAGE_CLIENT.get_projects()
 
-    if project.scene_id != scene_id:
-        return False
+    for project_meta in id_list.items:
 
-    for obj in project.objects:
+        project = await STORAGE_CLIENT.get_project(project_meta.id)
 
-        if obj.id == obj_id:
-            return True
+        if project.scene_id != scene_id:
+            continue
 
-        for ap in obj.action_points:
-            for action in ap.actions:
-                action_obj_id, _ = action.type.split("/")
+        for obj in project.objects:
 
-                if action_obj_id == obj_id:
-                    return True
+            if obj.id == obj_id:
+                yield project
+                break
 
-    return False
+            for ap in obj.action_points:
+                for action in ap.actions:
+                    action_obj_id, _ = action.type.split("/")
+
+                    if action_obj_id == obj_id:
+                        yield project
+                        break
 
 
 async def scene_object_usage_request_cb(req: SceneObjectUsageRequest) -> Union[SceneObjectUsageResponse,
@@ -907,17 +906,8 @@ async def scene_object_usage_request_cb(req: SceneObjectUsageRequest) -> Union[S
 
     resp = SceneObjectUsageResponse()
 
-    id_list = await STORAGE_CLIENT.get_projects()
-
-    for project_meta in id_list.items:
-
-        project = await STORAGE_CLIENT.get_project(project_meta.id)
-
-        if _check_project_for_usage_of_object(req.args.scene_id, project, req.args.id):
-            resp.data.add(project.id)
-
-    if PROJECT and _check_project_for_usage_of_object(req.args.scene_id, PROJECT, req.args.id):
-        resp.data.add(PROJECT.id)
+    async for project in projects_using_object(req.args.scene_id, req.args.id):
+        resp.data.add(project.id)
 
     return resp
 
