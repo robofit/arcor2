@@ -1,11 +1,12 @@
 import select
 import sys
-from typing import Union, Callable, Any, TYPE_CHECKING
+from typing import Union, Callable, Any, TYPE_CHECKING, no_type_check
 from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent
 from arcor2.data.common import ProjectStateEnum, ActionStateEnum, ActionState, ProjectState
 
 if TYPE_CHECKING:
     from arcor2.object_types import Generic  # NOQA
+    from arcor2.services import Service  # NOQA
 
 
 def read_stdin(timeout: float = 0.0) -> Union[str, None]:
@@ -15,7 +16,13 @@ def read_stdin(timeout: float = 0.0) -> Union[str, None]:
     return None
 
 
-def handle_action(obj_id: str, f: Callable[..., Any], where: ActionStateEnum) -> None:
+def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], where: ActionStateEnum) -> None:
+
+    # can't import Service/Generic here (circ. import)
+    if hasattr(inst, "name"):
+        obj_id = inst.name  # type: ignore
+    else:
+        obj_id = inst.__class__.__name__
 
     print_event(ActionStateEvent(data=ActionState(obj_id, f.__name__, where)))
 
@@ -39,7 +46,9 @@ def print_event(event: Event) -> None:
     sys.stdout.flush()
 
 
-def action(f: Callable[..., Any]) -> Callable[..., Any]:  # TODO read stdin and pause if requested
+@no_type_check
+def action(f):
+
     def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
 
         # automagical overload for dictionary (allow to get rid of ** in script).
@@ -47,9 +56,23 @@ def action(f: Callable[..., Any]) -> Callable[..., Any]:  # TODO read stdin and 
             kwargs = args[1]
             args = (args[0],)
 
-        handle_action(args[0].name, f, ActionStateEnum.BEFORE)
+        if not action.inside_composite:
+            handle_action(args[0], f, ActionStateEnum.BEFORE)
+
+        if wrapper.__action__.composite:  # TODO and not step_into
+            action.inside_composite = f
+
         res = f(*args, **kwargs)
-        handle_action(args[0].name, f, ActionStateEnum.AFTER)
+
+        if action.inside_composite == f:
+            action.inside_composite = None
+
+        if not action.inside_composite:
+            handle_action(args[0], f, ActionStateEnum.AFTER)
+
         return res
 
     return wrapper
+
+
+action.inside_composite = None  # type: ignore

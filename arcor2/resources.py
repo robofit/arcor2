@@ -16,10 +16,12 @@ from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException
 import arcor2.object_types
 from arcor2.object_types import Generic
+from arcor2.services import Service
 from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_pose_abs
+from arcor2.object_types_utils import meta_from_def
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -31,6 +33,7 @@ ARGS_DICT = Dict[str, SUPPORTED_ARGS]
 class IntResources:
 
     CUSTOM_OBJECT_TYPES_MODULE = "object_types"
+    SERVICES_MODULE = "services"
 
     def __init__(self, scene: Scene, project: Project) -> None:
 
@@ -40,7 +43,16 @@ class IntResources:
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
 
+        self.services: Dict[str, Service] = {}
         self.objects: Dict[str, Generic] = {}
+
+        for srv in self.scene.services:
+
+            assert srv.type not in self.services, "Duplicate service {}!".format(srv.type)
+
+            module = importlib.import_module(ResourcesBase.SERVICES_MODULE + "." + camel_case_to_snake_case(srv.type))
+            cls = getattr(module, srv.type)
+            self.services[srv.type] = cls(srv.configuration_id)
 
         built_in = built_in_types_names()
 
@@ -57,8 +69,19 @@ class IntResources:
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
-            # TODO handle hierarchy of object_types (tree), e.g. call add_child...
-            inst = cls(scene_obj.id, scene_obj.pose)
+            if hasattr(cls, "from_services"):
+
+                obj_meta = meta_from_def(cls)
+
+                args: List[Service] = []
+
+                for srv_type in obj_meta.needs_services:
+                    args.append(self.services[srv_type])
+
+                inst = cls(*args, scene_obj.id, scene_obj.pose)
+            else:
+                inst = cls(scene_obj.id, scene_obj.pose)
+
             self.objects[scene_obj.id] = inst
 
         # add action points to the object_types

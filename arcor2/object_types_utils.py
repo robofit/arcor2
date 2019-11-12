@@ -114,6 +114,8 @@ def meta_from_def(type_def, built_in=False) -> ObjectTypeMeta:
                 continue
             obj.needs_services.add(ttype.__name__)
 
+    # TODO check whether the same services are also in constructor
+
     return obj
 
 
