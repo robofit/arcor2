@@ -23,7 +23,8 @@ from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DI
 from arcor2.object_types_utils import built_in_types_names, DataError, obj_description_from_base, built_in_types_meta, \
     built_in_types_actions, add_ancestor_actions, get_built_in_type, meta_from_def, type_def_from_source, \
     object_actions, ObjectTypeException, SERVICES_METHOD_NAME
-from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position, SceneObject, SceneService
+from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
+    ActionParameterTypeEnum
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
     MeshFocusAction, ObjectModel
 from arcor2.data.services import ServiceMeta
@@ -101,6 +102,8 @@ def scene_needed(coro):
             return False, "Scene not opened or has invalid id."
         return await coro(*args, **kwargs)
 
+    return async_wrapper
+
 
 def project_needed(coro):
     @functools.wraps(coro)
@@ -109,6 +112,8 @@ def project_needed(coro):
         if PROJECT is None or not PROJECT.id:
             return False, "Project not opened or has invalid id."
         return await coro(*args, **kwargs)
+
+    return async_wrapper
 
 
 async def handle_manager_incoming_messages(manager_client):
@@ -881,13 +886,14 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Pro
 
             for ap in obj.action_points:
                 for action in ap.actions:
-                    action_obj_id, _ = action.type.split("/")
+                    action_obj_id, _ = action.parse_type()
 
                     if action_obj_id == obj_id:
                         yield project
                         break
 
 
+@scene_needed
 async def scene_object_usage_request_cb(req: SceneObjectUsageRequest) -> Union[SceneObjectUsageResponse,
                                                                                RPC_RETURN_TYPES]:
     """
@@ -896,17 +902,15 @@ async def scene_object_usage_request_cb(req: SceneObjectUsageRequest) -> Union[S
     :return:
     """
 
-    scene_id_list = await STORAGE_CLIENT.get_scenes()
+    assert SCENE
 
-    for scene_meta in scene_id_list.items:
-        if scene_meta.id == req.args.scene_id:
-            break
-    else:
-        return False, "Invalid scene id."
+    if not (any(obj.id == req.args.id for obj in SCENE.objects) or
+            any(srv.type == req.args.id for srv in SCENE.services)):
+        return False, "Unknown ID."
 
     resp = SceneObjectUsageResponse()
 
-    async for project in projects_using_object(req.args.scene_id, req.args.id):
+    async for project in projects_using_object(SCENE.id, req.args.id):
         resp.data.add(project.id)
 
     return resp
@@ -917,10 +921,9 @@ async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromS
 
     assert SCENE
 
-    # TODO remove object references from all projects
-
     if req.args.id in SCENE_OBJECT_INSTANCES:
 
+        # TODO comprehension
         for obj in SCENE.objects:
             if obj.id == req.args.id:
                 obj_to_delete = obj
@@ -938,6 +941,7 @@ async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromS
             if req.args.id in OBJECT_TYPES[obj.type].needs_services:
                 return False, f"Object {obj.id} ({obj.type}) relies on the service to be removed: {req.args.id}."
 
+        # TODO comprehension
         for srv in SCENE.services:
             if srv.type == req.args.id:
                 srv_to_delete = srv
@@ -951,8 +955,57 @@ async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromS
     else:
         return False, "Unknown id."
 
+    asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
     asyncio.ensure_future(notify_scene_change_to_others())
     return None
+
+
+async def remove_object_references_from_projects(obj_id: str) -> None:
+
+    assert SCENE
+
+    updated_project_ids: Set[str] = set()
+
+    async for project in projects_using_object(SCENE.id, obj_id):
+
+        # delete object and its action points
+        project.objects = [obj for obj in project.objects if obj.id != obj_id]
+
+        action_ids: Set[str] = set()
+
+        for obj in project.objects:
+            for ap in obj.action_points:
+
+                # delete actions using the object
+                ap.actions = [act for act in ap.actions if act.parse_type()[0] != obj_id]
+
+                # delete actions using obj's action points as parameters
+                # TODO nested comprehension?
+                actions_using_invalid_param: Set[str] = set()
+                for act in ap.actions:
+                    for param in act.parameters:
+                        if param.type == ActionParameterTypeEnum.ACTION_POINT and param.value.startswith(obj_id):
+                            actions_using_invalid_param.add(act.id)
+
+                ap.actions = [act for act in ap.actions if act.id not in actions_using_invalid_param]
+
+                # get IDs of remaining actions
+                action_ids.update({act.id for act in ap.actions})
+
+        valid_ids: Set[str] = action_ids | ActionIOEnum.set()
+
+        # remove invalid inputs/outputs
+        for obj in project.objects:
+            for ap in obj.action_points:
+                for act in ap.actions:
+                    act.inputs = [input for input in act.inputs if input.default in valid_ids]
+                    act.outputs = [output for output in act.outputs if output.default in valid_ids]
+
+        await STORAGE_CLIENT.update_project(project)
+        updated_project_ids.add(project.id)
+        # TODO what to do with project sources?
+
+    await logger.info("Updated projects: {}".format(updated_project_ids))
 
 
 async def scene_change(ui, event: SceneChangedEvent) -> None:

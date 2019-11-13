@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Union
+from typing import List, Any, Iterator, Optional, Union, Tuple, Set
 from enum import Enum
 
 from json import JSONEncoder
@@ -12,8 +12,14 @@ import quaternion  # type: ignore
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2.exceptions import Arcor2Exception
+
 
 class ActionIOEnum(Enum):
+
+    @classmethod
+    def set(cls) -> Set[str]:
+        return set(map(lambda c: c.value, cls))  # type: ignore
 
     FIRST: str = "start"
     LAST: str = "end"
@@ -153,6 +159,14 @@ class Action(JsonSchemaMixin):
     parameters: List[ActionParameter] = field(default_factory=list)
     inputs: List[ActionIO] = field(default_factory=list)
     outputs: List[ActionIO] = field(default_factory=list)
+
+    def parse_type(self) -> Tuple[str, str]:
+
+        try:
+            obj_id, action = self.type.split("/")
+        except ValueError:
+            raise Arcor2Exception(f"Action: {self.id} has invalid type: {self.type}.")
+        return obj_id, action
 
 
 @dataclass

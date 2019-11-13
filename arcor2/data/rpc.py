@@ -260,16 +260,9 @@ Scene / project
 
 
 @dataclass
-class SceneObjectUsageRequestArgs(JsonSchemaMixin):
-
-    scene_id: str
-    id: str  # could be object or service
-
-
-@dataclass
 class SceneObjectUsageRequest(Request):
 
-    args: SceneObjectUsageRequestArgs
+    args: IdArgs  # ID could be object or service
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
