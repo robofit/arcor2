@@ -37,7 +37,7 @@ from arcor2.data.rpc import GetActionsRequest, GetObjectTypesResponse, GetObject
     FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse, GetServicesRequest, \
     GetServicesResponse, AddObjectToSceneRequest, AddObjectToSceneResponse, AddServiceToSceneRequest, \
     AddServiceToSceneResponse, RemoveFromSceneRequest, RemoveFromSceneResponse, AutoAddObjectToSceneRequest, \
-    AutoAddObjectToSceneResponse, SceneObjectUsageRequest, SceneObjectUsageResponse
+    AutoAddObjectToSceneResponse, SceneObjectUsageRequest, SceneObjectUsageResponse, OpenSceneRequest, OpenSceneResponse
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
@@ -94,6 +94,7 @@ class RobotPoseException(Arcor2Exception):
     pass
 
 
+# TODO refactor into server_utils
 def scene_needed(coro):
     @functools.wraps(coro)
     async def async_wrapper(*args, **kwargs):
@@ -281,12 +282,7 @@ async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse,
 
     assert SCENE and PROJECT
 
-    action_names = []
-
-    for obj in PROJECT.objects:
-        for aps in obj.action_points:
-            for act in aps.actions:
-                action_names.append(act.id)
+    action_names = [act.id for obj in PROJECT.objects for aps in obj.action_points for act in aps.actions]
 
     msgs: List[str] = []
     project_sources = None
@@ -306,13 +302,27 @@ async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse,
     return SaveProjectResponse(messages=msgs)
 
 
+async def open_scene(scene_id: str):
+
+    global SCENE
+    SCENE = await STORAGE_CLIENT.get_scene(scene_id)
+
+    for srv in SCENE.services:
+        await add_service_to_scene(srv)
+
+    for obj in SCENE.objects:
+        await add_object_to_scene(obj)
+
+    asyncio.ensure_future(notify_scene_change_to_others())
+
+
 async def open_project(project_id: str) -> bool:
 
     global PROJECT
-    global SCENE
 
     PROJECT = await STORAGE_CLIENT.get_project(project_id)
-    SCENE = await STORAGE_CLIENT.get_scene(PROJECT.scene_id)
+
+    await open_scene(PROJECT.scene_id)
 
     project_sources = await STORAGE_CLIENT.get_project_sources(PROJECT.id)
 
@@ -324,16 +334,14 @@ async def open_project(project_id: str) -> bool:
         load_logic_failed = True
         await logger.error(e)
 
-    for srv in SCENE.services:
-        await add_service_to_scene(srv)
-
-    for obj in SCENE.objects:
-        await add_object_to_scene(obj)
-
-    asyncio.ensure_future(notify_scene_change_to_others())
     asyncio.ensure_future(notify_project_change_to_others())
-
     return not load_logic_failed
+
+
+async def open_scene_cb(req: OpenSceneRequest) -> Union[OpenSceneResponse, RPC_RETURN_TYPES]:
+
+    await open_scene(req.args.id)
+    return None
 
 
 async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse, RPC_RETURN_TYPES]:
@@ -622,12 +630,11 @@ async def focus_object_cb(req: FocusObjectRequest) -> Union[FocusObjectResponse,
     return r
 
 
+@scene_needed
 async def focus_object_done_cb(req: FocusObjectDoneRequest) -> Union[FocusObjectDoneResponse, RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
     global FOCUS_OBJECT_ROBOT
-
-    # TODO decorator to check if scene is loaded etc.
 
     obj_id = req.args.id
 
@@ -783,10 +790,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
         obj_type = await STORAGE_CLIENT.get_object_type(obj_type_name)
         cls = type_def_from_source(obj_type.source, obj_type.id)
 
-        args: List[Service] = []
-
-        for srv_name in obj_meta.needs_services:
-            args.append(SERVICES_INSTANCES[srv_name])
+        args: List[Service] = [SERVICES_INSTANCES[srv_name] for srv_name in obj_meta.needs_services]
 
         assert hasattr(cls, SERVICES_METHOD_NAME)
         for obj_inst in cls.from_services(*args):
@@ -923,15 +927,7 @@ async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromS
 
     if req.args.id in SCENE_OBJECT_INSTANCES:
 
-        # TODO comprehension
-        for obj in SCENE.objects:
-            if obj.id == req.args.id:
-                obj_to_delete = obj
-                break
-        else:
-            return False, "Inconsistency!"
-
-        SCENE.objects.remove(obj_to_delete)
+        SCENE.objects = [obj for obj in SCENE.objects if obj.id != req.args.id]
         del SCENE_OBJECT_INSTANCES[req.args.id]
 
     elif req.args.id in SERVICES_INSTANCES:
@@ -941,15 +937,7 @@ async def remove_from_scene_cb(req: RemoveFromSceneRequest) -> Union[RemoveFromS
             if req.args.id in OBJECT_TYPES[obj.type].needs_services:
                 return False, f"Object {obj.id} ({obj.type}) relies on the service to be removed: {req.args.id}."
 
-        # TODO comprehension
-        for srv in SCENE.services:
-            if srv.type == req.args.id:
-                srv_to_delete = srv
-                break
-        else:
-            return False, "Inconsistency!"
-
-        SCENE.services.remove(srv_to_delete)
+        SCENE.services = [srv for srv in SCENE.services if srv.type != req.args.id]
         del SERVICES_INSTANCES[req.args.id]
 
     else:
@@ -980,12 +968,9 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
                 ap.actions = [act for act in ap.actions if act.parse_type()[0] != obj_id]
 
                 # delete actions using obj's action points as parameters
-                # TODO nested comprehension?
-                actions_using_invalid_param: Set[str] = set()
-                for act in ap.actions:
-                    for param in act.parameters:
-                        if param.type == ActionParameterTypeEnum.ACTION_POINT and param.value.startswith(obj_id):
-                            actions_using_invalid_param.add(act.id)
+                actions_using_invalid_param: Set[str] = \
+                    {act.id for act in ap.actions for param in act.parameters
+                     if param.type == ActionParameterTypeEnum.ACTION_POINT and param.value.startswith(obj_id)}
 
                 ap.actions = [act for act in ap.actions if act.id not in actions_using_invalid_param]
 
@@ -1059,7 +1044,8 @@ RPC_DICT: RPC_DICT_TYPE = {
     AutoAddObjectToSceneRequest: auto_add_object_to_scene_cb,
     AddServiceToSceneRequest: add_service_to_scene_cb,
     RemoveFromSceneRequest: remove_from_scene_cb,
-    SceneObjectUsageRequest: scene_object_usage_request_cb
+    SceneObjectUsageRequest: scene_object_usage_request_cb,
+    OpenSceneRequest: open_scene_cb
 }
 
 # add Project Manager RPC API

@@ -383,6 +383,21 @@ class OpenProjectResponse(Response):
 
 
 @dataclass
+class OpenSceneRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class OpenSceneResponse(Response):
+
+    response: str = field(default=OpenSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
 class ListProjectsRequest(Request):
 
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821

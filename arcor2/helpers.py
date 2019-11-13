@@ -117,7 +117,11 @@ async def server(client: Any,
                     await logger.error(f"Invalid RPC: {data}, error: {e}")
                     continue
 
-                resp = await rpc_dict[req_cls](req)
+                try:
+                    resp = await rpc_dict[req_cls](req)
+                except Arcor2Exception as e:
+                    await logger.exception(e)
+                    resp = False, "System error."
 
                 if resp is None:  # default response
                     resp = resp_cls()
