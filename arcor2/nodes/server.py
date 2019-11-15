@@ -42,7 +42,8 @@ from arcor2.data.rpc import GetActionsRequest, GetObjectTypesResponse, GetObject
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
-from arcor2.persistent_storage import AioPersistentStorage, PersistentStorageException
+from arcor2.persistent_storage import PersistentStorageException
+from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_object_ap
 from arcor2.scene_utils import get_scene_object
@@ -87,8 +88,6 @@ ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / servi
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
 FOCUS_OBJECT_ROBOT: Dict[str, Tuple[str, str]] = {}  # object_id / robot, end_effector
-
-STORAGE_CLIENT = AioPersistentStorage()
 
 
 class RobotPoseException(Arcor2Exception):
@@ -229,10 +228,10 @@ async def _get_object_types() -> None:
 
     object_types: Dict[str, ObjectTypeMeta] = built_in_types_meta()
 
-    obj_ids = await STORAGE_CLIENT.get_object_type_ids()
+    obj_ids = await storage.get_object_type_ids()
 
     for obj_id in obj_ids.items:
-        obj = await STORAGE_CLIENT.get_object_type(obj_id.id)
+        obj = await storage.get_object_type(obj_id.id)
         try:
             object_types[obj.id] = meta_from_def(type_def_from_source(obj.source, obj.id))
         except ObjectTypeException as e:
@@ -240,7 +239,7 @@ async def _get_object_types() -> None:
             continue
 
         if obj.model:
-            model = await STORAGE_CLIENT.get_model(obj.model.id, obj.model.type)
+            model = await storage.get_model(obj.model.id, obj.model.type)
             kwargs = {model.type().value.lower(): model}
             object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
@@ -273,7 +272,7 @@ async def get_services_cb(req: GetServicesRequest) -> GetServicesResponse:
 async def save_scene_cb(req: SaveSceneRequest) -> Union[SaveSceneResponse, RPC_RETURN_TYPES]:
 
     assert SCENE
-    await STORAGE_CLIENT.update_scene(SCENE)
+    await storage.update_scene(SCENE)
     return None
 
 
@@ -296,9 +295,9 @@ async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse,
         await logger.error(e)
         msgs.append("Failed to generate project sources.")
 
-    await STORAGE_CLIENT.update_project(PROJECT)
+    await storage.update_project(PROJECT)
     if project_sources:
-        await STORAGE_CLIENT.update_project_sources(project_sources)
+        await storage.update_project_sources(project_sources)
 
     return SaveProjectResponse(messages=msgs)
 
@@ -306,7 +305,7 @@ async def save_project_cb(req: SaveProjectRequest) -> Union[SaveProjectResponse,
 async def open_scene(scene_id: str):
 
     global SCENE
-    SCENE = await STORAGE_CLIENT.get_scene(scene_id)
+    SCENE = await storage.get_scene(scene_id)
 
     for srv in SCENE.services:
         await add_service_to_scene(srv)
@@ -321,11 +320,11 @@ async def open_project(project_id: str) -> bool:
 
     global PROJECT
 
-    PROJECT = await STORAGE_CLIENT.get_project(project_id)
+    PROJECT = await storage.get_project(project_id)
 
     await open_scene(PROJECT.scene_id)
 
-    project_sources = await STORAGE_CLIENT.get_project_sources(PROJECT.id)
+    project_sources = await storage.get_project_sources(PROJECT.id)
 
     load_logic_failed = False
 
@@ -347,6 +346,8 @@ async def open_scene_cb(req: OpenSceneRequest) -> Union[OpenSceneResponse, RPC_R
 
 async def open_project_cb(req: OpenProjectRequest) -> Union[OpenProjectResponse, RPC_RETURN_TYPES]:
 
+    # TODO validate using project_problems
+
     logic_loaded = await open_project(req.args.id)
 
     if not logic_loaded:
@@ -367,7 +368,7 @@ async def _get_object_actions() -> None:
             continue
 
         # db-stored (user-created) object types
-        obj_db = await STORAGE_CLIENT.get_object_type(obj_type)
+        obj_db = await storage.get_object_type(obj_type)
         try:
             object_actions_dict[obj_type] = object_actions(type_def_from_source(obj_db.source, obj_db.id))
         except ObjectTypeException as e:
@@ -572,20 +573,20 @@ async def list_projects_cb(req: ListProjectsRequest) -> Union[ListProjectsRespon
 
     data: List[ListProjectsResponseData] = []
 
-    projects = await STORAGE_CLIENT.get_projects()
+    projects = await storage.get_projects()
 
     scenes: Dict[str, Scene] = {}
 
     for project_iddesc in projects.items:
 
-        project = await STORAGE_CLIENT.get_project(project_iddesc.id)
+        project = await storage.get_project(project_iddesc.id)
 
         pd = ListProjectsResponseData(id=project.id, desc=project.desc)
         data.append(pd)
 
         if project.scene_id not in scenes:
             try:
-                scenes[project.scene_id] = await STORAGE_CLIENT.get_scene(project.scene_id)
+                scenes[project.scene_id] = await storage.get_scene(project.scene_id)
             except PersistentStorageException:
                 pd.problems.append("Scene does not exist.")
                 continue
@@ -607,12 +608,12 @@ async def list_projects_cb(req: ListProjectsRequest) -> Union[ListProjectsRespon
 
 async def list_scenes_cb(req: ListScenesRequest) -> Union[ListScenesResponse, RPC_RETURN_TYPES]:
 
-    scenes = await STORAGE_CLIENT.get_scenes()
+    scenes = await storage.get_scenes()
     return ListScenesResponse(data=scenes.items)
 
 
 async def list_meshes_cb(req: ListMeshesRequest) -> Union[ListMeshesResponse, RPC_RETURN_TYPES]:
-    return ListMeshesResponse(data=await STORAGE_CLIENT.get_meshes())
+    return ListMeshesResponse(data=await storage.get_meshes())
 
 
 async def new_object_type_cb(req: NewObjectTypeRequest) -> Union[NewObjectTypeResponse, RPC_RETURN_TYPES]:
@@ -630,15 +631,15 @@ async def new_object_type_cb(req: NewObjectTypeRequest) -> Union[NewObjectTypeRe
 
     if meta.object_model and meta.object_model.type != ModelTypeEnum.MESH:
         assert meta.type == meta.object_model.model().id
-        await STORAGE_CLIENT.put_model(meta.object_model.model())
+        await storage.put_model(meta.object_model.model())
 
     # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
     if meta.object_model and meta.object_model.type == ModelTypeEnum.MESH:
         # ...get whole mesh (focus_points) based on mesh id
         assert meta.object_model.mesh
-        meta.object_model.mesh = await STORAGE_CLIENT.get_mesh(meta.object_model.mesh.id)
+        meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
 
-    await STORAGE_CLIENT.update_object_type(obj)
+    await storage.update_object_type(obj)
 
     OBJECT_TYPES[meta.type] = meta
     ACTIONS[meta.type] = object_actions(type_def_from_source(obj.source, obj.id))
@@ -843,7 +844,7 @@ async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
         if obj.type in built_in_types_names():
             cls = get_built_in_type(obj.type)
         else:
-            obj_type = await STORAGE_CLIENT.get_object_type(obj.type)
+            obj_type = await storage.get_object_type(obj.type)
             cls = type_def_from_source(obj_type.source, obj_type.id)
 
         SCENE_OBJECT_INSTANCES[obj.id] = cls(obj.id, obj.pose)
@@ -880,7 +881,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
     try:
 
-        obj_type = await STORAGE_CLIENT.get_object_type(obj_type_name)
+        obj_type = await storage.get_object_type(obj_type_name)
         cls = type_def_from_source(obj_type.source, obj_type.id)
 
         args: List[Service] = [SERVICES_INSTANCES[srv_name] for srv_name in obj_meta.needs_services]
@@ -966,11 +967,11 @@ async def add_service_to_scene_cb(req: AddServiceToSceneRequest) -> Union[AddSer
 
 async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
 
-    id_list = await STORAGE_CLIENT.get_projects()
+    id_list = await storage.get_projects()
 
     for project_meta in id_list.items:
 
-        project = await STORAGE_CLIENT.get_project(project_meta.id)
+        project = await storage.get_project(project_meta.id)
 
         if project.scene_id != scene_id:
             continue
@@ -1079,7 +1080,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
                     act.inputs = [input for input in act.inputs if input.default in valid_ids]
                     act.outputs = [output for output in act.outputs if output.default in valid_ids]
 
-        await STORAGE_CLIENT.update_project(project)
+        await storage.update_project(project)
         updated_project_ids.add(project.id)
         # TODO what to do with project sources?
 

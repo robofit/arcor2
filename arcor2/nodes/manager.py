@@ -19,7 +19,7 @@ from dataclasses_jsonschema import ValidationError
 
 from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE
 from arcor2.source.utils import make_executable
-from arcor2.persistent_storage import AioPersistentStorage
+from arcor2 import aio_persistent_storage as storage
 from arcor2.settings import PROJECT_PATH
 from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectResponse, \
     PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, RunProjectResponse,\
@@ -40,8 +40,6 @@ PROJECT_ID: Optional[str] = None
 TASK = None
 
 CLIENTS: Set = set()
-
-STORAGE_CLIENT = AioPersistentStorage()
 
 
 def process_running() -> bool:
@@ -124,7 +122,7 @@ async def project_run(req: RunProjectRequest) -> Union[RunProjectResponse, RPC_R
 
         path = os.path.join(tmpdirname, "project.zip")
 
-        await STORAGE_CLIENT.publish_project(req.args.id, path)
+        await storage.publish_project(req.args.id, path)
 
         with zipfile.ZipFile(path, 'r') as zip_ref:
             zip_ref.extractall(tmpdirname)

@@ -6,7 +6,7 @@ from arcor2.source.object_types import check_object_type
 from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
-from arcor2.persistent_storage import PersistentStorage
+from arcor2 import persistent_storage as storage
 from arcor2.data.object_type import ObjectType, Models
 
 
@@ -26,8 +26,6 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
 
     path = inspect.getfile(cls)
 
-    storage_client = PersistentStorage()
-
     with open(path, "r") as source_file:
 
         source = source_file.read()
@@ -42,7 +40,7 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
 
         if model:
             obj_type.model = model.metamodel()
-            storage_client.put_model(model)
+            storage.put_model(model)
 
         print(f"Storing '{obj_type.id}'...")
-        storage_client.update_object_type(obj_type)
+        storage.update_object_type(obj_type)
