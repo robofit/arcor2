@@ -398,6 +398,14 @@ class OpenSceneResponse(Response):
 
 
 @dataclass
+class ListProjectsResponseData(IdDesc):
+
+    valid: bool = False  # objects and their actions exists
+    executable: bool = False  # logic is defined and valid
+    problems: List[str] = field(default_factory=list)
+
+
+@dataclass
 class ListProjectsRequest(Request):
 
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
@@ -406,7 +414,7 @@ class ListProjectsRequest(Request):
 @dataclass
 class ListProjectsResponse(Response):
 
-    data: List[IdDesc] = field(default_factory=list)
+    data: List[ListProjectsResponseData] = field(default_factory=list)
     response: str = field(default=ListProjectsRequest.request, init=False)
 
 

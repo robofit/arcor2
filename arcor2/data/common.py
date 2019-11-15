@@ -144,6 +144,16 @@ class ActionParameter(JsonSchemaMixin):
         # TODO implement value type check
         pass
 
+    def parse_value(self) -> Tuple[str, str]:
+
+        assert self.type == ActionParameterTypeEnum.ACTION_POINT
+
+        try:
+            obj_id, ap_id = self.type.value.split(".")
+        except ValueError:
+            raise Arcor2Exception(f"Parameter: {self.id} has invalid value: {self.value}.")
+        return obj_id, ap_id
+
 
 @dataclass
 class ActionIO(JsonSchemaMixin):

@@ -37,11 +37,12 @@ from arcor2.data.rpc import GetActionsRequest, GetObjectTypesResponse, GetObject
     FocusObjectDoneRequest, FocusObjectDoneResponse, ProjectStateRequest, ProjectStateResponse, GetServicesRequest, \
     GetServicesResponse, AddObjectToSceneRequest, AddObjectToSceneResponse, AddServiceToSceneRequest, \
     AddServiceToSceneResponse, RemoveFromSceneRequest, RemoveFromSceneResponse, AutoAddObjectToSceneRequest, \
-    AutoAddObjectToSceneResponse, SceneObjectUsageRequest, SceneObjectUsageResponse, OpenSceneRequest, OpenSceneResponse
+    AutoAddObjectToSceneResponse, SceneObjectUsageRequest, SceneObjectUsageResponse, OpenSceneRequest,\
+    OpenSceneResponse, ListProjectsResponseData
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.helpers import RPC_MAPPING
-from arcor2.persistent_storage import AioPersistentStorage
+from arcor2.persistent_storage import AioPersistentStorage, PersistentStorageException
 from arcor2.object_types import Generic, Robot
 from arcor2.project_utils import get_object_ap
 from arcor2.scene_utils import get_scene_object
@@ -506,10 +507,102 @@ async def update_action_object_cb(req: UpdateActionObjectPoseRequest) -> Union[U
     return None
 
 
+def project_problems(scene: Scene, project: Project) -> List[str]:
+
+    scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
+    objects_aps: Dict[str, Set[str]] = {obj.id: {ap.id for ap in obj.action_points}
+                                        for obj in project.objects}  # object_id, APs
+
+    problems: List[str] = []
+
+    for obj in project.objects:
+
+        # test if all objects exists in scene
+        if obj.id not in scene_objects:
+            problems.append(f"Object ID {obj.id} does not exist in scene.")
+            continue
+
+        for ap in obj.action_points:
+
+            for action in ap.actions:
+
+                # check if objects have used actions
+                obj_id, action_type = action.parse_type()
+
+                if obj_id not in scene_objects:
+                    problems.append(f"Object ID {obj.id} which action is used in {action.id} does not exist in scene.")
+                    continue
+
+                for act in ACTIONS[scene_objects[obj_id]]:
+                    if action_type == act.name:
+                        break
+                else:
+                    problems.append(f"Object type {scene_objects[obj_id]} does not have action {action_type} "
+                                    f"used in {action.id}.")
+
+                # check object's actions parameters
+                action_params: Dict[str, ActionParameterTypeEnum] = \
+                    {param.id: param.type for param in action.parameters}
+                ot_params: Dict[str, ActionParameterTypeEnum] = {param.name: param.type for param in act.action_args
+                                                                 for act in ACTIONS[scene_objects[obj_id]]}
+
+                if action_params != ot_params:
+                    problems.append(f"Action ID {action.id} of type {action.type} has invalid parameters.")
+
+                # validate parameter values
+                for param in action.parameters:
+                    if param.type == ActionParameterTypeEnum.ACTION_POINT:
+
+                        p_obj_id, p_ap_id = param.parse_value()
+
+                        if p_obj_id not in objects_aps:
+                            problems.append(f"Parameter {param.id} of action {action.id} refers to non-existent "
+                                            f"object id.")
+
+                        if p_ap_id not in objects_aps[p_obj_id]:
+                            problems.append(f"Parameter {param.id} of action {action.id} refers to non-existent "
+                                            f"action point of object id {p_obj_id}.")
+
+                    # TODO validate values of another parameter types
+
+    return problems
+
+
 async def list_projects_cb(req: ListProjectsRequest) -> Union[ListProjectsResponse, RPC_RETURN_TYPES]:
 
+    data: List[ListProjectsResponseData] = []
+
     projects = await STORAGE_CLIENT.get_projects()
-    return ListProjectsResponse(data=projects.items)
+
+    scenes: Dict[str, Scene] = {}
+
+    for project_iddesc in projects.items:
+
+        project = await STORAGE_CLIENT.get_project(project_iddesc.id)
+
+        pd = ListProjectsResponseData(id=project.id, desc=project.desc)
+        data.append(pd)
+
+        if project.scene_id not in scenes:
+            try:
+                scenes[project.scene_id] = await STORAGE_CLIENT.get_scene(project.scene_id)
+            except PersistentStorageException:
+                pd.problems.append("Scene does not exist.")
+                continue
+
+        pd.problems = project_problems(scenes[project.scene_id], project)
+        pd.valid = not pd.problems
+
+        if not pd.valid:
+            continue
+
+        try:
+            program_src(project, scenes[project.scene_id], built_in_types_names())
+            pd.executable = True
+        except SourceException as e:
+            pd.problems.append(str(e))
+
+    return ListProjectsResponse(data=data)
 
 
 async def list_scenes_cb(req: ListScenesRequest) -> Union[ListScenesResponse, RPC_RETURN_TYPES]:
@@ -996,6 +1089,10 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 async def scene_change(ui, event: SceneChangedEvent) -> None:
 
     global SCENE
+
+    if PROJECT:
+        await logger.warning("Scene changes not allowed when editing project.")
+        return
 
     if event.data:
         for srv in event.data.services:
