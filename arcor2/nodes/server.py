@@ -1108,6 +1108,10 @@ async def scene_change(ui, event: SceneChangedEvent) -> None:
                 await notify_scene(ui)
                 await logger.warning("Ignoring scene changes: object added.")
                 return
+    else:
+        await logger.info("Clearing the scene.")
+        SERVICES_INSTANCES.clear()
+        SCENE_OBJECT_INSTANCES.clear()  # TODO delete collision objects
 
     SCENE = event.data
     await notify_scene_change_to_others(ui)
