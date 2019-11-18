@@ -936,7 +936,7 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
     if srv.type not in SERVICES:
         return False, "Unknown service type."
 
-    if srv.type in SCENE_OBJECT_INSTANCES:
+    if srv.type in SERVICES_INSTANCES:
         return False, "Service already in scene."
 
     # TODO hack
