@@ -4,6 +4,8 @@ from typing import Set
 
 class Service(metaclass=abc.ABCMeta):
 
+    __DESCRIPTION__ = "A generic service."
+
     def __init__(self, configuration_id: str) -> None:
         self.configuration_id = configuration_id
 

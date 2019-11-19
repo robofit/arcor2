@@ -1,5 +1,6 @@
 from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
 from arcor2.data.object_type import ObjectType, Models, ModelTypeEnum, Mesh, MeshList
+from arcor2.data.services import ServiceType
 from arcor2.helpers import run_in_executor
 from arcor2 import persistent_storage
 
@@ -48,8 +49,16 @@ async def get_object_type(object_type_id: str) -> ObjectType:
     return await run_in_executor(persistent_storage.get_object_type, object_type_id)
 
 
+async def get_service_type(service_type_id: str) -> ServiceType:
+    return await run_in_executor(persistent_storage.get_service_type, service_type_id)
+
+
 async def get_object_type_ids() -> IdDescList:
     return await run_in_executor(persistent_storage.get_object_type_ids)
+
+
+async def get_service_type_ids() -> IdDescList:
+    return await run_in_executor(persistent_storage.get_service_type_ids)
 
 
 async def update_project(project: Project) -> None:
@@ -66,3 +75,7 @@ async def update_project_sources(project_sources: ProjectSources) -> None:
 
 async def update_object_type(object_type: ObjectType) -> None:
     await run_in_executor(persistent_storage.update_object_type, object_type)
+
+
+async def update_service_type(service_type: ServiceType) -> None:
+    await run_in_executor(persistent_storage.update_service_type, service_type)

@@ -1,19 +1,18 @@
 import inspect
-from typing import Optional
 
-from arcor2.source.object_types import check_object_type
+from arcor2.source.services import check_service_type
 from arcor2.source import SourceException
 from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import persistent_storage as storage
-from arcor2.data.object_type import ObjectType, Models
+from arcor2.data.services import ServiceType
 
 
 class UploadException(Arcor2Exception):
     pass
 
 
-def upload(module_cls: str, model: Optional[Models] = None) -> None:
+def upload(module_cls: str) -> None:
 
     try:
         _, cls = import_cls(module_cls)
@@ -27,16 +26,12 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
         source = source_file.read()
 
         try:
-            check_object_type(source, cls.__name__)
+            check_service_type(source, cls.__name__)
         except SourceException as e:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
-        obj_type = ObjectType(id=cls.__name__, source=source)
+        srv_type = ServiceType(id=cls.__name__, source=source)
 
-        if model:
-            obj_type.model = model.metamodel()
-            storage.put_model(model)
-
-        print(f"Storing '{obj_type.id}'...")
-        storage.update_object_type(obj_type)
+        print(f"Storing '{srv_type.id}'...")
+        storage.update_service_type(srv_type)

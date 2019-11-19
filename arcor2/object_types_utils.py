@@ -1,7 +1,6 @@
 import copy
 import inspect
 from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
-from types import ModuleType
 
 from undecorated import undecorated  # type: ignore
 
@@ -119,19 +118,6 @@ def meta_from_def(type_def, built_in=False) -> ObjectTypeMeta:
     return obj
 
 
-def type_def_from_source(source: str, type_name: str) -> Type:
-
-    mod = ModuleType('temp_module')
-    try:
-        exec(source, mod.__dict__)
-    except ModuleNotFoundError as e:
-        raise ObjectTypeException(e)
-    try:
-        return getattr(mod, type_name)
-    except AttributeError:
-        raise ObjectTypeException(f"Source does not contain class named '{type_name}'.")
-
-
 def built_in_types_actions() -> ObjectActionsDict:
 
     # TODO get built_in_types sources and rather use get_object_actions(source)?
@@ -176,7 +162,9 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                     data.returns = ttype.__name__  # TODO define enum for this
                     continue
 
-                data.action_args.append(ObjectActionArgs(name=name, type=PARAM_MAPPING[ttype.__name__]))
+                args = ObjectActionArgs(name=name, type=PARAM_MAPPING[ttype.__name__])
+
+                data.action_args.append(args)
 
             except AttributeError:
                 print(f"Skipping {ttype}")  # TODO make a fix for Union

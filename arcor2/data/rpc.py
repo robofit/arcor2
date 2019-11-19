@@ -8,7 +8,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction, SceneObject, SceneService
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
-from arcor2.data.services import ServiceMeta
+from arcor2.data.services import ServiceTypeMeta
 
 """
 mypy does not recognize __qualname__ so far: https://github.com/python/mypy/issues/6473
@@ -81,7 +81,7 @@ class GetServicesRequest(Request):
 @dataclass
 class GetServicesResponse(Response):
 
-    data: List[ServiceMeta] = field(default_factory=list)
+    data: List[ServiceTypeMeta] = field(default_factory=list)
     response: str = field(default=GetServicesRequest.request, init=False)
 
 

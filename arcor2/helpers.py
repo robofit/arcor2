@@ -1,5 +1,5 @@
 import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable
+from typing import Optional,Dict, Callable, Tuple, Type, Union, Any, Awaitable, List, TypeVar
 from types import ModuleType
 import json
 import asyncio
@@ -33,6 +33,10 @@ EVENT_DICT_TYPE = Dict[Type[Event], Any]
 
 
 class ImportClsException(Arcor2Exception):
+    pass
+
+
+class TypeDefException(Arcor2Exception):
     pass
 
 
@@ -176,6 +180,12 @@ async def run_in_executor(func, *args):
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 
+def parallel_tasks(tasks: List[Awaitable]) -> None:
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.gather(*tasks))
+
+
 def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
     :param parent: e.g. scene object
@@ -210,3 +220,24 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     p.orientation.set_from_quaternion(child.orientation.as_quaternion()*parent.orientation.as_quaternion())
 
     return p
+
+
+T = TypeVar('T')
+
+
+def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> Type[T]:
+
+    mod = ModuleType('temp_module')
+    try:
+        exec(source, mod.__dict__)
+    except ModuleNotFoundError as e:
+        raise TypeDefException(e)
+    try:
+        cls_def = getattr(mod, type_name)
+    except AttributeError:
+        raise TypeDefException(f"Source does not contain class named '{type_name}'.")
+
+    if not issubclass(cls_def, output_type):
+        raise TypeDefException(f"Class is not of expected type.")
+
+    return cls_def

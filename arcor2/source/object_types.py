@@ -5,10 +5,10 @@ from arcor2.data.object_type import ObjectTypeMeta
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.source import SourceException
 from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr
-from arcor2.object_types_utils import built_in_types_names, type_def_from_source, meta_from_def, object_actions
+from arcor2.object_types_utils import built_in_types_names, meta_from_def, object_actions
+import arcor2.helpers as hlp
 import arcor2.object_types
 from arcor2.object_types import Generic
-from arcor2.services import Service
 
 
 def check_object_type(object_type_source: str, type_name: str) -> None:
@@ -17,9 +17,11 @@ def check_object_type(object_type_source: str, type_name: str) -> None:
     :param object_type_source:
     :return:
     """
-    type_def = type_def_from_source(object_type_source, type_name)
-    if not issubclass(type_def, (Generic, Service)):
-        raise SourceException("Not subclass of supported types.")
+    try:
+        type_def = hlp.type_def_from_source(object_type_source, type_name, Generic)
+    except hlp.TypeDefException as e:
+        raise SourceException(e)
+
     meta_from_def(type_def, False)
     object_actions(type_def)
 

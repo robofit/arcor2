@@ -1,11 +1,22 @@
-from typing import Set
+from typing import Set, Optional
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
 @dataclass
-class ServiceMeta(JsonSchemaMixin):
+class ServiceType(JsonSchemaMixin):
+    """
+    Service type, as it is stored in DB.
+    """
+
+    id: str
+    source: str
+    desc: Optional[str] = ""
+
+
+@dataclass
+class ServiceTypeMeta(JsonSchemaMixin):
     """
     Metadata about object type, as it is used in server API.
     """

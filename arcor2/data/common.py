@@ -15,11 +15,14 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2.exceptions import Arcor2Exception
 
 
-class ActionIOEnum(Enum):
+class Arcor2Enum(Enum):
 
     @classmethod
     def set(cls) -> Set[str]:
         return set(map(lambda c: c.value, cls))  # type: ignore
+
+
+class ActionIOEnum(Arcor2Enum):
 
     FIRST: str = "start"
     LAST: str = "end"
@@ -31,6 +34,7 @@ class ActionParameterTypeEnum(Enum):
     DOUBLE: str = "double"
     INTEGER: str = "integer"
     ACTION_POINT: str = "ActionPoint"
+    ENUM: str = "enum"
 
 
 class DataClassEncoder(JSONEncoder):

@@ -150,6 +150,7 @@ class ObjectActionArgs(JsonSchemaMixin):
 
     name: str
     type: ActionParameterTypeEnum
+    allowed_values: Optional[Set[str]] = None
 
 
 @dataclass

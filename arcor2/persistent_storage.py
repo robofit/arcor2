@@ -3,6 +3,7 @@ import functools
 
 from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
 from arcor2.data.object_type import ObjectType, Models, MODEL_MAPPING, ModelTypeEnum, Mesh, MeshList
+from arcor2.data.services import ServiceType
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import rest
 
@@ -84,8 +85,18 @@ def get_object_type(object_type_id: str) -> ObjectType:
 
 
 @handle_exceptions
+def get_service_type(service_type_id: str) -> ServiceType:
+    return rest.get(f"{URL}/service_types/{service_type_id}", ServiceType)
+
+
+@handle_exceptions
 def get_object_type_ids() -> IdDescList:
     return rest.get(f"{URL}/object_types", IdDescList)
+
+
+@handle_exceptions
+def get_service_type_ids() -> IdDescList:
+    return rest.get(f"{URL}/service_types", IdDescList)
 
 
 @handle_exceptions
@@ -114,3 +125,10 @@ def update_object_type(object_type: ObjectType) -> None:
 
     assert object_type.id
     rest.post(f"{URL}/object_type", object_type)
+
+
+@handle_exceptions
+def update_service_type(service_type: ServiceType) -> None:
+
+    assert service_type.id
+    rest.post(f"{URL}/service_type", service_type)
