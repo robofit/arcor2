@@ -180,11 +180,6 @@ async def run_in_executor(func, *args):
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 
-def parallel_tasks(tasks: List[Awaitable]) -> None:
-
-    asyncio.wait(asyncio.gather(*tasks))
-
-
 def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
     :param parent: e.g. scene object

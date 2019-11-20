@@ -200,8 +200,8 @@ async def notify_project(interface) -> None:
 
 async def _initialize_server() -> None:
 
-    hlp.parallel_tasks([_get_object_types(), _get_service_types()])
-    hlp.parallel_tasks([_get_object_actions(), _check_manager()])
+    await asyncio.wait([_get_object_types(), _get_service_types()])
+    await asyncio.wait([_get_object_actions(), _check_manager()])
 
 
 async def _get_service_types() -> None:
@@ -1165,7 +1165,7 @@ def main():
     bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
 
-    hlp.parallel_tasks([asyncio.gather(websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
+    asyncio.wait([asyncio.gather(websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
                         _initialize_server())])
     loop.run_forever()
 
