@@ -89,7 +89,7 @@ def built_in_types_meta() -> ObjectTypeMetaDict:
     return d
 
 
-def meta_from_def(type_def, built_in=False) -> ObjectTypeMeta:
+def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectTypeMeta:
 
     obj = ObjectTypeMeta(type_def.__name__,
                          type_def.__DESCRIPTION__,

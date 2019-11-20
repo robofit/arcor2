@@ -5,10 +5,6 @@ from arcor2.helpers import run_in_executor
 from arcor2 import persistent_storage
 
 
-async def publish_project(project_id: str, path: str) -> None:
-    return await run_in_executor(persistent_storage.publish_project, project_id, path)
-
-
 async def get_mesh(mesh_id: str) -> Mesh:
     return await run_in_executor(persistent_storage.get_mesh, mesh_id)
 

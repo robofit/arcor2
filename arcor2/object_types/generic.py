@@ -2,7 +2,7 @@ import abc
 from typing import Dict
 import time
 
-from arcor2.data.common import Pose, ActionPoint, ActionMetadata
+from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
 from arcor2.action import action
 
 
@@ -10,11 +10,14 @@ class Generic(metaclass=abc.ABCMeta):
 
     __DESCRIPTION__ = "Generic object"
 
-    def __init__(self, name: str, pose: Pose) -> None:
+    def __init__(self, obj_id: str, pose: Pose) -> None:
 
-        self.name = name
+        self.id = obj_id
         self.pose = pose
         self.action_points: Dict[str, ActionPoint] = {}
+
+    def scene_object(self) -> SceneObject:
+        return SceneObject(self.id, self.__class__.__name__, self.pose)
 
     def add_action_point(self, name: str, pose: Pose) -> None:
 

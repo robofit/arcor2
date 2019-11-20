@@ -20,7 +20,7 @@ def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], wher
 
     # can't import Service/Generic here (circ. import)
     if hasattr(inst, "name"):
-        obj_id = inst.name  # type: ignore
+        obj_id = inst.id  # type: ignore
     else:
         obj_id = inst.__class__.__name__
 

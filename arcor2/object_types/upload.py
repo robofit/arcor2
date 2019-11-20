@@ -7,6 +7,7 @@ from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import persistent_storage as storage
 from arcor2.data.object_type import ObjectType, Models
+from arcor2.object_types import Generic
 
 
 class UploadException(Arcor2Exception):
@@ -32,7 +33,9 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
-        obj_type = ObjectType(id=cls.__name__, source=source)
+        assert issubclass(cls, Generic)
+
+        obj_type = ObjectType(id=cls.__name__, source=source, desc=cls.__DESCRIPTION__)
 
         if model:
             obj_type.model = model.metamodel()

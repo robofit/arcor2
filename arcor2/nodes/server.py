@@ -13,13 +13,12 @@ import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 
-from arcor2.source.logic import program_src, get_logic_from_source
+from arcor2.source.logic import program_src
 from arcor2.source.object_types import new_object_type_source
-from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
-from arcor2.data.common import Scene, Project, ProjectSources, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
+from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
     ActionParameterTypeEnum
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
     MeshFocusAction, ObjectModel
@@ -77,6 +76,16 @@ def scene_needed(coro):
 
         if SCENE is None or not SCENE.id:
             return False, "Scene not opened or has invalid id."
+        return await coro(*args, **kwargs)
+
+    return async_wrapper
+
+
+def no_project(coro):
+    @functools.wraps(coro)
+    async def async_wrapper(*args, **kwargs):
+        if PROJECT:
+            return False, "Not available during project editing."
         return await coro(*args, **kwargs)
 
     return async_wrapper
@@ -208,7 +217,7 @@ async def _get_service_types() -> None:
         srv_type = await storage.get_service_type(srv_id.id)
         try:
             service_types[srv_id.id] = stu.meta_from_def(hlp.type_def_from_source(srv_type.source, srv_type.id, Service))
-        except otu.ObjectTypeException as e:
+        except Arcor2Exception as e:
             await logger.error(f"Ignoring object type {srv_type.id}: {e}")
 
     SERVICE_TYPES = service_types
@@ -226,7 +235,7 @@ async def _get_object_types() -> None:
         obj = await storage.get_object_type(obj_id.id)
         try:
             object_types[obj.id] = otu.meta_from_def(hlp.type_def_from_source(obj.source, obj.id, Generic))
-        except otu.ObjectTypeException as e:
+        except (otu.ObjectTypeException, hlp.TypeDefException) as e:
             await logger.error(f"Ignoring object type {obj.id}: {e}")
             continue
 
@@ -261,6 +270,7 @@ async def get_services_cb(req: rpc.GetServicesRequest) -> rpc.GetServicesRespons
 
 
 @scene_needed
+@no_project
 async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
@@ -273,25 +283,8 @@ async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneRespons
 async def save_project_cb(req: rpc.SaveProjectRequest) -> Union[rpc.SaveProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE and PROJECT
-
-    action_names = [act.id for obj in PROJECT.objects for aps in obj.action_points for act in aps.actions]
-
-    msgs: List[str] = []
-    project_sources = None
-
-    try:
-        project_sources = ProjectSources(id=PROJECT.id,
-                                         resources=derived_resources_class(PROJECT.id, action_names),
-                                         script=program_src(PROJECT, SCENE, otu.built_in_types_names()))
-    except SourceException as e:
-        await logger.error(e)
-        msgs.append("Failed to generate project sources.")
-
     await storage.update_project(PROJECT)
-    if project_sources:
-        await storage.update_project_sources(project_sources)
-
-    return rpc.SaveProjectResponse(messages=msgs)
+    return None
 
 
 async def open_scene(scene_id: str):
@@ -317,6 +310,7 @@ async def open_project(project_id: str) -> None:
     asyncio.ensure_future(notify_project_change_to_others())
 
 
+@no_project
 async def open_scene_cb(req: rpc.OpenSceneRequest) -> Union[rpc.OpenSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     await open_scene(req.args.id)
@@ -463,6 +457,7 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
 
 
 @scene_needed
+@no_project
 async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Union[rpc.UpdateActionObjectPoseRequest,
                                                                                hlp.RPC_RETURN_TYPES]:
 
@@ -627,6 +622,7 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
 
 
 @scene_needed
+@no_project
 async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.FocusObjectStartResponse, hlp.RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
@@ -669,6 +665,7 @@ def get_obj_type_name(object_id: str) -> str:
     return SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
 
 
+@no_project
 async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectResponse, hlp.RPC_RETURN_TYPES]:
 
     obj_id = req.args.object_id
@@ -702,6 +699,7 @@ async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectR
 
 
 @scene_needed
+@no_project
 async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.FocusObjectDoneResponse, hlp.RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
@@ -795,7 +793,6 @@ async def unregister(websocket) -> None:
     INTERFACES.remove(websocket)
 
 
-@scene_needed
 async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
 
     assert SCENE
@@ -834,7 +831,6 @@ async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
     return True, "ok"
 
 
-@scene_needed
 async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
     assert SCENE
@@ -866,12 +862,14 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
         assert hasattr(cls, otu.SERVICES_METHOD_NAME)
         for obj_inst in cls.from_services(*args):
 
-            if obj_inst.name in SCENE_OBJECT_INSTANCES:
-                await logger.warning(f"Object id {obj_inst.name} already in scene.")
+            assert isinstance(obj_inst, Generic)
+
+            if obj_inst.id in SCENE_OBJECT_INSTANCES:
+                await logger.warning(f"Object id {obj_inst.id} already in scene.")
                 continue
 
-            SCENE_OBJECT_INSTANCES[obj_inst.name] = obj_inst
-            SCENE.objects.append(SceneObject(id=obj_inst.name, type=obj_type_name, pose=obj_inst.pose))
+            SCENE_OBJECT_INSTANCES[obj_inst.id] = obj_inst
+            SCENE.objects.append(obj_inst.scene_object())
 
     except Arcor2Exception as e:
         await logger.error(e)
@@ -881,6 +879,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
 
 @scene_needed
+@no_project
 async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
@@ -894,6 +893,7 @@ async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.
 
 
 @scene_needed
+@no_project
 async def auto_add_object_to_scene_cb(req: rpc.AutoAddObjectToSceneRequest) -> Union[rpc.AutoAddObjectToSceneResponse,
                                                                                  hlp.RPC_RETURN_TYPES]:
 
@@ -916,7 +916,6 @@ def find_robot_service() -> Union[None, RobotService]:
         return None
 
 
-@scene_needed
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
 
     if srv.type not in SERVICE_TYPES:
@@ -943,6 +942,7 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
 
 
 @scene_needed
+@no_project
 async def add_service_to_scene_cb(req: rpc.AddServiceToSceneRequest) -> Union[rpc.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
@@ -1008,6 +1008,7 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
 
 
 @scene_needed
+@no_project
 async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE

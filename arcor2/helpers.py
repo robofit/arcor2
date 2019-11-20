@@ -1,5 +1,5 @@
 import sys
-from typing import Optional,Dict, Callable, Tuple, Type, Union, Any, Awaitable, List, TypeVar
+from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, List, TypeVar
 from types import ModuleType
 import json
 import asyncio
@@ -182,8 +182,7 @@ async def run_in_executor(func, *args):
 
 def parallel_tasks(tasks: List[Awaitable]) -> None:
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.gather(*tasks))
+    asyncio.wait(asyncio.gather(*tasks))
 
 
 def make_pose_rel(parent: Pose, child: Pose) -> Pose:

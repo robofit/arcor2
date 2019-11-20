@@ -30,11 +30,6 @@ def handle_exceptions(func):
 
 
 @handle_exceptions
-def publish_project(project_id: str, path: str) -> None:
-    rest.download(f"{URL}/project/{project_id}/publish", path)
-
-
-@handle_exceptions
 def get_mesh(mesh_id) -> Mesh:
     return rest.get(f"{URL}/models/{mesh_id}/mesh", Mesh)
 
@@ -86,7 +81,7 @@ def get_object_type(object_type_id: str) -> ObjectType:
 
 @handle_exceptions
 def get_service_type(service_type_id: str) -> ServiceType:
-    return rest.get(f"{URL}/service_types/{service_type_id}", ServiceType)
+    return rest.get(f"{URL}/service_type/{service_type_id}", ServiceType)
 
 
 @handle_exceptions

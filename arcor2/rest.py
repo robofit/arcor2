@@ -40,8 +40,14 @@ def handle_response(resp: requests.Response) -> None:
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(e)
+
+        try:
+            resp_body = json.loads(resp.content)
+        except json.JSONDecodeError:
+            resp_body = resp.content
+
         raise RestException(f"Status code: {resp.status_code}, "
-                            f"body: {json.loads(resp.content)}.")
+                            f"body: {resp_body}.")
 
 
 def _send(url: str, op: Callable, data: Optional[JsonSchemaMixin] = None) -> None:
@@ -116,6 +122,11 @@ def get(url: str, data_cls: Type[T]) -> T:
 def download(url: str, path: str) -> None:
     # TODO check content type
 
-    r = requests.get(url, allow_redirects=True)
+    try:
+        r = requests.get(url, allow_redirects=True)
+    except requests.exceptions.RequestException as e:
+        print(e)
+        raise RestException("Download of file failed.")
+
     with open(path, 'wb') as file:
         file.write(r.content)

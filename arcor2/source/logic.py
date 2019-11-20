@@ -14,7 +14,7 @@ from arcor2.source.object_types import object_instance_from_res
 import arcor2.object_types
 
 
-def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> str:
+def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:
 
     tree = empty_script_tree()
     add_import(tree, "resources", "Resources", try_to_import=False)
@@ -31,7 +31,8 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str]) -> s
 
         object_instance_from_res(tree, obj.id, obj.type)
 
-    add_logic_to_loop(tree, project)
+    if add_logic:
+        add_logic_to_loop(tree, project)
 
     return SCRIPT_HEADER + tree_to_str(tree)
 

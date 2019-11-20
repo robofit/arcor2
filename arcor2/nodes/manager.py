@@ -17,9 +17,8 @@ from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
-from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE
+from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, run_in_executor
 from arcor2.source.utils import make_executable
-from arcor2 import aio_persistent_storage as storage
 from arcor2.settings import PROJECT_PATH
 from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectResponse, \
     PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, RunProjectResponse,\
@@ -27,6 +26,10 @@ from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectRe
 from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.common import ProjectStateEnum, ProjectState
 from arcor2.data.helpers import EVENT_MAPPING
+from arcor2 import rest
+from arcor2.nodes import builder
+
+BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://127.0.0.1:{builder.PORT}")
 
 PORT = 6790
 
@@ -120,15 +123,24 @@ async def project_run(req: RunProjectRequest) -> Union[RunProjectResponse, RPC_R
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
-        path = os.path.join(tmpdirname, "project.zip")
+        path = os.path.join(tmpdirname, "publish.zip")
 
-        await storage.publish_project(req.args.id, path)
+        try:
+            await run_in_executor(rest.download, f"{BUILDER_URL}/project/{req.args.id}/publish", path)
+        except rest.RestException as e:
+            await logger.error(e)
+            return False, "Failed to get project package."
 
         with zipfile.ZipFile(path, 'r') as zip_ref:
             zip_ref.extractall(tmpdirname)
 
-        shutil.rmtree(PROJECT_PATH)
-        shutil.move(os.path.join(tmpdirname, "arcor2_project"), PROJECT_PATH)
+        os.remove(path)
+
+        try:
+            shutil.rmtree(PROJECT_PATH)
+        except FileNotFoundError:
+            pass
+        shutil.copytree(tmpdirname, PROJECT_PATH)
 
     script_path = os.path.join(PROJECT_PATH, "script.py")
     make_executable(script_path)

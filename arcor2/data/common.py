@@ -3,16 +3,25 @@
 
 from typing import List, Any, Iterator, Optional, Union, Tuple, Set
 from enum import Enum
+import warnings
 
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
 import numpy as np  # type: ignore
+
+warnings.filterwarnings(
+    action='ignore',
+    category=UserWarning,
+    module='quaternion'
+)
+
 import quaternion  # type: ignore
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception
+
 
 
 class Arcor2Enum(Enum):
@@ -107,10 +116,25 @@ class ActionMetadata(JsonSchemaMixin):
 
 
 @dataclass
+class Joint(JsonSchemaMixin):
+
+    name: str
+    rotation: float
+
+
+@dataclass
+class RobotJoints(JsonSchemaMixin):
+
+    robot_id: str
+    joint: List[Joint]
+
+
+@dataclass
 class ActionPoint(JsonSchemaMixin):
 
     id: str
     pose: Pose
+    joints: Optional[RobotJoints] = None  # TODO should be mandatory?
 
 
 @dataclass
@@ -203,6 +227,7 @@ class Project(JsonSchemaMixin):
     scene_id: str
     objects: List[ProjectObject] = field(default_factory=list)
     desc: str = field(default_factory=str)
+    has_logic: bool = True
 
 
 @dataclass

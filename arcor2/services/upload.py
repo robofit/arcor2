@@ -6,6 +6,7 @@ from arcor2.helpers import import_cls, ImportClsException
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import persistent_storage as storage
 from arcor2.data.services import ServiceType
+from arcor2.services import Service
 
 
 class UploadException(Arcor2Exception):
@@ -31,7 +32,9 @@ def upload(module_cls: str) -> None:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
-        srv_type = ServiceType(id=cls.__name__, source=source)
+        assert issubclass(cls, Service)
+
+        srv_type = ServiceType(id=cls.__name__, source=source, desc=cls.__DESCRIPTION__)
 
         print(f"Storing '{srv_type.id}'...")
         storage.update_service_type(srv_type)

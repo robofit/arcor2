@@ -4,11 +4,11 @@
 import os
 import tempfile
 import shutil
+import argparse
 
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
-from flask import Flask, jsonify, request, send_file
-from werkzeug.exceptions import NotFound, InternalServerError
+from flask import Flask, send_file
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 
 from arcor2 import persistent_storage as ps
@@ -18,6 +18,7 @@ from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.helpers import camel_case_to_snake_case
 
+PORT = 5007
 
 # Create an APISpec
 spec = APISpec(
@@ -60,7 +61,7 @@ def project_publish(project_id: str):
                           example: The archive of execution package (.zip)
                 404:
                     description: Project ID or some of the required items was not found.
-                500:
+                501:
                     description: Project invalid.
             """
 
@@ -80,6 +81,12 @@ def project_publish(project_id: str):
             os.makedirs(ot_path)
             os.makedirs(srv_path)
 
+            with open(os.path.join(ot_path, "__init__.py"), "w"):
+                pass
+
+            with open(os.path.join(srv_path, "__init__.py"), "w"):
+                pass
+
             with open(os.path.join(data_path, "project.json"), "w") as project_file:
                 project_file.write(project.to_json())
 
@@ -88,35 +95,36 @@ def project_publish(project_id: str):
 
             for scene_obj in scene.objects:
                 obj = ps.get_object_type(scene_obj.type)
-                with open(os.path.join(ot_path, camel_case_to_snake_case(obj.id)), "w") as obj_file:
+
+                # TODO handle inheritance
+
+                with open(os.path.join(ot_path, camel_case_to_snake_case(obj.id)) + ".py", "w") as obj_file:
                     obj_file.write(obj.source)
 
             for scene_srv in scene.services:
                 srv = ps.get_service_type(scene_srv.type)
-                with open(os.path.join(srv_path, camel_case_to_snake_case(srv.id)), "w") as srv_file:
+                with open(os.path.join(srv_path, camel_case_to_snake_case(srv.id)) + ".py", "w") as srv_file:
                     srv_file.write(srv.source)
 
         except ps.PersistentStorageException as e:
-            print(e)
-            return
+            return str(e), 404
 
         action_names = [act.id for obj in project.objects for aps in obj.action_points for act in aps.actions]
 
         try:
 
-            with open('script.py', "w") as script:
-                script.write(program_src(project, scene, built_in_types_names()))
+            with open(os.path.join(project_dir, 'script.py'), "w") as script:
+                script.write(program_src(project, scene, built_in_types_names(), project.has_logic))
 
-            with open('resources.py', "w") as res:
+            with open(os.path.join(project_dir, 'resources.py'), "w") as res:
                 res.write(derived_resources_class(project.id, action_names))
 
         except SourceException as e:
-            print(e)
-            return
+            return str(e), 501
 
-        archive_path = os.path.join(tmpdirname, "arcor2_project.zip")
+        archive_path = os.path.join(tmpdirname, "arcor2_project")
         shutil.make_archive(archive_path, 'zip',  project_dir)
-        return send_file(archive_path)
+        return send_file(archive_path + ".zip")
 
 
 @app.route("/project/<string:project_id>/script", methods=['PUT'])
@@ -145,8 +153,16 @@ with app.test_request_context():
 
 
 def main():
-    print(spec.to_yaml())
-    app.run(host='0.0.0.0', port=5007)
+
+    parser = argparse.ArgumentParser(description='ARCOR2 Project Builder')
+    parser.add_argument('-s', '--swagger', action="store_true", default=False)
+    args = parser.parse_args()
+
+    if args.swagger:
+        print(spec.to_yaml())
+        return
+
+    app.run(host='0.0.0.0', port=PORT)
 
 
 if __name__ == '__main__':
