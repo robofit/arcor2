@@ -797,6 +797,7 @@ async def unregister(websocket) -> None:
     await logger.info("Unregistering ui")  # TODO print out some identifier
     INTERFACES.remove(websocket)
 
+
 async def add_collision(obj: Generic) -> None:
 
     if not obj.collision_model:
@@ -804,7 +805,7 @@ async def add_collision(obj: Generic) -> None:
 
     rs = find_robot_service()
     if rs:
-        await hlp.run_in_executor(rs.add_collision(obj))
+        await hlp.run_in_executor(rs.add_collision, obj)
 
 
 async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool, str]:
