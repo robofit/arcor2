@@ -64,6 +64,7 @@ class Sphere(Model):
 @dataclass
 class Mesh(Model):
 
+    uri: str
     focus_points: Optional[List[Pose]] = None
 
 

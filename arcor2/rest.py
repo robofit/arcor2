@@ -50,15 +50,20 @@ def handle_response(resp: requests.Response) -> None:
                             f"body: {resp_body}.")
 
 
-def _send(url: str, op: Callable, data: Optional[JsonSchemaMixin] = None) -> None:
+def _send(url: str, op: Callable, data: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> None:
 
     if data:
         d = convert_keys(data.to_dict(), snake_case_to_camel_case)
     else:
         d = {}
 
+    if params:
+        params = convert_keys(params, snake_case_to_camel_case)
+    else:
+        params = {}
+
     try:
-        resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'})
+        resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'}, params=params)
     except requests.exceptions.RequestException as e:
         print(e)
         raise RestException(f"Catastrophic error: {e}")
@@ -66,12 +71,22 @@ def _send(url: str, op: Callable, data: Optional[JsonSchemaMixin] = None) -> Non
     handle_response(resp)
 
 
-def post(url: str, data: JsonSchemaMixin):
-    _send(url, requests.post, data)
+def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
+    _send(url, requests.post, data, params)
 
 
-def put(url: str, data: Optional[JsonSchemaMixin] = None):
-    _send(url, requests.put, data)
+def put(url: str, data: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None):
+    _send(url, requests.put, data, params)
+
+def delete(url: str):
+
+    try:
+        resp = requests.delete(url, timeout=TIMEOUT)
+    except requests.exceptions.RequestException as e:
+        print(e)
+        raise RestException(f"Catastrophic error: {e}")
+
+    handle_response(resp)
 
 
 def get_data(url: str) -> Union[Dict, List]:

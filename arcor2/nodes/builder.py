@@ -6,6 +6,8 @@ import tempfile
 import shutil
 import argparse
 
+from typing import Set
+
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
 from flask import Flask, send_file
@@ -17,6 +19,7 @@ from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.helpers import camel_case_to_snake_case
+from arcor2.data.object_type import ObjectModel, ObjectType
 
 PORT = 5007
 
@@ -93,13 +96,24 @@ def project_publish(project_id: str):
             with open(os.path.join(data_path, "scene.json"), "w") as scene_file:
                 scene_file.write(scene.to_json())
 
-            for scene_obj in scene.objects:
-                obj = ps.get_object_type(scene_obj.type)
+            obj_types_with_models: Set[str] = set()
 
-                # TODO handle inheritance
+            for scene_obj in scene.objects:  # TODO handle inheritance
 
-                with open(os.path.join(ot_path, camel_case_to_snake_case(obj.id)) + ".py", "w") as obj_file:
-                    obj_file.write(obj.source)
+                obj_type = ps.get_object_type(scene_obj.type)
+
+                if obj_type.model and obj_type.id not in obj_types_with_models:
+                    obj_types_with_models.add(obj_type.id)
+
+                    model = ps.get_model(obj_type.model.id, obj_type.model.type)
+                    obj_model = ObjectModel(obj_type.model.type)
+                    setattr(obj_model, model.type().value, model)
+
+                    with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id), ".json")) as model_file:
+                        model_file.write(obj_model.to_json())
+
+                with open(os.path.join(ot_path, camel_case_to_snake_case(obj_type.id)) + ".py", "w") as obj_file:
+                    obj_file.write(obj_type.source)
 
             for scene_srv in scene.services:
                 srv = ps.get_service_type(scene_srv.type)

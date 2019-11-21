@@ -3,9 +3,29 @@ from typing import Set
 
 from arcor2.services import Service
 from arcor2.data.common import Pose
+from arcor2.object_types import Generic
 
 
 class RobotService(Service, metaclass=abc.ABCMeta):
+
+
+    @abc.abstractmethod
+    def add_collision(self, obj: Generic) -> None:
+        """
+        Adds collision model for object instance.
+        :param obj:
+        :return:
+        """
+        pass
+
+    @abc.abstractmethod
+    def remove_collision(self, obj: Generic) -> None:
+        """
+        Removes collision model for object instance.
+        :param obj:
+        :return:
+        """
+        pass
 
     @abc.abstractmethod
     def get_robot_ids(self) -> Set[str]:

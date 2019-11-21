@@ -8,6 +8,7 @@ import functools
 import sys
 from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator
 import uuid
+import keyword
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -21,7 +22,7 @@ from arcor2 import service_types_utils as stu, object_types_utils as otu, helper
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
     ActionParameterTypeEnum
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
-    MeshFocusAction, ObjectModel
+    MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMeta
 from arcor2.data import rpc
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
@@ -296,7 +297,7 @@ async def open_scene(scene_id: str):
         await add_service_to_scene(srv)
 
     for obj in SCENE.objects:
-        await add_object_to_scene(obj)
+        await add_object_to_scene(obj, add_to_scene=False)
 
     asyncio.ensure_future(notify_scene_change_to_others())
 
@@ -598,6 +599,10 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
     if meta.base not in OBJECT_TYPES:
         return False, "Unknown base object type."
 
+    if not meta.type.isidentifier() or keyword.iskeyword(meta.type) \
+            or meta.type != hlp.snake_case_to_camel_case(meta.type):
+        return False, "Object type invalid (should be CamelCase)."
+
     obj = meta.to_object_type()
     obj.source = new_object_type_source(OBJECT_TYPES[meta.base], meta)
 
@@ -792,12 +797,28 @@ async def unregister(websocket) -> None:
     await logger.info("Unregistering ui")  # TODO print out some identifier
     INTERFACES.remove(websocket)
 
+async def add_collision(obj: Generic) -> None:
 
-async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
+    if not obj.collision_model:
+        return
+
+    rs = find_robot_service()
+    if rs:
+        await hlp.run_in_executor(rs.add_collision(obj))
+
+
+async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool, str]:
+    """
+
+    :param obj:
+    :param add_to_scene: Set to false to only create object instance and add its collision model (if any).
+    :return:
+    """
 
     assert SCENE
 
     if obj.type not in OBJECT_TYPES:
+        # TODO try to get it from storage
         return False, "Unknown object type."
 
     obj_meta = OBJECT_TYPES[obj.type]
@@ -811,6 +832,9 @@ async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
     if obj.id in SCENE_OBJECT_INSTANCES:
         return False, "Object with that id already exists."
 
+    if not obj.id.isidentifier() or keyword.iskeyword(obj.id) and obj.id != hlp.camel_case_to_snake_case(obj.id):
+        return False, "Object ID invalid (should be snake_case)."
+
     await logger.debug(f"Creating instance {obj.id} ({obj.type}).")
 
     try:
@@ -821,8 +845,17 @@ async def add_object_to_scene(obj: SceneObject) -> Tuple[bool, str]:
             obj_type = await storage.get_object_type(obj.type)
             cls = hlp.type_def_from_source(obj_type.source, obj_type.id, Generic)
 
-        SCENE_OBJECT_INSTANCES[obj.id] = cls(obj.id, obj.pose)
-        SCENE.objects.append(obj)
+        coll_model: Optional[Models] = None
+        if obj_meta.object_model:
+            coll_model = obj_meta.object_model.model()
+
+        obj_inst = cls(obj.id, obj.pose, coll_model)
+        SCENE_OBJECT_INSTANCES[obj.id] = obj_inst
+
+        if add_to_scene:
+            SCENE.objects.append(obj)
+
+        await add_collision(obj_inst)
 
     except Arcor2Exception as e:
         await logger.error(e)
@@ -837,6 +870,9 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
     if obj_type_name not in OBJECT_TYPES:
         return False, "Unknown object type."
+
+    if obj_type_name in otu.built_in_types_names():
+        return False, "Does not work for built in types."
 
     obj_meta = OBJECT_TYPES[obj_type_name]
 
@@ -870,6 +906,10 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
             SCENE_OBJECT_INSTANCES[obj_inst.id] = obj_inst
             SCENE.objects.append(obj_inst.scene_object())
+
+            if obj_meta.object_model:
+                obj_inst.collision_model = obj_meta.object_model.model()
+                await add_collision(obj_inst)
 
     except Arcor2Exception as e:
         await logger.error(e)
@@ -931,12 +971,18 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
     if issubclass(cls_def, RobotService) and find_robot_service():
         return False, "Scene might contain only one robot service."
 
-
     try:
-        SERVICES_INSTANCES[srv.type] = await hlp.run_in_executor(cls_def, srv.configuration_id)
+        srv_inst = await hlp.run_in_executor(cls_def, srv.configuration_id)
     except Arcor2Exception as e:
         await logger.error(e)
         return False, "System error"
+
+    SERVICES_INSTANCES[srv.type] = srv_inst
+
+    if isinstance(srv_inst, RobotService):
+        for obj_inst in SCENE_OBJECT_INSTANCES.values():
+            if obj_inst.collision_model:
+                await hlp.run_in_executor(srv_inst.add_collision, obj_inst)
 
     return True, "ok"
 
@@ -1016,6 +1062,13 @@ async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.Rem
     if req.args.id in SCENE_OBJECT_INSTANCES:
 
         SCENE.objects = [obj for obj in SCENE.objects if obj.id != req.args.id]
+        obj_inst = SCENE_OBJECT_INSTANCES[req.args.id]
+
+        if obj_inst.collision_model:
+            rs = find_robot_service()
+            if rs:
+                await hlp.run_in_executor(rs.remove_collision, obj_inst)
+
         del SCENE_OBJECT_INSTANCES[req.args.id]
 
     elif req.args.id in SERVICES_INSTANCES:

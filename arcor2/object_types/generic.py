@@ -1,19 +1,21 @@
 import abc
-from typing import Dict
+from typing import Dict, Optional
 import time
 
 from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
 from arcor2.action import action
+from arcor2.data.object_type import Models
 
 
 class Generic(metaclass=abc.ABCMeta):
 
     __DESCRIPTION__ = "Generic object"
 
-    def __init__(self, obj_id: str, pose: Pose) -> None:
+    def __init__(self, obj_id: str, pose: Pose, collision_model: Optional[Models] = None) -> None:
 
         self.id = obj_id
         self.pose = pose
+        self.collision_model = collision_model
         self.action_points: Dict[str, ActionPoint] = {}
 
     def scene_object(self) -> SceneObject:

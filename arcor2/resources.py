@@ -3,7 +3,7 @@
 
 
 from os import path
-from typing import Dict, Union, Type, TypeVar, List
+from typing import Dict, Union, Type, TypeVar, List, Optional
 import importlib
 import json
 
@@ -12,11 +12,12 @@ from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
     ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction
+from arcor2.data.object_type import ObjectModel
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException
 import arcor2.object_types
 from arcor2.object_types import Generic
-from arcor2.services import Service
+from arcor2.services import Service, RobotService
 from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
@@ -35,7 +36,7 @@ class IntResources:
     CUSTOM_OBJECT_TYPES_MODULE = "object_types"
     SERVICES_MODULE = "services"
 
-    def __init__(self, scene: Scene, project: Project) -> None:
+    def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[ObjectModel]]) -> None:
 
         self.project = project
         self.scene = scene
@@ -46,13 +47,20 @@ class IntResources:
         self.services: Dict[str, Service] = {}
         self.objects: Dict[str, Generic] = {}
 
+        self.robot_service: Optional[RobotService] = None
+
         for srv in self.scene.services:
 
             assert srv.type not in self.services, "Duplicate service {}!".format(srv.type)
 
             module = importlib.import_module(ResourcesBase.SERVICES_MODULE + "." + camel_case_to_snake_case(srv.type))
             cls = getattr(module, srv.type)
-            self.services[srv.type] = cls(srv.configuration_id)
+            srv_inst = cls(srv.configuration_id)
+            self.services[srv.type] = srv_inst
+
+            if isinstance(srv_inst, RobotService):
+                assert self.robot_service is None
+                self.robot_service = srv_inst
 
         built_in = built_in_types_names()
 
@@ -78,11 +86,14 @@ class IntResources:
                 for srv_type in obj_meta.needs_services:
                     args.append(self.services[srv_type])
 
-                inst = cls(*args, scene_obj.id, scene_obj.pose)
+                inst = cls(*args, scene_obj.id, scene_obj.pose, models[scene_obj.type])
             else:
-                inst = cls(scene_obj.id, scene_obj.pose)
+                inst = cls(scene_obj.id, scene_obj.pose, models[scene_obj.type])
 
             self.objects[scene_obj.id] = inst
+
+            if self.robot_service:
+                self.robot_service.add_collision(inst)
 
         # add action points to the object_types
         for project_obj in self.project.objects:
@@ -148,11 +159,11 @@ def lower(s: str) -> str:
 
 class ResourcesBase(IntResources):
 
-    def read_project_data(self, cls: Type[T]) -> T:
+    def read_project_data(self, file_name: str, cls: Type[T]) -> T:
 
         try:
 
-            with open(path.join(PROJECT_PATH, "data", cls.__name__.lower() + ".json")) as scene_file:
+            with open(path.join(PROJECT_PATH, "data", file_name + ".json")) as scene_file:
 
                 data_dict = json.loads(scene_file.read())
                 data_dict = convert_keys(data_dict, camel_case_to_snake_case)
@@ -161,15 +172,25 @@ class ResourcesBase(IntResources):
 
         except JsonSchemaValidationError as e:
             raise ResourcesException(f"Invalid project/scene: {e}")
-        except IOError as e:
-            raise ResourcesException(f"Failed to read project/scene: {e}")
 
     def __init__(self, project_id: str) -> None:
 
-        scene = self.read_project_data(Scene)
-        project = self.read_project_data(Project)
+        scene = self.read_project_data(Scene.__name__.lower(), Scene)
+        project = self.read_project_data(Project.__name__.lower(), Project)
 
         if project_id != project.id:
             raise ResourcesException("Resources were generated for different project!")
 
-        super(ResourcesBase, self).__init__(scene, project)
+        models: Dict[str, Optional[ObjectModel]] = {}
+
+        for obj in scene.objects:
+
+            if obj.type in models:
+                continue
+
+            try:
+                models[obj.type] = self.read_project_data(camel_case_to_snake_case(obj.type), ObjectModel)
+            except IOError:
+                models[obj.type] = None
+
+        super(ResourcesBase, self).__init__(scene, project, models)
