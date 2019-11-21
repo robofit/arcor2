@@ -12,7 +12,7 @@ from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
     ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction
-from arcor2.data.object_type import ObjectModel
+from arcor2.data.object_type import ObjectModel, Models
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException
 import arcor2.object_types
@@ -36,7 +36,7 @@ class IntResources:
     CUSTOM_OBJECT_TYPES_MODULE = "object_types"
     SERVICES_MODULE = "services"
 
-    def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[ObjectModel]]) -> None:
+    def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
         self.project = project
         self.scene = scene
@@ -181,7 +181,7 @@ class ResourcesBase(IntResources):
         if project_id != project.id:
             raise ResourcesException("Resources were generated for different project!")
 
-        models: Dict[str, Optional[ObjectModel]] = {}
+        models: Dict[str, Optional[Models]] = {}
 
         for obj in scene.objects:
 
@@ -189,7 +189,7 @@ class ResourcesBase(IntResources):
                 continue
 
             try:
-                models[obj.type] = self.read_project_data(camel_case_to_snake_case(obj.type), ObjectModel)
+                models[obj.type] = self.read_project_data(camel_case_to_snake_case(obj.type), ObjectModel).model()
             except IOError:
                 models[obj.type] = None
 

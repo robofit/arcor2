@@ -125,8 +125,8 @@ class Joint(JsonSchemaMixin):
 @dataclass
 class RobotJoints(JsonSchemaMixin):
 
-    robot_id: str
-    joint: List[Joint]
+    robot_id: str = ""
+    joints: List[Joint] = field(default_factory=list)
 
 
 @dataclass
@@ -134,7 +134,9 @@ class ActionPoint(JsonSchemaMixin):
 
     id: str
     pose: Pose
-    joints: Optional[RobotJoints] = None  # TODO should be mandatory?
+
+    # TODO store joints in project variable instead
+    joints: Optional[RobotJoints] = field(default_factory=RobotJoints)
 
 
 @dataclass

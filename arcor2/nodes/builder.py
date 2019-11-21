@@ -19,7 +19,7 @@ from arcor2.source.utils import derived_resources_class
 from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.helpers import camel_case_to_snake_case
-from arcor2.data.object_type import ObjectModel, ObjectType
+from arcor2.data.object_type import ObjectModel
 
 PORT = 5007
 
@@ -106,10 +106,9 @@ def project_publish(project_id: str):
                     obj_types_with_models.add(obj_type.id)
 
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
-                    obj_model = ObjectModel(obj_type.model.type)
-                    setattr(obj_model, model.type().value, model)
+                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value: model})
 
-                    with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id), ".json")) as model_file:
+                    with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id) + ".json"), "w") as model_file:
                         model_file.write(obj_model.to_json())
 
                 with open(os.path.join(ot_path, camel_case_to_snake_case(obj_type.id)) + ".py", "w") as obj_file:

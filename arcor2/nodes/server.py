@@ -552,7 +552,11 @@ async def list_projects_cb(req: rpc.ListProjectsRequest) -> Union[rpc.ListProjec
 
     for project_iddesc in projects.items:
 
-        project = await storage.get_project(project_iddesc.id)
+        try:
+            project = await storage.get_project(project_iddesc.id)
+        except Arcor2Exception as e:
+            await logger.warning(f"Ignoring project {project_iddesc.id} due to error: {e}")
+            continue
 
         pd = rpc.ListProjectsResponseData(id=project.id, desc=project.desc)
         data.append(pd)
