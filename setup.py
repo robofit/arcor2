@@ -35,7 +35,8 @@ setup(
         'apispec_webframeworks',
         'flask',
         'requests',
-        'numpy-quaternion'
+        'numpy-quaternion',
+        'fastcache'
     ],
     tests_require=[
         'websocket'

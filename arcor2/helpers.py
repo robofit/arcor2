@@ -1,5 +1,5 @@
 import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, List, TypeVar
+from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, TypeVar
 from types import ModuleType
 import json
 import asyncio

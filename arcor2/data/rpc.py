@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple, Set, Any
 import re
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction, SceneObject, SceneService
+from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction, SceneObject, SceneService, \
+    IdValue
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
 from arcor2.data.services import ServiceTypeMeta
 
@@ -90,6 +91,31 @@ class GetServicesResponse(Response):
 Objects
 ------------------------------------------------------------------------------------------------------------------------
 """
+
+
+@dataclass
+class ActionParamValuesArgs(JsonSchemaMixin):
+
+    id: str  # object or service id
+    param_id: str
+    parent_params: List[IdValue] = field(default_factory=list)
+
+
+@dataclass
+class ActionParamValuesRequest(Request):
+
+    args: ActionParamValuesArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ActionParamValuesResponse(Response):
+
+    data: List[Any] = field(default_factory=list)  # union would be better but it does not work in C#
+    response: str = field(default=ActionParamValuesRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass

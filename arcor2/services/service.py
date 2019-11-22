@@ -1,5 +1,5 @@
 import abc
-from typing import Set
+from typing import Set, Dict, Tuple, Callable
 
 
 class Service(metaclass=abc.ABCMeta):
@@ -8,6 +8,10 @@ class Service(metaclass=abc.ABCMeta):
 
     def __init__(self, configuration_id: str) -> None:
         self.configuration_id = configuration_id
+
+        # TODO this should be also defined for objects
+        # TODO callable should return Set[??]
+        self.params: Dict[str, Tuple[Callable, Set[str]]] = {}
 
     @staticmethod
     def get_configuration_ids() -> Set[str]:

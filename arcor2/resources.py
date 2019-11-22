@@ -103,6 +103,17 @@ class IntResources:
                 abs_pose = make_pose_abs(self.objects[project_obj.id].pose, aps.pose)
                 self.objects[project_obj.id].add_action_point(aps.id, abs_pose)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+
+        if not self.robot_service:
+            return
+
+        for obj in self.objects.values():
+            self.robot_service.remove_collision(obj)
+
     @staticmethod
     def print_info(action_id: str, args: ARGS_DICT) -> None:
         """Helper method used to print out info about the action going to be executed."""
@@ -116,7 +127,7 @@ class IntResources:
             if isinstance(v, ActionPoint):  # this is needed because of "value: Any"
                 vv = v.to_dict()
 
-            args_list.append(ActionParameter(k, ARGS_MAPPING[type(v)], vv))
+            args_list.append(ActionParameter(k, vv, ARGS_MAPPING[type(v)]))
 
         print_event(CurrentActionEvent(data=CurrentAction(action_id, args_list)))
 

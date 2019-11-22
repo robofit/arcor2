@@ -1,10 +1,8 @@
 import json
 import requests
-
 from typing import Type, TypeVar, Dict, Callable, List, Union, Any, Optional
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
-
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case
@@ -78,6 +76,7 @@ def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
 def put(url: str, data: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None):
     _send(url, requests.put, data, params)
 
+
 def delete(url: str):
 
     try:
@@ -89,9 +88,30 @@ def delete(url: str):
     handle_response(resp)
 
 
-def get_data(url: str) -> Union[Dict, List]:
+def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Union[Dict, List]:
+
+    data = _get(url, body, params)
+
+    if not isinstance(data, (list, dict)):
+        raise RestException("Invalid data.")
+
+    return convert_keys(data, camel_case_to_snake_case)
+
+
+def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Any:
+
+    if body is None:
+        body_dict = {}
+    else:
+        body_dict = body.to_dict()
+
+    if params:
+        params = convert_keys(params, snake_case_to_camel_case)
+    else:
+        params = {}
+
     try:
-        resp = requests.get(url, timeout=TIMEOUT)
+        resp = requests.get(url, timeout=TIMEOUT, data=body_dict, params=params)
     except requests.exceptions.RequestException as e:
         print(e)
         raise RestException(f"Catastrophic error: {e}")
@@ -99,12 +119,30 @@ def get_data(url: str) -> Union[Dict, List]:
     handle_response(resp)
 
     try:
-        data = json.loads(resp.text)
+        return json.loads(resp.text)
     except (json.JSONDecodeError, TypeError) as e:
         print(e)
         raise RestException("Invalid JSON.")
 
-    return convert_keys(data, camel_case_to_snake_case)
+
+def get_float(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> float:
+
+    value = _get(url, body, params)
+
+    try:
+        return float(value)
+    except ValueError as e:
+        raise RestException(e)
+
+
+def get_bool(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> bool:
+
+    value = _get(url, body, params)
+
+    try:
+        return bool(value)
+    except ValueError as e:
+        raise RestException(e)
 
 
 def get_list(url: str, data_cls: Type[T]) -> List[T]:
@@ -122,8 +160,9 @@ def get_list(url: str, data_cls: Type[T]) -> List[T]:
     return ret
 
 
-def get(url: str, data_cls: Type[T]) -> T:
-    data = get_data(url)
+def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None) -> T:
+
+    data = get_data(url, body)
 
     assert isinstance(data, dict)
 

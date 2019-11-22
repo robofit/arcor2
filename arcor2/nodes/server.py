@@ -217,7 +217,8 @@ async def _get_service_types() -> None:
 
         srv_type = await storage.get_service_type(srv_id.id)
         try:
-            service_types[srv_id.id] = stu.meta_from_def(hlp.type_def_from_source(srv_type.source, srv_type.id, Service))
+            service_types[srv_id.id] = stu.meta_from_def(hlp.type_def_from_source(srv_type.source,
+                                                                                  srv_type.id, Service))
         except Arcor2Exception as e:
             await logger.error(f"Ignoring object type {srv_type.id}: {e}")
 
@@ -339,7 +340,8 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         # db-stored (user-created) object types
         obj_db = await storage.get_object_type(obj_type)
         try:
-            object_actions_dict[obj_type] = otu.object_actions(hlp.type_def_from_source(obj_db.source, obj_db.id, Generic))
+            object_actions_dict[obj_type] = otu.object_actions(hlp.type_def_from_source(obj_db.source,
+                                                                                        obj_db.id, Generic))
         except hlp.TypeDefException as e:
             await logger.error(e)
 
@@ -368,7 +370,8 @@ async def _check_manager() -> None:
     """
 
     # TODO avoid cast
-    resp = cast(rpc.ProjectStateResponse, await manager_request(rpc.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    resp = cast(rpc.ProjectStateResponse,
+                await manager_request(rpc.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
         await open_project(resp.data.id)
@@ -437,7 +440,7 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
 @scene_needed
 @project_needed
 async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union[rpc.UpdateActionPointPoseResponse,
-                                                                             hlp.RPC_RETURN_TYPES]:
+                                                                                 hlp.RPC_RETURN_TYPES]:
 
     assert SCENE and PROJECT
 
@@ -460,7 +463,7 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
 @scene_needed
 @no_project
 async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Union[rpc.UpdateActionObjectPoseRequest,
-                                                                               hlp.RPC_RETURN_TYPES]:
+                                                                                   hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -632,7 +635,8 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
 
 @scene_needed
 @no_project
-async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.FocusObjectStartResponse, hlp.RPC_RETURN_TYPES]:
+async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.FocusObjectStartResponse,
+                                                                           hlp.RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
     global FOCUS_OBJECT_ROBOT
@@ -648,7 +652,7 @@ async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.F
     if obj_id not in SCENE_OBJECT_INSTANCES:
         return False, "Unknown object."
 
-    # TODO check if the robot supports (implements) focusing (how?)
+    # TODO check if the robot supports focusing (hasattr focus), RobotService has to support focus
     # TODO check if end effector exists
 
     obj_type = OBJECT_TYPES[get_obj_type_name(obj_id)]
@@ -709,7 +713,8 @@ async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectR
 
 @scene_needed
 @no_project
-async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.FocusObjectDoneResponse, hlp.RPC_RETURN_TYPES]:
+async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.FocusObjectDoneResponse,
+                                                                         hlp.RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
     global FOCUS_OBJECT_ROBOT
@@ -788,7 +793,8 @@ async def register(websocket) -> None:
     await notify_project(websocket)
 
     # TODO avoid cast
-    resp = cast(rpc.ProjectStateResponse, await manager_request(rpc.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    resp = cast(rpc.ProjectStateResponse,
+                await manager_request(rpc.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     await asyncio.wait([websocket.send(ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
@@ -802,14 +808,26 @@ async def unregister(websocket) -> None:
     INTERFACES.remove(websocket)
 
 
-async def add_collision(obj: Generic) -> None:
+async def collision(obj: Generic,
+                    rs: Optional[RobotService] = None, *, add: bool = False, remove: bool = False) -> None:
+    """
+
+    :param obj: Instance of the object.
+    :param add:
+    :param remove:
+    :param rs:
+    :return:
+    """
+
+    assert add ^ remove
 
     if not obj.collision_model:
         return
 
-    rs = find_robot_service()
+    if rs is None:
+        rs = find_robot_service()
     if rs:
-        await hlp.run_in_executor(rs.add_collision, obj)
+        await hlp.run_in_executor(rs.add_collision if add else rs.remove_collision, obj)
 
 
 async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool, str]:
@@ -860,7 +878,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool
         if add_to_scene:
             SCENE.objects.append(obj)
 
-        await add_collision(obj_inst)
+        await collision(obj_inst, add=True)
 
     except Arcor2Exception as e:
         await logger.error(e)
@@ -914,7 +932,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
             if obj_meta.object_model:
                 obj_inst.collision_model = obj_meta.object_model.model()
-                await add_collision(obj_inst)
+                await collision(obj_inst, add=True)
 
     except Arcor2Exception as e:
         await logger.error(e)
@@ -925,7 +943,8 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
 @scene_needed
 @no_project
-async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.AddObjectToSceneResponse,
+                                                                            hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await add_object_to_scene(obj)
@@ -940,7 +959,7 @@ async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.
 @scene_needed
 @no_project
 async def auto_add_object_to_scene_cb(req: rpc.AutoAddObjectToSceneRequest) -> Union[rpc.AutoAddObjectToSceneResponse,
-                                                                                 hlp.RPC_RETURN_TYPES]:
+                                                                                     hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await auto_add_object_to_scene(obj.type)
@@ -985,16 +1004,17 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
     SERVICES_INSTANCES[srv.type] = srv_inst
 
     if isinstance(srv_inst, RobotService):
+        await logger.info("RobotService added, adding collision models to all objects.")
         for obj_inst in SCENE_OBJECT_INSTANCES.values():
-            if obj_inst.collision_model:
-                await hlp.run_in_executor(srv_inst.add_collision, obj_inst)
+            await collision(obj_inst, srv_inst, add=True)
 
     return True, "ok"
 
 
 @scene_needed
 @no_project
-async def add_service_to_scene_cb(req: rpc.AddServiceToSceneRequest) -> Union[rpc.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def add_service_to_scene_cb(req: rpc.AddServiceToSceneRequest) -> Union[rpc.AddServiceToSceneResponse,
+                                                                              hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -1037,7 +1057,7 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Pro
 
 @scene_needed
 async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Union[rpc.SceneObjectUsageResponse,
-                                                                               hlp.RPC_RETURN_TYPES]:
+                                                                                   hlp.RPC_RETURN_TYPES]:
     """
     Works for both services and objects.
     :param req:
@@ -1058,9 +1078,47 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
     return resp
 
 
+@project_needed
+async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc.ActionParamValuesResponse,
+                                                                             hlp.RPC_RETURN_TYPES]:
+
+    if req.args.id in SCENE_OBJECT_INSTANCES:
+        return False, "Not implemented for object so far!"  # TODO implement
+    elif req.args.id in SERVICES_INSTANCES:
+        inst = SERVICES_INSTANCES[req.args.id]
+    else:
+        return False, "Unknown ID."
+
+    parent_params = {}
+
+    for pp in req.args.parent_params:
+        parent_params[pp.id] = pp.value
+
+    try:
+        method, required_parent_params = inst.params[req.args.param_id]
+    except KeyError:
+        return False, "Unknown parameter or values not constrained."
+
+    print(parent_params)
+    print(required_parent_params)
+
+    if parent_params.keys() != required_parent_params:
+        return False, "Not all required parent params were given."
+
+    # TODO validate method parameters vs parent_params (check types)
+
+    resp = rpc.ActionParamValuesResponse()
+
+    # TODO update hlp.run_in_executor to support kwargs
+    resp.data = list(await asyncio.get_event_loop().run_in_executor(None,
+                                                                    functools.partial(method, **parent_params)))
+    return resp
+
+
 @scene_needed
 @no_project
-async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.RemoveFromSceneResponse,
+                                                                         hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -1068,12 +1126,7 @@ async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.Rem
 
         SCENE.objects = [obj for obj in SCENE.objects if obj.id != req.args.id]
         obj_inst = SCENE_OBJECT_INSTANCES[req.args.id]
-
-        if obj_inst.collision_model:
-            rs = find_robot_service()
-            if rs:
-                await hlp.run_in_executor(rs.remove_collision, obj_inst)
-
+        await collision(obj_inst, remove=True)
         del SCENE_OBJECT_INSTANCES[req.args.id]
 
     elif req.args.id in SERVICES_INSTANCES:
@@ -1162,7 +1215,11 @@ async def scene_change(ui, event: SceneChangedEvent) -> None:
                 return
     else:
         await logger.info("Clearing the scene.")
-        SCENE_OBJECT_INSTANCES.clear()  # TODO delete collision objects
+        rs = find_robot_service()
+        if rs:
+            for obj_inst in SCENE_OBJECT_INSTANCES.values():
+                await collision(obj_inst, rs, remove=True)
+        SCENE_OBJECT_INSTANCES.clear()
         SERVICES_INSTANCES.clear()
 
     SCENE = event.data
@@ -1199,7 +1256,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.AddServiceToSceneRequest: add_service_to_scene_cb,
     rpc.RemoveFromSceneRequest: remove_from_scene_cb,
     rpc.SceneObjectUsageRequest: scene_object_usage_request_cb,
-    rpc.OpenSceneRequest: open_scene_cb
+    rpc.OpenSceneRequest: open_scene_cb,
+    rpc.ActionParamValuesRequest: action_param_values_cb
 }
 
 # add Project Manager RPC API
@@ -1224,7 +1282,7 @@ def main():
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
 
     asyncio.wait([asyncio.gather(websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
-                        _initialize_server())])
+                                 _initialize_server())])
     loop.run_forever()
 
 

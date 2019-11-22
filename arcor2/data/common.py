@@ -23,7 +23,6 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2.exceptions import Arcor2Exception
 
 
-
 class Arcor2Enum(Enum):
 
     @classmethod
@@ -164,11 +163,16 @@ class Scene(JsonSchemaMixin):
 
 
 @dataclass
-class ActionParameter(JsonSchemaMixin):
+class IdValue(JsonSchemaMixin):
 
     id: str
-    type: ActionParameterTypeEnum
     value: Any
+
+
+@dataclass
+class ActionParameter(IdValue):
+
+    type: ActionParameterTypeEnum
 
     def __post_init__(self) -> None:
         # TODO implement value type check
@@ -295,3 +299,6 @@ class CurrentAction(JsonSchemaMixin):
 
     action_id: str = ""
     args: List[ActionParameter] = field(default_factory=list)
+
+
+ActionParameterValuesPermutations = List[List[ActionParameter]]
