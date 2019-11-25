@@ -3,19 +3,11 @@
 
 from typing import List, Any, Iterator, Optional, Union, Tuple, Set
 from enum import Enum
-import warnings
 
 from json import JSONEncoder
 from dataclasses import dataclass, field
 
 import numpy as np  # type: ignore
-
-warnings.filterwarnings(
-    action='ignore',
-    category=UserWarning,
-    module='quaternion'
-)
-
 import quaternion  # type: ignore
 
 from dataclasses_jsonschema import JsonSchemaMixin

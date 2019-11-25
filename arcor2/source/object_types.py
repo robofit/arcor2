@@ -1,3 +1,6 @@
+from typing import Union
+from typing_extensions import Literal
+
 from typed_ast.ast3 import Assign, Name, ClassDef, Str, Module, \
     ImportFrom, alias, Pass, AnnAssign, Store, Load, Subscript, Index
 
@@ -65,18 +68,16 @@ def new_object_type_source(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> str
     return tree_to_str(tree)
 
 
-def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> None:
+def object_instance_from_res(tree: Module, object_id: str, cls_name: str,
+                             cls_type: Union[Literal["objects"], Literal["services"]]) -> None:
 
     main_body = find_function("main", tree).body
-    last_assign_idx = None
+    last_assign_idx = -1
 
     for body_idx, body_item in enumerate(main_body):
 
         if isinstance(body_item, (Assign, AnnAssign)):
             last_assign_idx = body_idx
-
-    if last_assign_idx is None:
-        raise SourceException()
 
     assign = AnnAssign(
         target=Name(
@@ -86,7 +87,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str) -> Non
             id=cls_name,
             ctx=Load()),
         value=Subscript(
-            value=get_name_attr('res', 'objects'),
+            value=get_name_attr('res', cls_type),
             slice=Index(value=Str(
                 s=object_id,
                 kind='')),

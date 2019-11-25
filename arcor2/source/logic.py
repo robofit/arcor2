@@ -8,7 +8,7 @@ from arcor2.helpers import camel_case_to_snake_case
 from arcor2.project_utils import get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
-from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, add_cls_inst, \
+from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, \
     append_method_call, tree_to_str, get_name_attr
 from arcor2.source.object_types import object_instance_from_res
 import arcor2.object_types
@@ -17,10 +17,7 @@ import arcor2.object_types
 def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:
 
     tree = empty_script_tree()
-    add_import(tree, "resources", "Resources", try_to_import=False)
-    add_cls_inst(tree, "Resources", "res")
 
-    # TODO api???
     # get object instances from resources object
     for obj in scene.objects:
 
@@ -29,7 +26,11 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_
         else:
             add_import(tree, "object_types." + camel_case_to_snake_case(obj.type), obj.type, try_to_import=False)
 
-        object_instance_from_res(tree, obj.id, obj.type)
+        object_instance_from_res(tree, obj.id, obj.type, "objects")
+
+    for srv in scene.services:
+        add_import(tree, "services." + camel_case_to_snake_case(srv.type), srv.type, try_to_import=False)
+        object_instance_from_res(tree, srv.type, srv.type, "services")
 
     if add_logic:
         add_logic_to_loop(tree, project)

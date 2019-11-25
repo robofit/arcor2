@@ -8,8 +8,8 @@ import argparse
 
 from typing import Set
 
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
+from apispec import APISpec  # type: ignore
+from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, send_file
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 

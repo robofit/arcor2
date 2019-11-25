@@ -919,7 +919,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
         args: List[Service] = [SERVICES_INSTANCES[srv_name] for srv_name in obj_meta.needs_services]
 
         assert hasattr(cls, otu.SERVICES_METHOD_NAME)
-        for obj_inst in cls.from_services(*args):
+        for obj_inst in cls.from_services(*args):  # type: ignore
 
             assert isinstance(obj_inst, Generic)
 
