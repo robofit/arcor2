@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import List, Any, Iterator, Optional, Union, Tuple, Set
-from enum import Enum
+from enum import Enum, unique
 
 from json import JSONEncoder
 from dataclasses import dataclass, field
@@ -15,26 +15,36 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2.exceptions import Arcor2Exception
 
 
-class Arcor2Enum(Enum):
+@unique
+class StrEnum(str, Enum):
 
     @classmethod
     def set(cls) -> Set[str]:
         return set(map(lambda c: c.value, cls))  # type: ignore
 
 
-class ActionIOEnum(Arcor2Enum):
+@unique
+class IntEnum(int, Enum):
+
+    @classmethod
+    def set(cls) -> Set[int]:
+        return set(map(lambda c: c.value, cls))  # type: ignore
+
+
+class ActionIOEnum(StrEnum):
 
     FIRST: str = "start"
     LAST: str = "end"
 
 
-class ActionParameterTypeEnum(Enum):
+class ActionParameterTypeEnum(StrEnum):
 
     STRING: str = "string"
     DOUBLE: str = "double"
     INTEGER: str = "integer"
     ACTION_POINT: str = "ActionPoint"
-    ENUM: str = "enum"
+    STRING_ENUM: str = "string_enum"
+    INTEGER_ENUM: str = "integer_enum"
 
 
 class DataClassEncoder(JSONEncoder):
@@ -248,13 +258,15 @@ class IdDescList(JsonSchemaMixin):
     items: List[IdDesc] = field(default_factory=list)
 
 
-SUPPORTED_ARGS = Union[str, float, int, ActionPoint]
+SUPPORTED_ARGS = Union[str, float, int, ActionPoint, StrEnum, IntEnum]
 
 ARGS_MAPPING = {
     str: ActionParameterTypeEnum.STRING,
     float: ActionParameterTypeEnum.DOUBLE,
     int: ActionParameterTypeEnum.INTEGER,
-    ActionPoint: ActionParameterTypeEnum.ACTION_POINT
+    ActionPoint: ActionParameterTypeEnum.ACTION_POINT,
+    StrEnum: ActionParameterTypeEnum.STRING_ENUM,
+    IntEnum: ActionParameterTypeEnum.INTEGER_ENUM
 }
 
 

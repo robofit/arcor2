@@ -224,8 +224,9 @@ def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> T
     mod = ModuleType('temp_module')
     try:
         exec(source, mod.__dict__)
-    except ModuleNotFoundError as e:
+    except (ModuleNotFoundError, ImportError) as e:
         raise TypeDefException(e)
+
     try:
         cls_def = getattr(mod, type_name)
     except AttributeError:

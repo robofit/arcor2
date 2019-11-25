@@ -3,15 +3,16 @@
 
 
 from os import path
-from typing import Dict, Union, Type, TypeVar, List, Optional
+from typing import Dict, Union, Type, TypeVar, List, Optional, get_type_hints
 import importlib
 import json
 
 from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
+from undecorated import undecorated  # type: ignore
 
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
-    ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction
+    ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction, StrEnum, IntEnum
 from arcor2.data.object_type import ObjectModel, Models
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException
@@ -103,6 +104,8 @@ class IntResources:
                 abs_pose = make_pose_abs(self.objects[project_obj.id].pose, aps.pose)
                 self.objects[project_obj.id].add_action_point(aps.id, abs_pose)
 
+        self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
+
     def __enter__(self):
         return self
 
@@ -127,7 +130,14 @@ class IntResources:
             if isinstance(v, ActionPoint):  # this is needed because of "value: Any"
                 vv = v.to_dict()
 
-            args_list.append(ActionParameter(k, vv, ARGS_MAPPING[type(v)]))
+            if isinstance(v, StrEnum):
+                vv = v.value
+                args_list.append(ActionParameter(k, vv, ActionParameterTypeEnum.STRING_ENUM))
+            elif isinstance(v, IntEnum):
+                vv = v.value
+                args_list.append(ActionParameter(k, vv, ActionParameterTypeEnum.STRING_ENUM))
+            else:
+                args_list.append(ActionParameter(k, vv, ARGS_MAPPING[type(v)]))
 
         print_event(CurrentActionEvent(data=CurrentAction(action_id, args_list)))
 
@@ -145,13 +155,22 @@ class IntResources:
                 for act in aps.actions:
                     if act.id == action_id:
 
-                        ret: Dict[str, Union[str, float, int, ActionPoint]] = {}
+                        ret: Dict[str, Union[str, float, int, ActionPoint, StrEnum, IntEnum]] = {}
 
                         for param in act.parameters:
                             if param.type == ActionParameterTypeEnum.ACTION_POINT:
                                 assert isinstance(param.value, str)
                                 object_id, ap_id = param.value.split('.')
                                 ret[param.id] = self.action_point(object_id, ap_id)
+                            elif param.type in (ActionParameterTypeEnum.STRING_ENUM,
+                                                ActionParameterTypeEnum.INTEGER_ENUM):
+
+                                inst_name, method_name = act.type.split("/")
+
+                                undecorated_method = undecorated(getattr(self.all_instances[inst_name], method_name))
+                                ttype = get_type_hints(undecorated_method)[param.id]
+                                ret[param.id] = ttype(param.value)
+
                             else:
                                 ret[param.id] = param.value
 

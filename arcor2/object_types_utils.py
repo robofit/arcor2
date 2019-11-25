@@ -1,13 +1,13 @@
 import copy
 import inspect
-from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
+from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union, Optional
 
 from undecorated import undecorated  # type: ignore
 
 import arcor2
 from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArgs, \
     ObjectAction, ObjectActions
-from arcor2.data.common import ActionParameterTypeEnum
+from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
@@ -162,8 +162,19 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                     data.returns = ttype.__name__  # TODO define enum for this
                     continue
 
-                args = ObjectActionArgs(name=name, type=PARAM_MAPPING[ttype.__name__],
-                                        dynamic_value=name in type_def.DYNAMIC_PARAMS)
+                allowed_values: Optional[Set[Union[str, int]]] = None
+
+                if issubclass(ttype, StrEnum):
+                    param_type = ActionParameterTypeEnum.STRING_ENUM
+                    allowed_values = ttype.set()
+                elif issubclass(ttype, IntEnum):
+                    param_type = ActionParameterTypeEnum.INTEGER_ENUM
+                    allowed_values = ttype.set()
+                else:
+                    param_type = PARAM_MAPPING[ttype.__name__]
+
+                args = ObjectActionArgs(name=name, type=param_type,
+                                        dynamic_value=name in type_def.DYNAMIC_PARAMS, allowed_values=allowed_values)
 
                 data.action_args.append(args)
 

@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Union, Set
+from typing import Optional, List, Dict, Union, Set, Any
 from enum import Enum
 
 from arcor2.data import DataException
@@ -151,7 +151,7 @@ class ObjectActionArgs(JsonSchemaMixin):
 
     name: str
     type: ActionParameterTypeEnum
-    allowed_values: Optional[Set[str]] = None  # for enums
+    allowed_values: Optional[Set[Any]] = None  # for enums
     dynamic_value: bool = False  # client should ask for allowed values using RPC
 
 
