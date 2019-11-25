@@ -162,7 +162,8 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                     data.returns = ttype.__name__  # TODO define enum for this
                     continue
 
-                args = ObjectActionArgs(name=name, type=PARAM_MAPPING[ttype.__name__])
+                args = ObjectActionArgs(name=name, type=PARAM_MAPPING[ttype.__name__],
+                                        dynamic_value=name in type_def.DYNAMIC_PARAMS)
 
                 data.action_args.append(args)
 

@@ -1082,8 +1082,11 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
 async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc.ActionParamValuesResponse,
                                                                              hlp.RPC_RETURN_TYPES]:
 
+    inst: Union[None, Service, Generic] = None
+
+    # TODO method to get object/service based on ID
     if req.args.id in SCENE_OBJECT_INSTANCES:
-        return False, "Not implemented for object so far!"  # TODO implement
+        inst = SCENE_OBJECT_INSTANCES[req.args.id]
     elif req.args.id in SERVICES_INSTANCES:
         inst = SERVICES_INSTANCES[req.args.id]
     else:
@@ -1095,17 +1098,14 @@ async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc
         parent_params[pp.id] = pp.value
 
     try:
-        method, required_parent_params = inst.params[req.args.param_id]
+        method, required_parent_params = inst.DYNAMIC_PARAMS[req.args.param_id]
     except KeyError:
         return False, "Unknown parameter or values not constrained."
-
-    print(parent_params)
-    print(required_parent_params)
 
     if parent_params.keys() != required_parent_params:
         return False, "Not all required parent params were given."
 
-    # TODO validate method parameters vs parent_params (check types)
+    # TODO validate method parameters vs parent_params (check types)?
 
     resp = rpc.ActionParamValuesResponse()
 

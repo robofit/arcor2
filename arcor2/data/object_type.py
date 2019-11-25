@@ -151,7 +151,8 @@ class ObjectActionArgs(JsonSchemaMixin):
 
     name: str
     type: ActionParameterTypeEnum
-    allowed_values: Optional[Set[str]] = None
+    allowed_values: Optional[Set[str]] = None  # for enums
+    dynamic_value: bool = False  # client should ask for allowed values using RPC
 
 
 @dataclass

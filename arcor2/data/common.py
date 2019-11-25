@@ -299,6 +299,3 @@ class CurrentAction(JsonSchemaMixin):
 
     action_id: str = ""
     args: List[ActionParameter] = field(default_factory=list)
-
-
-ActionParameterValuesPermutations = List[List[ActionParameter]]

@@ -2,6 +2,7 @@ import abc
 from typing import Dict, Optional
 import time
 
+from arcor2 import DynamicParamDict
 from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
 from arcor2.action import action
 from arcor2.data.object_type import Models
@@ -10,6 +11,7 @@ from arcor2.data.object_type import Models
 class Generic(metaclass=abc.ABCMeta):
 
     __DESCRIPTION__ = "Generic object"
+    DYNAMIC_PARAMS: DynamicParamDict = {}
 
     def __init__(self, obj_id: str, pose: Pose, collision_model: Optional[Models] = None) -> None:
 
