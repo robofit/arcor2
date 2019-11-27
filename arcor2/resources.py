@@ -15,14 +15,14 @@ from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeE
     ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction, StrEnum, IntEnum
 from arcor2.data.object_type import ObjectModel, Models
 from arcor2.data.events import CurrentActionEvent
-from arcor2.exceptions import ResourcesException
+from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
 from arcor2.object_types import Generic
 from arcor2.services import Service, RobotService
 from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
-from arcor2.helpers import camel_case_to_snake_case, make_pose_abs
+from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs
 from arcor2.object_types_utils import meta_from_def
 
 
@@ -98,11 +98,15 @@ class IntResources:
 
         # add action points to the object_types
         for project_obj in self.project.objects:
-
             for aps in project_obj.action_points:
+
+                obj_inst = self.objects[project_obj.id]
+
                 # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
-                abs_pose = make_pose_abs(self.objects[project_obj.id].pose, aps.pose)
-                self.objects[project_obj.id].add_action_point(aps.id, abs_pose)
+                obj_inst.action_points[aps.id] = aps
+                aps.position = make_position_abs(obj_inst.pose.position, aps.position)
+                for ori in aps.orientations:
+                    ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
 
         self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
@@ -127,8 +131,9 @@ class IntResources:
 
             vv: Union[SUPPORTED_ARGS, Dict] = v
 
-            if isinstance(v, ActionPoint):  # this is needed because of "value: Any"
-                vv = v.to_dict()
+            # this is needed because of "value: Any"
+            if hasattr(v, "to_dict"):
+                vv = v.to_dict()  # type: ignore
 
             if isinstance(v, StrEnum):
                 vv = v.value
@@ -150,33 +155,41 @@ class IntResources:
 
     def parameters(self, action_id: str) -> ARGS_DICT:
 
-        for obj in self.project.objects:
-            for aps in obj.action_points:
-                for act in aps.actions:
-                    if act.id == action_id:
+        try:
+            act = self.project.action(action_id)
+        except Arcor2Exception:
+            raise ResourcesException("Action_id {} not found in project {}.".format(action_id, self.project.id))
 
-                        ret: Dict[str, Union[str, float, int, ActionPoint, StrEnum, IntEnum]] = {}
+        inst_name, method_name = act.type.split("/")
+        action_obj_inst = self.all_instances[inst_name]
 
-                        for param in act.parameters:
-                            if param.type == ActionParameterTypeEnum.ACTION_POINT:
-                                assert isinstance(param.value, str)
-                                object_id, ap_id = param.value.split('.')
-                                ret[param.id] = self.action_point(object_id, ap_id)
-                            elif param.type in (ActionParameterTypeEnum.STRING_ENUM,
-                                                ActionParameterTypeEnum.INTEGER_ENUM):
+        ret: Dict[str, SUPPORTED_ARGS] = {}
 
-                                inst_name, method_name = act.type.split("/")
+        for param in act.parameters:
+            if param.type in (ActionParameterTypeEnum.POSE, ActionParameterTypeEnum.JOINTS):
+                assert isinstance(param.value, str)
+                try:
+                    object_id, ap_id, value_id = param.parse_id()
+                except Arcor2Exception:
+                    raise ResourcesException(f"Action {act.id} has invalid value {param.value}"
+                                             f" for parameter: {param.id}.")
 
-                                undecorated_method = undecorated(getattr(self.all_instances[inst_name], method_name))
-                                ttype = get_type_hints(undecorated_method)[param.id]
-                                ret[param.id] = ttype(param.value)
+                if param.type == ActionParameterTypeEnum.POSE:
+                    ret[param.id] = self.action_point(object_id, ap_id).pose(value_id)
+                elif param.type == ActionParameterTypeEnum.JOINTS:
+                    ret[param.id] = self.action_point(object_id, ap_id).robot_joints(inst_name, value_id)
 
-                            else:
-                                ret[param.id] = param.value
+            elif param.type in (ActionParameterTypeEnum.STRING_ENUM,
+                                ActionParameterTypeEnum.INTEGER_ENUM):
 
-                        return ret
+                undecorated_method = undecorated(getattr(action_obj_inst, method_name))
+                ttype = get_type_hints(undecorated_method)[param.id]
+                ret[param.id] = ttype(param.value)
 
-        raise ResourcesException("Action_id {} not found for project {}.".format(action_id, self.project.id))
+            else:
+                ret[param.id] = param.value
+
+        return ret
 
 
 T = TypeVar('T', bound=JsonSchemaMixin)

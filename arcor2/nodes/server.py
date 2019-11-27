@@ -20,7 +20,7 @@ from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
-    ActionParameterTypeEnum
+    ActionParameterTypeEnum, Joint, NamedOrientation, RobotJoints
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
     MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMeta
@@ -57,6 +57,7 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 SERVICE_TYPES: Dict[str, ServiceTypeMeta] = {}
 
+# TODO merge it into one dict?
 SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
 SERVICES_INSTANCES: Dict[str, Service] = {}
 
@@ -297,8 +298,11 @@ async def open_scene(scene_id: str):
     for srv in SCENE.services:
         await add_service_to_scene(srv)
 
-    for obj in SCENE.objects:
+    for obj in SCENE.objects:  # TODO service-based objects
         await add_object_to_scene(obj, add_to_scene=False)
+
+    assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
+    assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
 
     asyncio.ensure_future(notify_scene_change_to_others())
 
@@ -355,7 +359,7 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         try:
             object_actions_dict[service_type] = otu.object_actions(
                 hlp.type_def_from_source(srv_type.source, service_type, Service))
-        except hlp.TypeDefException as e:
+        except (hlp.TypeDefException, otu.ObjectTypeException) as e:
             await logger.warning(e)
 
     ACTIONS = object_actions_dict
@@ -397,7 +401,7 @@ async def manager_request(req: rpc.Request) -> rpc.Response:
     return resp
 
 
-async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
+async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tuple[Pose, List[Joint]]:
     """
     :param robot_id:
     :param end_effector:
@@ -415,9 +419,13 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
             raise RobotPoseException(f"Unknown end effector.")
 
         try:
-            return await hlp.run_in_executor(robot.get_end_effector_pose, end_effector)
+            pose = await hlp.run_in_executor(robot.get_end_effector_pose, end_effector)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
+
+        # TODO get joints
+
+        return pose, []
 
     else:
 
@@ -432,9 +440,16 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
             raise RobotPoseException(f"Unknown end effector.")
 
         try:
-            return await hlp.run_in_executor(robot_service.get_end_effector_pose, robot_id, end_effector)
+            pose = await hlp.run_in_executor(robot_service.get_end_effector_pose, robot_id, end_effector)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
+
+        try:
+            joints = await hlp.run_in_executor(robot_service.robot_joints, robot_id)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting joints.")
+
+        return pose, joints
 
 
 @scene_needed
@@ -450,11 +465,29 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
         return False, "Invalid action point."
 
     try:
-        new_pose = await get_end_effector_pose(req.args.robot.id, req.args.robot.end_effector)
+        new_pose, new_joints = await get_end_effector_pose_joints(req.args.robot.id, req.args.robot.end_effector)
     except RobotPoseException as e:
         return False, str(e)
 
-    ap.pose = hlp.make_pose_rel(SCENE_OBJECT_INSTANCES[proj_obj.id].pose, new_pose)
+    rel_pose = hlp.make_pose_rel(SCENE_OBJECT_INSTANCES[proj_obj.id].pose, new_pose)
+
+    if req.args.update_position:
+        ap.position = rel_pose.position
+
+    for ori in ap.orientations:
+        if ori.id == req.args.id:
+            ori.orientation = rel_pose.orientation
+            break
+    else:
+        ap.orientations.append(NamedOrientation(req.args.id, rel_pose.orientation))
+
+    for joint in ap.joints:
+        if joint.id == req.args.id:
+            joint.joints = new_joints
+            joint.robot_id = req.args.robot.id
+            break
+    else:
+        ap.joints.append(RobotJoints(req.args.id, req.args.robot.id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -476,7 +509,7 @@ async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Uni
         return False, "Invalid action object."
 
     try:
-        scene_object.pose = await get_end_effector_pose(req.args.robot.id, req.args.robot.end_effector)
+        scene_object.pose = (await get_end_effector_pose_joints(req.args.robot.id, req.args.robot.end_effector))[0]
     except RobotPoseException as e:
         return False, str(e)
 
@@ -528,9 +561,13 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
                 # validate parameter values
                 for param in action.parameters:
-                    if param.type == ActionParameterTypeEnum.ACTION_POINT:
+                    if param.type in (ActionParameterTypeEnum.POSE, ActionParameterTypeEnum.JOINTS):
 
-                        p_obj_id, p_ap_id = param.parse_value()
+                        try:
+                            p_obj_id, p_ap_id, val_id = param.parse_id()
+                        except Arcor2Exception as e:
+                            problems.append(str(e))
+                            continue
 
                         if p_obj_id not in objects_aps:
                             problems.append(f"Parameter {param.id} of action {action.id} refers to non-existent "
@@ -539,6 +576,13 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                         if p_ap_id not in objects_aps[p_obj_id]:
                             problems.append(f"Parameter {param.id} of action {action.id} refers to non-existent "
                                             f"action point of object id {p_obj_id}.")
+
+                        # TODO validate value (check if val_id exists)
+
+                    elif param.type == ActionParameterTypeEnum.STRING_ENUM:
+                        pass  # TODO validate value
+                    elif param.type == ActionParameterTypeEnum.INTEGER_ENUM:
+                        pass  # TODO validate value
 
                     # TODO validate values of another parameter types
 
@@ -704,7 +748,7 @@ async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectR
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id]
 
-    FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(robot_id, end_effector)
+    FOCUS_OBJECT[obj_id][pt_idx] = (await get_end_effector_pose_joints(robot_id, end_effector))[0]
 
     r = rpc.FocusObjectResponse()
     r.data.finished_indexes = list(FOCUS_OBJECT[obj_id].keys())
@@ -1169,7 +1213,8 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
                 # delete actions using obj's action points as parameters
                 actions_using_invalid_param: Set[str] = \
                     {act.id for act in ap.actions for param in act.parameters
-                     if param.type == ActionParameterTypeEnum.ACTION_POINT and param.value.startswith(obj_id)}
+                     if param.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE) and
+                     param.value.startswith(obj_id)}
 
                 ap.actions = [act for act in ap.actions if act.id not in actions_using_invalid_param]
 
@@ -1207,7 +1252,7 @@ async def scene_change(ui, event: SceneChangedEvent) -> None:
                 await logger.warning("Ignoring scene changes: service added.")
                 return
 
-        # TODO don't allow change of pose for service-based objects
+        # TODO don't allow change of pose for robots
         for obj in event.data.objects:
             if obj.id not in SCENE_OBJECT_INSTANCES:
                 await notify_scene(ui)

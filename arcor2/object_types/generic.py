@@ -23,10 +23,6 @@ class Generic(metaclass=abc.ABCMeta):
     def scene_object(self) -> SceneObject:
         return SceneObject(self.id, self.__class__.__name__, self.pose)
 
-    def add_action_point(self, name: str, pose: Pose) -> None:
-
-        self.action_points[name] = ActionPoint(name, pose)
-
     def __repr__(self) -> str:
         return str(self.__dict__)
 

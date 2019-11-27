@@ -19,7 +19,7 @@ def read_stdin(timeout: float = 0.0) -> Union[str, None]:
 def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], where: ActionStateEnum) -> None:
 
     # can't import Service/Generic here (circ. import)
-    if hasattr(inst, "name"):
+    if hasattr(inst, "id"):
         obj_id = inst.id  # type: ignore
     else:
         obj_id = inst.__class__.__name__

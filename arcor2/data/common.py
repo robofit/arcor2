@@ -42,9 +42,10 @@ class ActionParameterTypeEnum(StrEnum):
     STRING: str = "string"
     DOUBLE: str = "double"
     INTEGER: str = "integer"
-    ACTION_POINT: str = "ActionPoint"
     STRING_ENUM: str = "string_enum"
     INTEGER_ENUM: str = "integer_enum"
+    POSE: str = "pose"
+    JOINTS: str = "joints"
 
 
 class DataClassEncoder(JSONEncoder):
@@ -74,17 +75,17 @@ class IterableIndexable(JsonSchemaMixin):
 @dataclass
 class Position(IterableIndexable):
 
-    x: float = 0
-    y: float = 0
-    z: float = 0
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
 
 
 @dataclass
 class Orientation(IterableIndexable):
 
-    x: float = 0
-    y: float = 0
-    z: float = 0
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
     w: float = 1.0
 
     def as_quaternion(self) -> quaternion.quaternion:
@@ -98,6 +99,13 @@ class Orientation(IterableIndexable):
         self.y = arr[1]
         self.z = arr[2]
         self.w = arr[3]
+
+
+@dataclass
+class NamedOrientation(JsonSchemaMixin):
+
+    id: str
+    orientation: Orientation
 
 
 @dataclass
@@ -126,18 +134,33 @@ class Joint(JsonSchemaMixin):
 @dataclass
 class RobotJoints(JsonSchemaMixin):
 
-    robot_id: str = ""
-    joints: List[Joint] = field(default_factory=list)
+    id: str
+    robot_id: str
+    joints: List[Joint]
+    dirty: bool = False
 
 
 @dataclass
 class ActionPoint(JsonSchemaMixin):
 
     id: str
-    pose: Pose
+    position: Position
+    orientations: List[NamedOrientation] = field(default_factory=list)
+    joints: List[RobotJoints] = field(default_factory=list)
 
-    # TODO store joints in project variable instead
-    joints: Optional[RobotJoints] = field(default_factory=RobotJoints)
+    def pose(self, orientation_id: str) -> Pose:
+
+        for ori in self.orientations:
+            if ori.id == orientation_id:
+                return Pose(self.position, ori.orientation)
+        raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
+
+    def robot_joints(self, robot_id: str, joints_id: str) -> RobotJoints:
+
+        for joints in self.joints:
+            if joints.id == joints_id and robot_id == joints.robot_id:
+                return joints
+        raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")
 
 
 @dataclass
@@ -180,15 +203,16 @@ class ActionParameter(IdValue):
         # TODO implement value type check
         pass
 
-    def parse_value(self) -> Tuple[str, str]:
+    def parse_id(self) -> Tuple[str, str, str]:
 
-        assert self.type == ActionParameterTypeEnum.ACTION_POINT
+        assert self.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE)
 
         try:
-            obj_id, ap_id = self.type.value.split(".")
+            # value_id should be valid for both orientation and joints
+            obj_id, ap_id, value_id = self.type.value.split(".")
         except ValueError:
             raise Arcor2Exception(f"Parameter: {self.id} has invalid value: {self.value}.")
-        return obj_id, ap_id
+        return obj_id, ap_id, value_id
 
 
 @dataclass
@@ -237,6 +261,15 @@ class Project(JsonSchemaMixin):
     desc: str = field(default_factory=str)
     has_logic: bool = True
 
+    def action(self, action_id: str) -> Action:
+
+        for obj in self.objects:
+            for aps in obj.action_points:
+                for act in aps.actions:
+                    if act.id == action_id:
+                        return act
+        raise Arcor2Exception("Action not found")
+
 
 @dataclass
 class ProjectSources(JsonSchemaMixin):
@@ -258,15 +291,16 @@ class IdDescList(JsonSchemaMixin):
     items: List[IdDesc] = field(default_factory=list)
 
 
-SUPPORTED_ARGS = Union[str, float, int, ActionPoint, StrEnum, IntEnum]
+SUPPORTED_ARGS = Union[str, float, int, StrEnum, IntEnum, Pose, RobotJoints]
 
 ARGS_MAPPING = {
     str: ActionParameterTypeEnum.STRING,
     float: ActionParameterTypeEnum.DOUBLE,
     int: ActionParameterTypeEnum.INTEGER,
-    ActionPoint: ActionParameterTypeEnum.ACTION_POINT,
     StrEnum: ActionParameterTypeEnum.STRING_ENUM,
-    IntEnum: ActionParameterTypeEnum.INTEGER_ENUM
+    IntEnum: ActionParameterTypeEnum.INTEGER_ENUM,
+    Pose: ActionParameterTypeEnum.POSE,
+    RobotJoints: ActionParameterTypeEnum.JOINTS
 }
 
 

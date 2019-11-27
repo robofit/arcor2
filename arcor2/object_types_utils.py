@@ -7,7 +7,7 @@ from undecorated import undecorated  # type: ignore
 import arcor2
 from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArgs, \
     ObjectAction, ObjectActions
-from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum
+from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum, ARGS_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
@@ -19,12 +19,7 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {
-    "str": ActionParameterTypeEnum.STRING,
-    "float": ActionParameterTypeEnum.DOUBLE,
-    "int": ActionParameterTypeEnum.INTEGER,
-    "ActionPoint": ActionParameterTypeEnum.ACTION_POINT
-}
+PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {k.__name__: v for k, v in ARGS_MAPPING.items()}
 
 
 def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
@@ -171,7 +166,11 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                     param_type = ActionParameterTypeEnum.INTEGER_ENUM
                     allowed_values = ttype.set()
                 else:
-                    param_type = PARAM_MAPPING[ttype.__name__]
+                    try:
+                        param_type = PARAM_MAPPING[ttype.__name__]
+                    except KeyError:
+                        raise ObjectTypeException(f"Object type {type_def.__name__}, action {method[0]}, "
+                                                  f"invalid parameter type: {ttype.__name__}.")
 
                 args = ObjectActionArgs(name=name, type=param_type,
                                         dynamic_value=name in type_def.DYNAMIC_PARAMS, allowed_values=allowed_values)

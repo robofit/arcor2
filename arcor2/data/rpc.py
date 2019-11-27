@@ -241,6 +241,8 @@ class FocusObjectDoneResponse(Response):
 class UpdateActionPointPoseRequestArgs(IdArgs):
 
     robot: RobotArg
+    update_position: bool
+    orientation_id: str = "default"
 
 
 @dataclass

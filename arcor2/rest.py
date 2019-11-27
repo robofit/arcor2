@@ -1,6 +1,6 @@
 import json
 import requests
-from typing import Type, TypeVar, Dict, Callable, List, Union, Any, Optional
+from typing import Type, TypeVar, Dict, Callable, List, Union, Any, Optional, Sequence
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 
@@ -48,10 +48,16 @@ def handle_response(resp: requests.Response) -> None:
                             f"body: {resp_body}.")
 
 
-def _send(url: str, op: Callable, data: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> None:
+def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[JsonSchemaMixin]]] = None,
+          params: Optional[Dict] = None) -> None:
 
     if data:
-        d = convert_keys(data.to_dict(), snake_case_to_camel_case)
+        if isinstance(data, list):
+            d = []
+            for dd in data:
+                d.append(convert_keys(dd.to_dict(), snake_case_to_camel_case))
+        else:
+            d = convert_keys(data.to_dict(), snake_case_to_camel_case)
     else:
         d = {}
 
@@ -73,7 +79,8 @@ def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
     _send(url, requests.post, data, params)
 
 
-def put(url: str, data: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None):
+def put(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]] = None,
+        params: Optional[Dict] = None):
     _send(url, requests.put, data, params)
 
 
