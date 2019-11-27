@@ -157,14 +157,15 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                     data.returns = ttype.__name__  # TODO define enum for this
                     continue
 
-                allowed_values: Optional[Set[Union[str, int]]] = None
+                string_allowed_values: Optional[Set[str]] = None
+                integer_allowed_values: Optional[Set[int]] = None
 
                 if issubclass(ttype, StrEnum):
                     param_type = ActionParameterTypeEnum.STRING_ENUM
-                    allowed_values = ttype.set()
+                    string_allowed_values = ttype.set()
                 elif issubclass(ttype, IntEnum):
                     param_type = ActionParameterTypeEnum.INTEGER_ENUM
-                    allowed_values = ttype.set()
+                    integer_allowed_values = ttype.set()
                 else:
                     try:
                         param_type = PARAM_MAPPING[ttype.__name__]
@@ -173,7 +174,10 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                                                   f"invalid parameter type: {ttype.__name__}.")
 
                 args = ObjectActionArgs(name=name, type=param_type,
-                                        dynamic_value=name in type_def.DYNAMIC_PARAMS, allowed_values=allowed_values)
+                                        dynamic_value=name in type_def.DYNAMIC_PARAMS)
+
+                args.string_allowed_values = string_allowed_values
+                args.integer_allowed_values = integer_allowed_values
 
                 data.action_args.append(args)
 

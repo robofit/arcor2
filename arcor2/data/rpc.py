@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional, Tuple, Set, Any
+from typing import List, Optional, Tuple, Set
 import re
 
 from dataclasses import dataclass, field
@@ -111,7 +111,7 @@ class ActionParamValuesRequest(Request):
 @dataclass
 class ActionParamValuesResponse(Response):
 
-    data: List[Any] = field(default_factory=list)  # union would be better but it does not work in C#
+    data: Set[str] = field(default_factory=set)  # TODO what about other (possible) types?
     response: str = field(default=ActionParamValuesRequest.request, init=False)
 
 

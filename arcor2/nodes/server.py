@@ -6,7 +6,7 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator
+from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, get_type_hints
 import uuid
 import keyword
 
@@ -296,10 +296,14 @@ async def open_scene(scene_id: str):
     SCENE = await storage.get_scene(scene_id)
 
     for srv in SCENE.services:
-        await add_service_to_scene(srv)
+        res, msg = await add_service_to_scene(srv)
+        if not res:
+            await logger.error(msg)
 
-    for obj in SCENE.objects:  # TODO service-based objects
-        await add_object_to_scene(obj, add_to_scene=False)
+    for obj in SCENE.objects:
+        res, msg = await add_object_to_scene(obj, add_to_scene=False, srv_obj_ok=True)
+        if not res:
+            await logger.error(msg)
 
     assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
     assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
@@ -871,10 +875,14 @@ async def collision(obj: Generic,
     if rs is None:
         rs = find_robot_service()
     if rs:
-        await hlp.run_in_executor(rs.add_collision if add else rs.remove_collision, obj)
+        try:
+            # TODO notify user somehow when something went wrong?
+            await hlp.run_in_executor(rs.add_collision if add else rs.remove_collision, obj)
+        except Arcor2Exception as e:
+            await logger.error(e)
 
 
-async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool, str]:
+async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=False) -> Tuple[bool, str]:
     """
 
     :param obj:
@@ -890,7 +898,15 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool
 
     obj_meta = OBJECT_TYPES[obj.type]
 
-    if obj_meta.needs_services:
+    if srv_obj_ok:  # just for internal usage
+
+        if not obj_meta.needs_services <= SERVICE_TYPES.keys():
+            return False, "Some of required services is not available."
+
+        if not obj_meta.needs_services <= SERVICES_INSTANCES.keys():
+            return False, "Some of required services is not in the scene."
+
+    elif obj_meta.needs_services:
         return False, "Service(s)-based object."
 
     if obj_meta.abstract:
@@ -916,7 +932,29 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True) -> Tuple[bool
         if obj_meta.object_model:
             coll_model = obj_meta.object_model.model()
 
-        obj_inst = cls(obj.id, obj.pose, coll_model)
+        if not obj_meta.needs_services:
+            obj_inst = cls(obj.id, obj.pose, coll_model)
+        else:
+
+            srv_args: List[Service] = []
+
+            for name, ttype in get_type_hints(cls.__init__).items():
+
+                # service arguments should be listed first
+                if not issubclass(ttype, Service):
+                    break
+
+                try:
+                    srv_args.append(SERVICES_INSTANCES[ttype.__name__])
+                except KeyError:
+                    return False, f"Object type {obj.type} has invalid typ annotation in the constructor, " \
+                                  f"service {ttype.__name__} not available."
+
+            try:
+                obj_inst = cls(*srv_args, obj.id, obj.pose, coll_model)  # type: ignore
+            except TypeError as e:
+                return False, f"System error ({e})."
+
         SCENE_OBJECT_INSTANCES[obj.id] = obj_inst
 
         if add_to_scene:
@@ -1154,8 +1192,7 @@ async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc
     resp = rpc.ActionParamValuesResponse()
 
     # TODO update hlp.run_in_executor to support kwargs
-    resp.data = list(await asyncio.get_event_loop().run_in_executor(None,
-                                                                    functools.partial(method, **parent_params)))
+    resp.data = await asyncio.get_event_loop().run_in_executor(None, functools.partial(method, **parent_params))
     return resp
 
 
