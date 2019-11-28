@@ -89,12 +89,13 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
     obj = ObjectTypeMeta(type_def.__name__,
                          type_def.__DESCRIPTION__,
                          built_in=built_in,
-                         abstract=inspect.isabstract(type_def))
+                         # TODO kind of hack to make Generic abstract
+                         abstract=inspect.isabstract(type_def) or type_def == Generic)
 
     bases = inspect.getmro(type_def)
 
     if len(bases) > 2:
-        obj.base = bases[-2].__name__
+        obj.base = bases[1].__name__
 
     if hasattr(type_def, SERVICES_METHOD_NAME):
 
