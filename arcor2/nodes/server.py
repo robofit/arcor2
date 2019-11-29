@@ -527,6 +527,8 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
     objects_aps: Dict[str, Set[str]] = {obj.id: {ap.id for ap in obj.action_points}
                                         for obj in project.objects}  # object_id, APs
 
+    action_ids: Set[str] = set()
+
     problems: List[str] = []
 
     for obj in project.objects:
@@ -539,6 +541,9 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
         for ap in obj.action_points:
 
             for action in ap.actions:
+
+                if action.id in action_ids:
+                    problems.append(f"Action ID {action.id} of the {obj.id}/{ap.id} is not unique.")
 
                 # check if objects have used actions
                 obj_id, action_type = action.parse_type()

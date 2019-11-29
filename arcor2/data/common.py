@@ -235,7 +235,7 @@ class ActionParameter(IdValue):
 
         try:
             # value_id should be valid for both orientation and joints
-            obj_id, ap_id, value_id = self.type.value.split(".")
+            obj_id, ap_id, value_id = self.value.split(".")
         except ValueError:
             raise Arcor2Exception(f"Parameter: {self.id} has invalid value: {self.value}.")
         return obj_id, ap_id, value_id

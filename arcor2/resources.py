@@ -21,7 +21,7 @@ from arcor2.services import Service, RobotService
 from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
-from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs
+from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs, print_exception
 from arcor2.object_types_utils import meta_from_def, object_actions
 
 
@@ -100,6 +100,8 @@ class IntResources:
             if self.robot_service:
                 self.robot_service.add_collision(inst)
 
+        self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
+
         # add action points to the object_types
         for project_obj in self.project.objects:
             for aps in project_obj.action_points:
@@ -108,16 +110,15 @@ class IntResources:
 
                 for action in aps.actions:
                     assert action.id not in self.action_id_to_type_and_action_name
-                    _, action_type = action.parse_type()
-                    self.action_id_to_type_and_action_name[action.id] = obj_inst.__class__.__name__, action_type
+                    action_obj_id, action_type = action.parse_type()
+                    self.action_id_to_type_and_action_name[action.id] = \
+                        self.all_instances[action_obj_id].__class__.__name__, action_type
 
                 # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
                 obj_inst.action_points[aps.id] = aps
                 aps.position = make_position_abs(obj_inst.pose.position, aps.position)
                 for ori in aps.orientations:
                     ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
-
-        self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
         for type_def in type_defs:
 
@@ -130,13 +131,19 @@ class IntResources:
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, ex_type, ex_value, traceback):  # TODO check for exception and print it
 
-        if not self.robot_service:
-            return
+        if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
+            print_exception(ex_type(ex_value))
 
-        for obj in self.objects.values():
-            self.robot_service.remove_collision(obj)
+        if self.robot_service:
+            try:
+                for obj in self.objects.values():
+                    self.robot_service.remove_collision(obj)
+            except Arcor2Exception as e:
+                print_exception(e)
+
+        return True
 
     def print_info(self, action_id: str, args: Dict[str, Any]) -> None:
         """Helper method used to print out info about the action going to be executed."""
