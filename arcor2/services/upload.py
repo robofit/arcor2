@@ -34,7 +34,7 @@ def upload(module_cls: str) -> None:
 
         assert issubclass(cls, Service)
 
-        srv_type = ServiceType(id=cls.__name__, source=source, desc=cls.__DESCRIPTION__)
+        srv_type = ServiceType(id=cls.__name__, source=source, desc=cls.description())
 
         print(f"Storing '{srv_type.id}'...")
         storage.update_service_type(srv_type)

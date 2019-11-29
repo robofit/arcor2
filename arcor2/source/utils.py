@@ -405,7 +405,7 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
                 defaults=[]),
             body=[
                 Expr(value=Call(
-                    func=get_name_attr('Resources', 'print_info'),
+                    func=Attribute(value=Name(id='self', ctx=Load()), attr='print_info', ctx=Load()),
                     args=[
                         Str(
                             s=param,

@@ -57,9 +57,8 @@ def new_object_type_source(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> str
                  decorator_list=[])
 
     if child.description:
-        c.body.append(Assign(targets=[get_name("__DESCRIPTION__")],
-                             value=Str(s=child.description, kind=""),
-                             type_comment=None))
+        # TODO add docstring with description
+        pass
     else:
         c.body.append(Pass())
 

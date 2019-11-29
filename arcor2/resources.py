@@ -3,17 +3,16 @@
 
 
 from os import path
-from typing import Dict, Union, Type, TypeVar, List, Optional, get_type_hints
+from typing import Dict, Union, Type, TypeVar, List, Optional, get_type_hints, Any, Tuple
 import importlib
 import json
 
 from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
-from undecorated import undecorated  # type: ignore
 
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
-    ARGS_MAPPING, SUPPORTED_ARGS, CurrentAction, StrEnum, IntEnum
-from arcor2.data.object_type import ObjectModel, Models
+    CurrentAction, StrEnum, IntEnum, Pose
+from arcor2.data.object_type import ObjectModel, Models, ObjectActionArg
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
@@ -23,14 +22,10 @@ from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs
-from arcor2.object_types_utils import meta_from_def
+from arcor2.object_types_utils import meta_from_def, object_actions
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
-
-
-ARGS_DICT = Dict[str, SUPPORTED_ARGS]
-
 
 class IntResources:
 
@@ -45,10 +40,15 @@ class IntResources:
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
 
+        self.action_args: Dict[str, Dict[str, Dict[str, ObjectActionArg]]] = {}  # keys: obj_type, action_name, arg_name
+        self.action_id_to_type_and_action_name: Dict[str, Tuple[str, str]] = {}
+
         self.services: Dict[str, Service] = {}
         self.objects: Dict[str, Generic] = {}
 
         self.robot_service: Optional[RobotService] = None
+
+        type_defs: List[Union[Type[Service], Type[Generic]]] = []
 
         for srv in self.scene.services:
 
@@ -56,7 +56,10 @@ class IntResources:
 
             module = importlib.import_module(ResourcesBase.SERVICES_MODULE + "." + camel_case_to_snake_case(srv.type))
             cls = getattr(module, srv.type)
+            assert issubclass(cls, Service)
+
             srv_inst = cls(srv.configuration_id)
+            type_defs.append(cls)
             self.services[srv.type] = srv_inst
 
             if isinstance(srv_inst, RobotService):
@@ -75,6 +78,7 @@ class IntResources:
                                                  camel_case_to_snake_case(scene_obj.type))
 
             cls = getattr(module, scene_obj.type)
+            type_defs.append(cls)
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
@@ -102,6 +106,11 @@ class IntResources:
 
                 obj_inst = self.objects[project_obj.id]
 
+                for action in aps.actions:
+                    assert action.id not in self.action_id_to_type_and_action_name
+                    _, action_type = action.parse_type()
+                    self.action_id_to_type_and_action_name[action.id] = obj_inst.__class__.__name__, action_type
+
                 # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
                 obj_inst.action_points[aps.id] = aps
                 aps.position = make_position_abs(obj_inst.pose.position, aps.position)
@@ -109,6 +118,14 @@ class IntResources:
                     ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
 
         self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
+
+        for type_def in type_defs:
+
+            self.action_args[type_def.__name__] = {}
+            for obj_action in object_actions(type_def):
+                self.action_args[type_def.__name__][obj_action.name] = {}
+                for arg in obj_action.action_args:
+                    self.action_args[type_def.__name__][obj_action.name][arg.name] = arg
 
     def __enter__(self):
         return self
@@ -121,28 +138,24 @@ class IntResources:
         for obj in self.objects.values():
             self.robot_service.remove_collision(obj)
 
-    @staticmethod
-    def print_info(action_id: str, args: ARGS_DICT) -> None:
+    def print_info(self, action_id: str, args: Dict[str, Any]) -> None:
         """Helper method used to print out info about the action going to be executed."""
 
         args_list: List[ActionParameter] = []
 
         for k, v in args.items():
 
-            vv: Union[SUPPORTED_ARGS, Dict] = v
+            vv = v
 
             # this is needed because of "value: Any"
             if hasattr(v, "to_dict"):
                 vv = v.to_dict()  # type: ignore
+            elif isinstance(v, (StrEnum, IntEnum)):
+                vv = v.value
 
-            if isinstance(v, StrEnum):
-                vv = v.value
-                args_list.append(ActionParameter(k, vv, ActionParameterTypeEnum.STRING_ENUM))
-            elif isinstance(v, IntEnum):
-                vv = v.value
-                args_list.append(ActionParameter(k, vv, ActionParameterTypeEnum.STRING_ENUM))
-            else:
-                args_list.append(ActionParameter(k, vv, ARGS_MAPPING[type(v)]))
+            obj_type_name, action_name = self.action_id_to_type_and_action_name[action_id]
+            arg = self.action_args[obj_type_name][action_name][k]
+            args_list.append(ActionParameter(k, vv, arg.type))
 
         print_event(CurrentActionEvent(data=CurrentAction(action_id, args_list)))
 
@@ -153,7 +166,7 @@ class IntResources:
         except KeyError:
             raise ResourcesException("Unknown object id or action point id.")
 
-    def parameters(self, action_id: str) -> ARGS_DICT:
+    def parameters(self, action_id: str) -> Dict[str, Any]:
 
         try:
             act = self.project.action(action_id)
@@ -163,7 +176,7 @@ class IntResources:
         inst_name, method_name = act.type.split("/")
         action_obj_inst = self.all_instances[inst_name]
 
-        ret: Dict[str, SUPPORTED_ARGS] = {}
+        ret: Dict[str, Any] = {}
 
         for param in act.parameters:
             if param.type in (ActionParameterTypeEnum.POSE, ActionParameterTypeEnum.JOINTS):
@@ -179,11 +192,15 @@ class IntResources:
                 elif param.type == ActionParameterTypeEnum.JOINTS:
                     ret[param.id] = self.action_point(object_id, ap_id).robot_joints(inst_name, value_id)
 
+            elif param.type == ActionParameterTypeEnum.RELATIVE_POSE:
+                assert isinstance(param.value, dict)
+                ret[param.id] = Pose.from_dict(param.value)  # TODO do this in __post_init__ of ActionPoint?
+
             elif param.type in (ActionParameterTypeEnum.STRING_ENUM,
                                 ActionParameterTypeEnum.INTEGER_ENUM):
 
-                undecorated_method = undecorated(getattr(action_obj_inst, method_name))
-                ttype = get_type_hints(undecorated_method)[param.id]
+                method = getattr(action_obj_inst, method_name)
+                ttype = get_type_hints(method)[param.id]
                 ret[param.id] = ttype(param.value)
 
             else:

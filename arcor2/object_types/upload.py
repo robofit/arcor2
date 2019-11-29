@@ -35,7 +35,7 @@ def upload(module_cls: str, model: Optional[Models] = None) -> None:
 
         assert issubclass(cls, Generic)
 
-        obj_type = ObjectType(id=cls.__name__, source=source, desc=cls.__DESCRIPTION__)
+        obj_type = ObjectType(id=cls.__name__, source=source, desc=cls.description())
 
         if model:
             obj_type.model = model.metamodel()

@@ -29,7 +29,6 @@ setup(
         'websockets',
         'aiologger',
         'aiofiles',
-        'undecorated',
         'dataclasses-jsonschema[fast-validation]',
         'pytest',
         'apispec',
@@ -37,7 +36,8 @@ setup(
         'flask',
         'requests',
         'numpy-quaternion',
-        'fastcache'
+        'fastcache',
+        'bidict'
     ],
     tests_require=[
         'websocket'

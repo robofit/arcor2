@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Union, Tuple, Set
+from typing import List, Any, Iterator, Optional, Tuple, Set
 from enum import Enum, unique
 
 from json import JSONEncoder
@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 
 import numpy as np  # type: ignore
 import quaternion  # type: ignore
+from bidict import bidict  # type: ignore
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -45,6 +46,7 @@ class ActionParameterTypeEnum(StrEnum):
     STRING_ENUM: str = "string_enum"
     INTEGER_ENUM: str = "integer_enum"
     POSE: str = "pose"
+    RELATIVE_POSE: str = "relative_pose"
     JOINTS: str = "joints"
 
 
@@ -113,6 +115,11 @@ class Pose(JsonSchemaMixin):
 
     position: Position = field(default_factory=Position)
     orientation: Orientation = field(default_factory=Orientation)
+
+
+@dataclass
+class RelativePose(Pose):
+    pass
 
 
 @dataclass
@@ -194,13 +201,32 @@ class IdValue(JsonSchemaMixin):
     value: Any
 
 
+PARAM_TO_TYPE = bidict({
+    ActionParameterTypeEnum.STRING: str,
+    ActionParameterTypeEnum.DOUBLE: float,
+    ActionParameterTypeEnum.INTEGER: int,
+    ActionParameterTypeEnum.STRING_ENUM: StrEnum,
+    ActionParameterTypeEnum.INTEGER_ENUM: IntEnum,
+    ActionParameterTypeEnum.POSE: Pose,
+    ActionParameterTypeEnum.RELATIVE_POSE: RelativePose,
+    ActionParameterTypeEnum.JOINTS: RobotJoints
+})
+
+assert ActionParameterTypeEnum.set() == PARAM_TO_TYPE.keys()
+
+
+class ActionParameterException(Arcor2Exception):
+    pass
+
+
 @dataclass
 class ActionParameter(IdValue):
 
     type: ActionParameterTypeEnum
 
     def __post_init__(self) -> None:
-        # TODO implement value type check
+        # TODO check if value is valid (dict for joints/pose)
+        # TODO ...or convert it automatically to RobotJoints/Pose? What about serialization then?
         pass
 
     def parse_id(self) -> Tuple[str, str, str]:
@@ -289,19 +315,6 @@ class IdDesc(JsonSchemaMixin):
 class IdDescList(JsonSchemaMixin):
 
     items: List[IdDesc] = field(default_factory=list)
-
-
-SUPPORTED_ARGS = Union[str, float, int, StrEnum, IntEnum, Pose, RobotJoints]
-
-ARGS_MAPPING = {
-    str: ActionParameterTypeEnum.STRING,
-    float: ActionParameterTypeEnum.DOUBLE,
-    int: ActionParameterTypeEnum.INTEGER,
-    StrEnum: ActionParameterTypeEnum.STRING_ENUM,
-    IntEnum: ActionParameterTypeEnum.INTEGER_ENUM,
-    Pose: ActionParameterTypeEnum.POSE,
-    RobotJoints: ActionParameterTypeEnum.JOINTS
-}
 
 
 class ProjectStateEnum(Enum):

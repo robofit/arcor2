@@ -4,8 +4,9 @@ from arcor2.data.common import ActionMetadata
 
 
 class Tester(Generic):
-
-    __DESCRIPTION__ = "A generic tester"
+    """
+    A generic tester
+    """
 
     @action
     def run_test(self) -> None:  # not needed in demo 0, just for test purposes

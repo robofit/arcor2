@@ -6,11 +6,14 @@ from arcor2 import DynamicParamDict
 from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
 from arcor2.action import action
 from arcor2.data.object_type import Models
+from arcor2.docstring import parse_docstring
 
 
 class Generic(metaclass=abc.ABCMeta):
+    """
+    Generic object
+    """
 
-    __DESCRIPTION__ = "Generic object"
     DYNAMIC_PARAMS: DynamicParamDict = {}
 
     def __init__(self, obj_id: str, pose: Pose, collision_model: Optional[Models] = None) -> None:
@@ -19,6 +22,10 @@ class Generic(metaclass=abc.ABCMeta):
         self.pose = pose
         self.collision_model = collision_model
         self.action_points: Dict[str, ActionPoint] = {}
+
+    @classmethod
+    def description(cls) -> str:  # TODO mixin with common stuff for objects/services?
+        return parse_docstring(cls.__doc__)["short_description"]
 
     def scene_object(self) -> SceneObject:
         return SceneObject(self.id, self.__class__.__name__, self.pose)

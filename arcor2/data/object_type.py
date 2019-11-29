@@ -147,20 +147,22 @@ class ObjectTypeMeta(JsonSchemaMixin):
 
 
 @dataclass
-class ObjectActionArgs(JsonSchemaMixin):
+class ObjectActionArg(JsonSchemaMixin):
 
     name: str
     type: ActionParameterTypeEnum
     string_allowed_values: Optional[Set[str]] = None  # for string enums
     integer_allowed_values: Optional[Set[int]] = None  # for string enums
     dynamic_value: bool = False  # client should ask for allowed values using RPC
+    description: str = ""
 
 
 @dataclass
-class ObjectAction(JsonSchemaMixin):
+class ObjectAction(JsonSchemaMixin):  # TODO description (from docstring)
 
     name: str
-    action_args: List[ObjectActionArgs] = field(default_factory=list)
+    description: str = ""
+    action_args: List[ObjectActionArg] = field(default_factory=list)
     returns: str = "NoneType"
     origins: str = ""
     meta: ActionMetadata = field(default_factory=ActionMetadata)

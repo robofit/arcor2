@@ -2,15 +2,14 @@ import copy
 import inspect
 from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union, Optional
 
-from undecorated import undecorated  # type: ignore
-
 import arcor2
-from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArgs, \
+from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArg, \
     ObjectAction, ObjectActions
-from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum, ARGS_MAPPING
+from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum, PARAM_TO_TYPE
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
+from arcor2.docstring import parse_docstring
 
 SERVICES_METHOD_NAME = "from_services"
 
@@ -19,7 +18,7 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {k.__name__: v for k, v in ARGS_MAPPING.items()}
+PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {k.__name__: v for k, v in PARAM_TO_TYPE.inverse.items()}
 
 
 def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
@@ -87,7 +86,7 @@ def built_in_types_meta() -> ObjectTypeMetaDict:
 def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectTypeMeta:
 
     obj = ObjectTypeMeta(type_def.__name__,
-                         type_def.__DESCRIPTION__,
+                         type_def.description(),
                          built_in=built_in,
                          # TODO kind of hack to make Generic abstract
                          abstract=inspect.isabstract(type_def) or type_def == Generic)
@@ -104,7 +103,7 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
         if not inspect.isfunction(srv_method):
             raise ObjectTypeException(f"{SERVICES_METHOD_NAME} should be method.")
 
-        for name, ttype in get_type_hints(undecorated(srv_method)).items():
+        for name, ttype in get_type_hints(srv_method).items():
             if name == "return":
                 continue
             obj.needs_services.add(ttype.__name__)
@@ -149,9 +148,11 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
         Methods supposed to be actions have @action decorator, which has to be stripped away in order to get
         method's arguments / type hints.
         """
-        undecorated_method = undecorated(method[1])
 
-        for name, ttype in get_type_hints(undecorated_method).items():
+        doc = parse_docstring(method[1].__doc__)
+        data.description = doc["short_description"]
+
+        for name, ttype in get_type_hints(method[1]).items():
 
             try:
                 if name == "return":
@@ -174,11 +175,16 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                         raise ObjectTypeException(f"Object type {type_def.__name__}, action {method[0]}, "
                                                   f"invalid parameter type: {ttype.__name__}.")
 
-                args = ObjectActionArgs(name=name, type=param_type,
-                                        dynamic_value=name in type_def.DYNAMIC_PARAMS)
+                args = ObjectActionArg(name=name, type=param_type,
+                                       dynamic_value=name in type_def.DYNAMIC_PARAMS)
 
                 args.string_allowed_values = string_allowed_values
                 args.integer_allowed_values = integer_allowed_values
+
+                try:
+                    args.description = doc["params"][name].strip()
+                except KeyError:
+                    pass
 
                 data.action_args.append(args)
 

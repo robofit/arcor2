@@ -3,6 +3,7 @@ import sys
 from typing import Union, Callable, Any, TYPE_CHECKING, no_type_check
 from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent
 from arcor2.data.common import ProjectStateEnum, ActionStateEnum, ActionState, ProjectState
+from functools import wraps
 
 if TYPE_CHECKING:
     from arcor2.object_types import Generic  # NOQA
@@ -49,6 +50,7 @@ def print_event(event: Event) -> None:
 @no_type_check
 def action(f):
 
+    @wraps(f)
     def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
 
         # automagical overload for dictionary (allow to get rid of ** in script).
