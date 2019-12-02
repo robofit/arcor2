@@ -1,7 +1,8 @@
-from typing import Dict, Tuple, Callable, Set
+from typing import Dict, Set, Tuple
 import warnings
 
-DynamicParamDict = Dict[str, Tuple[Callable[..., Set[str]], Set[str]]]
+# key: name of parameter, value: name of method to call (to get set of strings), set of parent parameters
+DynamicParamDict = Dict[str, Tuple[str, Set[str]]]
 
 warnings.filterwarnings(
     action='ignore',

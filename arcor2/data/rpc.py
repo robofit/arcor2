@@ -10,6 +10,7 @@ from arcor2.data.common import IdDesc, ProjectState, ActionState, CurrentAction,
     IdValue
 from arcor2.data.object_type import ObjectTypeMeta, MeshList, ObjectActions
 from arcor2.data.services import ServiceTypeMeta
+from arcor2.data.robot import RobotMeta
 
 """
 mypy does not recognize __qualname__ so far: https://github.com/python/mypy/issues/6473
@@ -59,11 +60,11 @@ class IdArgs(JsonSchemaMixin):
 
 @dataclass
 class RobotArg(JsonSchemaMixin):
-    id: str
+    robot_id: str  # object id of the robot or robot_id within the robot service
     end_effector: str
 
     def as_tuple(self) -> Tuple[str, str]:
-        return self.id, self.end_effector
+        return self.robot_id, self.end_effector
 
 
 """
@@ -568,3 +569,23 @@ class ListMeshesResponse(Response):
 
     data: MeshList = field(default_factory=list)
     response: str = field(default=ListMeshesRequest.request, init=False)
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+Robot object type / service
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+@dataclass
+class GetRobotMetaRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class GetRobotMetaResponse(Response):
+
+    data: List[RobotMeta] = field(default_factory=list)
+    response: str = field(default=GetRobotMetaRequest.request, init=False)
