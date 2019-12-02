@@ -1191,7 +1191,7 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
     return resp
 
 
-@project_needed
+@scene_needed
 async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc.ActionParamValuesResponse,
                                                                              hlp.RPC_RETURN_TYPES]:
 
