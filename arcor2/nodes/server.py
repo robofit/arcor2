@@ -6,7 +6,8 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, get_type_hints
+from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, \
+    get_type_hints, Type
 import uuid
 import keyword
 
@@ -24,6 +25,7 @@ from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, Scen
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
     MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMeta
+from arcor2.data.robot import RobotMeta
 from arcor2.data import rpc
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
     ProjectStateEvent, ActionStateEvent, CurrentActionEvent
@@ -56,6 +58,7 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 SERVICE_TYPES: Dict[str, ServiceTypeMeta] = {}
+ROBOT_META: Dict[str, RobotMeta] = {}
 
 # TODO merge it into one dict?
 SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
@@ -64,7 +67,7 @@ SERVICES_INSTANCES: Dict[str, Service] = {}
 ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / services
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
-FOCUS_OBJECT_ROBOT: Dict[str, Tuple[str, str]] = {}  # object_id / robot, end_effector
+FOCUS_OBJECT_ROBOT: Dict[str, rpc.RobotArg] = {}  # key: object_id
 
 
 class RobotPoseException(Arcor2Exception):
@@ -206,6 +209,13 @@ async def _initialize_server() -> None:
     await asyncio.wait([_get_object_actions(), _check_manager()])
 
 
+async def _get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
+
+    meta = RobotMeta(robot_type.__name__)
+    meta.features.focus = hasattr(robot_type, "focus")  # TODO more sophisticated test? (attr(s) and return value?)
+    ROBOT_META[robot_type.__name__] = meta
+
+
 async def _get_service_types() -> None:
 
     global SERVICE_TYPES
@@ -218,10 +228,14 @@ async def _get_service_types() -> None:
 
         srv_type = await storage.get_service_type(srv_id.id)
         try:
-            service_types[srv_id.id] = stu.meta_from_def(hlp.type_def_from_source(srv_type.source,
-                                                                                  srv_type.id, Service))
+            type_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
+            service_types[srv_id.id] = stu.meta_from_def(type_def)
         except Arcor2Exception as e:
-            await logger.error(f"Ignoring object type {srv_type.id}: {e}")
+            await logger.error(f"Ignoring service type {srv_type.id}: {e}")
+            continue
+
+        if issubclass(type_def, RobotService):
+            asyncio.ensure_future(_get_robot_meta(type_def))
 
     SERVICE_TYPES = service_types
 
@@ -237,7 +251,8 @@ async def _get_object_types() -> None:
     for obj_id in obj_ids.items:
         obj = await storage.get_object_type(obj_id.id)
         try:
-            object_types[obj.id] = otu.meta_from_def(hlp.type_def_from_source(obj.source, obj.id, Generic))
+            type_def = hlp.type_def_from_source(obj.source, obj.id, Generic)
+            object_types[obj.id] = otu.meta_from_def(type_def)
         except (otu.ObjectTypeException, hlp.TypeDefException) as e:
             await logger.error(f"Ignoring object type {obj.id}: {e}")
             continue
@@ -246,6 +261,9 @@ async def _get_object_types() -> None:
             model = await storage.get_model(obj.model.id, obj.model.type)
             kwargs = {model.type().value.lower(): model}
             object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
+
+        if issubclass(type_def, Robot):
+            asyncio.ensure_future(_get_robot_meta(type_def))
 
     # if description is missing, try to get it from ancestor(s), or forget the object type
     to_delete: Set[str] = set()
@@ -412,18 +430,12 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
     :return: Global pose
     """
 
-    if robot_id in SCENE_OBJECT_INSTANCES:
+    robot_inst = get_robot_instance(robot_id, end_effector)
 
-        robot = SCENE_OBJECT_INSTANCES[robot_id]
-
-        if not isinstance(robot, Robot):
-            raise RobotPoseException(f"Object {robot_id} is not instance of Robot!")
-
-        if end_effector not in await hlp.run_in_executor(robot.get_end_effectors_ids):
-            raise RobotPoseException(f"Unknown end effector.")
+    if isinstance(robot_inst, Robot):
 
         try:
-            pose = await hlp.run_in_executor(robot.get_end_effector_pose, end_effector)
+            pose = await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
 
@@ -431,29 +443,22 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
 
         return pose, []
 
-    else:
-
-        for service in SERVICES_INSTANCES.values():
-            if isinstance(service, RobotService) and robot_id in await hlp.run_in_executor(service.get_robot_ids):
-                robot_service = service
-                break
-        else:
-            raise RobotPoseException("Robot ID invalid or robot service not available.")
-
-        if end_effector not in hlp.run_in_executor(robot_service.get_end_effectors_ids, robot_id):
-            raise RobotPoseException(f"Unknown end effector.")
+    elif isinstance(robot_inst, RobotService):
 
         try:
-            pose = await hlp.run_in_executor(robot_service.get_end_effector_pose, robot_id, end_effector)
+            pose = await hlp.run_in_executor(robot_inst.get_end_effector_pose, robot_id, end_effector)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
 
         try:
-            joints = await hlp.run_in_executor(robot_service.robot_joints, robot_id)
+            joints = await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting joints.")
 
         return pose, joints
+
+    else:
+        raise NotImplementedError()
 
 
 @scene_needed
@@ -469,7 +474,7 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
         return False, "Invalid action point."
 
     try:
-        new_pose, new_joints = await get_end_effector_pose_joints(req.args.robot.id, req.args.robot.end_effector)
+        new_pose, new_joints = await get_end_effector_pose_joints(req.args.robot.robot_id, req.args.robot.end_effector)
     except RobotPoseException as e:
         return False, str(e)
 
@@ -488,10 +493,10 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
     for joint in ap.joints:
         if joint.id == req.args.id:
             joint.joints = new_joints
-            joint.robot_id = req.args.robot.id
+            joint.robot_id = req.args.robot.robot_id
             break
     else:
-        ap.joints.append(RobotJoints(req.args.id, req.args.robot.id, new_joints))
+        ap.joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -504,7 +509,7 @@ async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Uni
 
     assert SCENE
 
-    if req.args.id == req.args.robot.id:
+    if req.args.id == req.args.robot.robot_id:
         return False, "Robot cannot update its own pose."
 
     try:
@@ -513,7 +518,8 @@ async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Uni
         return False, "Invalid action object."
 
     try:
-        scene_object.pose = (await get_end_effector_pose_joints(req.args.robot.id, req.args.robot.end_effector))[0]
+        scene_object.pose = (await get_end_effector_pose_joints(req.args.robot.robot_id,
+                                                                req.args.robot.end_effector))[0]
     except RobotPoseException as e:
         return False, str(e)
 
@@ -699,14 +705,16 @@ async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.F
     if obj_id in FOCUS_OBJECT_ROBOT:
         return False, "Focusing already started."
 
-    if req.args.robot.id not in SCENE_OBJECT_INSTANCES:
-        return False, "Unknown robot."
-
     if obj_id not in SCENE_OBJECT_INSTANCES:
         return False, "Unknown object."
 
-    # TODO check if the robot supports focusing (hasattr focus), RobotService has to support focus
-    # TODO check if end effector exists
+    try:
+        inst = get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
+    except Arcor2Exception as e:
+        return False, str(e)
+
+    if not ROBOT_META[inst.__class__.__name__].features.focus:
+        return False, "Robot/service does not support focusing."
 
     obj_type = OBJECT_TYPES[get_obj_type_name(obj_id)]
 
@@ -720,7 +728,7 @@ async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.F
     if not focus_points:
         return False, "focusPoints not defined for the mesh."
 
-    FOCUS_OBJECT_ROBOT[req.args.object_id] = req.args.robot.as_tuple()
+    FOCUS_OBJECT_ROBOT[req.args.object_id] = req.args.robot
     FOCUS_OBJECT[obj_id] = {}
     await logger.info(f'Start of focusing for {obj_id}.')
     return None
@@ -755,13 +763,32 @@ async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectR
         await logger.info(f'Start of focusing for {obj_id}.')
         FOCUS_OBJECT[obj_id] = {}
 
-    robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id]
+    robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
 
     FOCUS_OBJECT[obj_id][pt_idx] = (await get_end_effector_pose_joints(robot_id, end_effector))[0]
 
     r = rpc.FocusObjectResponse()
     r.data.finished_indexes = list(FOCUS_OBJECT[obj_id].keys())
     return r
+
+
+async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Union[Robot, RobotService]:
+
+    if robot_id in SCENE_OBJECT_INSTANCES:
+        robot_inst = SCENE_OBJECT_INSTANCES[robot_id]
+        if not isinstance(robot_inst, Robot):
+            raise Arcor2Exception("Not a robot.")
+        if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_inst.get_end_effectors_ids):
+            raise Arcor2Exception("Unknown end effector ID.")
+        return robot_inst
+    else:
+        robot_srv_inst = find_robot_service()
+        if not robot_srv_inst or robot_id not in await hlp.run_in_executor(robot_srv_inst.get_robot_ids):
+            raise Arcor2Exception("Unknown robot ID.")
+        if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_srv_inst.get_end_effectors_ids,
+                                                                                robot_id):
+            raise Arcor2Exception("Unknown end effector ID.")
+        return robot_srv_inst
 
 
 @scene_needed
@@ -789,11 +816,9 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
         clean_up_after_focus(obj_id)
         return rpc.FocusObjectDoneResponse(messages=["Focusing cancelled."])
 
-    robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id]
+    robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
+    robot_inst = get_robot_instance(robot_id)
 
-    robot_inst = SCENE_OBJECT_INSTANCES[robot_id]
-
-    assert isinstance(robot_inst, Robot)
     assert SCENE
 
     obj = get_scene_object(SCENE, obj_id)
@@ -811,7 +836,8 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
     await logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
 
     try:
-        obj.pose = await hlp.run_in_executor(robot_inst.focus, mfa)
+        assert hasattr(robot_inst, "focus")  # mypy does not deal with hasattr
+        obj.pose = await hlp.run_in_executor(robot_inst.focus, mfa)  # type: ignore
     except NotImplementedError:  # TODO it is too late to realize it here!
         clean_up_after_focus(obj_id)
         return False, "The robot does not support focussing."
@@ -917,8 +943,8 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
     if obj_meta.abstract:
         return False, "Cannot instantiate abstract type."
 
-    if obj.id in SCENE_OBJECT_INSTANCES:
-        return False, "Object with that id already exists."
+    if obj.id in SCENE_OBJECT_INSTANCES or obj.id in SERVICES_INSTANCES:
+        return False, "Object/service with that id already exists."
 
     if not obj.id.isidentifier() or keyword.iskeyword(obj.id) and obj.id != hlp.camel_case_to_snake_case(obj.id):
         return False, "Object ID invalid (should be snake_case)."
@@ -1165,7 +1191,7 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
     return resp
 
 
-@project_needed
+@scene_needed
 async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc.ActionParamValuesResponse,
                                                                              hlp.RPC_RETURN_TYPES]:
 
@@ -1185,7 +1211,7 @@ async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc
         parent_params[pp.id] = pp.value
 
     try:
-        method, required_parent_params = inst.DYNAMIC_PARAMS[req.args.param_id]
+        method_name, required_parent_params = inst.DYNAMIC_PARAMS[req.args.param_id]
     except KeyError:
         return False, "Unknown parameter or values not constrained."
 
@@ -1195,6 +1221,13 @@ async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc
     # TODO validate method parameters vs parent_params (check types)?
 
     resp = rpc.ActionParamValuesResponse()
+
+    try:
+        method = getattr(inst, method_name)
+    except AttributeError:
+        await logger.error(f"Unable to get values for parameter {req.args.param_id}, "
+                           f"object/service {inst.id} has no method named {method_name}.")
+        return False, "System error."
 
     # TODO update hlp.run_in_executor to support kwargs
     resp.data = await asyncio.get_event_loop().run_in_executor(None, functools.partial(method, **parent_params))
@@ -1231,6 +1264,11 @@ async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.Rem
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
     asyncio.ensure_future(notify_scene_change_to_others())
     return None
+
+
+async def get_robot_meta_cb(req: rpc.GetRobotMetaRequest) -> Union[rpc.GetRobotMetaResponse, hlp.RPC_RETURN_TYPES]:
+
+    return rpc.GetRobotMetaResponse(data=list(ROBOT_META.values()))
 
 
 async def remove_object_references_from_projects(obj_id: str) -> None:
@@ -1344,7 +1382,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.RemoveFromSceneRequest: remove_from_scene_cb,
     rpc.SceneObjectUsageRequest: scene_object_usage_request_cb,
     rpc.OpenSceneRequest: open_scene_cb,
-    rpc.ActionParamValuesRequest: action_param_values_cb
+    rpc.ActionParamValuesRequest: action_param_values_cb,
+    rpc.GetRobotMetaRequest: get_robot_meta_cb
 }
 
 # add Project Manager RPC API
