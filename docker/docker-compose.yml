@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  arcor:
+    image: arcor2_base:0.1.0
+    container_name: arcor2
+    command: ["/wait-for", "http://pickmaster-storage:11000/projects", "--","/bin/bash", "/start.sh"]
+    depends_on:
+      - pickmaster-storage
+    ports:
+      - "6789:6789"
+    environment:
+      - ARCOR2_PERSISTENT_STORAGE_URL=http://pickmaster-storage:11000
+  pickmaster-storage:
+    image: kinalisoft/storage:0.3.1
+    container_name: "pickmaster-storage"
+    ports:
+      - "11000-11001:11000-11001"
+    environment:
+      MONGODB_URL: pickmaster-mongodb:27017
+    links:
+        - pickmaster-mongodb
+    depends_on:
+        - pickmaster-mongodb
+
+  pickmaster-mongodb:
+    image: mongo:4.2.0-bionic
+    container_name: "pickmaster-mongodb"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - mongodb:/data/db
+    expose:
+      - "27017"
+
+volumes:
+  mongodb:   
+
