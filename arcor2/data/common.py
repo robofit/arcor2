@@ -144,7 +144,7 @@ class RobotJoints(JsonSchemaMixin):
     id: str
     robot_id: str
     joints: List[Joint]
-    dirty: bool = False
+    is_valid: bool = False
 
 
 @dataclass

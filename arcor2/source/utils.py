@@ -9,8 +9,10 @@ from horast import parse, unparse
 
 from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef,\
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
-    ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem
+    ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem, Subscript, \
+    Index
 
+from arcor2.data.common import Project
 from arcor2.resources import ResourcesBase
 from arcor2.source import SourceException, SCRIPT_HEADER
 
@@ -358,8 +360,116 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
         make_executable(out_file)
 
 
-def derived_resources_class(project_id: str, parameters: List[str]) -> str:
+def global_actions_class(project: Project) -> str:
+
     tree = Module(body=[])
+    tree.body.append(ImportFrom(
+                module='resources',
+                names=[alias(
+                    name='Resources',
+                    asname=None)],
+                level=0))
+
+    cls_def = ClassDef(
+                name='Actions',
+                bases=[],
+                keywords=[],
+                body=[
+                    FunctionDef(
+                        name='__init__',
+                        args=arguments(
+                            args=[
+                                arg(
+                                    arg='self',
+                                    annotation=None,
+                                    type_comment=None),
+                                arg(
+                                    arg='res',
+                                    annotation=Name(
+                                        id='Resources',
+                                        ctx=Load()),
+                                    type_comment=None)],
+                            vararg=None,
+                            kwonlyargs=[],
+                            kw_defaults=[],
+                            kwarg=None,
+                            defaults=[]),
+                        body=[Assign(
+                            targets=[Attribute(
+                                value=Name(
+                                    id='self',
+                                    ctx=Load()),
+                                attr='_res',
+                                ctx=Store())],
+                            value=Name(
+                                id='res',
+                                ctx=Load()),
+                            type_comment=None)],
+                        decorator_list=[],
+                        returns=None,
+                        type_comment=None)],
+                decorator_list=[])
+
+    for obj in project.objects:
+        for ap in obj.action_points:
+            for action in ap.actions:
+
+                ac_obj, ac_type = action.parse_type()
+
+                m = FunctionDef(
+                        name=action.id,
+                        args=arguments(
+                            args=[arg(
+                                arg='self',
+                                annotation=None,
+                                type_comment=None)],
+                            vararg=None,
+                            kwonlyargs=[],
+                            kw_defaults=[],
+                            kwarg=None,
+                            defaults=[]),
+                        body=[Expr(value=Call(
+                            func=Attribute(
+                                value=Subscript(
+                                    value=Attribute(
+                                        value=Attribute(
+                                            value=Name(
+                                                id='self',
+                                                ctx=Load()),
+                                            attr='_res',
+                                            ctx=Load()),
+                                        attr='all_instances',
+                                        ctx=Load()),
+                                    slice=Index(value=Str(
+                                        s=ac_obj,
+                                        kind='')),
+                                    ctx=Load()),
+                                attr=ac_type,
+                                ctx=Load()),
+                            args=[Attribute(
+                                value=Attribute(
+                                    value=Name(
+                                        id='self',
+                                        ctx=Load()),
+                                    attr='_res',
+                                    ctx=Load()),
+                                attr=action.id,
+                                ctx=Load())],
+                            keywords=[]))],
+                        decorator_list=[],
+                        returns=None,
+                        type_comment=None)
+
+                cls_def.body.append(m)
+
+    tree.body.append(cls_def)
+    return tree_to_str(tree)
+
+
+def derived_resources_class(project: Project) -> str:
+    tree = Module(body=[])
+
+    parameters = [act.id for obj in project.objects for aps in obj.action_points for act in aps.actions]
 
     # TODO avoid having "arcor2.resources" as string - how?
     add_import(tree, "arcor2.resources", ResourcesBase.__name__)
@@ -370,7 +480,7 @@ def derived_resources_class(project_id: str, parameters: List[str]) -> str:
         func=Attribute(value=Call(func=Name(id='super', ctx=Load()),
                                   args=[Name(id=derived_cls_name, ctx=Load()),
                                         Name(id='self', ctx=Load())], keywords=[]),
-                       attr='__init__', ctx=Load()), args=[Str(s=project_id)],
+                       attr='__init__', ctx=Load()), args=[Str(s=project.id)],
         keywords=[]))]
 
     for param in parameters:
