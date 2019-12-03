@@ -508,14 +508,14 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
     else:
         ap.orientations.append(NamedOrientation(req.args.id, rel_pose.orientation))
 
-    for joint in ap.joints:
+    for joint in ap.robot_joints:
         if joint.id == req.args.id:
             joint.joints = new_joints
             joint.robot_id = req.args.robot.robot_id
             joint.is_valid = True
             break
     else:
-        ap.joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
+        ap.robot_joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -549,11 +549,10 @@ async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Uni
 def project_problems(scene: Scene, project: Project) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
+    scene_services: Set[str] = {srv.type for srv in scene.services}
     objects_aps: Dict[str, Set[str]] = {obj.id: {ap.id for ap in obj.action_points}
                                         for obj in project.objects}  # object_id, APs
-
     action_ids: Set[str] = set()
-
     problems: List[str] = []
 
     for obj in project.objects:
@@ -565,7 +564,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
         for ap in obj.action_points:
 
-            for joints in ap.joints:
+            for joints in ap.robot_joints:
                 if not joints.is_valid:
                     problems.append(f"Action point {ap.id} has invalid joints: {joints.id} (robot {joints.robot_id}).")
 
@@ -577,11 +576,16 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 # check if objects have used actions
                 obj_id, action_type = action.parse_type()
 
-                if obj_id not in scene_objects:
+                if obj_id not in scene_objects.keys() | scene_services:
                     problems.append(f"Object ID {obj.id} which action is used in {action.id} does not exist in scene.")
                     continue
 
-                for act in ACTIONS[scene_objects[obj_id]]:
+                try:
+                    os_type = scene_objects[obj_id]  # object type
+                except KeyError:
+                    os_type = obj_id  # service
+
+                for act in ACTIONS[os_type]:
                     if action_type == act.name:
                         break
                 else:
@@ -592,7 +596,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 action_params: Dict[str, ActionParameterTypeEnum] = \
                     {param.id: param.type for param in action.parameters}
                 ot_params: Dict[str, ActionParameterTypeEnum] = {param.name: param.type for param in act.action_args
-                                                                 for act in ACTIONS[scene_objects[obj_id]]}
+                                                                 for act in ACTIONS[os_type]}
 
                 if action_params != ot_params:
                     problems.append(f"Action ID {action.id} of type {action.type} has invalid parameters.")
@@ -882,7 +886,7 @@ async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
             if obj.id != obj_id:
                 continue
             for ap in obj.action_points:
-                for joints in ap.joints:
+                for joints in ap.robot_joints:
                     joints.is_valid = False
 
         await storage.update_project(project)

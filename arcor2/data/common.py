@@ -153,7 +153,7 @@ class ActionPoint(JsonSchemaMixin):
     id: str
     position: Position
     orientations: List[NamedOrientation] = field(default_factory=list)
-    joints: List[RobotJoints] = field(default_factory=list)
+    robot_joints: List[RobotJoints] = field(default_factory=list)
 
     def pose(self, orientation_id: str) -> Pose:
 
@@ -162,9 +162,9 @@ class ActionPoint(JsonSchemaMixin):
                 return Pose(self.position, ori.orientation)
         raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
 
-    def robot_joints(self, robot_id: str, joints_id: str) -> RobotJoints:
+    def get_joints(self, robot_id: str, joints_id: str) -> RobotJoints:
 
-        for joints in self.joints:
+        for joints in self.robot_joints:
             if joints.id == joints_id and robot_id == joints.robot_id:
                 return joints
         raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")

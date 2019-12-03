@@ -197,7 +197,7 @@ class IntResources:
                 if param.type == ActionParameterTypeEnum.POSE:
                     ret[param.id] = self.action_point(object_id, ap_id).pose(value_id)
                 elif param.type == ActionParameterTypeEnum.JOINTS:
-                    ret[param.id] = self.action_point(object_id, ap_id).robot_joints(inst_name, value_id)
+                    ret[param.id] = self.action_point(object_id, ap_id).get_joints(inst_name, value_id)
 
             elif param.type == ActionParameterTypeEnum.RELATIVE_POSE:
                 assert isinstance(param.value, dict)
