@@ -1,8 +1,8 @@
 import abc
-from typing import Set
+from typing import Set, List
 
 from arcor2.object_types.generic import Generic
-from arcor2.data.common import Pose
+from arcor2.data.common import Pose, Joint
 
 
 class Robot(Generic, metaclass=abc.ABCMeta):
@@ -16,4 +16,8 @@ class Robot(Generic, metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_end_effector_pose(self, end_effector: str) -> Pose:
+        pass
+
+    @abc.abstractmethod
+    def robot_joints(self, robot_id: str) -> List[Joint]:
         pass

@@ -98,14 +98,14 @@ def get_service_type_ids() -> IdDescList:
 def update_project(project: Project) -> None:
 
     assert project.id
-    rest.post(f"{URL}/project", project)
+    rest.put(f"{URL}/project", project)
 
 
 @handle_exceptions
 def update_scene(scene: Scene) -> None:
 
     assert scene.id
-    rest.post(f"{URL}/scene", scene)
+    rest.put(f"{URL}/scene", scene)
 
 
 @handle_exceptions
@@ -119,11 +119,11 @@ def update_project_sources(project_sources: ProjectSources) -> None:
 def update_object_type(object_type: ObjectType) -> None:
 
     assert object_type.id
-    rest.post(f"{URL}/object_type", object_type)
+    rest.put(f"{URL}/object_type", object_type)
 
 
 @handle_exceptions
 def update_service_type(service_type: ServiceType) -> None:
 
     assert service_type.id
-    rest.post(f"{URL}/service_type", service_type)
+    rest.put(f"{URL}/service_type", service_type)

@@ -15,7 +15,7 @@ from dataclasses_jsonschema.apispec import DataclassesPlugin
 
 from arcor2 import persistent_storage as ps
 from arcor2.source.logic import program_src, get_logic_from_source
-from arcor2.source.utils import derived_resources_class
+from arcor2.source.utils import derived_resources_class, global_actions_class
 from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.helpers import camel_case_to_snake_case
@@ -123,15 +123,16 @@ def project_publish(project_id: str):
         except ps.PersistentStorageException as e:
             return str(e), 404
 
-        action_names = [act.id for obj in project.objects for aps in obj.action_points for act in aps.actions]
-
         try:
 
             with open(os.path.join(project_dir, 'script.py'), "w") as script:
                 script.write(program_src(project, scene, built_in_types_names(), project.has_logic))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
-                res.write(derived_resources_class(project.id, action_names))
+                res.write(derived_resources_class(project))
+
+            with open(os.path.join(project_dir, 'actions.py'), "w") as act:
+                act.write(global_actions_class(project))
 
         except SourceException as e:
             return str(e), 501

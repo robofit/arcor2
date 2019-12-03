@@ -295,7 +295,20 @@ async def get_services_cb(req: rpc.GetServicesRequest) -> rpc.GetServicesRespons
 async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
-    await storage.update_scene(SCENE)
+
+    try:
+        stored_scene = await storage.get_scene(SCENE.id)
+    except storage.PersistentStorageException:
+        await storage.update_scene(SCENE)
+        return None
+
+    for old_obj in stored_scene.objects:
+        for new_obj in SCENE.objects:
+            if old_obj.id != new_obj.id:
+                continue
+
+            if old_obj.pose != new_obj.pose:
+                asyncio.ensure_future(scene_object_pose_updated(SCENE.id, new_obj.id))
     return None
 
 
@@ -432,6 +445,8 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
 
     robot_inst = get_robot_instance(robot_id, end_effector)
 
+    # TODO get pose/joints in parallel
+    # TODO simplify / deduplicate code
     if isinstance(robot_inst, Robot):
 
         try:
@@ -439,9 +454,12 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
 
-        # TODO get joints
+        try:
+            joints = await hlp.run_in_executor(robot_inst.robot_joints)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting joints.")
 
-        return pose, []
+        return pose, joints
 
     elif isinstance(robot_inst, RobotService):
 
@@ -490,13 +508,14 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
     else:
         ap.orientations.append(NamedOrientation(req.args.id, rel_pose.orientation))
 
-    for joint in ap.joints:
+    for joint in ap.robot_joints:
         if joint.id == req.args.id:
             joint.joints = new_joints
             joint.robot_id = req.args.robot.robot_id
+            joint.is_valid = True
             break
     else:
-        ap.joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
+        ap.robot_joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -530,11 +549,10 @@ async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Uni
 def project_problems(scene: Scene, project: Project) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
+    scene_services: Set[str] = {srv.type for srv in scene.services}
     objects_aps: Dict[str, Set[str]] = {obj.id: {ap.id for ap in obj.action_points}
                                         for obj in project.objects}  # object_id, APs
-
     action_ids: Set[str] = set()
-
     problems: List[str] = []
 
     for obj in project.objects:
@@ -546,6 +564,10 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
         for ap in obj.action_points:
 
+            for joints in ap.robot_joints:
+                if not joints.is_valid:
+                    problems.append(f"Action point {ap.id} has invalid joints: {joints.id} (robot {joints.robot_id}).")
+
             for action in ap.actions:
 
                 if action.id in action_ids:
@@ -554,11 +576,16 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 # check if objects have used actions
                 obj_id, action_type = action.parse_type()
 
-                if obj_id not in scene_objects:
+                if obj_id not in scene_objects.keys() | scene_services:
                     problems.append(f"Object ID {obj.id} which action is used in {action.id} does not exist in scene.")
                     continue
 
-                for act in ACTIONS[scene_objects[obj_id]]:
+                try:
+                    os_type = scene_objects[obj_id]  # object type
+                except KeyError:
+                    os_type = obj_id  # service
+
+                for act in ACTIONS[os_type]:
                     if action_type == act.name:
                         break
                 else:
@@ -569,7 +596,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 action_params: Dict[str, ActionParameterTypeEnum] = \
                     {param.id: param.type for param in action.parameters}
                 ot_params: Dict[str, ActionParameterTypeEnum] = {param.name: param.type for param in act.action_args
-                                                                 for act in ACTIONS[scene_objects[obj_id]]}
+                                                                 for act in ACTIONS[os_type]}
 
                 if action_params != ot_params:
                     problems.append(f"Action ID {action.id} of type {action.type} has invalid parameters.")
@@ -847,7 +874,22 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
     clean_up_after_focus(obj_id)
 
     asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(scene_object_pose_updated(SCENE.id, obj.id))
     return None
+
+
+async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
+
+    async for project in projects_using_object(scene_id, obj_id):
+
+        for obj in project.objects:
+            if obj.id != obj_id:
+                continue
+            for ap in obj.action_points:
+                for joints in ap.robot_joints:
+                    joints.is_valid = False
+
+        await storage.update_project(project)
 
 
 def clean_up_after_focus(obj_id: str) -> None:
@@ -1312,7 +1354,6 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
         await storage.update_project(project)
         updated_project_ids.add(project.id)
-        # TODO what to do with project sources?
 
     await logger.info("Updated projects: {}".format(updated_project_ids))
 
