@@ -295,7 +295,20 @@ async def get_services_cb(req: rpc.GetServicesRequest) -> rpc.GetServicesRespons
 async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
-    await storage.update_scene(SCENE)
+
+    try:
+        stored_scene = await storage.get_scene(SCENE.id)
+    except storage.PersistentStorageException:
+        await storage.update_scene(SCENE)
+        return None
+
+    for old_obj in stored_scene.objects:
+        for new_obj in SCENE.objects:
+            if old_obj.id != new_obj.id:
+                continue
+
+            if old_obj.pose != new_obj.pose:
+                asyncio.ensure_future(scene_object_pose_updated(SCENE.id, new_obj.id))
     return None
 
 
@@ -432,6 +445,8 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
 
     robot_inst = get_robot_instance(robot_id, end_effector)
 
+    # TODO get pose/joints in parallel
+    # TODO simplify / deduplicate code
     if isinstance(robot_inst, Robot):
 
         try:
@@ -439,9 +454,12 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
 
-        # TODO get joints
+        try:
+            joints = await hlp.run_in_executor(robot_inst.robot_joints)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting joints.")
 
-        return pose, []
+        return pose, joints
 
     elif isinstance(robot_inst, RobotService):
 
@@ -494,6 +512,7 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
         if joint.id == req.args.id:
             joint.joints = new_joints
             joint.robot_id = req.args.robot.robot_id
+            joint.is_valid = True
             break
     else:
         ap.joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
@@ -545,6 +564,10 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
             continue
 
         for ap in obj.action_points:
+
+            for joints in ap.joints:
+                if not joints.is_valid:
+                    problems.append(f"Action point {ap.id} has invalid joints: {joints.id} (robot {joints.robot_id}).")
 
             for action in ap.actions:
 
@@ -847,7 +870,22 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
     clean_up_after_focus(obj_id)
 
     asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(scene_object_pose_updated(SCENE.id, obj.id))
     return None
+
+
+async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
+
+    async for project in projects_using_object(scene_id, obj_id):
+
+        for obj in project.objects:
+            if obj.id != obj_id:
+                continue
+            for ap in obj.action_points:
+                for joints in ap.joints:
+                    joints.is_valid = False
+
+        await storage.update_project(project)
 
 
 def clean_up_after_focus(obj_id: str) -> None:
@@ -1312,7 +1350,6 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
         await storage.update_project(project)
         updated_project_ids.add(project.id)
-        # TODO what to do with project sources?
 
     await logger.info("Updated projects: {}".format(updated_project_ids))
 
