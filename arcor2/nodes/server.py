@@ -443,7 +443,7 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
     :return: Global pose
     """
 
-    robot_inst = get_robot_instance(robot_id, end_effector)
+    robot_inst = await get_robot_instance(robot_id, end_effector)
 
     # TODO get pose/joints in parallel
     # TODO simplify / deduplicate code
@@ -476,7 +476,7 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
         return pose, joints
 
     else:
-        raise NotImplementedError()
+        raise Arcor2Exception("Not a robot instance.")
 
 
 @scene_needed
@@ -502,20 +502,20 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
         ap.position = rel_pose.position
 
     for ori in ap.orientations:
-        if ori.id == req.args.id:
+        if ori.id == req.args.orientation_id:
             ori.orientation = rel_pose.orientation
             break
     else:
-        ap.orientations.append(NamedOrientation(req.args.id, rel_pose.orientation))
+        ap.orientations.append(NamedOrientation(req.args.orientation_id, rel_pose.orientation))
 
     for joint in ap.robot_joints:
-        if joint.id == req.args.id:
+        if joint.id == req.args.orientation_id:
             joint.joints = new_joints
             joint.robot_id = req.args.robot.robot_id
             joint.is_valid = True
             break
     else:
-        ap.robot_joints.append(RobotJoints(req.args.id, req.args.robot.robot_id, new_joints))
+        ap.robot_joints.append(RobotJoints(req.args.orientation_id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -736,7 +736,7 @@ async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.F
         return False, "Unknown object."
 
     try:
-        inst = get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
+        inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
     except Arcor2Exception as e:
         return False, str(e)
 
@@ -810,10 +810,12 @@ async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = Non
         return robot_inst
     else:
         robot_srv_inst = find_robot_service()
-        if not robot_srv_inst or robot_id not in await hlp.run_in_executor(robot_srv_inst.get_robot_ids):
+        # if not robot_srv_inst or robot_id not in await hlp.run_in_executor(robot_srv_inst.get_robot_ids):
+        if not robot_srv_inst or robot_id not in robot_srv_inst.get_robot_ids():  # TODO fix with executor!
             raise Arcor2Exception("Unknown robot ID.")
-        if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_srv_inst.get_end_effectors_ids,
-                                                                                robot_id):
+        # if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_srv_inst.get_end_effectors_ids,
+        #                                                                        robot_id):
+        if end_effector_id and end_effector_id not in robot_srv_inst.get_end_effectors_ids(robot_id):
             raise Arcor2Exception("Unknown end effector ID.")
         return robot_srv_inst
 
@@ -844,7 +846,7 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
         return rpc.FocusObjectDoneResponse(messages=["Focusing cancelled."])
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
-    robot_inst = get_robot_instance(robot_id)
+    robot_inst = await get_robot_instance(robot_id)
 
     assert SCENE
 
