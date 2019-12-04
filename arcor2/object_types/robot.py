@@ -19,5 +19,5 @@ class Robot(Generic, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def robot_joints(self, robot_id: str) -> List[Joint]:
+    def robot_joints(self) -> List[Joint]:
         pass
