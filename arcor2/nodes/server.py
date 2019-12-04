@@ -707,7 +707,11 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
     if meta.object_model and meta.object_model.type == ModelTypeEnum.MESH:
         # ...get whole mesh (focus_points) based on mesh id
         assert meta.object_model.mesh
-        meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
+        try:
+            meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
+        except storage.PersistentStorageException as e:
+            await logger.error(e)
+            return False, f"Mesh ID {meta.object_model.mesh.id} does not exist."
 
     await storage.update_object_type(obj)
 
@@ -810,12 +814,10 @@ async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = Non
         return robot_inst
     else:
         robot_srv_inst = find_robot_service()
-        # if not robot_srv_inst or robot_id not in await hlp.run_in_executor(robot_srv_inst.get_robot_ids):
-        if not robot_srv_inst or robot_id not in robot_srv_inst.get_robot_ids():  # TODO fix with executor!
+        if not robot_srv_inst or robot_id not in await hlp.run_in_executor(robot_srv_inst.get_robot_ids):
             raise Arcor2Exception("Unknown robot ID.")
-        # if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_srv_inst.get_end_effectors_ids,
-        #                                                                        robot_id):
-        if end_effector_id and end_effector_id not in robot_srv_inst.get_end_effectors_ids(robot_id):
+        if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_srv_inst.get_end_effectors_ids,
+                                                                                robot_id):
             raise Arcor2Exception("Unknown end effector ID.")
         return robot_srv_inst
 
