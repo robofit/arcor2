@@ -49,7 +49,7 @@ def handle_response(resp: requests.Response) -> None:
 
 
 def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[JsonSchemaMixin]]] = None,
-          params: Optional[Dict] = None) -> None:
+          params: Optional[Dict] = None, get_response=False) -> Optional[Dict]:
 
     if data:
         if isinstance(data, list):
@@ -67,12 +67,24 @@ def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[Jso
         params = {}
 
     try:
-        resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'}, params=params)
+        resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'},
+                  params=json.dumps(params))
     except requests.exceptions.RequestException as e:
         print(e)
         raise RestException(f"Catastrophic error: {e}")
 
     handle_response(resp)
+
+    if not get_response:
+        return
+
+    print(resp.text)
+
+    try:
+        return json.loads(resp.text)
+    except (json.JSONDecodeError, TypeError) as e:
+        print(e)
+        raise RestException("Invalid JSON.")
 
 
 def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
@@ -80,8 +92,17 @@ def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
 
 
 def put(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]] = None,
-        params: Optional[Dict] = None):
-    _send(url, requests.put, data, params)
+        params: Optional[Dict] = None, data_cls: Type[T] = None) -> T:
+    ret = _send(url, requests.put, data, params, get_response=data_cls is not None)
+
+    if not data_cls:
+        return None
+
+    try:
+        return data_cls.from_dict(ret)
+    except ValidationError as e:
+        print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
+        raise RestException("Invalid data.")
 
 
 def delete(url: str):
