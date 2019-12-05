@@ -68,7 +68,7 @@ def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[Jso
 
     try:
         resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'},
-                  params=json.dumps(params))
+                  params=params)
     except requests.exceptions.RequestException as e:
         print(e)
         raise RestException(f"Catastrophic error: {e}")
