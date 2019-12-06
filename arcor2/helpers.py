@@ -5,6 +5,7 @@ import json
 import asyncio
 import importlib
 import re
+import keyword
 
 from dataclasses_jsonschema import ValidationError
 
@@ -17,9 +18,6 @@ from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data.common import Pose, Position, Orientation
 
-
-_first_cap_re = re.compile('(.)([A-Z][a-z]+)')
-_all_cap_re = re.compile('([a-z0-9])([A-Z])')
 
 RPC_RETURN_TYPES = Union[None, Tuple[bool, str]]
 
@@ -70,6 +68,32 @@ def import_cls(module_cls: str) -> Tuple[ModuleType, Type[Any]]:
     return module, cls
 
 
+def is_valid_identifier(value: str) -> bool:
+    """
+    Identifier (e.g. object id) will be used as variable name in the script - it should be in snake_case,
+    not containing any special characters etc.
+    :param value:
+    :return:
+    """
+
+    return value.isidentifier() and not keyword.iskeyword(value) and value == camel_case_to_snake_case(value)
+
+
+def is_valid_type(value: str) -> bool:
+    """
+    Value will be used as object type name - it should be in CamelCase,
+    not containing any special characters etc.
+    :param value:
+    :return:
+    """
+
+    return value.isidentifier() and not keyword.iskeyword(value) and value == snake_case_to_camel_case(value)
+
+
+_first_cap_re = re.compile('(.)([A-Z][a-z]+)')
+_all_cap_re = re.compile('([a-z0-9])([A-Z])')
+
+
 def camel_case_to_snake_case(camel_str: str) -> str:
 
     s1 = _first_cap_re.sub(r'\1_\2', camel_str)
@@ -78,8 +102,7 @@ def camel_case_to_snake_case(camel_str: str) -> str:
 
 def snake_case_to_camel_case(snake_str: str) -> str:
 
-    first, *others = snake_str.split('_')
-    return ''.join([first.lower(), *map(str.title, others)])
+    return re.sub(r"(?:^|_)(.)", lambda m: m.group(1).upper(), snake_str)
 
 
 async def server(client: Any,
