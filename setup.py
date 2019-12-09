@@ -41,7 +41,9 @@ setup(
     ],
     tests_require=[
         'websocket',
-        'pytest-docker-compose'
+        'pytest-docker-compose',
+        'openapi-spec-validator',
+        'pyyaml'
     ],
     zip_safe=False
 )
