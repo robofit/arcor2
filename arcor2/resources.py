@@ -197,7 +197,19 @@ class IntResources:
                 if param.type == ActionParameterTypeEnum.POSE:
                     ret[param.id] = self.action_point(object_id, ap_id).pose(value_id)
                 elif param.type == ActionParameterTypeEnum.JOINTS:
-                    ret[param.id] = self.action_point(object_id, ap_id).get_joints(inst_name, value_id)
+
+                    robot_id = inst_name
+
+                    if isinstance(action_obj_inst, RobotService):
+                        for aparam in act.parameters:
+                            if aparam.type == ActionParameterTypeEnum.STRING and aparam.id == "robot_id":
+                                robot_id = aparam.value
+                                break
+                        else:
+                            raise ResourcesException(f"Parameter 'robot_id' of type string needed by"
+                                                     f" {param.id} not found.")
+
+                    ret[param.id] = self.action_point(object_id, ap_id).get_joints(robot_id, value_id)
 
             elif param.type == ActionParameterTypeEnum.RELATIVE_POSE:
                 assert isinstance(param.value, dict)
