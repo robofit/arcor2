@@ -204,8 +204,20 @@ async def notify_project(interface) -> None:
 
 async def _initialize_server() -> None:
 
+    while True:  # wait until Project service becomes available
+        try:
+            await storage.get_projects()
+            break
+        except storage.PersistentStorageException:
+            await asyncio.sleep(1)
+
     await asyncio.wait([_get_object_types(), _get_service_types()])
     await asyncio.wait([_get_object_actions(), _check_manager()])
+
+    bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
+                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
+
+    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', 6789)])
 
 
 async def _get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
@@ -689,7 +701,7 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
         return False, "Object type already exists."
 
     if meta.base not in OBJECT_TYPES:
-        return False, "Unknown base object type."
+        return False, f"Unknown base object type '{meta.base}', known types are: {', '.join(OBJECT_TYPES.keys())}."
 
     if not hlp.is_valid_type(meta.type):
         return False, "Object type invalid (should be CamelCase)."
@@ -1450,13 +1462,9 @@ def main():
     assert sys.version_info >= (3, 6)
 
     loop = asyncio.get_event_loop()
-    loop.set_debug(enabled=True)
+    # loop.set_debug(enabled=True)
 
-    bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
-                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
-
-    asyncio.wait([asyncio.gather(websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
-                                 _initialize_server())])
+    asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())])
     loop.run_forever()
 
 
