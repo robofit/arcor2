@@ -40,7 +40,8 @@ setup(
         'bidict'
     ],
     tests_require=[
-        'websocket'
+        'websocket',
+        'pytest-docker-compose'
     ],
     zip_safe=False
 )
