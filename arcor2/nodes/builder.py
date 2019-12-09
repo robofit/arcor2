@@ -126,7 +126,16 @@ def project_publish(project_id: str):
         try:
 
             with open(os.path.join(project_dir, 'script.py'), "w") as script:
-                script.write(program_src(project, scene, built_in_types_names(), project.has_logic))
+
+                if not project.has_logic:
+                    try:
+                        # TODO check if script is valid somehow?
+                        script.write(ps.get_project_sources(project.id).script)
+                    except ps.PersistentStorageException:
+                        # script not uploaded, write script with empty main loop
+                        script.write(program_src(project, scene, built_in_types_names(), False))
+                else:
+                    script.write(program_src(project, scene, built_in_types_names(), True))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
                 res.write(derived_resources_class(project))
