@@ -226,7 +226,7 @@ class ActionParameter(IdValue):
 
     def __post_init__(self) -> None:
         # TODO check if value is valid (dict for joints/pose)
-        # TODO ...or convert it automatically to RobotJoints/Pose? What about serialization then?
+        # TODO ...or convert it automatically to RobotJoints/Pose? What about serialization then? (override to_dict)
         pass
 
     def parse_id(self) -> Tuple[str, str, str]:
