@@ -131,8 +131,12 @@ async def project_run(req: RunProjectRequest) -> Union[RunProjectResponse, RPC_R
             await logger.error(e)
             return False, "Failed to get project package."
 
-        with zipfile.ZipFile(path, 'r') as zip_ref:
-            zip_ref.extractall(tmpdirname)
+        try:
+            with zipfile.ZipFile(path, 'r') as zip_ref:
+                zip_ref.extractall(tmpdirname)
+        except zipfile.BadZipFile as e:
+            await logger.error(e)
+            return False, "Invalid zip file."
 
         os.remove(path)
 

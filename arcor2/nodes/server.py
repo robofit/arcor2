@@ -9,7 +9,6 @@ import sys
 from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, \
     get_type_hints, Type
 import uuid
-import keyword
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -205,8 +204,20 @@ async def notify_project(interface) -> None:
 
 async def _initialize_server() -> None:
 
+    while True:  # wait until Project service becomes available
+        try:
+            await storage.get_projects()
+            break
+        except storage.PersistentStorageException:
+            await asyncio.sleep(1)
+
     await asyncio.wait([_get_object_types(), _get_service_types()])
     await asyncio.wait([_get_object_actions(), _check_manager()])
+
+    bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
+                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
+
+    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', 6789)])
 
 
 async def _get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
@@ -690,10 +701,9 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
         return False, "Object type already exists."
 
     if meta.base not in OBJECT_TYPES:
-        return False, "Unknown base object type."
+        return False, f"Unknown base object type '{meta.base}', known types are: {', '.join(OBJECT_TYPES.keys())}."
 
-    if not meta.type.isidentifier() or keyword.iskeyword(meta.type) \
-            or meta.type != hlp.snake_case_to_camel_case(meta.type):
+    if not hlp.is_valid_type(meta.type):
         return False, "Object type invalid (should be CamelCase)."
 
     obj = meta.to_object_type()
@@ -992,7 +1002,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
     if obj.id in SCENE_OBJECT_INSTANCES or obj.id in SERVICES_INSTANCES:
         return False, "Object/service with that id already exists."
 
-    if not obj.id.isidentifier() or keyword.iskeyword(obj.id) and obj.id != hlp.camel_case_to_snake_case(obj.id):
+    if not hlp.is_valid_identifier(obj.id):
         return False, "Object ID invalid (should be snake_case)."
 
     await logger.debug(f"Creating instance {obj.id} ({obj.type}).")
@@ -1081,6 +1091,11 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
         for obj_inst in cls.from_services(*args):  # type: ignore
 
             assert isinstance(obj_inst, Generic)
+
+            if not hlp.is_valid_identifier(obj_inst.id):
+                # TODO add message to response
+                await logger.warning(f"Object id {obj_inst.id} invalid.")
+                continue
 
             if obj_inst.id in SCENE_OBJECT_INSTANCES:
                 await logger.warning(f"Object id {obj_inst.id} already in scene.")
@@ -1447,13 +1462,9 @@ def main():
     assert sys.version_info >= (3, 6)
 
     loop = asyncio.get_event_loop()
-    loop.set_debug(enabled=True)
+    # loop.set_debug(enabled=True)
 
-    bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
-                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
-
-    asyncio.wait([asyncio.gather(websockets.serve(bound_handler, '0.0.0.0', 6789), project_manager_client(),
-                                 _initialize_server())])
+    asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())])
     loop.run_forever()
 
 

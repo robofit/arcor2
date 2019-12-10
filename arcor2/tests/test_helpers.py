@@ -4,15 +4,12 @@ import datetime
 
 import pytest  # type: ignore
 
-from arcor2.helpers import import_cls, ImportClsException, camel_case_to_snake_case
-from arcor2.project_utils import get_actions_cache
-from arcor2.source.tests.test_logic import VALID_PROJECT, VALID_PROJECT_WO_LOGIC
-from arcor2.data.common import Project
+from arcor2 import helpers as hlp
 
 
 def test_import_cls_valid():
 
-    mod, cls = import_cls("datetime/timedelta")
+    mod, cls = hlp.import_cls("datetime/timedelta")
 
     assert mod == datetime
     assert cls == datetime.timedelta
@@ -20,50 +17,54 @@ def test_import_cls_valid():
 
 def test_import_cls_non_existing():
 
-    with pytest.raises(ImportClsException):
+    with pytest.raises(hlp.ImportClsException):
 
-        mod, cls = import_cls("nonsense/NonSense")
+        mod, cls = hlp.import_cls("nonsense/NonSense")
 
 
 def test_import_cls_invalid():
 
-    with pytest.raises(ImportClsException):
+    with pytest.raises(hlp.ImportClsException):
 
-        mod, cls = import_cls("Generic")
-
-
-def test_convert_cc():
-
-    assert camel_case_to_snake_case("camelCase") == "camel_case"
+        mod, cls = hlp.import_cls("Generic")
 
 
-def test_get_actions_cache_w_logic():
-
-    cache, first, last = get_actions_cache(VALID_PROJECT)
-
-    assert len(cache) == 3
-    assert first
-    assert last
-    assert "MoveToBoxIN" in cache
-    assert "MoveToTester" in cache
-    assert "MoveToBoxOUT" in cache
+@pytest.mark.parametrize('input,output', [
+     ("CamelCaseStr", "camel_case_str"),
+     ("camelCaseStr", "camel_case_str"),
+     ("camel_case_str", "camel_case_str"),
+     ("Camel", "camel")
+])
+def test_camel_case_to_snake_case(input, output):
+    assert hlp.camel_case_to_snake_case(input) == output
 
 
-def test_get_actions_cache_wo_logic():
+@pytest.mark.parametrize('input,output', [
+    ("snake_case_str", "SnakeCaseStr"),
+    ("SnakeCaseStr", "SnakeCaseStr"),
+    ("snake", "Snake")
+])
+def test_snake_case_to_camel_case(input, output):
+    assert hlp.snake_case_to_camel_case(input) == output
 
-    cache, first, last = get_actions_cache(VALID_PROJECT_WO_LOGIC)
 
-    assert len(cache) == 3
-    assert first is None
-    assert last is None
+@pytest.mark.parametrize('val', [
+    "valid",
+    "valid_ident",
+    pytest.param("InvalidIdent", marks=pytest.mark.xfail),
+    pytest.param("invalid ident", marks=pytest.mark.xfail),
+    pytest.param("invalid?ident", marks=pytest.mark.xfail)
+])
+def test_is_valid_identifier(val):
+    assert hlp.is_valid_identifier(val)
 
 
-def test_get_actions_cache_empty_project():
-
-    proj = Project("proj", "scene")
-
-    cache, first, last = get_actions_cache(proj)
-
-    assert not cache
-    assert first is None
-    assert last is None
+@pytest.mark.parametrize('val', [
+    "Valid",
+    "ValidType",
+    pytest.param("invalid_type", marks=pytest.mark.xfail),
+    pytest.param("Invalid Type", marks=pytest.mark.xfail),
+    pytest.param("invalid?type", marks=pytest.mark.xfail)
+])
+def test_is_valid_type(val):
+    assert hlp.is_valid_type(val)

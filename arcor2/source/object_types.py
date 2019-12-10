@@ -56,11 +56,8 @@ def new_object_type_source(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> str
                  body=[],
                  decorator_list=[])
 
-    if child.description:
-        # TODO add docstring with description
-        pass
-    else:
-        c.body.append(Pass())
+    # TODO add docstring with description (if provided)
+    c.body.append(Pass())
 
     tree.body.append(c)
 
