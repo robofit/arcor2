@@ -12,7 +12,7 @@ class RestException(Arcor2Exception):
     pass
 
 
-TIMEOUT = (1.0, 1.0)  # connect, read
+TIMEOUT = (1.0, 20.0)  # connect, read
 
 T = TypeVar('T', bound=JsonSchemaMixin)
 
