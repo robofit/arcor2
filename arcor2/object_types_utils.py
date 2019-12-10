@@ -175,8 +175,11 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                         raise ObjectTypeException(f"Object type {type_def.__name__}, action {method[0]}, "
                                                   f"invalid parameter type: {ttype.__name__}.")
 
-                args = ObjectActionArg(name=name, type=param_type,
-                                       dynamic_value=name in type_def.DYNAMIC_PARAMS)
+                args = ObjectActionArg(name=name, type=param_type)
+
+                if name in type_def.DYNAMIC_PARAMS:
+                    args.dynamic_value = True
+                    args.dynamic_value_parents = type_def.DYNAMIC_PARAMS[name][1]
 
                 args.string_allowed_values = string_allowed_values
                 args.integer_allowed_values = integer_allowed_values
