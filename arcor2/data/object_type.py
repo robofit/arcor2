@@ -154,6 +154,7 @@ class ObjectActionArg(JsonSchemaMixin):
     string_allowed_values: Optional[Set[str]] = None  # for string enums
     integer_allowed_values: Optional[Set[int]] = None  # for string enums
     dynamic_value: bool = False  # client should ask for allowed values using RPC
+    dynamic_value_parents: Optional[Set[str]] = None
     description: str = ""
 
 
