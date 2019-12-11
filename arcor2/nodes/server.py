@@ -9,10 +9,12 @@ import sys
 from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, \
     get_type_hints, Type
 import uuid
+import argparse
 
 import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
+from aiologger.levels import LogLevel  # type: ignore
 
 from arcor2.source.logic import program_src
 from arcor2.source.object_types import new_object_type_source
@@ -45,7 +47,7 @@ else:
     RespQueue = asyncio.Queue
 
 
-logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter())
+logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
@@ -311,9 +313,11 @@ async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneRespons
     try:
         stored_scene = await storage.get_scene(SCENE.id)
     except storage.PersistentStorageException:
+        # new scene, no need for further checks
         await storage.update_scene(SCENE)
         return None
 
+    # let's check if something important has changed
     for old_obj in stored_scene.objects:
         for new_obj in SCENE.objects:
             if old_obj.id != new_obj.id:
@@ -321,6 +325,8 @@ async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneRespons
 
             if old_obj.pose != new_obj.pose:
                 asyncio.ensure_future(scene_object_pose_updated(SCENE.id, new_obj.id))
+
+    await storage.update_scene(SCENE)
     return None
 
 
@@ -1461,6 +1467,14 @@ EVENT_DICT: hlp.EVENT_DICT_TYPE = {
 def main():
 
     assert sys.version_info >= (3, 6)
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-v", "--verbose", help="Increase output verbosity",
+                        action="store_const", const=LogLevel.DEBUG, default=LogLevel.INFO)
+
+    args = parser.parse_args()
+    logger.level = args.verbose
 
     loop = asyncio.get_event_loop()
     # loop.set_debug(enabled=True)
