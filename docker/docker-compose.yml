@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arcor:
-    image: arcor2_arserver:latest
+    image: arcor2/arcor2_arserver:latest
     container_name: arcor2
     depends_on:
       - pickmaster-storage
@@ -12,10 +12,10 @@ services:
       - ARCOR2_PERSISTENT_STORAGE_URL=http://pickmaster-storage:11000    
       - ARCOR2_EXECUTION_URL=ws://arcor2_execution:6790
   arcor2_build:
-    image: arcor2_build:latest
+    image: arcor2/arcor2_build:latest
     container_name: arcor2_build
   arcor2_execution:
-    image: arcor2_execution:latest
+    image: arcor2/arcor2_execution:latest
     container_name: arcor2_execution
     environment:
       - ARCOR2_BUILDER_URL=http://arcor2_build:5007

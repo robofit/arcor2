@@ -1,4 +1,4 @@
-FROM arcor2_base:latest
+FROM arcor2/arcor2_base:latest
 
 RUN ln -s /root/arcor2/docker/start-arserver.sh /start.sh
 
