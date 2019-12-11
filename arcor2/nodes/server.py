@@ -134,7 +134,8 @@ async def project_manager_client() -> None:
         await logger.info("Attempting connection to manager...")
 
         try:
-            async with websockets.connect(f"ws://localhost:{MANAGER_PORT}") as manager_client:
+            MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"http://127.0.0.1:{builder.PORT}")
+            async with websockets.connect(MANAGER_URL) as manager_client:
 
                 await logger.info("Connected to manager.")
 
