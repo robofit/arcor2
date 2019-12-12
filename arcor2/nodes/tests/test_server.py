@@ -40,7 +40,7 @@ def ws_client(request, function_scoped_container_getter):
 
     ws = websocket.WebSocket()
 
-    for _ in range(200):  # TODO how to have shorter time (20s?) on localhost while longer on CI?
+    for _ in range(20):
         try:
             ws.connect("ws://0.0.0.0:6789", timeout=1)
             break

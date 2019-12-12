@@ -29,7 +29,7 @@ from arcor2.data.helpers import EVENT_MAPPING
 from arcor2 import rest
 from arcor2.nodes import builder
 
-BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://127.0.0.1:{builder.PORT}")
+BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{builder.PORT}")
 
 PORT = 6790
 

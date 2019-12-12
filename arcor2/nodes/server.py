@@ -10,6 +10,7 @@ from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Calla
     get_type_hints, Type
 import uuid
 import argparse
+import os
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -49,6 +50,8 @@ else:
 
 
 logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
+
+MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{MANAGER_PORT}")
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
@@ -137,7 +140,7 @@ async def project_manager_client() -> None:
         await logger.info("Attempting connection to manager...")
 
         try:
-            async with websockets.connect(f"ws://localhost:{MANAGER_PORT}") as manager_client:
+            async with websockets.connect(MANAGER_URL) as manager_client:
 
                 await logger.info("Connected to manager.")
 
