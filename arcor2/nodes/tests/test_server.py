@@ -42,7 +42,7 @@ def ws_client(request, function_scoped_container_getter):
 
     for _ in range(200):  # TODO how to have shorter time (20s?) on localhost while longer on CI?
         try:
-            ws.connect("ws://localhost:6789", timeout=1)
+            ws.connect("ws://0.0.0.0:6789", timeout=1)
             break
         except ConnectionRefusedError:
             time.sleep(1.0)
