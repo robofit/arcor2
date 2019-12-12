@@ -140,6 +140,7 @@ async def project_manager_client() -> None:
         await logger.info("Attempting connection to manager...")
 
         try:
+
             async with websockets.connect(MANAGER_URL) as manager_client:
 
                 await logger.info("Connected to manager.")
