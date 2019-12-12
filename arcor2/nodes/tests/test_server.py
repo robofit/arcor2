@@ -90,7 +90,7 @@ def test_object_types(ws_client):
             assert ot.abstract
 
         ws_client.send(rpc.GetActionsRequest(id=uuid.uuid4().int, args=rpc.TypeArgs(ot.type)).to_json())
-        actions = rpc.GetActionsResponse.from_json(ws_client.recv())
+        rpc.GetActionsResponse.from_json(ws_client.recv())
         # TODO do some tests regarding actions?
 
 
