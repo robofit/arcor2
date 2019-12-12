@@ -17,8 +17,12 @@ jobs:
 
     working_directory: ~/repo
 
+    environment:
+      ARCOR2_PROJECT_PATH: /tmp/arcor2_project
+
     steps:
       - checkout
+      - setup_remote_docker
 
       # Download and cache dependencies
       - restore_cache:
@@ -30,8 +34,6 @@ jobs:
       - run:
           name: prepare environment
           command: |
-            echo "export ARCOR2_PROJECT_PATH=/tmp/arcor2_project" >> $BASH_ENV
-            source $BASH_ENV
             mkdir -p ${ARCOR2_PROJECT_PATH}
 
       - run:
