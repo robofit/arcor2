@@ -5,6 +5,7 @@ import os
 import json
 import time
 import uuid
+import logging
 
 import pytest  # type: ignore
 import websocket  # type: ignore
@@ -18,6 +19,8 @@ from arcor2.object_types import Generic, Robot, Workspace
 # TODO run/pause/resume/stop project
 
 pytest_plugins = ["docker_compose"]
+
+LOGGER = logging.getLogger(__name__)
 
 
 @pytest.fixture()
@@ -44,6 +47,9 @@ def ws_client(request, function_scoped_container_getter):
         except ConnectionRefusedError:
             time.sleep(1.0)
     else:
+        for proc in processes:
+            out, _ = proc.communicate()
+            LOGGER.info(out)
         raise ConnectionRefusedError("Failed to connect to server.")
 
     def fin():
