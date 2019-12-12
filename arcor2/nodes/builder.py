@@ -5,16 +5,18 @@ import os
 import tempfile
 import shutil
 import argparse
+import json
 
 from typing import Set
 
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, send_file
-from dataclasses_jsonschema.apispec import DataclassesPlugin
+from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
+import arcor2
 from arcor2 import persistent_storage as ps
-from arcor2.source.logic import program_src, get_logic_from_source
+from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_actions_class
 from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
@@ -22,22 +24,17 @@ from arcor2.helpers import camel_case_to_snake_case
 from arcor2.data.object_type import ObjectModel
 
 PORT = 5007
+SERVICE_NAME = "ARCOR2 Build Service"
 
 # Create an APISpec
 spec = APISpec(
-    title="ARCOR2 Builder Service",
-    version="0.0.1",
+    title=SERVICE_NAME,
+    version=arcor2.version(),
     openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
+    plugins=[FlaskPlugin()],
 )
 
-# Dependant schemas are added automatically
-# spec.components.schema(IdDescList.__name__, schema=IdDescList)
-
 app = Flask(__name__)
-
-app.config['APISPEC_SPEC'] = spec
-app.config['APISPEC_SWAGGER_URL'] = '/swagger/'
 
 
 @app.route("/project/<string:project_id>/publish", methods=['GET'])
@@ -156,14 +153,20 @@ def project_script(project_id: str):
     """Project script
             ---
             put:
-              description: Add or update project main script
-              consumes:
-                 - multipart/form-data
+              description: Add or update project main script (DOES NOT WORK YET).
               parameters:
-                 - in: formData
-                   name: upfile
-                   type: file
-                   description: The file to upload.
+                - in: path
+                  name: project_id
+                  schema:
+                    type: string
+                  required: true
+                  description: unique ID
+              requestBody:
+                  content:
+                    text/x-python:
+                      schema:
+                        type: string
+                        format: binary
               responses:
                 200:
                   description: Ok
@@ -172,19 +175,35 @@ def project_script(project_id: str):
     pass
 
 
+@app.route("/swagger/api/swagger.json", methods=["GET"])
+def get_swagger():
+    return json.dumps(spec.to_dict())
+
+
 with app.test_request_context():
     spec.path(view=project_publish)
+    spec.path(view=project_script)
 
 
 def main():
 
-    parser = argparse.ArgumentParser(description='ARCOR2 Project Builder')
+    parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument('-s', '--swagger', action="store_true", default=False)
     args = parser.parse_args()
 
     if args.swagger:
         print(spec.to_yaml())
         return
+
+    SWAGGER_URL = "/swagger"
+
+    swaggerui_blueprint = get_swaggerui_blueprint(
+        SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+        f"http://localhost:{PORT}{SWAGGER_URL}/api/swagger.json"
+    )
+
+    # Register blueprint at URL
+    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
     app.run(host='0.0.0.0', port=PORT)
 

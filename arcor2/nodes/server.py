@@ -16,6 +16,7 @@ from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
+import arcor2
 from arcor2.source.logic import program_src
 from arcor2.source.object_types import new_object_type_source
 from arcor2.source import SourceException
@@ -1471,6 +1472,8 @@ def main():
 
     parser.add_argument("-v", "--verbose", help="Increase output verbosity",
                         action="store_const", const=LogLevel.DEBUG, default=LogLevel.INFO)
+    parser.add_argument('--version', action='version',
+                        version='{}'.format(arcor2.version()))
 
     args = parser.parse_args()
     logger.level = args.verbose

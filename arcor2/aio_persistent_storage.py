@@ -3,7 +3,7 @@ from arcor2.data.object_type import ObjectType, Models, ModelTypeEnum, Mesh, Mes
 from arcor2.data.services import ServiceType
 from arcor2.helpers import run_in_executor
 from arcor2 import persistent_storage
-from arcor2.persistent_storage import PersistentStorageException
+from arcor2.persistent_storage import PersistentStorageException  # noqa
 
 
 async def get_mesh(mesh_id: str) -> Mesh:
