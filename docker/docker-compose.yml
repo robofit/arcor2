@@ -1,39 +1,41 @@
 version: '3'
 
 services:
-  arcor:
-    image: arcor2/arcor2_arserver:latest
-    container_name: arcor2
+  arserver:
+    image: arcor2/arcor2_kinali
+    container_name: arserver
     depends_on:
-      - pickmaster-storage
+      - project
+      - build
+      - execution
     ports:
       - "6789:6789"
     environment:
-      - ARCOR2_PERSISTENT_STORAGE_URL=http://pickmaster-storage:11000    
-      - ARCOR2_EXECUTION_URL=ws://arcor2_execution:6790
-  arcor2_build:
-    image: arcor2/arcor2_build:latest
-    container_name: arcor2_build
-  arcor2_execution:
-    image: arcor2/arcor2_execution:latest
-    container_name: arcor2_execution
+      - ARCOR2_PERSISTENT_STORAGE_URL=http://project:11000    
+      - ARCOR2_EXECUTION_URL=ws://execution:6790
+  build:
+    image: arcor2/arcor2_build
+    container_name: build
+  execution:
+    image: arcor2/arcor2_execution
+    container_name: execution
     environment:
-      - ARCOR2_BUILDER_URL=http://arcor2_build:5007
-  pickmaster-storage:
-    image: kinalisoft/storage:0.3.1
-    container_name: "pickmaster-storage"
+      - ARCOR2_BUILDER_URL=http://build:5007
+  project:
+    image: kinalisoft/storage:0.6.1
+    container_name: "project"
     ports:
       - "11000-11001:11000-11001"
     environment:
-      MONGODB_URL: pickmaster-mongodb:27017
+      MONGODB_URL: mongodb:27017
     links:
-        - pickmaster-mongodb
+        - mongodb
     depends_on:
-        - pickmaster-mongodb
+        - mongodb
 
-  pickmaster-mongodb:
+  mongodb:
     image: mongo:4.2.0-bionic
-    container_name: "pickmaster-mongodb"
+    container_name: "mongodb"
     environment:
       - MONGO_DATA_DIR=/data/db
       - MONGO_LOG_DIR=/dev/null

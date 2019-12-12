@@ -1,11 +1,6 @@
 FROM python:3
 
 RUN cd \
-	&& git clone https://github.com/s-knibbs/dataclasses-jsonschema.git \
-	&& cd dataclasses-jsonschema \
-	&& pip install -e .
-
-RUN cd \
 	&& git clone https://github.com/capripot/wait-for.git \
 	&& cd wait-for \
 	&& git checkout http-tests \
