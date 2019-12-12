@@ -17,6 +17,7 @@ from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
+import arcor2
 from arcor2.source.logic import program_src
 from arcor2.source.object_types import new_object_type_source
 from arcor2.source import SourceException
@@ -49,6 +50,8 @@ else:
 
 
 logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
+
+MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{MANAGER_PORT}")
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
@@ -137,7 +140,7 @@ async def project_manager_client() -> None:
         await logger.info("Attempting connection to manager...")
 
         try:
-            MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"http://127.0.0.1:{MANAGER_PORT}")
+
             async with websockets.connect(MANAGER_URL) as manager_client:
 
                 await logger.info("Connected to manager.")
@@ -1473,6 +1476,8 @@ def main():
 
     parser.add_argument("-v", "--verbose", help="Increase output verbosity",
                         action="store_const", const=LogLevel.DEBUG, default=LogLevel.INFO)
+    parser.add_argument('--version', action='version',
+                        version='{}'.format(arcor2.version()))
 
     args = parser.parse_args()
     logger.level = args.verbose

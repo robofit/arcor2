@@ -17,8 +17,12 @@ jobs:
 
     working_directory: ~/repo
 
+    environment:
+      ARCOR2_PROJECT_PATH: /tmp/arcor2_project
+
     steps:
       - checkout
+      - setup_remote_docker
 
       # Download and cache dependencies
       - restore_cache:
@@ -28,11 +32,19 @@ jobs:
             - v1-dependencies-
 
       - run:
+          name: prepare environment
+          command: |
+            mkdir -p ${ARCOR2_PROJECT_PATH}
+
+      - run:
           name: install dependencies
           command: |
             python3 -m venv venv
             . venv/bin/activate
-            pip install -r requirements.txt
+            sudo apt-get update
+            sudo apt-get install build-essential
+            pip install --upgrade pip setuptools
+            pip3 install -e .[test]
             pip install pytest flake8 mypy
 
       - save_cache:
@@ -56,7 +68,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            py.test arcor2
+            py.test -m "not integration" --docker-compose arcor2/docker arcor2
 
       - store_artifacts:
           path: test-reports

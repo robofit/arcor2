@@ -1,8 +1,9 @@
 from setuptools import setup  # type: ignore
+import arcor2
 
 setup(
     name='arcor2',
-    version='0.1',
+    version=arcor2.version(),
     packages=['arcor2', 'arcor2.object_types', 'arcor2.source', 'arcor2.user_objects'],
     package_data={"arcor2": ["py.typed"]},
     entry_points={
@@ -30,20 +31,26 @@ setup(
         'aiologger',
         'aiofiles',
         'dataclasses-jsonschema[fast-validation]',
-        'pytest',
         'apispec',
         'apispec_webframeworks',
         'flask',
         'requests',
+        'cython',  # dependency of numpy, for some reason not installed automatically...
         'numpy-quaternion',
         'fastcache',
-        'bidict'
+        'bidict',
+        'flask_swagger_ui'
     ],
-    tests_require=[
-        'websocket',
-        'pytest-docker-compose',
-        'openapi-spec-validator',
-        'pyyaml'
-    ],
+    extras_require={
+        'test': [
+            'pytest',
+            'websocket',
+            'pytest-docker-compose',
+            'openapi-spec-validator',
+            'pyyaml'
+            ],
+        'docs': ['sphinx']
+    },
+
     zip_safe=False
 )

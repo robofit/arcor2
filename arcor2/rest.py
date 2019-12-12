@@ -57,12 +57,12 @@ def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[Jso
             for dd in data:
                 d.append(convert_keys(dd.to_dict(), snake_case_to_camel_case))
         else:
-            d = convert_keys(data.to_dict(), snake_case_to_camel_case)
+            d = convert_keys(data.to_dict(), snake_case_to_camel_case)  # type: ignore
     else:
-        d = {}
+        d = {}  # type: ignore
 
     if params:
-        params = convert_keys(params, snake_case_to_camel_case)
+        params = convert_keys(params, snake_case_to_camel_case)  # type: ignore
     else:
         params = {}
 
@@ -76,7 +76,7 @@ def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[Jso
     handle_response(resp)
 
     if not get_response:
-        return
+        return None
 
     print(resp.text)
 
@@ -93,13 +93,13 @@ def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
 
 def put(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]] = None,
         params: Optional[Dict] = None, data_cls: Type[T] = None) -> T:
-    ret = _send(url, requests.put, data, params, get_response=data_cls is not None)
+    ret = _send(url, requests.put, data, params, get_response=data_cls is not None)  # type: ignore
 
     if not data_cls:
-        return None
+        return None  # type: ignore
 
     try:
-        return data_cls.from_dict(ret)
+        return data_cls.from_dict(ret)  # type: ignore
     except ValidationError as e:
         print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
         raise RestException("Invalid data.")
@@ -129,12 +129,12 @@ def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[
 def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Any:
 
     if body is None:
-        body_dict = {}
+        body_dict = {}  # type: ignore
     else:
         body_dict = body.to_dict()
 
     if params:
-        params = convert_keys(params, snake_case_to_camel_case)
+        params = convert_keys(params, snake_case_to_camel_case)  # type: ignore
     else:
         params = {}
 
