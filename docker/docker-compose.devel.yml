@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  arserver:
+    image: arcor2/arcor2_kinali
+  build:
+    image: arcor2/arcor2_build
+  execution:
+    image: arcor2/arcor2_execution
+  
+
