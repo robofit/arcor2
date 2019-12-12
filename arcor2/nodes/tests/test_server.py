@@ -32,6 +32,8 @@ def ws_client(request, function_scoped_container_getter):
     my_env = os.environ.copy()
     my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = api_url.strip("/")
 
+    LOGGER.info(f"Storage URL: {api_url}")
+
     processes = []
 
     for cmd in ("arcor2_manager", "arcor2_server"):
@@ -47,9 +49,6 @@ def ws_client(request, function_scoped_container_getter):
         except ConnectionRefusedError:
             time.sleep(1.0)
     else:
-        for proc in processes:
-            out, _ = proc.communicate(timeout=1)
-            LOGGER.info(out)
         raise ConnectionRefusedError("Failed to connect to server.")
 
     def fin():
