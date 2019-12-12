@@ -12,7 +12,8 @@ setup(
                       'arcor2_manager = arcor2.nodes.manager:main',
                       'arcor2_builder = arcor2.nodes.builder:main',
                       'arcor2_upload_ot = arcor2.scripts.upload_object_type:main',
-                      'arcor2_swagger_models = arcor2.scripts.swagger_models:main'
+                      'arcor2_swagger_models = arcor2.scripts.swagger_models:main',
+                      'arcor2_execution_proxy = arcor2.nodes.execution_proxy:main'
                   ],
               },
     url='',
@@ -39,12 +40,12 @@ setup(
         'numpy-quaternion',
         'fastcache',
         'bidict',
-        'flask_swagger_ui'
+        'flask_swagger_ui',
+        'websocket-client'
     ],
     extras_require={
         'test': [
             'pytest',
-            'websocket',
             'pytest-docker-compose',
             'openapi-spec-validator',
             'pyyaml'
