@@ -35,6 +35,7 @@ setup(
         'apispec_webframeworks',
         'flask',
         'requests',
+        'cython',  # dependency of numpy, for some reason not installed automatically...
         'numpy-quaternion',
         'fastcache',
         'bidict',
