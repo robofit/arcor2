@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  arserver:
+    image: arcor2/arcor2_kinali
+    container_name: arserver
+    depends_on:
+      - project
+      - build
+      - execution
+    ports:
+      - "6789:6789"
+    environment:
+      - ARCOR2_PERSISTENT_STORAGE_URL=http://project:11000    
+      - ARCOR2_EXECUTION_URL=ws://execution:6790
+  build:
+    image: arcor2/arcor2_build
+    container_name: build
+  execution:
+    image: arcor2/arcor2_execution
+    container_name: execution
+    environment:
+      - ARCOR2_BUILDER_URL=http://build:5007
+  project:
+    image: kinalisoft/storage:0.6.1
+    container_name: "project"
+    ports:
+      - "11000-11001:11000-11001"
+    environment:
+      MONGODB_URL: mongodb:27017
+    links:
+        - mongodb
+    depends_on:
+        - mongodb
+
+  mongodb:
+    image: mongo:4.2.0-bionic
+    container_name: "mongodb"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - mongodb:/data/db
+    expose:
+      - "27017"
+
+volumes:
+  mongodb:   
+
