@@ -5,6 +5,7 @@ import os
 import json
 import time
 import uuid
+import logging
 
 import pytest  # type: ignore
 import websocket  # type: ignore
@@ -19,6 +20,8 @@ from arcor2.object_types import Generic, Robot, Workspace
 
 pytest_plugins = ["docker_compose"]
 
+LOGGER = logging.getLogger(__name__)
+
 
 @pytest.fixture()
 def ws_client(request, function_scoped_container_getter):
@@ -28,6 +31,8 @@ def ws_client(request, function_scoped_container_getter):
 
     my_env = os.environ.copy()
     my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = api_url.strip("/")
+
+    LOGGER.info(f"Storage URL: {api_url}")
 
     processes = []
 
@@ -39,7 +44,7 @@ def ws_client(request, function_scoped_container_getter):
 
     for _ in range(20):
         try:
-            ws.connect("ws://localhost:6789", timeout=1)
+            ws.connect("ws://0.0.0.0:6789", timeout=1)
             break
         except ConnectionRefusedError:
             time.sleep(1.0)

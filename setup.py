@@ -31,21 +31,26 @@ setup(
         'aiologger',
         'aiofiles',
         'dataclasses-jsonschema[fast-validation]',
-        'pytest',
         'apispec',
         'apispec_webframeworks',
         'flask',
         'requests',
+        'cython',  # dependency of numpy, for some reason not installed automatically...
         'numpy-quaternion',
         'fastcache',
         'bidict',
         'flask_swagger_ui'
     ],
-    tests_require=[
-        'websocket',
-        'pytest-docker-compose',
-        'openapi-spec-validator',
-        'pyyaml'
-    ],
+    extras_require={
+        'test': [
+            'pytest',
+            'websocket',
+            'pytest-docker-compose',
+            'openapi-spec-validator',
+            'pyyaml'
+            ],
+        'docs': ['sphinx']
+    },
+
     zip_safe=False
 )
