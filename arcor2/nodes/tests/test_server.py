@@ -48,7 +48,7 @@ def ws_client(request, function_scoped_container_getter):
             time.sleep(1.0)
     else:
         for proc in processes:
-            out, _ = proc.communicate()
+            out, _ = proc.communicate(timeout=1)
             LOGGER.info(out)
         raise ConnectionRefusedError("Failed to connect to server.")
 
