@@ -29,13 +29,13 @@ With each push to the robofit/arcor2 repository, all images are builded with the
  - **Build**
 	 - docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:version
  - **Execute**
-	 - docker build . -f docker/Dockerfile-execute -t arcor2/arcor2_execute:version
+	 - docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution:version
 
 ## Releasing a new version
 To release a new version of ARCOR2, follow this procedure
 
  1. Update version info
-	 1. VERSION file in repository root
+	 1. VERSION file in arcor2 package
 	 2. Update base image version (FROM statement) in dockerfiles of all services
 	 3. Update images version info in docker-compose.yml
  2. Push all changes to arcor2 repository

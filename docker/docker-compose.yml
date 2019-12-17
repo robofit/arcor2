@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_kinali:0.1.1
+    image: arcor2/arcor2_arserver:0.1.1
     container_name: arserver
     depends_on:
       - project
