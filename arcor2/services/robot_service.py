@@ -47,7 +47,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def end_effector_move(self, robot_id: str, end_effector_id: str, pose: Pose):
+    def move(self, robot_id: str, end_effector_id: str, pose: Pose):
         pass
 
     @abc.abstractmethod

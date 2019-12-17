@@ -210,5 +210,7 @@ def download(url: str, path: str) -> None:
         print(e)
         raise RestException("Download of file failed.")
 
+    handle_response(r)
+
     with open(path, 'wb') as file:
         file.write(r.content)

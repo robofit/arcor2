@@ -458,7 +458,33 @@ async def manager_request(req: rpc.Request) -> rpc.Response:
     return resp
 
 
-async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tuple[Pose, List[Joint]]:
+async def get_robot_joints(robot_id: str) -> List[Joint]:
+    """
+    :param robot_id:
+    :return: List of joints
+    """
+
+    robot_inst = await get_robot_instance(robot_id)
+
+    if isinstance(robot_inst, Robot):
+
+        try:
+            return await hlp.run_in_executor(robot_inst.robot_joints)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting joints.")
+
+    elif isinstance(robot_inst, RobotService):
+
+        try:
+            return await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
+        except NotImplementedError:
+            raise RobotPoseException("The robot does not support getting joints.")
+
+    else:
+        raise Arcor2Exception("Not a robot instance.")
+
+
+async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
     """
     :param robot_id:
     :param end_effector:
@@ -467,38 +493,56 @@ async def get_end_effector_pose_joints(robot_id: str, end_effector: str) -> Tupl
 
     robot_inst = await get_robot_instance(robot_id, end_effector)
 
-    # TODO get pose/joints in parallel
-    # TODO simplify / deduplicate code
     if isinstance(robot_inst, Robot):
 
         try:
-            pose = await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
+            return await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
-
-        try:
-            joints = await hlp.run_in_executor(robot_inst.robot_joints)
-        except NotImplementedError:
-            raise RobotPoseException("The robot does not support getting joints.")
-
-        return pose, joints
 
     elif isinstance(robot_inst, RobotService):
 
         try:
-            pose = await hlp.run_in_executor(robot_inst.get_end_effector_pose, robot_id, end_effector)
+            return await hlp.run_in_executor(robot_inst.get_end_effector_pose, robot_id, end_effector)
         except NotImplementedError:
             raise RobotPoseException("The robot does not support getting pose.")
 
-        try:
-            joints = await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
-        except NotImplementedError:
-            raise RobotPoseException("The robot does not support getting joints.")
-
-        return pose, joints
-
     else:
         raise Arcor2Exception("Not a robot instance.")
+
+
+@scene_needed
+@project_needed
+async def update_ap_joints_cb(req: rpc.UpdateActionPointJointsRequest) -> Union[rpc.UpdateActionPointJointsResponse,
+                                                                                hlp.RPC_RETURN_TYPES]:
+
+    assert SCENE and PROJECT
+
+    try:
+        proj_obj, ap = get_object_ap(PROJECT, req.args.id)
+    except ActionPointNotFound:
+        return False, "Invalid action point."
+
+    try:
+        new_joints = await get_robot_joints(req.args.robot_id)
+    except Arcor2Exception as e:
+        return False, str(e)
+
+    for orientation in ap.orientations:
+        if orientation.id == req.args.joints_id:
+            return False, "Can't update joints that are paired with orientation."
+
+    for joint in ap.robot_joints:  # update existing joints_id
+        if joint.id == req.args.joints_id:
+            joint.joints = new_joints
+            joint.robot_id = req.args.robot_id
+            joint.is_valid = True
+            break
+    else:
+        ap.robot_joints.append(RobotJoints(req.args.joints_id, req.args.robot_id, new_joints))
+
+    asyncio.ensure_future(notify_project_change_to_others())
+    return None
 
 
 @scene_needed
@@ -514,7 +558,9 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
         return False, "Invalid action point."
 
     try:
-        new_pose, new_joints = await get_end_effector_pose_joints(req.args.robot.robot_id, req.args.robot.end_effector)
+        new_pose, new_joints = await asyncio.gather(get_end_effector_pose(req.args.robot.robot_id,
+                                                                          req.args.robot.end_effector),
+                                                    get_robot_joints(req.args.robot.robot_id))
     except RobotPoseException as e:
         return False, str(e)
 
@@ -559,8 +605,7 @@ async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Uni
         return False, "Invalid action object."
 
     try:
-        scene_object.pose = (await get_end_effector_pose_joints(req.args.robot.robot_id,
-                                                                req.args.robot.end_effector))[0]
+        scene_object.pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
     except RobotPoseException as e:
         return False, str(e)
 
@@ -817,7 +862,7 @@ async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectR
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
 
-    FOCUS_OBJECT[obj_id][pt_idx] = (await get_end_effector_pose_joints(robot_id, end_effector))[0]
+    FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(robot_id, end_effector)
 
     r = rpc.FocusObjectResponse()
     r.data.finished_indexes = list(FOCUS_OBJECT[obj_id].keys())
@@ -1437,6 +1482,7 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.SaveProjectRequest: save_project_cb,
     rpc.SaveSceneRequest: save_scene_cb,
     rpc.UpdateActionPointPoseRequest: update_action_point_cb,
+    rpc.UpdateActionPointJointsRequest: update_ap_joints_cb,
     rpc.UpdateActionObjectPoseRequest: update_action_object_cb,
     rpc.OpenProjectRequest: open_project_cb,
     rpc.ListProjectsRequest: list_projects_cb,
