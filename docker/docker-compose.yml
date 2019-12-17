@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.1.1
+    image: "arcor2/arcor2_arserver:${ARCOR2_VERSION:?Version not selected}"
     container_name: arserver
     depends_on:
       - project
@@ -14,10 +14,10 @@ services:
       - ARCOR2_PERSISTENT_STORAGE_URL=http://project:11000    
       - ARCOR2_EXECUTION_URL=ws://execution:6790
   build:
-    image: arcor2/arcor2_build:0.1.1
+    image: arcor2/arcor2_build:${ARCOR2_VERSION:?Version not selected}
     container_name: build
   execution:
-    image: arcor2/arcor2_execution:0.1.1
+    image: arcor2/arcor2_execution:${ARCOR2_VERSION:?Version not selected}
     container_name: execution
     environment:
       - ARCOR2_BUILDER_URL=http://build:5007
