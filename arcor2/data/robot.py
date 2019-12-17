@@ -10,6 +10,9 @@ class RobotFeatures(JsonSchemaMixin):
 
 @dataclass
 class RobotMeta(JsonSchemaMixin):
+    """
+    Robot meta that could be extracted without creating an instance.
+    """
 
     type: str
     features: RobotFeatures = field(default_factory=RobotFeatures)
