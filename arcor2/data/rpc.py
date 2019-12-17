@@ -263,6 +263,29 @@ class UpdateActionPointPoseResponse(Response):
 
 
 @dataclass
+class UpdateActionPointJointsRequestArgs(IdArgs):
+
+    robot_id: str
+    joints_id: str = "default"
+
+
+@dataclass
+class UpdateActionPointJointsRequest(Request):
+
+    args: UpdateActionPointJointsRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointJointsResponse(Response):
+
+    response: str = field(default=UpdateActionPointJointsRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
 class UpdateActionObjectPoseRequestArgs(IdArgs):
 
     robot: RobotArg

@@ -1,10 +1,11 @@
-from setuptools import setup  # type: ignore
+from setuptools import setup, find_packages  # type: ignore
 import arcor2
 
 setup(
     name='arcor2',
     version=arcor2.version(),
-    packages=['arcor2', 'arcor2.object_types', 'arcor2.source', 'arcor2.user_objects'],
+    include_package_data=True,
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     package_data={"arcor2": ["py.typed"]},
     entry_points={
                   'console_scripts': [
