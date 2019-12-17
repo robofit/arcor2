@@ -16,8 +16,9 @@ setup(
                       'arcor2_execution_proxy = arcor2.nodes.execution_proxy:main'
                   ],
               },
-    url='',
-    license='',
+    url='https://github.com/robofit/arcor2',
+    download_url=f'https://github.com/robofit/arcor2/archive/{arcor2.version()}.tar.gz',
+    license='LGPL',
     author='Robo@FIT',
     author_email='imaterna@fit.vutbr.cz',
     description='',
@@ -52,6 +53,15 @@ setup(
             ],
         'docs': ['sphinx']
     },
-
-    zip_safe=False
+    zip_safe=False,
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Environment :: No Input/Output (Daemon)',
+        'Intended Audience :: Developers',
+        'Topic :: Software Development :: Build Tools',
+        'License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)',
+        'Programming Language :: Python :: 3.6',
+        'Natural Language :: English',
+        'Topic :: Scientific/Engineering'
+    ]
 )
