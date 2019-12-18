@@ -212,8 +212,12 @@ class IntResources:
                     ret[param.id] = self.action_point(object_id, ap_id).get_joints(robot_id, value_id)
 
             elif param.type == ActionParameterTypeEnum.RELATIVE_POSE:
-                assert isinstance(param.value, dict)
-                ret[param.id] = Pose.from_dict(param.value)  # TODO do this in __post_init__ of ActionPoint?
+                if isinstance(param.value, str):
+                    ret[param.id] = Pose.from_json(param.value)  # TODO do this in __post_init__ of ActionPoint?
+                elif isinstance(param.value, dict):
+                    ret[param.id] = Pose.from_dict(param.value)
+                else:
+                    raise ResourcesException("Invalid type of parameter value!")
 
             elif param.type in (ActionParameterTypeEnum.STRING_ENUM,
                                 ActionParameterTypeEnum.INTEGER_ENUM):
