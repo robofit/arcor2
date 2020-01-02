@@ -74,7 +74,7 @@ async def read_proc_stdout() -> None:
     while process_running():
         try:
             stdout = await PROCESS.stdout.readuntil()
-        except asyncio.streams.IncompleteReadError:
+        except asyncio.exceptions.IncompleteReadError:
             break
 
         try:
@@ -246,7 +246,7 @@ RPC_DICT: RPC_DICT_TYPE = {
 
 def main() -> None:
 
-    assert sys.version_info >= (3, 6)
+    assert sys.version_info >= (3, 8)
 
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT)
