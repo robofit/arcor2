@@ -43,14 +43,14 @@ setup(
         'fastcache',
         'bidict',
         'flask_swagger_ui',
-        'websocket-client'
+        'websocket-client',
+        'pyyaml'  # dependency of apispec, for some reason not installed automatically...
     ],
     extras_require={
         'test': [
             'pytest',
             'pytest-docker-compose',
-            'openapi-spec-validator',
-            'pyyaml'
+            'openapi-spec-validator'
             ],
         'docs': ['sphinx']
     },
