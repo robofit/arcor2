@@ -910,11 +910,11 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
     assert focus_points
 
     if len(FOCUS_OBJECT[obj_id]) < len(focus_points):
-        clean_up_after_focus(obj_id)
-        return rpc.FocusObjectDoneResponse(messages=["Focusing cancelled."])
+        return False, "Not all points were done."
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
     robot_inst = await get_robot_instance(robot_id)
+    assert hasattr(robot_inst, "focus")  # mypy does not deal with hasattr
 
     assert SCENE
 
@@ -933,11 +933,10 @@ async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.Foc
     await logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
 
     try:
-        assert hasattr(robot_inst, "focus")  # mypy does not deal with hasattr
         obj.pose = await hlp.run_in_executor(robot_inst.focus, mfa)  # type: ignore
-    except NotImplementedError:  # TODO it is too late to realize it here!
-        clean_up_after_focus(obj_id)
-        return False, "The robot does not support focussing."
+    except Arcor2Exception as e:
+        await logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
+        return False, "Focusing failed."
 
     await logger.info(f"Done focusing for {obj_id}.")
 
