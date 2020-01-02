@@ -145,7 +145,7 @@ def project_publish(project_id: str):
 
         archive_path = os.path.join(tmpdirname, "arcor2_project")
         shutil.make_archive(archive_path, 'zip',  project_dir)
-        return send_file(archive_path + ".zip")
+        return send_file(archive_path + ".zip", as_attachment=True)
 
 
 @app.route("/project/<string:project_id>/script", methods=['PUT'])
@@ -199,7 +199,7 @@ def main():
 
     swaggerui_blueprint = get_swaggerui_blueprint(
         SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
-        f"http://localhost:{PORT}{SWAGGER_URL}/api/swagger.json"
+        f"./api/swagger.json"
     )
 
     # Register blueprint at URL
