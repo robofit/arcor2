@@ -5,7 +5,7 @@ from typed_ast.ast3 import Expr, Pass, Module, Call, Attribute
 
 from arcor2.data.common import Project, Scene, Action, ActionIO, ActionIOEnum
 from arcor2.helpers import camel_case_to_snake_case
-from arcor2.project_utils import get_actions_cache
+from arcor2.project_utils import get_actions_cache, ProjectException
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
 from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, \
@@ -44,7 +44,10 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
 
     assert isinstance(tree, Module)
 
-    actions_cache, _, _ = get_actions_cache(project)
+    try:
+        actions_cache, _, _ = get_actions_cache(project)
+    except ProjectException as e:
+        raise SourceException(e)
     # objects_cache = get_objects_cache(project, id_to_var=True)
 
     found_actions: Set[str] = set()
@@ -122,7 +125,10 @@ def add_logic_to_loop(tree: Module, project: Project) -> None:
 
     loop = main_loop_body(tree)
 
-    actions_cache, first_action_id, last_action_id = get_actions_cache(project)
+    try:
+        actions_cache, first_action_id, last_action_id = get_actions_cache(project)
+    except ProjectException as e:
+        raise SourceException(e)
 
     if first_action_id is None:
         raise SourceException("'start' action not found.")
