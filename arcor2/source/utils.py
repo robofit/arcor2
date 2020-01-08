@@ -1,7 +1,7 @@
 import importlib
 import os
 import stat
-from typing import List, Optional, Dict, Any, Union, Type
+from typing import List, Optional, Dict, Any, Union, Type, Tuple
 
 import autopep8  # type: ignore
 import typed_astunparse
@@ -10,7 +10,7 @@ from horast import parse, unparse
 from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef,\
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
     ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem, Subscript, \
-    Index
+    Index, Assert, LtE, AST
 
 from arcor2.data.common import Project
 from arcor2.resources import ResourcesBase
@@ -116,7 +116,54 @@ def empty_script_tree() -> Module:
     return tree
 
 
-def find_function(name: str, tree: Module) -> FunctionDef:
+def get_assert_minimum_maximum(asserts: List[Assert]) -> Dict[str, Tuple[Any, Any]]:
+
+    # Assert(test=Compare(left=Num(n=0), ops=[LtE(), LtE()], comparators=[Name(id='speed', ctx=Load()), Num(n=100)]))
+
+    ret = {}
+
+    for ass in asserts:
+        if not isinstance(ass.test, Compare):
+            continue
+
+        if len(ass.test.comparators) != 2:
+            continue
+
+        if len(ass.test.ops) != 2:
+            continue
+
+        err = False
+        for op in ass.test.ops:
+            if not isinstance(op, LtE):
+                err = True
+                break
+        if err:
+            continue
+
+        try:
+            ret[ass.test.comparators[0].id] = ass.test.left.n, ass.test.comparators[1].n  # type: ignore
+        except AttributeError:
+            continue
+
+    return ret
+
+
+def find_asserts(tree: FunctionDef) -> List[Assert]:
+    class FindAsserts(NodeVisitor):
+
+        def __init__(self) -> None:
+            self.asserts: List[Assert] = []
+
+        def visit_Assert(self, node: Assert) -> None:
+            self.asserts.append(node)
+
+    ff = FindAsserts()
+    ff.visit(tree)
+
+    return ff.asserts
+
+
+def find_function(name: str, tree: Union[Module, AST]) -> FunctionDef:
     class FindFunction(NodeVisitor):
 
         def __init__(self) -> None:

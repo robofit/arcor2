@@ -1,17 +1,35 @@
-from typing import Union
+from typing import Union, Dict, Tuple, Any, Set
 from typing_extensions import Literal
 
 from typed_ast.ast3 import Assign, Name, ClassDef, Str, Module, \
     ImportFrom, alias, Pass, AnnAssign, Store, Load, Subscript, Index
 
+import horast
+
 from arcor2.data.object_type import ObjectTypeMeta
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.source import SourceException
-from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr
+from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr, get_assert_minimum_maximum, \
+    find_asserts
 from arcor2.object_types_utils import built_in_types_names, meta_from_def, object_actions
 import arcor2.helpers as hlp
 import arcor2.object_types
 from arcor2.object_types import Generic
+
+
+def param_bounds(object_type_source: str, action_names: Set[str]) -> Dict[str, Dict[str, Tuple[Any, Any]]]:
+
+    ret = {}
+    tree = horast.parse(object_type_source)
+    for action_name in action_names:
+        try:
+            method_tree = find_function(action_name, tree)
+            asserts = find_asserts(method_tree)
+            if asserts:  # TODO candidate for walrus operator (not supported by flake8 so far)
+                ret[action_name] = get_assert_minimum_maximum(asserts)
+        except SourceException:
+            pass
+    return ret
 
 
 def check_object_type(object_type_source: str, type_name: str) -> None:
