@@ -24,7 +24,8 @@ def param_bounds(object_type_source: str, action_names: Set[str]) -> Dict[str, D
     for action_name in action_names:
         try:
             method_tree = find_function(action_name, tree)
-            if asserts := find_asserts(method_tree):  # noqa
+            asserts = find_asserts(method_tree)
+            if asserts:  # TODO candidate for walrus operator (not supported by flake8 so far)
                 ret[action_name] = get_assert_minimum_maximum(asserts)
         except SourceException:
             pass
