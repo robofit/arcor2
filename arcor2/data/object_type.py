@@ -157,6 +157,8 @@ class ObjectActionArg(JsonSchemaMixin):
     dynamic_value_parents: Optional[Set[str]] = None
     description: str = ""
     default_value: Any = None
+    minimum: Any = None
+    maximum: Any = None
 
 
 @dataclass

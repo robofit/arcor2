@@ -19,14 +19,14 @@ from aiologger.levels import LogLevel  # type: ignore
 
 import arcor2
 from arcor2.source.logic import program_src
-from arcor2.source.object_types import new_object_type_source
+from arcor2.source.object_types import new_object_type_source, param_bounds
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
     ActionParameterTypeEnum, Joint, NamedOrientation, RobotJoints
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
-    MeshFocusAction, ObjectModel, Models
+    MeshFocusAction, ObjectModel, Models, ObjectActions
 from arcor2.data.services import ServiceTypeMeta
 from arcor2.data.robot import RobotMeta
 from arcor2.data import rpc
@@ -387,6 +387,22 @@ async def open_project_cb(req: rpc.OpenProjectRequest) -> Union[rpc.OpenProjectR
     return None
 
 
+def arg_bounds(source: str, actions: ObjectActions):
+
+    param_bounds_dict = param_bounds(source, {obj_action.name for obj_action in actions})
+
+    for action in actions:
+
+        if action.name not in param_bounds_dict:
+            continue
+
+        for arg in action.action_args:
+            if arg.name not in param_bounds_dict[action.name]:
+                continue
+
+            arg.minimum, arg.maximum = param_bounds_dict[action.name][arg.name]
+
+
 async def _get_object_actions() -> None:  # TODO do it in parallel
 
     global ACTIONS
@@ -403,6 +419,8 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         try:
             object_actions_dict[obj_type] = otu.object_actions(hlp.type_def_from_source(obj_db.source,
                                                                                         obj_db.id, Generic))
+            # TODO should be also done for actions from ancestors
+            arg_bounds(obj_db.source, object_actions_dict[obj_type])
         except hlp.TypeDefException as e:
             await logger.error(e)
 
@@ -416,6 +434,8 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         try:
             object_actions_dict[service_type] = otu.object_actions(
                 hlp.type_def_from_source(srv_type.source, service_type, Service))
+            # TODO should be also done for actions from ancestors
+            arg_bounds(srv_type.source, object_actions_dict[service_type])
         except (hlp.TypeDefException, otu.ObjectTypeException) as e:
             await logger.warning(e)
 
