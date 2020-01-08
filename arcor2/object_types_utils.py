@@ -152,6 +152,8 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
         doc = parse_docstring(method[1].__doc__)
         data.description = doc["short_description"]
 
+        signature = inspect.signature(method[1])
+
         for name, ttype in get_type_hints(method[1]).items():
 
             try:
@@ -183,6 +185,10 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
 
                 args.string_allowed_values = string_allowed_values
                 args.integer_allowed_values = integer_allowed_values
+
+                def_val = signature.parameters[name].default
+                if def_val is not inspect.Parameter.empty:
+                    args.default_value = def_val
 
                 try:
                     args.description = doc["params"][name].strip()
