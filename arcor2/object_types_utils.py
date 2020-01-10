@@ -1,24 +1,22 @@
 import copy
 import inspect
-from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union, Optional
+from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
 
 import arcor2
-from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArg, \
+from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ActionParameterMeta, \
     ObjectAction, ObjectActions
-from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum, PARAM_TO_TYPE
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.docstring import parse_docstring
+from arcor2.parameter_plugins.base import ParameterPlugin
+from arcor2.source import SourceException
 
 SERVICES_METHOD_NAME = "from_services"
 
 
 class ObjectTypeException(Arcor2Exception):
     pass
-
-
-PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {k.__name__: v for k, v in PARAM_TO_TYPE.inverse.items()}
 
 
 def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
@@ -113,7 +111,7 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
     return obj
 
 
-def built_in_types_actions() -> ObjectActionsDict:
+def built_in_types_actions(plugins: Dict[Type, Type[ParameterPlugin]]) -> ObjectActionsDict:
 
     # TODO get built_in_types sources and rather use get_object_actions(source)?
 
@@ -124,12 +122,13 @@ def built_in_types_actions() -> ObjectActionsDict:
 
         if type_name not in d:
             d[type_name] = []
-        d[type_name] = object_actions(type_def)
+        d[type_name] = object_actions(plugins, type_def, inspect.getsource(type_def))
 
     return d
 
 
-def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActions:
+def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[Type[Generic], Type[Service]],
+                   source: str) -> ObjectActions:
 
     ret: ObjectActions = []
 
@@ -161,30 +160,25 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                     data.returns = ttype.__name__  # TODO define enum for this
                     continue
 
-                string_allowed_values: Optional[Set[str]] = None
-                integer_allowed_values: Optional[Set[int]] = None
+                try:
+                    param_type = plugins[ttype]
+                except KeyError:
+                    for k, v in plugins.items():
+                        if not v.EXACT_TYPE and issubclass(ttype, k):
+                            param_type = v
+                            break
+                    else:
+                        raise ObjectTypeException(f"Unknown parameter type {ttype.__name__}.")
 
-                if issubclass(ttype, StrEnum):
-                    param_type = ActionParameterTypeEnum.STRING_ENUM
-                    string_allowed_values = ttype.set()
-                elif issubclass(ttype, IntEnum):
-                    param_type = ActionParameterTypeEnum.INTEGER_ENUM
-                    integer_allowed_values = ttype.set()
-                else:
-                    try:
-                        param_type = PARAM_MAPPING[ttype.__name__]
-                    except KeyError:
-                        raise ObjectTypeException(f"Object type {type_def.__name__}, action {method[0]}, "
-                                                  f"invalid parameter type: {ttype.__name__}.")
-
-                args = ObjectActionArg(name=name, type=param_type)
+                args = ActionParameterMeta(name=name, type=param_type.type_name())
+                try:
+                    param_type.meta(args, method[1], source)
+                except SourceException:  # TODO it (logically) could not find action from parent class / what to do?????
+                    continue
 
                 if name in type_def.DYNAMIC_PARAMS:
                     args.dynamic_value = True
                     args.dynamic_value_parents = type_def.DYNAMIC_PARAMS[name][1]
-
-                args.string_allowed_values = string_allowed_values
-                args.integer_allowed_values = integer_allowed_values
 
                 def_val = signature.parameters[name].default
                 if def_val is not inspect.Parameter.empty:
@@ -195,7 +189,7 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                 except KeyError:
                     pass
 
-                data.action_args.append(args)
+                data.parameters.append(args)
 
             except AttributeError:
                 print(f"Skipping {ttype}")  # TODO make a fix for Union

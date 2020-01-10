@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Tuple, Set
+from typing import List, Any, Iterator, Optional, Tuple, Set, Dict, Union
 from enum import Enum, unique
 
 from json import JSONEncoder
@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 
 import numpy as np  # type: ignore
 import quaternion  # type: ignore
-from bidict import bidict  # type: ignore
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -36,18 +35,6 @@ class ActionIOEnum(StrEnum):
 
     FIRST: str = "start"
     LAST: str = "end"
-
-
-class ActionParameterTypeEnum(StrEnum):
-
-    STRING: str = "string"
-    DOUBLE: str = "double"
-    INTEGER: str = "integer"
-    STRING_ENUM: str = "string_enum"
-    INTEGER_ENUM: str = "integer_enum"
-    POSE: str = "pose"
-    RELATIVE_POSE: str = "relative_pose"
-    JOINTS: str = "joints"
 
 
 class DataClassEncoder(JSONEncoder):
@@ -115,11 +102,6 @@ class Pose(JsonSchemaMixin):
 
     position: Position = field(default_factory=Position)
     orientation: Orientation = field(default_factory=Orientation)
-
-
-@dataclass
-class RelativePose(Pose):
-    pass
 
 
 @dataclass
@@ -193,26 +175,30 @@ class Scene(JsonSchemaMixin):
     services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
 
+    def __post_init__(self):
+
+        self._id_cache: Dict[str, Union[SceneObject, SceneService]] = {}
+
+    def object_or_service(self, object_or_service_id: str) -> Union[SceneObject, SceneService]:
+
+        if not self._id_cache:
+            for obj in self.objects:
+                self._id_cache[obj.id] = obj
+            for srv in self.services:
+                self._id_cache[srv.type] = srv
+
+        try:
+            return self._id_cache[object_or_service_id]
+        except KeyError:
+            raise Arcor2Exception(f"Unknown object/service id: {object_or_service_id}, "
+                                  f"known are: {self._id_cache.keys()}")  # TODO DataException?
+
 
 @dataclass
 class IdValue(JsonSchemaMixin):
 
     id: str
     value: Any
-
-
-PARAM_TO_TYPE = bidict({
-    ActionParameterTypeEnum.STRING: str,
-    ActionParameterTypeEnum.DOUBLE: float,
-    ActionParameterTypeEnum.INTEGER: int,
-    ActionParameterTypeEnum.STRING_ENUM: StrEnum,
-    ActionParameterTypeEnum.INTEGER_ENUM: IntEnum,
-    ActionParameterTypeEnum.POSE: Pose,
-    ActionParameterTypeEnum.RELATIVE_POSE: RelativePose,
-    ActionParameterTypeEnum.JOINTS: RobotJoints
-})
-
-assert ActionParameterTypeEnum.set() == PARAM_TO_TYPE.keys()
 
 
 class ActionParameterException(Arcor2Exception):
@@ -222,23 +208,7 @@ class ActionParameterException(Arcor2Exception):
 @dataclass
 class ActionParameter(IdValue):
 
-    type: ActionParameterTypeEnum
-
-    def __post_init__(self) -> None:
-        # TODO check if value is valid (dict for joints/pose)
-        # TODO ...or convert it automatically to RobotJoints/Pose? What about serialization then? (override to_dict)
-        pass
-
-    def parse_id(self) -> Tuple[str, str, str]:
-
-        assert self.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE)
-
-        try:
-            # value_id should be valid for both orientation and joints
-            obj_id, ap_id, value_id = self.value.split(".")
-        except ValueError:
-            raise Arcor2Exception(f"Parameter: {self.id} has invalid value: {self.value}.")
-        return obj_id, ap_id, value_id
+    type: str
 
 
 @dataclass
@@ -264,6 +234,14 @@ class Action(JsonSchemaMixin):
             raise Arcor2Exception(f"Action: {self.id} has invalid type: {self.type}.")
         return obj_id, action
 
+    def parameter(self, parameter_id) -> ActionParameter:
+
+        for param in self.parameters:
+            if parameter_id == param.id:
+                return param
+
+        raise Arcor2Exception("Param not found")
+
 
 @dataclass
 class ProjectActionPoint(ActionPoint):
@@ -287,14 +265,44 @@ class Project(JsonSchemaMixin):
     desc: str = field(default_factory=str)
     has_logic: bool = True
 
-    def action(self, action_id: str) -> Action:
+    def __post_init__(self):
+
+        self._action_cache: Dict[str, Action] = {}
+        self._ap_cache: Dict[str, ActionPoint] = {}
+
+    def _build_cache(self):
 
         for obj in self.objects:
             for aps in obj.action_points:
+                assert aps.id not in self._ap_cache, "Action point ID not unique."
+                self._ap_cache[aps.id] = aps
                 for act in aps.actions:
-                    if act.id == action_id:
-                        return act
-        raise Arcor2Exception("Action not found")
+                    self._action_cache[act.id] = act
+
+    def invalidate_cache(self):
+
+        self._action_cache.clear()
+        self._ap_cache.clear()
+
+    def action(self, action_id: str) -> Action:
+
+        if not self._action_cache:
+            self._build_cache()
+
+        try:
+            return self._action_cache[action_id]
+        except KeyError:
+            raise Arcor2Exception("Action not found")
+
+    def action_point(self, action_point_id: str) -> ActionPoint:
+
+        if not self._ap_cache:
+            self._build_cache()
+
+        try:
+            return self._ap_cache[action_point_id]
+        except KeyError:
+            raise Arcor2Exception("Action point not found")
 
 
 @dataclass

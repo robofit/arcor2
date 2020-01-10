@@ -2,7 +2,7 @@ from typing import Optional, List, Dict, Union, Set, Any
 from enum import Enum
 
 from arcor2.data import DataException
-from arcor2.data.common import ActionMetadata, Pose, Position, ActionParameterTypeEnum
+from arcor2.data.common import ActionMetadata, Pose, Position
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -147,18 +147,18 @@ class ObjectTypeMeta(JsonSchemaMixin):
 
 
 @dataclass
-class ObjectActionArg(JsonSchemaMixin):
+class ActionParameterMeta(JsonSchemaMixin):
 
     name: str
-    type: ActionParameterTypeEnum
-    string_allowed_values: Optional[Set[str]] = None  # for string enums
-    integer_allowed_values: Optional[Set[int]] = None  # for string enums
+    type: str
+    allowed_values: Optional[Set[Any]] = None
     dynamic_value: bool = False  # client should ask for allowed values using RPC
     dynamic_value_parents: Optional[Set[str]] = None
     description: str = ""
     default_value: Any = None
     minimum: Any = None
     maximum: Any = None
+    extra: Any = None
 
 
 @dataclass
@@ -166,7 +166,7 @@ class ObjectAction(JsonSchemaMixin):  # TODO description (from docstring)
 
     name: str
     description: str = ""
-    action_args: List[ObjectActionArg] = field(default_factory=list)
+    parameters: List[ActionParameterMeta] = field(default_factory=list)
     returns: str = "NoneType"
     origins: str = ""
     meta: ActionMetadata = field(default_factory=ActionMetadata)
