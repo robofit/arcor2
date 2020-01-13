@@ -1,4 +1,4 @@
-from typing import Callable, List, Tuple, Any
+from typing import Callable, List, Tuple, Any, Type
 
 import horast
 from typed_ast import ast3 as ast
@@ -40,6 +40,21 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
     return None, None
 
 
+def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, action_method: Callable, source: str) -> \
+        None:
+
+    tree = horast.parse(source)
+    method_tree = find_function(action_method.__name__, tree)
+    minimum, maximum = get_assert_minimum_maximum(find_asserts(method_tree), param_meta.name)
+
+    for var in minimum, maximum:
+        if var is not None and not isinstance(minimum, cls.type()):
+            raise ParameterPluginException("Parameter bounds has incorrect type.")
+
+    param_meta.minimum = minimum
+    param_meta.maximum = maximum
+
+
 class IntegerPlugin(ParameterPlugin):
 
     @classmethod
@@ -54,17 +69,7 @@ class IntegerPlugin(ParameterPlugin):
     def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, source: str) -> None:
 
         super(IntegerPlugin, cls).meta(param_meta, action_method, source)
-
-        tree = horast.parse(source)
-        method_tree = find_function(action_method.__name__, tree)
-        minimum, maximum = get_assert_minimum_maximum(find_asserts(method_tree), param_meta.name)
-
-        for var in minimum, maximum:
-            if var is not None and not isinstance(minimum, cls.type()):
-                raise ParameterPluginException("Parameter bounds has incorrect type.")
-
-        param_meta.minimum = minimum
-        param_meta.maximum = maximum
+        get_min_max(IntegerPlugin, param_meta, action_method, source)
 
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> int:

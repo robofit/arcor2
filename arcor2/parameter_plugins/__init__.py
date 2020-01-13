@@ -26,5 +26,5 @@ for plug in PLUGINS:
         continue
     # TODO figure out why mypy complains
     # Only concrete class can be given where "Type[ParameterPlugin]" is expected
-    PARAM_PLUGINS[plug.type_name()] = plug
-    TYPE_TO_PLUGIN[plug.type()] = plug
+    PARAM_PLUGINS[plug.type_name()] = plug  # type: ignore
+    TYPE_TO_PLUGIN[plug.type()] = plug  # type: ignore

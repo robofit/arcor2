@@ -430,10 +430,10 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
     for service_type, service_meta in SERVICE_TYPES.items():
         srv_type = await storage.get_service_type(service_type)
         try:
-            type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
-            object_actions_dict[service_type] = otu.object_actions(TYPE_TO_PLUGIN, type_def, srv_type.source)
+            srv_type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
+            object_actions_dict[service_type] = otu.object_actions(TYPE_TO_PLUGIN, srv_type_def, srv_type.source)
             # TODO should be also done for actions from ancestors
-            param_meta(srv_type.source, object_actions_dict[service_type], type_def)
+            param_meta(srv_type.source, object_actions_dict[service_type], srv_type_def)
         except (hlp.TypeDefException, otu.ObjectTypeException) as e:
             await logger.warning(e)
 
