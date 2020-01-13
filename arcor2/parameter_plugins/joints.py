@@ -14,7 +14,8 @@ class JointsPlugin(ParameterPlugin):
         return "joints"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> RobotJoints:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> \
+            RobotJoints:
 
         param = project.action(action_id).parameter(parameter_id)
         robot_id, ap_id, value_id = cls.parse_id(param)

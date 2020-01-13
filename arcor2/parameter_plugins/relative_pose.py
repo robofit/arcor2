@@ -16,7 +16,8 @@ class RelativePosePlugin(ParameterPlugin):
         return RelativePose
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> RelativePose:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) ->\
+            RelativePose:
 
         param = project.action(action_id).parameter(parameter_id)
 
