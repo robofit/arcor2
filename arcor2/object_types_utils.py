@@ -9,8 +9,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.docstring import parse_docstring
-from arcor2.parameter_plugins.base import ParameterPlugin
-from arcor2.source import SourceException
+from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
 
 SERVICES_METHOD_NAME = "from_services"
 
@@ -133,31 +132,31 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
     ret: ObjectActions = []
 
     # ...inspect.ismethod does not work on un-initialized classes
-    for method in inspect.getmembers(type_def, predicate=inspect.isfunction):
+    for method_name, method_def in inspect.getmembers(type_def, predicate=inspect.isfunction):
 
         # TODO check also if the method has 'action' decorator (ast needed)
-        if not hasattr(method[1], "__action__"):
+        if not hasattr(method_def, "__action__"):
             continue
 
-        meta = method[1].__action__
+        # action from ancestor, will be copied later (only if the action was not overridden)
+        base_cls_def = type_def.__bases__[0]
+        if hasattr(base_cls_def, method_name) and getattr(base_cls_def, method_name) == method_def:
+            continue
 
-        data = ObjectAction(name=method[0], meta=meta)
+        meta = method_def.__action__
 
-        """
-        Methods supposed to be actions have @action decorator, which has to be stripped away in order to get
-        method's arguments / type hints.
-        """
+        data = ObjectAction(name=method_name, meta=meta)
 
-        doc = parse_docstring(method[1].__doc__)
+        doc = parse_docstring(method_def.__doc__)
         data.description = doc["short_description"]
 
-        signature = inspect.signature(method[1])
+        signature = inspect.signature(method_def)
 
-        for name, ttype in get_type_hints(method[1]).items():
+        for name, ttype in get_type_hints(method_def).items():
 
             try:
                 if name == "return":
-                    data.returns = ttype.__name__  # TODO define enum for this
+                    data.returns = ttype.__name__  # TODO remap to supported types of parameters
                     continue
 
                 try:
@@ -172,9 +171,9 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
                 args = ActionParameterMeta(name=name, type=param_type.type_name())
                 try:
-                    param_type.meta(args, method[1], source)
-                except SourceException:  # TODO it (logically) could not find action from parent class / what to do?????
-                    continue
+                    param_type.meta(args, method_def, source)
+                except ParameterPluginException as e:
+                    raise ObjectTypeException(e)
 
                 if name in type_def.DYNAMIC_PARAMS:
                     args.dynamic_value = True

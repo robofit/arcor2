@@ -12,7 +12,7 @@ from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, ActionParameter, CurrentAction, StrEnum, IntEnum
-from arcor2.data.object_type import ObjectModel, Models, ActionParameterMeta
+from arcor2.data.object_type import ObjectModel, Models, ActionParameterMeta, ObjectActionsDict, ObjectTypeMetaDict
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
@@ -22,7 +22,7 @@ from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs, print_exception
-from arcor2.object_types_utils import meta_from_def, object_actions
+import arcor2.object_types_utils as otu
 
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
@@ -88,7 +88,7 @@ class IntResources:
 
             if hasattr(cls, "from_services"):
 
-                obj_meta = meta_from_def(cls)
+                obj_meta = otu.meta_from_def(cls)
 
                 args: List[Service] = []
 
@@ -124,10 +124,30 @@ class IntResources:
                 for ori in aps.orientations:
                     ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
 
+        # add parameters from ancestors
+        object_actions_dict: ObjectActionsDict = otu.built_in_types_actions(TYPE_TO_PLUGIN)
+        object_types_meta_dict: ObjectTypeMetaDict = otu.built_in_types_meta()
+
+        for type_def in self.type_defs.values():
+
+            if issubclass(type_def, Generic):
+                object_types_meta_dict[type_def.__name__] = otu.meta_from_def(type_def)
+
+            object_actions_dict[type_def.__name__] = otu.object_actions(TYPE_TO_PLUGIN,
+                                                                        type_def, inspect.getsource(type_def))
+
+        for type_def in self.type_defs.values():
+
+            # so far, we deal with inheritance only in case of objects (not services)
+            if not issubclass(type_def, Generic):
+                continue
+
+            otu.add_ancestor_actions(type_def.__name__, object_actions_dict, object_types_meta_dict)
+
         for type_def in self.type_defs.values():
 
             self.action_args[type_def.__name__] = {}
-            for obj_action in object_actions(TYPE_TO_PLUGIN, type_def, inspect.getsource(type_def)):
+            for obj_action in object_actions_dict[type_def.__name__]:
                 self.action_args[type_def.__name__][obj_action.name] = {}
                 for arg in obj_action.parameters:
                     self.action_args[type_def.__name__][obj_action.name][arg.name] = arg

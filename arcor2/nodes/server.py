@@ -25,8 +25,8 @@ from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_P
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
     Joint, NamedOrientation, RobotJoints
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
-    MeshFocusAction, ObjectModel, Models, ObjectActions
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ModelTypeEnum, \
+    MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMeta
 from arcor2.data.robot import RobotMeta
 from arcor2.data import rpc
@@ -267,7 +267,7 @@ async def _get_object_types() -> None:
 
     global OBJECT_TYPES
 
-    object_types: Dict[str, ObjectTypeMeta] = otu.built_in_types_meta()
+    object_types: ObjectTypeMetaDict = otu.built_in_types_meta()
 
     obj_ids = await storage.get_object_type_ids()
 
@@ -393,14 +393,6 @@ async def open_project_cb(req: rpc.OpenProjectRequest) -> Union[rpc.OpenProjectR
     return None
 
 
-def param_meta(source: str, actions: ObjectActions, type_def: Union[Type[Generic], Type[Service]]):
-
-    for action in actions:
-        action_method = getattr(type_def, action.name)
-        for param in action.parameters:
-            PARAM_PLUGINS[param.type].meta(param, action_method, source)
-
-
 async def _get_object_actions() -> None:  # TODO do it in parallel
 
     global ACTIONS
@@ -417,8 +409,6 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         try:
             type_def = hlp.type_def_from_source(obj_db.source, obj_db.id, Generic)
             object_actions_dict[obj_type] = otu.object_actions(TYPE_TO_PLUGIN, type_def, obj_db.source)
-            # TODO should be also done for actions from ancestors
-            param_meta(obj_db.source, object_actions_dict[obj_type], type_def)
         except hlp.TypeDefException as e:
             await logger.error(e)
 
@@ -432,8 +422,6 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         try:
             srv_type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
             object_actions_dict[service_type] = otu.object_actions(TYPE_TO_PLUGIN, srv_type_def, srv_type.source)
-            # TODO should be also done for actions from ancestors
-            param_meta(srv_type.source, object_actions_dict[service_type], srv_type_def)
         except (hlp.TypeDefException, otu.ObjectTypeException) as e:
             await logger.warning(e)
 
