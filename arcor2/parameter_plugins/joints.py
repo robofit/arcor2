@@ -18,11 +18,13 @@ class JointsPlugin(ParameterPlugin):
             RobotJoints:
 
         param = project.action(action_id).parameter(parameter_id)
-        robot_id, ap_id, value_id = cls.parse_id(param)
+        _, ap_id, value_id = cls.parse_id(param)
 
-        if issubclass(type_defs[robot_id], RobotService):
+        action = project.action(action_id)
+        robot_id, action_method_name = action.parse_type()
+        robot_type = scene.object_or_service(robot_id)
 
-            action = project.action(action_id)
+        if issubclass(type_defs[robot_type.type], RobotService):
 
             for param in action.parameters:
                 if param.id == "robot_id":
