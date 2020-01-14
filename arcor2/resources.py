@@ -3,16 +3,16 @@
 
 
 from os import path
-from typing import Dict, Union, Type, TypeVar, List, Optional, get_type_hints, Any, Tuple
+from typing import Dict, Union, TypeVar, List, Optional, Any, Tuple, Type
 import importlib
 import json
+import inspect
 
 from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, ActionPoint, ActionParameterTypeEnum, ActionParameter, \
-    CurrentAction, StrEnum, IntEnum, Pose
-from arcor2.data.object_type import ObjectModel, Models, ObjectActionArg
+from arcor2.data.common import Project, Scene, ActionParameter, CurrentAction, StrEnum, IntEnum
+from arcor2.data.object_type import ObjectModel, Models, ActionParameterMeta, ObjectActionsDict, ObjectTypeMetaDict
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
@@ -22,7 +22,10 @@ from arcor2.action import print_event
 from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs, print_exception
-from arcor2.object_types_utils import meta_from_def, object_actions
+import arcor2.object_types_utils as otu
+
+from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
+from arcor2.parameter_plugins.base import TypesDict
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -40,7 +43,8 @@ class IntResources:
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
 
-        self.action_args: Dict[str, Dict[str, Dict[str, ObjectActionArg]]] = {}  # keys: obj_type, action_name, arg_name
+        # keys: obj_type, action_name, arg_name
+        self.action_args: Dict[str, Dict[str, Dict[str, ActionParameterMeta]]] = {}
         self.action_id_to_type_and_action_name: Dict[str, Tuple[str, str]] = {}
 
         self.services: Dict[str, Service] = {}
@@ -48,7 +52,7 @@ class IntResources:
 
         self.robot_service: Optional[RobotService] = None
 
-        type_defs: List[Union[Type[Service], Type[Generic]]] = []
+        self.type_defs: TypesDict = {}
 
         for srv in self.scene.services:
 
@@ -59,7 +63,7 @@ class IntResources:
             assert issubclass(cls, Service)
 
             srv_inst = cls(srv.configuration_id)
-            type_defs.append(cls)
+            self.type_defs[cls.__name__] = cls
             self.services[srv.type] = srv_inst
 
             if isinstance(srv_inst, RobotService):
@@ -78,13 +82,13 @@ class IntResources:
                                                  camel_case_to_snake_case(scene_obj.type))
 
             cls = getattr(module, scene_obj.type)
-            type_defs.append(cls)
+            self.type_defs[cls.__name__] = cls
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
             if hasattr(cls, "from_services"):
 
-                obj_meta = meta_from_def(cls)
+                obj_meta = otu.meta_from_def(cls)
 
                 args: List[Service] = []
 
@@ -120,12 +124,32 @@ class IntResources:
                 for ori in aps.orientations:
                     ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
 
-        for type_def in type_defs:
+        # add parameters from ancestors
+        object_actions_dict: ObjectActionsDict = otu.built_in_types_actions(TYPE_TO_PLUGIN)
+        object_types_meta_dict: ObjectTypeMetaDict = otu.built_in_types_meta()
+
+        for type_def in self.type_defs.values():
+
+            if issubclass(type_def, Generic):
+                object_types_meta_dict[type_def.__name__] = otu.meta_from_def(type_def)
+
+            object_actions_dict[type_def.__name__] = otu.object_actions(TYPE_TO_PLUGIN,
+                                                                        type_def, inspect.getsource(type_def))
+
+        for type_def in self.type_defs.values():
+
+            # so far, we deal with inheritance only in case of objects (not services)
+            if not issubclass(type_def, Generic):
+                continue
+
+            otu.add_ancestor_actions(type_def.__name__, object_actions_dict, object_types_meta_dict)
+
+        for type_def in self.type_defs.values():
 
             self.action_args[type_def.__name__] = {}
-            for obj_action in object_actions(type_def):
+            for obj_action in object_actions_dict[type_def.__name__]:
                 self.action_args[type_def.__name__][obj_action.name] = {}
-                for arg in obj_action.action_args:
+                for arg in obj_action.parameters:
                     self.action_args[type_def.__name__][obj_action.name][arg.name] = arg
 
     def __enter__(self):
@@ -166,13 +190,6 @@ class IntResources:
 
         print_event(CurrentActionEvent(data=CurrentAction(action_id, args_list)))
 
-    def action_point(self, object_id: str, ap_id: str) -> ActionPoint:
-
-        try:
-            return self.objects[object_id].action_points[ap_id]
-        except KeyError:
-            raise ResourcesException("Unknown object id or action point id.")
-
     def parameters(self, action_id: str) -> Dict[str, Any]:
 
         try:
@@ -180,54 +197,11 @@ class IntResources:
         except Arcor2Exception:
             raise ResourcesException("Action_id {} not found in project {}.".format(action_id, self.project.id))
 
-        inst_name, method_name = act.type.split("/")
-        action_obj_inst = self.all_instances[inst_name]
-
         ret: Dict[str, Any] = {}
 
         for param in act.parameters:
-            if param.type in (ActionParameterTypeEnum.POSE, ActionParameterTypeEnum.JOINTS):
-                assert isinstance(param.value, str)
-                try:
-                    object_id, ap_id, value_id = param.parse_id()
-                except Arcor2Exception:
-                    raise ResourcesException(f"Action {act.id} has invalid value {param.value}"
-                                             f" for parameter: {param.id}.")
-
-                if param.type == ActionParameterTypeEnum.POSE:
-                    ret[param.id] = self.action_point(object_id, ap_id).pose(value_id)
-                elif param.type == ActionParameterTypeEnum.JOINTS:
-
-                    robot_id = inst_name
-
-                    if isinstance(action_obj_inst, RobotService):
-                        for aparam in act.parameters:
-                            if aparam.type == ActionParameterTypeEnum.STRING and aparam.id == "robot_id":
-                                robot_id = aparam.value
-                                break
-                        else:
-                            raise ResourcesException(f"Parameter 'robot_id' of type string needed by"
-                                                     f" {param.id} not found.")
-
-                    ret[param.id] = self.action_point(object_id, ap_id).get_joints(robot_id, value_id)
-
-            elif param.type == ActionParameterTypeEnum.RELATIVE_POSE:
-                if isinstance(param.value, str):
-                    ret[param.id] = Pose.from_json(param.value)  # TODO do this in __post_init__ of ActionPoint?
-                elif isinstance(param.value, dict):
-                    ret[param.id] = Pose.from_dict(param.value)
-                else:
-                    raise ResourcesException("Invalid type of parameter value!")
-
-            elif param.type in (ActionParameterTypeEnum.STRING_ENUM,
-                                ActionParameterTypeEnum.INTEGER_ENUM):
-
-                method = getattr(action_obj_inst, method_name)
-                ttype = get_type_hints(method)[param.id]
-                ret[param.id] = ttype(param.value)
-
-            else:
-                ret[param.id] = param.value
+            ret[param.id] = PARAM_PLUGINS[param.type].value(self.type_defs,
+                                                            self.scene, self.project, action_id, param.id)
 
         return ret
 

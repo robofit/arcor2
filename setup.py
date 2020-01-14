@@ -41,7 +41,6 @@ setup(
         'cython',  # dependency of numpy, for some reason not installed automatically...
         'numpy-quaternion',
         'fastcache',
-        'bidict',
         'flask_swagger_ui',
         'websocket-client',
         'pyyaml'  # dependency of apispec, for some reason not installed automatically...

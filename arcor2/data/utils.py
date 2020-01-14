@@ -9,6 +9,7 @@ import arcor2.data.rpc
 import arcor2.data.events
 import arcor2.data.common
 import arcor2.data.object_type
+import arcor2
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
@@ -17,7 +18,7 @@ def generate_swagger() -> str:
     # Create an APISpec
     spec = APISpec(
         title="ARCOR2 Data Models",
-        version="1.0.0",
+        version=arcor2.version(),
         openapi_version="3.0.2",
         plugins=[FlaskPlugin(), DataclassesPlugin()],
     )

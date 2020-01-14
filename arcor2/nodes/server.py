@@ -19,14 +19,14 @@ from aiologger.levels import LogLevel  # type: ignore
 
 import arcor2
 from arcor2.source.logic import program_src
-from arcor2.source.object_types import new_object_type_source, param_bounds
+from arcor2.source.object_types import new_object_type_source
 from arcor2.source import SourceException
 from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
-    ActionParameterTypeEnum, Joint, NamedOrientation, RobotJoints
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ObjectTypeMeta, ModelTypeEnum, \
-    MeshFocusAction, ObjectModel, Models, ObjectActions
+    Joint, NamedOrientation, RobotJoints
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ModelTypeEnum, \
+    MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMeta
 from arcor2.data.robot import RobotMeta
 from arcor2.data import rpc
@@ -40,6 +40,8 @@ from arcor2.project_utils import get_object_ap
 from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import ActionPointNotFound, SceneObjectNotFound, Arcor2Exception
 from arcor2.services import Service, RobotService
+from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
+from arcor2.parameter_plugins.base import TypesDict, ParameterPluginException
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[rpc.Request]
@@ -64,6 +66,7 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 SERVICE_TYPES: Dict[str, ServiceTypeMeta] = {}
 ROBOT_META: Dict[str, RobotMeta] = {}
+TYPE_DEF_DICT: TypesDict = {}
 
 # TODO merge it into one dict?
 SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
@@ -224,6 +227,7 @@ async def _initialize_server() -> None:
     bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
 
+    await logger.info("Server initialized.")
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', 6789)])
 
 
@@ -248,6 +252,7 @@ async def _get_service_types() -> None:
         try:
             type_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
             service_types[srv_id.id] = stu.meta_from_def(type_def)
+            TYPE_DEF_DICT[srv_id.id] = type_def
         except Arcor2Exception as e:
             await logger.error(f"Ignoring service type {srv_type.id}: {e}")
             continue
@@ -262,7 +267,7 @@ async def _get_object_types() -> None:
 
     global OBJECT_TYPES
 
-    object_types: Dict[str, ObjectTypeMeta] = otu.built_in_types_meta()
+    object_types: ObjectTypeMetaDict = otu.built_in_types_meta()
 
     obj_ids = await storage.get_object_type_ids()
 
@@ -271,6 +276,7 @@ async def _get_object_types() -> None:
         try:
             type_def = hlp.type_def_from_source(obj.source, obj.id, Generic)
             object_types[obj.id] = otu.meta_from_def(type_def)
+            TYPE_DEF_DICT[obj.id] = type_def
         except (otu.ObjectTypeException, hlp.TypeDefException) as e:
             await logger.error(f"Ignoring object type {obj.id}: {e}")
             continue
@@ -387,27 +393,11 @@ async def open_project_cb(req: rpc.OpenProjectRequest) -> Union[rpc.OpenProjectR
     return None
 
 
-def arg_bounds(source: str, actions: ObjectActions):
-
-    param_bounds_dict = param_bounds(source, {obj_action.name for obj_action in actions})
-
-    for action in actions:
-
-        if action.name not in param_bounds_dict:
-            continue
-
-        for arg in action.action_args:
-            if arg.name not in param_bounds_dict[action.name]:
-                continue
-
-            arg.minimum, arg.maximum = param_bounds_dict[action.name][arg.name]
-
-
 async def _get_object_actions() -> None:  # TODO do it in parallel
 
     global ACTIONS
 
-    object_actions_dict: ObjectActionsDict = otu.built_in_types_actions()
+    object_actions_dict: ObjectActionsDict = otu.built_in_types_actions(TYPE_TO_PLUGIN)
 
     for obj_type, obj in OBJECT_TYPES.items():
 
@@ -417,10 +407,8 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         # db-stored (user-created) object types
         obj_db = await storage.get_object_type(obj_type)
         try:
-            object_actions_dict[obj_type] = otu.object_actions(hlp.type_def_from_source(obj_db.source,
-                                                                                        obj_db.id, Generic))
-            # TODO should be also done for actions from ancestors
-            arg_bounds(obj_db.source, object_actions_dict[obj_type])
+            type_def = hlp.type_def_from_source(obj_db.source, obj_db.id, Generic)
+            object_actions_dict[obj_type] = otu.object_actions(TYPE_TO_PLUGIN, type_def, obj_db.source)
         except hlp.TypeDefException as e:
             await logger.error(e)
 
@@ -432,10 +420,8 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
     for service_type, service_meta in SERVICE_TYPES.items():
         srv_type = await storage.get_service_type(service_type)
         try:
-            object_actions_dict[service_type] = otu.object_actions(
-                hlp.type_def_from_source(srv_type.source, service_type, Service))
-            # TODO should be also done for actions from ancestors
-            arg_bounds(srv_type.source, object_actions_dict[service_type])
+            srv_type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
+            object_actions_dict[service_type] = otu.object_actions(TYPE_TO_PLUGIN, srv_type_def, srv_type.source)
         except (hlp.TypeDefException, otu.ObjectTypeException) as e:
             await logger.warning(e)
 
@@ -637,8 +623,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
     scene_services: Set[str] = {srv.type for srv in scene.services}
-    objects_aps: Dict[str, Set[str]] = {obj.id: {ap.id for ap in obj.action_points}
-                                        for obj in project.objects}  # object_id, APs
+
     action_ids: Set[str] = set()
     problems: List[str] = []
 
@@ -680,40 +665,21 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                                     f"used in {action.id}.")
 
                 # check object's actions parameters
-                action_params: Dict[str, ActionParameterTypeEnum] = \
+                action_params: Dict[str, str] = \
                     {param.id: param.type for param in action.parameters}
-                ot_params: Dict[str, ActionParameterTypeEnum] = {param.name: param.type for param in act.action_args
-                                                                 for act in ACTIONS[os_type]}
+                ot_params: Dict[str, str] = {param.name: param.type for param in act.parameters
+                                             for act in ACTIONS[os_type]}
 
                 if action_params != ot_params:
                     problems.append(f"Action ID {action.id} of type {action.type} has invalid parameters.")
 
-                # validate parameter values
+                # TODO validate parameter values / instances (for value) are not available here / how to solve it?
                 for param in action.parameters:
-                    if param.type in (ActionParameterTypeEnum.POSE, ActionParameterTypeEnum.JOINTS):
-
-                        try:
-                            p_obj_id, p_ap_id, val_id = param.parse_id()
-                        except Arcor2Exception as e:
-                            problems.append(str(e))
-                            continue
-
-                        if p_obj_id not in objects_aps:
-                            problems.append(f"Parameter {param.id} of action {action.id} refers to non-existent "
-                                            f"object id.")
-
-                        if p_ap_id not in objects_aps[p_obj_id]:
-                            problems.append(f"Parameter {param.id} of action {action.id} refers to non-existent "
-                                            f"action point of object id {p_obj_id}.")
-
-                        # TODO validate value (check if val_id exists)
-
-                    elif param.type == ActionParameterTypeEnum.STRING_ENUM:
-                        pass  # TODO validate value
-                    elif param.type == ActionParameterTypeEnum.INTEGER_ENUM:
-                        pass  # TODO validate value
-
-                    # TODO validate values of another parameter types
+                    try:
+                        PARAM_PLUGINS[param.type].value(TYPE_DEF_DICT, scene, project, action.id, param.id)
+                    except ParameterPluginException:
+                        problems.append(f"Parameter {param.id} of action {act.name} "
+                                        f"has invalid value: '{param.value}'.")
 
     return problems
 
@@ -802,7 +768,8 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
     await storage.update_object_type(obj)
 
     OBJECT_TYPES[meta.type] = meta
-    ACTIONS[meta.type] = otu.object_actions(hlp.type_def_from_source(obj.source, obj.id, Generic))
+    ACTIONS[meta.type] = otu.object_actions(TYPE_TO_PLUGIN,
+                                            hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, ACTIONS, OBJECT_TYPES)
 
     asyncio.ensure_future(notify(ObjectTypesChangedEvent(data=[meta.type])))
@@ -1427,6 +1394,8 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
                 ap.actions = [act for act in ap.actions if act.parse_type()[0] != obj_id]
 
                 # delete actions using obj's action points as parameters
+                # TODO fix this!
+                """
                 actions_using_invalid_param: Set[str] = \
                     {act.id for act in ap.actions for param in act.parameters
                      if param.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE) and
@@ -1436,6 +1405,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
                 # get IDs of remaining actions
                 action_ids.update({act.id for act in ap.actions})
+                """
 
         valid_ids: Set[str] = action_ids | ActionIOEnum.set()
 

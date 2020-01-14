@@ -1,24 +1,21 @@
 import copy
 import inspect
-from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union, Optional
+from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
 
 import arcor2
-from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ObjectActionArg, \
+from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ActionParameterMeta, \
     ObjectAction, ObjectActions
-from arcor2.data.common import ActionParameterTypeEnum, StrEnum, IntEnum, PARAM_TO_TYPE
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.docstring import parse_docstring
+from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
 
 SERVICES_METHOD_NAME = "from_services"
 
 
 class ObjectTypeException(Arcor2Exception):
     pass
-
-
-PARAM_MAPPING: Dict[str, ActionParameterTypeEnum] = {k.__name__: v for k, v in PARAM_TO_TYPE.inverse.items()}
 
 
 def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
@@ -113,7 +110,7 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
     return obj
 
 
-def built_in_types_actions() -> ObjectActionsDict:
+def built_in_types_actions(plugins: Dict[Type, Type[ParameterPlugin]]) -> ObjectActionsDict:
 
     # TODO get built_in_types sources and rather use get_object_actions(source)?
 
@@ -124,67 +121,63 @@ def built_in_types_actions() -> ObjectActionsDict:
 
         if type_name not in d:
             d[type_name] = []
-        d[type_name] = object_actions(type_def)
+        d[type_name] = object_actions(plugins, type_def, inspect.getsource(type_def))
 
     return d
 
 
-def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActions:
+def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[Type[Generic], Type[Service]],
+                   source: str) -> ObjectActions:
 
     ret: ObjectActions = []
 
     # ...inspect.ismethod does not work on un-initialized classes
-    for method in inspect.getmembers(type_def, predicate=inspect.isfunction):
+    for method_name, method_def in inspect.getmembers(type_def, predicate=inspect.isfunction):
 
         # TODO check also if the method has 'action' decorator (ast needed)
-        if not hasattr(method[1], "__action__"):
+        if not hasattr(method_def, "__action__"):
             continue
 
-        meta = method[1].__action__
+        # action from ancestor, will be copied later (only if the action was not overridden)
+        base_cls_def = type_def.__bases__[0]
+        if hasattr(base_cls_def, method_name) and getattr(base_cls_def, method_name) == method_def:
+            continue
 
-        data = ObjectAction(name=method[0], meta=meta)
+        meta = method_def.__action__
 
-        """
-        Methods supposed to be actions have @action decorator, which has to be stripped away in order to get
-        method's arguments / type hints.
-        """
+        data = ObjectAction(name=method_name, meta=meta)
 
-        doc = parse_docstring(method[1].__doc__)
+        doc = parse_docstring(method_def.__doc__)
         data.description = doc["short_description"]
 
-        signature = inspect.signature(method[1])
+        signature = inspect.signature(method_def)
 
-        for name, ttype in get_type_hints(method[1]).items():
+        for name, ttype in get_type_hints(method_def).items():
 
             try:
                 if name == "return":
-                    data.returns = ttype.__name__  # TODO define enum for this
+                    data.returns = ttype.__name__  # TODO remap to supported types of parameters
                     continue
 
-                string_allowed_values: Optional[Set[str]] = None
-                integer_allowed_values: Optional[Set[int]] = None
+                try:
+                    param_type = plugins[ttype]
+                except KeyError:
+                    for k, v in plugins.items():
+                        if not v.EXACT_TYPE and issubclass(ttype, k):
+                            param_type = v
+                            break
+                    else:
+                        raise ObjectTypeException(f"Unknown parameter type {ttype.__name__}.")
 
-                if issubclass(ttype, StrEnum):
-                    param_type = ActionParameterTypeEnum.STRING_ENUM
-                    string_allowed_values = ttype.set()
-                elif issubclass(ttype, IntEnum):
-                    param_type = ActionParameterTypeEnum.INTEGER_ENUM
-                    integer_allowed_values = ttype.set()
-                else:
-                    try:
-                        param_type = PARAM_MAPPING[ttype.__name__]
-                    except KeyError:
-                        raise ObjectTypeException(f"Object type {type_def.__name__}, action {method[0]}, "
-                                                  f"invalid parameter type: {ttype.__name__}.")
-
-                args = ObjectActionArg(name=name, type=param_type)
+                args = ActionParameterMeta(name=name, type=param_type.type_name())
+                try:
+                    param_type.meta(args, method_def, source)
+                except ParameterPluginException as e:
+                    raise ObjectTypeException(e)
 
                 if name in type_def.DYNAMIC_PARAMS:
                     args.dynamic_value = True
                     args.dynamic_value_parents = type_def.DYNAMIC_PARAMS[name][1]
-
-                args.string_allowed_values = string_allowed_values
-                args.integer_allowed_values = integer_allowed_values
 
                 def_val = signature.parameters[name].default
                 if def_val is not inspect.Parameter.empty:
@@ -195,7 +188,7 @@ def object_actions(type_def: Union[Type[Generic], Type[Service]]) -> ObjectActio
                 except KeyError:
                     pass
 
-                data.action_args.append(args)
+                data.parameters.append(args)
 
             except AttributeError:
                 print(f"Skipping {ttype}")  # TODO make a fix for Union
