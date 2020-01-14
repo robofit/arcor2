@@ -1,3 +1,5 @@
+import traceback
+import time
 import sys
 from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, TypeVar
 from types import ModuleType
@@ -190,6 +192,13 @@ async def server(client: Any,
         await unregister(client)
 
 
+def format_stacktrace():
+    parts = ["Traceback (most recent call last):\n"]
+    parts.extend(traceback.format_stack(limit=25)[:-2])
+    parts.extend(traceback.format_exception(*sys.exc_info())[1:])
+    return "".join(parts)
+
+
 def print_exception(e: Exception) -> None:
 
     pee = ProjectExceptionEvent(data=ProjectExceptionEventData(str(e),
@@ -197,6 +206,9 @@ def print_exception(e: Exception) -> None:
                                                                isinstance(e, Arcor2Exception)))
     print(pee.to_json())
     sys.stdout.flush()
+
+    with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
+        tb_file.write(format_stacktrace())
 
 
 async def run_in_executor(func, *args):
