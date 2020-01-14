@@ -60,8 +60,8 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
 
         param = project.action(action_id).parameter(parameter_id)
 
-        if not isinstance(param.value, cls.type()):
+        try:
+            return cls.type()(param.value)
+        except ValueError:
             raise ParameterPluginException(f"Parameter {parameter_id} of action {action_id} has invalid param value: "
                                            f"'{param.value}' (should be of type {cls.type().__name__}).")
-
-        return param.value
