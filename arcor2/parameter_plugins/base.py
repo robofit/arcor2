@@ -1,6 +1,8 @@
 import abc
 from typing import Callable, Tuple, Any, Dict, Union, Type
 
+from typed_ast import ast3 as ast
+
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data.common import ActionParameter, Project, Scene
 from arcor2.data.object_type import ActionParameterMeta
@@ -36,7 +38,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         return camel_case_to_snake_case(cls.type().__name__)
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, source: str) -> None:
+    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
 
         assert param_meta.type == cls.type_name()
         assert param_meta.name

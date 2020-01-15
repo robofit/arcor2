@@ -1,12 +1,11 @@
 from typing import Callable, List, Tuple, Any, Type
 
-import horast
 from typed_ast import ast3 as ast
 
 from arcor2.data.common import Project, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 from arcor2.data.object_type import ActionParameterMeta
-from arcor2.source.utils import find_function, find_asserts
+from arcor2.source.utils import find_asserts
 
 
 def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tuple[Any, Any]:
@@ -40,12 +39,11 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
     return None, None
 
 
-def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, action_method: Callable, source: str) -> \
+def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, action_method: Callable,
+                action_node: ast.FunctionDef) -> \
         None:
 
-    tree = horast.parse(source)
-    method_tree = find_function(action_method.__name__, tree)
-    minimum, maximum = get_assert_minimum_maximum(find_asserts(method_tree), param_meta.name)
+    minimum, maximum = get_assert_minimum_maximum(find_asserts(action_node), param_meta.name)
 
     for var in minimum, maximum:
         if var is not None and not isinstance(minimum, cls.type()):
@@ -66,10 +64,10 @@ class IntegerPlugin(ParameterPlugin):
         return "integer"
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, source: str) -> None:
+    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
 
-        super(IntegerPlugin, cls).meta(param_meta, action_method, source)
-        get_min_max(IntegerPlugin, param_meta, action_method, source)
+        super(IntegerPlugin, cls).meta(param_meta, action_method, action_node)
+        get_min_max(IntegerPlugin, param_meta, action_method, action_node)
 
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> int:
