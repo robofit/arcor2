@@ -67,6 +67,28 @@ class RobotArg(JsonSchemaMixin):
         return self.robot_id, self.end_effector
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class SystemInfoRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class SystemInfoData(JsonSchemaMixin):
+
+    version: str = ""
+    api_version: str = ""
+
+
+@dataclass
+class SystemInfoResponse(Response):
+
+    data: SystemInfoData = field(default_factory=SystemInfoData)
+    response: str = field(default=SystemInfoRequest.request, init=False)
+
+
 """
 ------------------------------------------------------------------------------------------------------------------------
 Services
