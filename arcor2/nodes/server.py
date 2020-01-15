@@ -1514,7 +1514,7 @@ EVENT_DICT: hlp.EVENT_DICT_TYPE = {
 
 def main():
 
-    assert sys.version_info >= (3, 6)
+    assert sys.version_info >= (3, 8)
 
     parser = argparse.ArgumentParser()
 
@@ -1523,16 +1523,17 @@ def main():
     parser.add_argument('--version', action='version', version=arcor2.version(),
                         help="Shows ARCOR2 version and exits.")
     parser.add_argument('--api_version', action='version', version=arcor2.api_version(),
-                        help="Shows AR Server API version and exits.")
+                        help="Shows API version and exits.")
+    parser.add_argument("-a", "--asyncio_debug", help="Turn on asyncio debug mode.",
+                        action="store_const", const=True, default=False)
 
     args = parser.parse_args()
     logger.level = args.verbose
 
     loop = asyncio.get_event_loop()
-    # loop.set_debug(enabled=True)
+    loop.set_debug(enabled=args.asyncio_debug)
 
-    asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())])
-    loop.run_forever()
+    loop.run_until_complete(asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())]))
 
 
 if __name__ == "__main__":
