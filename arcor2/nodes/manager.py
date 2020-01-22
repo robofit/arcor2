@@ -11,12 +11,15 @@ import os
 import tempfile
 import zipfile
 import shutil
+import argparse
 
 import websockets
 from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
+from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
+import arcor2
 from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, run_in_executor
 from arcor2.source.utils import make_executable
 from arcor2.settings import PROJECT_PATH
@@ -248,12 +251,28 @@ def main() -> None:
 
     assert sys.version_info >= (3, 8)
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-v", "--verbose", help="Increase output verbosity",
+                        action="store_const", const=LogLevel.DEBUG, default=LogLevel.INFO)
+    parser.add_argument('--version', action='version', version=arcor2.version(),
+                        help="Shows ARCOR2 version and exits.")
+    parser.add_argument('--api_version', action='version', version=arcor2.api_version(),
+                        help="Shows API version and exits.")
+    parser.add_argument("-a", "--asyncio_debug", help="Turn on asyncio debug mode.",
+                        action="store_const", const=True, default=False)
+
+    args = parser.parse_args()
+    logger.level = args.verbose
+
+    loop = asyncio.get_event_loop()
+    loop.set_debug(enabled=args.asyncio_debug)
+
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT)
-    asyncio.get_event_loop().set_debug(enabled=True)
-    asyncio.get_event_loop().run_until_complete(
+    loop.run_until_complete(
         websockets.serve(bound_handler, '0.0.0.0', PORT))
-    asyncio.get_event_loop().run_forever()
+    loop.run_forever()
 
 
 if __name__ == "__main__":

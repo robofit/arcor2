@@ -1,6 +1,8 @@
 from typing import get_type_hints, Callable
 from enum import Enum
 
+from typed_ast import ast3 as ast
+
 from arcor2.data.common import Project, IntEnum, Scene
 from arcor2.data.object_type import ActionParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict, ParameterPluginException
@@ -21,8 +23,8 @@ class IntegerEnumPlugin(ParameterPlugin):
         return "integer_enum"
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, source: str) -> None:
-        super(IntegerEnumPlugin, cls).meta(param_meta, action_method, source)
+    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
+        super(IntegerEnumPlugin, cls).meta(param_meta, action_method, action_node)
 
         ttype = get_type_hints(action_method)[param_meta.name]
         if not issubclass(ttype, cls.type()):

@@ -18,7 +18,7 @@ def generate_swagger() -> str:
     # Create an APISpec
     spec = APISpec(
         title="ARCOR2 Data Models",
-        version=arcor2.version(),
+        version=arcor2.api_version(),
         openapi_version="3.0.2",
         plugins=[FlaskPlugin(), DataclassesPlugin()],
     )

@@ -19,8 +19,17 @@ warnings.filterwarnings(
 )
 
 
-def version() -> str:
-    res = pkgutil.get_data(__name__, 'VERSION')
+def _version(file: str) -> str:
+
+    res = pkgutil.get_data(__name__, file)
     if not res:
         return "unknown"
     return res.decode().strip()
+
+
+def version() -> str:
+    return _version('VERSION')
+
+
+def api_version() -> str:
+    return _version('API_VERSION')

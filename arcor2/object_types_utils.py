@@ -2,6 +2,8 @@ import copy
 import inspect
 from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
 
+import horast
+
 import arcor2
 from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ActionParameterMeta, \
     ObjectAction, ObjectActions
@@ -10,6 +12,7 @@ from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.docstring import parse_docstring
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
+from arcor2.source.utils import find_function
 
 SERVICES_METHOD_NAME = "from_services"
 
@@ -130,6 +133,7 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
                    source: str) -> ObjectActions:
 
     ret: ObjectActions = []
+    tree = horast.parse(source)
 
     # ...inspect.ismethod does not work on un-initialized classes
     for method_name, method_def in inspect.getmembers(type_def, predicate=inspect.isfunction):
@@ -152,6 +156,8 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
         signature = inspect.signature(method_def)
 
+        method_tree = find_function(method_name, tree)
+
         for name, ttype in get_type_hints(method_def).items():
 
             try:
@@ -171,7 +177,7 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
                 args = ActionParameterMeta(name=name, type=param_type.type_name())
                 try:
-                    param_type.meta(args, method_def, source)
+                    param_type.meta(args, method_def, method_tree)
                 except ParameterPluginException as e:
                     raise ObjectTypeException(e)
 

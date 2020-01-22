@@ -1374,6 +1374,14 @@ async def get_robot_meta_cb(req: rpc.GetRobotMetaRequest) -> Union[rpc.GetRobotM
     return rpc.GetRobotMetaResponse(data=list(ROBOT_META.values()))
 
 
+async def system_info_cb(req: rpc.SystemInfoRequest) -> Union[rpc.SystemInfoResponse, hlp.RPC_RETURN_TYPES]:
+
+    resp = rpc.SystemInfoResponse()
+    resp.data.version = arcor2.version()
+    resp.data.api_version = arcor2.api_version()
+    return resp
+
+
 async def remove_object_references_from_projects(obj_id: str) -> None:
 
     assert SCENE
@@ -1489,7 +1497,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.SceneObjectUsageRequest: scene_object_usage_request_cb,
     rpc.OpenSceneRequest: open_scene_cb,
     rpc.ActionParamValuesRequest: action_param_values_cb,
-    rpc.GetRobotMetaRequest: get_robot_meta_cb
+    rpc.GetRobotMetaRequest: get_robot_meta_cb,
+    rpc.SystemInfoRequest: system_info_cb
 }
 
 # add Project Manager RPC API
@@ -1505,23 +1514,26 @@ EVENT_DICT: hlp.EVENT_DICT_TYPE = {
 
 def main():
 
-    assert sys.version_info >= (3, 6)
+    assert sys.version_info >= (3, 8)
 
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-v", "--verbose", help="Increase output verbosity",
                         action="store_const", const=LogLevel.DEBUG, default=LogLevel.INFO)
-    parser.add_argument('--version', action='version',
-                        version='{}'.format(arcor2.version()))
+    parser.add_argument('--version', action='version', version=arcor2.version(),
+                        help="Shows ARCOR2 version and exits.")
+    parser.add_argument('--api_version', action='version', version=arcor2.api_version(),
+                        help="Shows API version and exits.")
+    parser.add_argument("-a", "--asyncio_debug", help="Turn on asyncio debug mode.",
+                        action="store_const", const=True, default=False)
 
     args = parser.parse_args()
     logger.level = args.verbose
 
     loop = asyncio.get_event_loop()
-    # loop.set_debug(enabled=True)
+    loop.set_debug(enabled=args.asyncio_debug)
 
-    asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())])
-    loop.run_forever()
+    loop.run_until_complete(asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())]))
 
 
 if __name__ == "__main__":
