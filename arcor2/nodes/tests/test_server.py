@@ -11,7 +11,7 @@ import pytest  # type: ignore
 import websocket  # type: ignore
 
 from arcor2.data import rpc, events, object_type
-from arcor2.object_types import Generic, Robot, Workspace
+from arcor2.object_types import Generic, Robot
 
 # TODO helper function for RPC
 # TODO upload some user object types
@@ -83,7 +83,7 @@ def test_object_types(ws_client):
     ws_client.send(rpc.GetObjectTypesRequest(id=uuid.uuid4().int).to_json())
     object_types = rpc.GetObjectTypesResponse.from_json(ws_client.recv())
 
-    built_in_types = {Generic.__name__, Robot.__name__, Workspace.__name__}
+    built_in_types = {Generic.__name__, Robot.__name__}
     abstract_types = {Generic.__name__, Robot.__name__}
 
     for ot in object_types.data:
