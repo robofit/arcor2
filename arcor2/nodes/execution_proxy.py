@@ -82,7 +82,7 @@ def project_run(project_id: str):
         resp = rpc.RunProjectResponse.from_json(ws.recv())
 
         if resp.result:
-            return 200
+            return "ok", 200
         else:
             return jsonify(resp.messages), 501
 
@@ -112,7 +112,7 @@ def project_stop():
         resp = rpc.RunProjectResponse.from_json(ws.recv())
 
         if resp.result:
-            return 200
+            return "ok", 200
         else:
             return jsonify(resp.messages), 501
 
