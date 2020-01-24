@@ -145,7 +145,7 @@ def project_publish(project_id: str):
 
         archive_path = os.path.join(tmpdirname, "arcor2_project")
         shutil.make_archive(archive_path, 'zip',  project_dir)
-        return send_file(archive_path + ".zip", as_attachment=True)
+        return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 
 
 @app.route("/project/<string:project_id>/script", methods=['PUT'])
