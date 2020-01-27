@@ -13,6 +13,7 @@ from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, send_file
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+import horast
 
 import arcor2
 from arcor2 import persistent_storage as ps
@@ -37,33 +38,7 @@ spec = APISpec(
 app = Flask(__name__)
 
 
-@app.route("/project/<string:project_id>/publish", methods=['GET'])
-def project_publish(project_id: str):
-    """Publish project
-            ---
-            get:
-              description: Get zip file with execution package
-              parameters:
-                - in: path
-                  name: project_id
-                  schema:
-                    type: string
-                  required: true
-                  description: unique ID
-              responses:
-                200:
-                  description: Ok
-                  content:
-                    application/zip:
-                        schema:
-                          type: string
-                          format: binary
-                          example: The archive of execution package (.zip)
-                404:
-                    description: Project ID or some of the required items was not found.
-                501:
-                    description: Project invalid.
-            """
+def _publish(project_id: str, template: bool = False):
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
@@ -122,17 +97,28 @@ def project_publish(project_id: str):
 
         try:
 
-            with open(os.path.join(project_dir, 'script.py'), "w") as script:
+            with open(os.path.join(project_dir, 'script.py'), "w") as script_file:
 
-                if not project.has_logic:
-                    try:
-                        # TODO check if script is valid somehow?
-                        script.write(ps.get_project_sources(project.id).script)
-                    except ps.PersistentStorageException:
-                        # script not uploaded, write script with empty main loop
-                        script.write(program_src(project, scene, built_in_types_names(), False))
+                if template:
+                    # write script with empty main loop
+                    script_file.write(program_src(project, scene, built_in_types_names(), False))
                 else:
-                    script.write(program_src(project, scene, built_in_types_names(), True))
+
+                    if project.has_logic:
+                        script_file.write(program_src(project, scene, built_in_types_names(), True))
+                    else:
+                        try:
+                            script = ps.get_project_sources(project.id).script
+                        except ps.PersistentStorageException:
+                            return "Project sources (script) does not exist.", 501
+
+                        # check if it is valid Python code
+                        try:
+                            horast.parse(script)
+                        except SyntaxError:
+                            return "Invalid code.", 501
+
+                        script_file.write(script)
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
                 res.write(derived_resources_class(project))
@@ -146,6 +132,68 @@ def project_publish(project_id: str):
         archive_path = os.path.join(tmpdirname, "arcor2_project")
         shutil.make_archive(archive_path, 'zip',  project_dir)
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
+
+
+@app.route("/project/<string:project_id>/template", methods=['GET'])
+def project_template(project_id: str):
+    """Publish project's main script template.
+            ---
+            get:
+              description: Get zip file with execution package.  To be used by a developer.
+              parameters:
+                - in: path
+                  name: project_id
+                  schema:
+                    type: string
+                  required: true
+                  description: unique ID
+              responses:
+                200:
+                  description: Ok
+                  content:
+                    application/zip:
+                        schema:
+                          type: string
+                          format: binary
+                          example: The archive of execution package (.zip)
+                404:
+                    description: Project ID or some of the required items was not found.
+                501:
+                    description: Project invalid.
+            """
+
+    return _publish(project_id, template=True)
+
+
+@app.route("/project/<string:project_id>/publish", methods=['GET'])
+def project_publish(project_id: str):
+    """Publish project
+            ---
+            get:
+              description: Get zip file with execution package. To be used by the Execution service.
+              parameters:
+                - in: path
+                  name: project_id
+                  schema:
+                    type: string
+                  required: true
+                  description: unique ID
+              responses:
+                200:
+                  description: Ok
+                  content:
+                    application/zip:
+                        schema:
+                          type: string
+                          format: binary
+                          example: The archive of execution package (.zip)
+                404:
+                    description: Project ID or some of the required items was not found.
+                501:
+                    description: Project invalid.
+            """
+
+    return _publish(project_id)
 
 
 @app.route("/project/<string:project_id>/script", methods=['PUT'])
@@ -182,6 +230,7 @@ def get_swagger():
 
 with app.test_request_context():
     spec.path(view=project_publish)
+    spec.path(view=project_template)
     spec.path(view=project_script)
 
 
