@@ -88,6 +88,27 @@ class SystemInfoResponse(Response):
     data: SystemInfoData = field(default_factory=SystemInfoData)
     response: str = field(default=SystemInfoRequest.request, init=False)
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class ExecuteActionArgs(JsonSchemaMixin):
+
+    action_id: str = field(metadata=dict(description="ID of the action to be executed."))
+
+
+@dataclass
+class ExecuteActionRequest(Request):
+
+    args: ExecuteActionArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ExecuteActionResponse(Response):
+
+    response: str = field(default=ExecuteActionRequest.request, init=False)
+
 
 """
 ------------------------------------------------------------------------------------------------------------------------

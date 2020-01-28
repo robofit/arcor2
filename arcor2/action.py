@@ -5,6 +5,8 @@ from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent
 from arcor2.data.common import ProjectStateEnum, ActionStateEnum, ActionState, ProjectState
 from functools import wraps
 
+HANDLE_ACTIONS = True
+
 if TYPE_CHECKING:
     from arcor2.object_types import Generic  # NOQA
     from arcor2.services import Service  # NOQA
@@ -58,7 +60,7 @@ def action(f):
             kwargs = args[1]
             args = (args[0],)
 
-        if not action.inside_composite:
+        if not action.inside_composite and HANDLE_ACTIONS:
             handle_action(args[0], f, ActionStateEnum.BEFORE)
 
         if wrapper.__action__.composite:  # TODO and not step_into
@@ -69,7 +71,7 @@ def action(f):
         if action.inside_composite == f:
             action.inside_composite = None
 
-        if not action.inside_composite:
+        if not action.inside_composite and HANDLE_ACTIONS:
             handle_action(args[0], f, ActionStateEnum.AFTER)
 
         return res

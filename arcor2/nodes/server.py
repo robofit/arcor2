@@ -7,7 +7,7 @@ import json
 import functools
 import sys
 from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, \
-    get_type_hints, Type
+    get_type_hints, Type, Any
 import uuid
 import argparse
 import os
@@ -42,6 +42,11 @@ from arcor2.exceptions import ActionPointNotFound, SceneObjectNotFound, Arcor2Ex
 from arcor2.services import Service, RobotService
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict, ParameterPluginException
+from arcor2 import action as action_mod
+
+# disables before/after messages, etc.
+action_mod.HANDLE_ACTIONS = False
+
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[rpc.Request]
@@ -76,6 +81,9 @@ ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / servi
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
 FOCUS_OBJECT_ROBOT: Dict[str, rpc.RobotArg] = {}  # key: object_id
+
+
+RUNNING_ACTION: Optional[str] = None
 
 
 class RobotPoseException(Arcor2Exception):
@@ -1382,6 +1390,65 @@ async def system_info_cb(req: rpc.SystemInfoRequest) -> Union[rpc.SystemInfoResp
     return resp
 
 
+@scene_needed
+@project_needed
+async def execute_action_cb(req: rpc.ExecuteActionRequest) -> Union[rpc.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert SCENE and PROJECT
+
+    global RUNNING_ACTION
+
+    if RUNNING_ACTION:
+        return False, f"Action {RUNNING_ACTION} is being executed. Only one action can be executed at a time."
+
+    try:
+        action = PROJECT.action(req.args.action_id)
+    except Arcor2Exception:
+        return False, "Unknown action."
+
+    params: Dict[str, Any] = {}
+
+    for param in action.parameters:
+        try:
+            params[param.id] = PARAM_PLUGINS[param.type].value(TYPE_DEF_DICT, SCENE, PROJECT, action.id, param.id)
+        except ParameterPluginException as e:
+            await logger.error(e)
+            return False, f"Failed to get value for parameter {param.id}."
+
+    obj_id, action_name = action.parse_type()
+
+    obj: Optional[Union[Generic, Service]] = None
+
+    if obj_id in SCENE_OBJECT_INSTANCES:
+        obj = SCENE_OBJECT_INSTANCES[obj_id]
+    elif obj_id in SERVICES_INSTANCES:
+        obj = SERVICES_INSTANCES[obj_id]
+    else:
+        return False, "Internal error: project not in sync with scene."
+
+    if not hasattr(obj, action_name):
+        return False, "Internal error: object does not have the requested method."
+
+    RUNNING_ACTION = action.id
+
+    # schedule execution and return success
+    asyncio.ensure_future(execute_action(getattr(obj, action_name), params))
+    return None
+
+
+async def execute_action(action_method: Callable, params: Dict[str, Any]) -> None:
+
+    global RUNNING_ACTION
+
+    try:
+        await hlp.run_in_executor(action_method, *params.values())
+    except (Arcor2Exception, TypeError) as e:
+        await logger.error(e)
+
+    # TODO send event with results
+    RUNNING_ACTION = None
+
+
 async def remove_object_references_from_projects(obj_id: str) -> None:
 
     assert SCENE
@@ -1498,7 +1565,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.OpenSceneRequest: open_scene_cb,
     rpc.ActionParamValuesRequest: action_param_values_cb,
     rpc.GetRobotMetaRequest: get_robot_meta_cb,
-    rpc.SystemInfoRequest: system_info_cb
+    rpc.SystemInfoRequest: system_info_cb,
+    rpc.ExecuteActionRequest: execute_action_cb
 }
 
 # add Project Manager RPC API
