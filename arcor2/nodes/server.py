@@ -384,6 +384,17 @@ async def open_project(project_id: str) -> None:
 
     PROJECT = await storage.get_project(project_id)
     await open_scene(PROJECT.scene_id)
+
+    assert SCENE
+    for obj in PROJECT.objects:
+        try:
+            scene_obj = SCENE.object_or_service(obj.id)
+        except Arcor2Exception as e:
+            await logger.error(e)
+            # TODO remove object from project?
+            continue
+        obj.uuid = scene_obj.uuid
+
     asyncio.ensure_future(notify_project_change_to_others())
 
 

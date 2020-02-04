@@ -3,6 +3,7 @@
 
 from typing import List, Any, Iterator, Optional, Tuple, Set, Dict, Union
 from enum import Enum, unique
+from uuid import UUID, uuid4
 
 from json import JSONEncoder
 from dataclasses import dataclass, field
@@ -158,6 +159,7 @@ class SceneObject(JsonSchemaMixin):
     id: str
     type: str
     pose: Pose
+    uuid: UUID = field(default_factory=uuid4)
 
 
 @dataclass
@@ -165,6 +167,7 @@ class SceneService(JsonSchemaMixin):
 
     type: str
     configuration_id: str
+    uuid: UUID = field(default_factory=uuid4)
 
 
 @dataclass
@@ -225,6 +228,7 @@ class Action(JsonSchemaMixin):
     parameters: List[ActionParameter] = field(default_factory=list)
     inputs: List[ActionIO] = field(default_factory=list)
     outputs: List[ActionIO] = field(default_factory=list)
+    uuid: UUID = field(default_factory=uuid4)
 
     def parse_type(self) -> Tuple[str, str]:
 
@@ -247,6 +251,7 @@ class Action(JsonSchemaMixin):
 class ProjectActionPoint(ActionPoint):
 
     actions: List[Action] = field(default_factory=list)
+    uuid: UUID = field(default_factory=uuid4)
 
 
 @dataclass
@@ -254,6 +259,7 @@ class ProjectObject(JsonSchemaMixin):
 
     id: str
     action_points: List[ProjectActionPoint] = field(default_factory=list)
+    uuid: Optional[UUID] = None
 
 
 @dataclass
