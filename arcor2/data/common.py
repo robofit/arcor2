@@ -159,7 +159,12 @@ class SceneObject(JsonSchemaMixin):
     id: str
     type: str
     pose: Pose
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: Optional[UUID] = None
+
+    def __post_init__(self):
+
+        if not self.uuid:
+            self.uuid = uuid4()
 
 
 @dataclass
@@ -167,7 +172,12 @@ class SceneService(JsonSchemaMixin):
 
     type: str
     configuration_id: str
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: Optional[UUID] = None
+
+    def __post_init__(self):
+
+        if not self.uuid:
+            self.uuid = uuid4()
 
 
 @dataclass
@@ -228,7 +238,12 @@ class Action(JsonSchemaMixin):
     parameters: List[ActionParameter] = field(default_factory=list)
     inputs: List[ActionIO] = field(default_factory=list)
     outputs: List[ActionIO] = field(default_factory=list)
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: Optional[UUID] = None
+
+    def __post_init__(self):
+
+        if not self.uuid:
+            self.uuid = uuid4()
 
     def parse_type(self) -> Tuple[str, str]:
 
@@ -251,7 +266,12 @@ class Action(JsonSchemaMixin):
 class ProjectActionPoint(ActionPoint):
 
     actions: List[Action] = field(default_factory=list)
-    uuid: UUID = field(default_factory=uuid4)
+    uuid: Optional[UUID] = None
+
+    def __post_init__(self):
+
+        if not self.uuid:
+            self.uuid = uuid4()
 
 
 @dataclass
@@ -283,6 +303,7 @@ class Project(JsonSchemaMixin):
                 assert aps.id not in self._ap_cache, "Action point ID not unique."
                 self._ap_cache[aps.id] = aps
                 for act in aps.actions:
+                    assert act.id not in self._action_cache, "Action ID not unique."
                     self._action_cache[act.id] = act
 
     def invalidate_cache(self):
