@@ -23,16 +23,11 @@ import arcor2
 from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE, run_in_executor
 from arcor2.source.utils import make_executable
 from arcor2.settings import PROJECT_PATH
-from arcor2.data.rpc import RunProjectRequest, StopProjectRequest, StopProjectResponse, \
-    PauseProjectRequest, PauseProjectResponse, ResumeProjectRequest, ResumeProjectResponse, RunProjectResponse,\
-    ProjectStateRequest, ProjectStateResponse
+from arcor2.data import rpc
 from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent, CurrentActionEvent
 from arcor2.data.common import ProjectStateEnum, ProjectState
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2 import rest
-from arcor2.nodes import builder
-
-BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{builder.PORT}")
 
 PORT = 6790
 
@@ -115,7 +110,7 @@ async def read_proc_stdout() -> None:
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-async def project_run(req: RunProjectRequest) -> Union[RunProjectResponse, RPC_RETURN_TYPES]:
+async def project_run(req: rpc.execution.RunProjectRequest) -> Union[RunProjectResponse, RPC_RETURN_TYPES]:
 
     global PROCESS
     global TASK
@@ -124,30 +119,8 @@ async def project_run(req: RunProjectRequest) -> Union[RunProjectResponse, RPC_R
     if process_running():
         return False, "Already running!"
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-
-        path = os.path.join(tmpdirname, "publish.zip")
-
-        try:
-            await run_in_executor(rest.download, f"{BUILDER_URL}/project/{req.args.id}/publish", path)
-        except rest.RestException as e:
-            await logger.error(e)
-            return False, "Failed to get project package."
-
-        try:
-            with zipfile.ZipFile(path, 'r') as zip_ref:
-                zip_ref.extractall(tmpdirname)
-        except zipfile.BadZipFile as e:
-            await logger.error(e)
-            return False, "Invalid zip file."
-
-        os.remove(path)
-
-        try:
-            shutil.rmtree(PROJECT_PATH)
-        except FileNotFoundError:
-            pass
-        shutil.copytree(tmpdirname, PROJECT_PATH)
+    # TODO check if execution package (directory) exists
+    # TODO switch there
 
     script_path = os.path.join(PROJECT_PATH, "script.py")
     make_executable(script_path)
