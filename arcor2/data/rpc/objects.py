@@ -7,7 +7,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdValue
 from arcor2.data.object_type import ObjectTypeMeta, ObjectActions
-from arcor2.data.rpc import IdArgs, Request, Response, wo_suffix, TypeArgs, RobotArg
+from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs, RobotArg
 
 
 @dataclass

@@ -1,4 +1,4 @@
 #!/bin/bash  
 
 arcor2_execution_proxy &
-arcor2_manager 
+arcor2_execution

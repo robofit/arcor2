@@ -13,7 +13,7 @@ import websocket  # type: ignore
 
 import arcor2
 from arcor2.data import rpc
-from arcor2.nodes.manager import PORT as MANAGER_PORT
+from arcor2.nodes.execution import PORT as MANAGER_PORT
 
 PORT = 5009
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
@@ -78,8 +78,9 @@ def project_run(project_id: str):
 
     with WebsocketContextManager() as ws:
 
-        ws.send(rpc.RunProjectRequest(id=get_id(), args=rpc.IdArgs(id=project_id)).to_json())  # type: ignore
-        resp = rpc.RunProjectResponse.from_json(ws.recv())
+        ws.send(rpc.execution.RunProjectRequest(id=get_id(),
+                                                args=rpc.common.IdArgs(id=project_id)).to_json())  # type: ignore
+        resp = rpc.execution.RunProjectResponse.from_json(ws.recv())
 
         if resp.result:
             return "ok", 200
@@ -108,8 +109,8 @@ def project_stop():
 
     with WebsocketContextManager() as ws:
 
-        ws.send(rpc.StopProjectRequest(id=get_id()).to_json())
-        resp = rpc.RunProjectResponse.from_json(ws.recv())
+        ws.send(rpc.execution.StopProjectRequest(id=get_id()).to_json())
+        resp = rpc.execution.RunProjectResponse.from_json(ws.recv())
 
         if resp.result:
             return "ok", 200
@@ -137,8 +138,8 @@ def project_running():
 
     with WebsocketContextManager() as ws:
 
-        ws.send(rpc.ProjectStateRequest(id=get_id()).to_json())
-        resp = rpc.ProjectStateResponse.from_json(ws.recv())
+        ws.send(rpc.execution.ProjectStateRequest(id=get_id()).to_json())
+        resp = rpc.execution.ProjectStateResponse.from_json(ws.recv())
 
         if resp.data.id:
             return resp.data.id, 200

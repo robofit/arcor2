@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from arcor2.data.object_type import MeshList
-from arcor2.data.rpc import Request, Response, wo_suffix
+from arcor2.data.rpc.common import Request, Response, wo_suffix
 
 
 @dataclass

@@ -1,6 +1,6 @@
 import inspect
 from typing import Dict, Tuple, Type
-from arcor2.data.rpc import Request, Response
+from arcor2.data.rpc.common import Request, Response
 from arcor2.data.events import Event
 import arcor2.data.events
 from arcor2.data import rpc

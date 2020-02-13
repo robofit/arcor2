@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdDesc, SceneObject, SceneService
-from arcor2.data.rpc import IdArgs, Request, Response, wo_suffix, TypeArgs
+from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs
 
 
 @dataclass

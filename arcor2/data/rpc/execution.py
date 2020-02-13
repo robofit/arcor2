@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional
 from datetime import datetime
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import ProjectState, ActionState, CurrentAction
-from arcor2.data.rpc import IdArgs, Request, Response, wo_suffix
+from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
 
 @dataclass
@@ -29,6 +29,28 @@ class BuildProjectResponse(Response):
 
 
 @dataclass
+class UploadPackageArgs(JsonSchemaMixin):
+
+    id: str  # id of the execution package (so far == ID of the project)
+    data: str  # base64 encoded zip file
+
+
+@dataclass
+class UploadPackageRequest(Request):
+
+    args: UploadPackageArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UploadPackageResponse(Response):
+
+    response: str = field(default=UploadPackageRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
 class ListPackagesRequest(Request):
 
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
@@ -45,9 +67,8 @@ class ModifiedFile(JsonSchemaMixin):
 class ExecutionPackage(JsonSchemaMixin):
 
     id: str
-    revision: int
-    created: datetime
-    modified_files: List[ModifiedFile] = field(default_factory=list)
+    project_last_modified: datetime
+    # modified_files: List[ModifiedFile] = field(default_factory=list)
 
 
 @dataclass
@@ -56,6 +77,20 @@ class ListPackagesResponse(Response):
     data: List[ExecutionPackage] = field(default_factory=list)
     response: str = field(default=ListPackagesRequest.request, init=False)
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class DeletePackageRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class DeletePackageResponse(Response):
+
+    response: str = field(default=DeletePackageRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 

@@ -19,7 +19,6 @@ import arcor2.object_types
 from arcor2.object_types import Generic
 from arcor2.services import Service, RobotService
 from arcor2.action import print_event
-from arcor2.settings import PROJECT_PATH
 from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs, print_exception
 import arcor2.object_types_utils as otu
@@ -220,7 +219,7 @@ class ResourcesBase(IntResources):
 
         try:
 
-            with open(path.join(PROJECT_PATH, "data", file_name + ".json")) as scene_file:
+            with open(path.join("data", file_name + ".json")) as scene_file:
 
                 data_dict = json.loads(scene_file.read())
                 data_dict = convert_keys(data_dict, camel_case_to_snake_case)

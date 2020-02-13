@@ -14,7 +14,7 @@ from dataclasses_jsonschema import ValidationError
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data.rpc import Request
+from arcor2.data.rpc.common import Request
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception

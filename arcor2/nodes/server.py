@@ -3,6 +3,7 @@
 
 
 import asyncio
+import base64
 import json
 import functools
 import sys
@@ -11,6 +12,7 @@ from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Calla
 import uuid
 import argparse
 import os
+import tempfile
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -21,7 +23,7 @@ import arcor2
 from arcor2.source.logic import program_src
 from arcor2.source.object_types import new_object_type_source
 from arcor2.source import SourceException
-from arcor2.nodes.manager import RPC_DICT as MANAGER_RPC_DICT, PORT as MANAGER_PORT
+from arcor2 import nodes
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
     Joint, NamedOrientation, RobotJoints
@@ -43,14 +45,15 @@ from arcor2.services import Service, RobotService
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict, ParameterPluginException
 from arcor2 import action as action_mod
+from arcor2 import rest
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
 
 
 if TYPE_CHECKING:
-    ReqQueue = asyncio.Queue[rpc.Request]
-    RespQueue = asyncio.Queue[rpc.Response]
+    ReqQueue = asyncio.Queue[rpc.common.Request]
+    RespQueue = asyncio.Queue[rpc.common.Response]
 else:
     ReqQueue = asyncio.Queue
     RespQueue = asyncio.Queue
@@ -58,7 +61,8 @@ else:
 
 logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
 
-MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{MANAGER_PORT}")
+MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{nodes.execution.PORT}")
+BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{nodes.build.PORT}")
 
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
@@ -80,7 +84,7 @@ SERVICES_INSTANCES: Dict[str, Service] = {}
 ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / services
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
-FOCUS_OBJECT_ROBOT: Dict[str, rpc.RobotArg] = {}  # key: object_id
+FOCUS_OBJECT_ROBOT: Dict[str, rpc.common.RobotArg] = {}  # key: object_id
 
 
 RUNNING_ACTION: Optional[str] = None
@@ -314,17 +318,18 @@ async def _get_object_types() -> None:
     OBJECT_TYPES = object_types
 
 
-async def get_object_types_cb(req: rpc.GetObjectTypesRequest) -> rpc.GetObjectTypesResponse:
-    return rpc.GetObjectTypesResponse(data=list(OBJECT_TYPES.values()))
+async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest) -> rpc.objects.GetObjectTypesResponse:
+    return rpc.objects.GetObjectTypesResponse(data=list(OBJECT_TYPES.values()))
 
 
-async def get_services_cb(req: rpc.GetServicesRequest) -> rpc.GetServicesResponse:
-    return rpc.GetServicesResponse(data=list(SERVICE_TYPES.values()))
+async def get_services_cb(req: rpc.services.GetServicesRequest) -> rpc.services.GetServicesResponse:
+    return rpc.services.GetServicesResponse(data=list(SERVICE_TYPES.values()))
 
 
 @scene_needed
 @no_project
-async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def save_scene_cb(req: rpc.scene_project.SaveSceneRequest) -> Union[rpc.scene_project.SaveSceneResponse,
+                                                                          hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -350,7 +355,8 @@ async def save_scene_cb(req: rpc.SaveSceneRequest) -> Union[rpc.SaveSceneRespons
 
 @scene_needed
 @project_needed
-async def save_project_cb(req: rpc.SaveProjectRequest) -> Union[rpc.SaveProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def save_project_cb(req: rpc.scene_project.SaveProjectRequest) -> Union[rpc.scene_project.SaveProjectResponse,
+                                                                              hlp.RPC_RETURN_TYPES]:
 
     assert SCENE and PROJECT
     await storage.update_project(PROJECT)
@@ -399,13 +405,15 @@ async def open_project(project_id: str) -> None:
 
 
 @no_project
-async def open_scene_cb(req: rpc.OpenSceneRequest) -> Union[rpc.OpenSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def open_scene_cb(req: rpc.scene_project.OpenSceneRequest) -> Union[rpc.scene_project.OpenSceneResponse,
+                                                                          hlp.RPC_RETURN_TYPES]:
 
     await open_scene(req.args.id)
     return None
 
 
-async def open_project_cb(req: rpc.OpenProjectRequest) -> Union[rpc.OpenProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def open_project_cb(req: rpc.scene_project.OpenProjectRequest) -> Union[rpc.scene_project.OpenProjectResponse,
+                                                                              hlp.RPC_RETURN_TYPES]:
 
     # TODO validate using project_problems?
     await open_project(req.args.id)
@@ -456,22 +464,23 @@ async def _check_manager() -> None:
     """
 
     # TODO avoid cast
-    resp = cast(rpc.ProjectStateResponse,
-                await manager_request(rpc.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    resp = cast(rpc.execution.ProjectStateResponse,
+                await manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
         await open_project(resp.data.id)
 
 
-async def get_object_actions_cb(req: rpc.GetActionsRequest) -> Union[rpc.GetActionsResponse, hlp.RPC_RETURN_TYPES]:
+async def get_object_actions_cb(req: rpc.objects.GetActionsRequest) -> Union[rpc.objects.GetActionsResponse,
+                                                                             hlp.RPC_RETURN_TYPES]:
 
     try:
-        return rpc.GetActionsResponse(data=ACTIONS[req.args.type])
+        return rpc.objects.GetActionsResponse(data=ACTIONS[req.args.type])
     except KeyError:
         return False, f"Unknown object type: '{req.args.type}'."
 
 
-async def manager_request(req: rpc.Request) -> rpc.Response:
+async def manager_request(req: rpc.common.Request) -> rpc.common.Response:
 
     assert req.id not in MANAGER_RPC_RESPONSES
 
@@ -538,8 +547,8 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
 
 @scene_needed
 @project_needed
-async def update_ap_joints_cb(req: rpc.UpdateActionPointJointsRequest) -> Union[rpc.UpdateActionPointJointsResponse,
-                                                                                hlp.RPC_RETURN_TYPES]:
+async def update_ap_joints_cb(req: rpc.objects.UpdateActionPointJointsRequest) -> \
+        Union[rpc.objects.UpdateActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE and PROJECT
 
@@ -572,8 +581,8 @@ async def update_ap_joints_cb(req: rpc.UpdateActionPointJointsRequest) -> Union[
 
 @scene_needed
 @project_needed
-async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union[rpc.UpdateActionPointPoseResponse,
-                                                                                 hlp.RPC_RETURN_TYPES]:
+async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) -> \
+        Union[rpc.objects.UpdateActionPointPoseResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE and PROJECT
 
@@ -616,8 +625,8 @@ async def update_action_point_cb(req: rpc.UpdateActionPointPoseRequest) -> Union
 
 @scene_needed
 @no_project
-async def update_action_object_cb(req: rpc.UpdateActionObjectPoseRequest) -> Union[rpc.UpdateActionObjectPoseRequest,
-                                                                                   hlp.RPC_RETURN_TYPES]:
+async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest) -> \
+        Union[rpc.objects.UpdateActionObjectPoseRequest, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -703,9 +712,10 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
     return problems
 
 
-async def list_projects_cb(req: rpc.ListProjectsRequest) -> Union[rpc.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
+async def list_projects_cb(req: rpc.scene_project.ListProjectsRequest) -> \
+        Union[rpc.scene_project.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
 
-    data: List[rpc.ListProjectsResponseData] = []
+    data: List[rpc.scene_project.ListProjectsResponseData] = []
 
     projects = await storage.get_projects()
 
@@ -719,7 +729,7 @@ async def list_projects_cb(req: rpc.ListProjectsRequest) -> Union[rpc.ListProjec
             await logger.warning(f"Ignoring project {project_iddesc.id} due to error: {e}")
             continue
 
-        pd = rpc.ListProjectsResponseData(id=project.id, desc=project.desc)
+        pd = rpc.scene_project.ListProjectsResponseData(id=project.id, desc=project.desc)
         data.append(pd)
 
         if project.scene_id not in scenes:
@@ -741,20 +751,23 @@ async def list_projects_cb(req: rpc.ListProjectsRequest) -> Union[rpc.ListProjec
         except SourceException as e:
             pd.problems.append(str(e))
 
-    return rpc.ListProjectsResponse(data=data)
+    return rpc.scene_project.ListProjectsResponse(data=data)
 
 
-async def list_scenes_cb(req: rpc.ListScenesRequest) -> Union[rpc.ListScenesResponse, hlp.RPC_RETURN_TYPES]:
+async def list_scenes_cb(req: rpc.scene_project.ListScenesRequest) -> \
+        Union[rpc.scene_project.ListScenesResponse, hlp.RPC_RETURN_TYPES]:
 
     scenes = await storage.get_scenes()
-    return rpc.ListScenesResponse(data=scenes.items)
+    return rpc.scene_project.ListScenesResponse(data=scenes.items)
 
 
-async def list_meshes_cb(req: rpc.ListMeshesRequest) -> Union[rpc.ListMeshesResponse, hlp.RPC_RETURN_TYPES]:
-    return rpc.ListMeshesResponse(data=await storage.get_meshes())
+async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,
+                                                                      hlp.RPC_RETURN_TYPES]:
+    return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
-async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObjectTypeResponse, hlp.RPC_RETURN_TYPES]:
+async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc.objects.NewObjectTypeResponse,
+                                                                             hlp.RPC_RETURN_TYPES]:
 
     meta = req.args
 
@@ -797,8 +810,8 @@ async def new_object_type_cb(req: rpc.NewObjectTypeRequest) -> Union[rpc.NewObje
 
 @scene_needed
 @no_project
-async def focus_object_start_cb(req: rpc.FocusObjectStartRequest) -> Union[rpc.FocusObjectStartResponse,
-                                                                           hlp.RPC_RETURN_TYPES]:
+async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest) -> Union[rpc.objects.FocusObjectStartResponse,
+                                                                                   hlp.RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
     global FOCUS_OBJECT_ROBOT
@@ -843,7 +856,8 @@ def get_obj_type_name(object_id: str) -> str:
 
 
 @no_project
-async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectResponse, hlp.RPC_RETURN_TYPES]:
+async def focus_object_cb(req: rpc.objects.FocusObjectRequest) -> Union[rpc.objects.FocusObjectResponse,
+                                                                        hlp.RPC_RETURN_TYPES]:
 
     obj_id = req.args.object_id
     pt_idx = req.args.point_idx
@@ -870,7 +884,7 @@ async def focus_object_cb(req: rpc.FocusObjectRequest) -> Union[rpc.FocusObjectR
 
     FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(robot_id, end_effector)
 
-    r = rpc.FocusObjectResponse()
+    r = rpc.objects.FocusObjectResponse()
     r.data.finished_indexes = list(FOCUS_OBJECT[obj_id].keys())
     return r
 
@@ -896,8 +910,8 @@ async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = Non
 
 @scene_needed
 @no_project
-async def focus_object_done_cb(req: rpc.FocusObjectDoneRequest) -> Union[rpc.FocusObjectDoneResponse,
-                                                                         hlp.RPC_RETURN_TYPES]:
+async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union[rpc.objects.FocusObjectDoneResponse,
+                                                                                 hlp.RPC_RETURN_TYPES]:
 
     global FOCUS_OBJECT
     global FOCUS_OBJECT_ROBOT
@@ -989,8 +1003,8 @@ async def register(websocket) -> None:
     await notify_project(websocket)
 
     # TODO avoid cast
-    resp = cast(rpc.ProjectStateResponse,
-                await manager_request(rpc.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    resp = cast(rpc.execution.ProjectStateResponse,
+                await manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     await asyncio.wait([websocket.send(ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
@@ -1178,8 +1192,8 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
 @scene_needed
 @no_project
-async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.AddObjectToSceneResponse,
-                                                                            hlp.RPC_RETURN_TYPES]:
+async def add_object_to_scene_cb(req: rpc.scene_project.AddObjectToSceneRequest) -> \
+        Union[rpc.scene_project.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await add_object_to_scene(obj)
@@ -1193,8 +1207,8 @@ async def add_object_to_scene_cb(req: rpc.AddObjectToSceneRequest) -> Union[rpc.
 
 @scene_needed
 @no_project
-async def auto_add_object_to_scene_cb(req: rpc.AutoAddObjectToSceneRequest) -> Union[rpc.AutoAddObjectToSceneResponse,
-                                                                                     hlp.RPC_RETURN_TYPES]:
+async def auto_add_object_to_scene_cb(req: rpc.scene_project.AutoAddObjectToSceneRequest) -> \
+        Union[rpc.scene_project.AutoAddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await auto_add_object_to_scene(obj.type)
@@ -1248,8 +1262,8 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
 
 @scene_needed
 @no_project
-async def add_service_to_scene_cb(req: rpc.AddServiceToSceneRequest) -> Union[rpc.AddServiceToSceneResponse,
-                                                                              hlp.RPC_RETURN_TYPES]:
+async def add_service_to_scene_cb(req: rpc.scene_project.AddServiceToSceneRequest) ->\
+        Union[rpc.scene_project.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -1291,8 +1305,8 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Pro
 
 
 @scene_needed
-async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Union[rpc.SceneObjectUsageResponse,
-                                                                                   hlp.RPC_RETURN_TYPES]:
+async def scene_object_usage_request_cb(req: rpc.scene_project.SceneObjectUsageRequest) -> \
+        Union[rpc.scene_project.SceneObjectUsageResponse, hlp.RPC_RETURN_TYPES]:
     """
     Works for both services and objects.
     :param req:
@@ -1305,7 +1319,7 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
             any(srv.type == req.args.id for srv in SCENE.services)):
         return False, "Unknown ID."
 
-    resp = rpc.SceneObjectUsageResponse()
+    resp = rpc.scene_project.SceneObjectUsageResponse()
 
     async for project in projects_using_object(SCENE.id, req.args.id):
         resp.data.add(project.id)
@@ -1314,8 +1328,8 @@ async def scene_object_usage_request_cb(req: rpc.SceneObjectUsageRequest) -> Uni
 
 
 @scene_needed
-async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc.ActionParamValuesResponse,
-                                                                             hlp.RPC_RETURN_TYPES]:
+async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
+        Union[rpc.objects.ActionParamValuesResponse, hlp.RPC_RETURN_TYPES]:
 
     inst: Union[None, Service, Generic] = None
 
@@ -1342,7 +1356,7 @@ async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc
 
     # TODO validate method parameters vs parent_params (check types)?
 
-    resp = rpc.ActionParamValuesResponse()
+    resp = rpc.objects.ActionParamValuesResponse()
 
     try:
         method = getattr(inst, method_name)
@@ -1358,8 +1372,8 @@ async def action_param_values_cb(req: rpc.ActionParamValuesRequest) -> Union[rpc
 
 @scene_needed
 @no_project
-async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.RemoveFromSceneResponse,
-                                                                         hlp.RPC_RETURN_TYPES]:
+async def remove_from_scene_cb(req: rpc.scene_project.RemoveFromSceneRequest) -> \
+        Union[rpc.scene_project.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE
 
@@ -1388,22 +1402,51 @@ async def remove_from_scene_cb(req: rpc.RemoveFromSceneRequest) -> Union[rpc.Rem
     return None
 
 
-async def get_robot_meta_cb(req: rpc.GetRobotMetaRequest) -> Union[rpc.GetRobotMetaResponse, hlp.RPC_RETURN_TYPES]:
+async def get_robot_meta_cb(req: rpc.robot.GetRobotMetaRequest) -> Union[rpc.robot.GetRobotMetaResponse,
+                                                                         hlp.RPC_RETURN_TYPES]:
 
-    return rpc.GetRobotMetaResponse(data=list(ROBOT_META.values()))
+    return rpc.robot.GetRobotMetaResponse(data=list(ROBOT_META.values()))
 
 
-async def system_info_cb(req: rpc.SystemInfoRequest) -> Union[rpc.SystemInfoResponse, hlp.RPC_RETURN_TYPES]:
+async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.SystemInfoResponse,
+                                                                     hlp.RPC_RETURN_TYPES]:
 
-    resp = rpc.SystemInfoResponse()
+    resp = rpc.common.SystemInfoResponse()
     resp.data.version = arcor2.version()
     resp.data.api_version = arcor2.api_version()
     return resp
 
 
+async def build_project_cb(req: rpc.execution.BuildProjectRequest) -> \
+        Union[rpc.execution.BuildProjectResponse, hlp.RPC_RETURN_TYPES]:
+
+    # call build service
+    # TODO store data in memory
+    with tempfile.TemporaryDirectory() as tmpdirname:
+
+        path = os.path.join(tmpdirname, "publish.zip")
+
+        try:
+            await hlp.run_in_executor(rest.download, f"{BUILDER_URL}/project/{req.args.id}/publish", path)
+        except rest.RestException as e:
+            await logger.error(e)
+            return False, "Failed to get project package."
+
+        with open(path, "rb") as zip_file:
+            b64_bytes = base64.b64encode(zip_file.read())
+            b64_str = b64_bytes.decode()
+
+    # send data to execution service
+    exe_req = rpc.execution.UploadPackageRequest(uuid.uuid4().int,
+                                             args=rpc.execution.UploadPackageArgs(req.args.id, b64_str))
+    resp = await manager_request(exe_req)
+    return resp.result, " ".join(resp.messages) if resp.messages else ""
+
+
 @scene_needed
 @project_needed
-async def execute_action_cb(req: rpc.ExecuteActionRequest) -> Union[rpc.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
+async def execute_action_cb(req: rpc.scene_project.ExecuteActionRequest) -> \
+        Union[rpc.scene_project.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert SCENE and PROJECT
 
@@ -1552,36 +1595,41 @@ async def project_change(ui, event: ProjectChangedEvent) -> None:
 
 
 RPC_DICT: hlp.RPC_DICT_TYPE = {
-    rpc.GetObjectTypesRequest: get_object_types_cb,
-    rpc.GetActionsRequest: get_object_actions_cb,
-    rpc.SaveProjectRequest: save_project_cb,
-    rpc.SaveSceneRequest: save_scene_cb,
-    rpc.UpdateActionPointPoseRequest: update_action_point_cb,
-    rpc.UpdateActionPointJointsRequest: update_ap_joints_cb,
-    rpc.UpdateActionObjectPoseRequest: update_action_object_cb,
-    rpc.OpenProjectRequest: open_project_cb,
-    rpc.ListProjectsRequest: list_projects_cb,
-    rpc.ListScenesRequest: list_scenes_cb,
-    rpc.NewObjectTypeRequest: new_object_type_cb,
-    rpc.ListMeshesRequest: list_meshes_cb,
-    rpc.FocusObjectRequest: focus_object_cb,
-    rpc.FocusObjectStartRequest: focus_object_start_cb,
-    rpc.FocusObjectDoneRequest: focus_object_done_cb,
-    rpc.GetServicesRequest: get_services_cb,
-    rpc.AddObjectToSceneRequest: add_object_to_scene_cb,
-    rpc.AutoAddObjectToSceneRequest: auto_add_object_to_scene_cb,
-    rpc.AddServiceToSceneRequest: add_service_to_scene_cb,
-    rpc.RemoveFromSceneRequest: remove_from_scene_cb,
-    rpc.SceneObjectUsageRequest: scene_object_usage_request_cb,
-    rpc.OpenSceneRequest: open_scene_cb,
-    rpc.ActionParamValuesRequest: action_param_values_cb,
-    rpc.GetRobotMetaRequest: get_robot_meta_cb,
-    rpc.SystemInfoRequest: system_info_cb,
-    rpc.ExecuteActionRequest: execute_action_cb
+    rpc.common.SystemInfoRequest: system_info_cb,
+    rpc.execution.BuildProjectRequest: build_project_cb,
+    rpc.objects.GetObjectTypesRequest: get_object_types_cb,
+    rpc.objects.GetActionsRequest: get_object_actions_cb,
+    rpc.objects.UpdateActionPointPoseRequest: update_action_point_cb,
+    rpc.objects.UpdateActionPointJointsRequest: update_ap_joints_cb,
+    rpc.objects.UpdateActionObjectPoseRequest: update_action_object_cb,
+    rpc.objects.NewObjectTypeRequest: new_object_type_cb,
+    rpc.objects.FocusObjectRequest: focus_object_cb,
+    rpc.objects.FocusObjectStartRequest: focus_object_start_cb,
+    rpc.objects.FocusObjectDoneRequest: focus_object_done_cb,
+    rpc.objects.ActionParamValuesRequest: action_param_values_cb,
+    rpc.robot.GetRobotMetaRequest: get_robot_meta_cb,
+    rpc.scene_project.SaveProjectRequest: save_project_cb,
+    rpc.scene_project.SaveSceneRequest: save_scene_cb,
+    rpc.scene_project.OpenProjectRequest: open_project_cb,
+    rpc.scene_project.ListProjectsRequest: list_projects_cb,
+    rpc.scene_project.ListScenesRequest: list_scenes_cb,
+    rpc.scene_project.AddObjectToSceneRequest: add_object_to_scene_cb,
+    rpc.scene_project.AutoAddObjectToSceneRequest: auto_add_object_to_scene_cb,
+    rpc.scene_project.AddServiceToSceneRequest: add_service_to_scene_cb,
+    rpc.scene_project.RemoveFromSceneRequest: remove_from_scene_cb,
+    rpc.scene_project.SceneObjectUsageRequest: scene_object_usage_request_cb,
+    rpc.scene_project.OpenSceneRequest: open_scene_cb,
+    rpc.scene_project.ExecuteActionRequest: execute_action_cb,
+    rpc.services.GetServicesRequest: get_services_cb,
+    rpc.storage.ListMeshesRequest: list_meshes_cb
 }
 
 # add Project Manager RPC API
-for k, v in MANAGER_RPC_DICT.items():
+for k, v in nodes.execution.RPC_DICT.items():
+
+    if v.__name__.startswith("_"):
+        continue
+
     RPC_DICT[k] = manager_request
 
 

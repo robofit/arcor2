@@ -5,7 +5,7 @@ from typing import List
 from dataclasses import dataclass, field
 
 from arcor2.data.robot import RobotMeta
-from arcor2.data.rpc import Request, Response, wo_suffix
+from arcor2.data.rpc.common import Request, Response, wo_suffix
 
 
 @dataclass
