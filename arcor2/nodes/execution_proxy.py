@@ -101,6 +101,18 @@ def put_package(package_id: str):
                           file:
                             type: string
                             format: binary
+            responses:
+                200:
+                  description: Ok
+                501:
+                  description: Contains array of errors.
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                          type: string
+
     """
 
     file = request.files['file']
