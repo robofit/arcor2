@@ -45,7 +45,7 @@ class IdArgs(JsonSchemaMixin):
 
 @dataclass
 class RobotArg(JsonSchemaMixin):
-    robot_id: str  # object id of the robot or robot_id within the robot service
+    robot_id: str = field(metadata=dict(description="Object id of the robot or robot_id within the robot service."))
     end_effector: str
 
     def as_tuple(self) -> Tuple[str, str]:

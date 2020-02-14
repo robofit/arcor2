@@ -31,8 +31,8 @@ class BuildProjectResponse(Response):
 @dataclass
 class UploadPackageArgs(JsonSchemaMixin):
 
-    id: str  # id of the execution package (so far == ID of the project)
-    data: str  # base64 encoded zip file
+    id: str = field(metadata=dict(description="Id of the execution package (so far == ID of the project)."))
+    data: str = field(metadata=dict(description="Base64 encoded content of the zip file."))
 
 
 @dataclass
@@ -46,6 +46,7 @@ class UploadPackageRequest(Request):
 class UploadPackageResponse(Response):
 
     response: str = field(default=UploadPackageRequest.request, init=False)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -64,17 +65,17 @@ class ModifiedFile(JsonSchemaMixin):
 
 
 @dataclass
-class ExecutionPackage(JsonSchemaMixin):
+class PackageSummary(JsonSchemaMixin):
 
     id: str
-    project_last_modified: datetime
+    date_time: datetime
     # modified_files: List[ModifiedFile] = field(default_factory=list)
 
 
 @dataclass
 class ListPackagesResponse(Response):
 
-    data: List[ExecutionPackage] = field(default_factory=list)
+    data: List[PackageSummary] = field(default_factory=list)
     response: str = field(default=ListPackagesRequest.request, init=False)
 
 

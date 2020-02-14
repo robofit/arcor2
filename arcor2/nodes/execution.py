@@ -259,8 +259,8 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest) -> Union[rpc.
             continue
 
         # TODO read actual project timestamp from data/project.json
-        resp.data.append(rpc.execution.ExecutionPackage(os.path.basename(folder_path),
-                                                        datetime.now(timezone.utc)-timedelta(hours=1)))
+        resp.data.append(rpc.execution.PackageSummary(os.path.basename(folder_path),
+                                                      datetime.now(timezone.utc) - timedelta(hours=1)))
 
         # TODO report manual changes (check last modification of files)?
 

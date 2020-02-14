@@ -13,7 +13,7 @@ from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArg
 @dataclass
 class ActionParamValuesArgs(JsonSchemaMixin):
 
-    id: str  # object or service id
+    id: str = field(metadata=dict(description="Object or service id."))
     param_id: str
     parent_params: List[IdValue] = field(default_factory=list)
 

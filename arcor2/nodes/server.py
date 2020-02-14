@@ -1438,7 +1438,7 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest) -> \
 
     # send data to execution service
     exe_req = rpc.execution.UploadPackageRequest(uuid.uuid4().int,
-                                             args=rpc.execution.UploadPackageArgs(req.args.id, b64_str))
+                                                 args=rpc.execution.UploadPackageArgs(req.args.id, b64_str))
     resp = await manager_request(exe_req)
     return resp.result, " ".join(resp.messages) if resp.messages else ""
 

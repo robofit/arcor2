@@ -12,7 +12,7 @@ from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArg
 @dataclass
 class SceneObjectUsageRequest(Request):
 
-    args: IdArgs  # ID could be object or service
+    args: IdArgs = field(metadata=dict(description="ID could be object or service."))
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -150,8 +150,8 @@ class OpenSceneResponse(Response):
 @dataclass
 class ListProjectsResponseData(IdDesc):
 
-    valid: bool = False  # objects and their actions exists
-    executable: bool = False  # logic is defined and valid
+    valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
+    executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
     problems: List[str] = field(default_factory=list)
 
 
