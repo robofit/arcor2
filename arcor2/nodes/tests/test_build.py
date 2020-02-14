@@ -4,4 +4,4 @@ from subprocess import check_output
 
 
 def test_build_openapi():
-    validate_spec(yaml.full_load(check_output(["arcor2_builder", "--swagger"])))
+    validate_spec(yaml.full_load(check_output(["arcor2_build", "--swagger"])))
