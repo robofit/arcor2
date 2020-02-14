@@ -1,3 +1,3 @@
 #!/bin/bash  
 
-arcor2_builder
+arcor2_build

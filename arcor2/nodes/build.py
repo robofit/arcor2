@@ -100,7 +100,7 @@ def _publish(project_id: str, template: bool = False):
             with open(os.path.join(project_dir, 'script.py'), "w") as script_file:
 
                 if template:
-                    # write script with empty main loop
+                    # write script without the main loop
                     script_file.write(program_src(project, scene, built_in_types_names(), False))
                 else:
 
@@ -132,37 +132,6 @@ def _publish(project_id: str, template: bool = False):
         archive_path = os.path.join(tmpdirname, "arcor2_project")
         shutil.make_archive(archive_path, 'zip',  project_dir)
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
-
-
-@app.route("/project/<string:project_id>/template", methods=['GET'])
-def project_template(project_id: str):
-    """Publish project's main script template.
-            ---
-            get:
-              description: Get zip file with execution package.  To be used by a developer.
-              parameters:
-                - in: path
-                  name: project_id
-                  schema:
-                    type: string
-                  required: true
-                  description: unique ID
-              responses:
-                200:
-                  description: Ok
-                  content:
-                    application/zip:
-                        schema:
-                          type: string
-                          format: binary
-                          example: The archive of execution package (.zip)
-                404:
-                    description: Project ID or some of the required items was not found.
-                501:
-                    description: Project invalid.
-            """
-
-    return _publish(project_id, template=True)
 
 
 @app.route("/project/<string:project_id>/publish", methods=['GET'])
@@ -230,7 +199,6 @@ def get_swagger():
 
 with app.test_request_context():
     spec.path(view=project_publish)
-    spec.path(view=project_template)
     spec.path(view=project_script)
 
 
