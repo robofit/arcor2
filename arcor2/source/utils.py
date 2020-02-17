@@ -2,22 +2,23 @@ import importlib
 import os
 import stat
 from typing import List, Optional, Dict, Any, Union, Type
+import re
 
 import autopep8  # type: ignore
 import typed_astunparse
 from horast import parse, unparse
 
-from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef,\
-    NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str,\
+from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef, \
+    NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str, \
     ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem, Subscript, \
     Index, Assert, AST
 
-from arcor2.data.common import Project
+from arcor2.data.common import Project, ActionPoint
 from arcor2.source import SourceException, SCRIPT_HEADER
+import arcor2.data.common
 
 
 def main_loop_body(tree: Module) -> List[Any]:
-
     main = find_function("main", tree)
 
     for node in main.body:
@@ -293,7 +294,6 @@ def add_cls_inst(node: Module, cls: str, name: str, kwargs: Optional[Dict] = Non
 
 
 def append_method_call(body: List, instance: str, method: str, args: List, kwargs: List) -> None:
-
     body.append(Expr(value=Call(func=get_name_attr(instance, method),
                                 args=args,
                                 keywords=kwargs)))
@@ -340,7 +340,6 @@ def get_name(name: str) -> Name:
 
 
 def get_name_attr(name: str, attr: str, ctx: Union[Type[Load], Type[Store]] = Load) -> Attribute:
-
     return Attribute(
         value=get_name(name),
         attr=attr,
@@ -374,105 +373,203 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
         make_executable(out_file)
 
 
-def global_actions_class(project: Project) -> str:
+def clean(x): re.sub('\W|^(?=\d)', '_', x)  # noqa
 
+
+def global_action_points_class(project: Project) -> str:
     tree = Module(body=[])
     tree.body.append(ImportFrom(
-                module='resources',
-                names=[alias(
-                    name='Resources',
-                    asname=None)],
-                level=0))
+        module=arcor2.data.common.__name__,
+        names=[alias(
+            name=ActionPoint.__name__,
+            asname=None)],
+        level=0))
+    tree.body.append(ImportFrom(
+        module='resources',
+        names=[alias(
+            name='Resources',
+            asname=None)],
+        level=0))
 
     cls_def = ClassDef(
-                name='Actions',
-                bases=[],
-                keywords=[],
-                body=[
-                    FunctionDef(
-                        name='__init__',
-                        args=arguments(
-                            args=[
-                                arg(
-                                    arg='self',
-                                    annotation=None,
-                                    type_comment=None),
-                                arg(
-                                    arg='res',
-                                    annotation=Name(
-                                        id='Resources',
-                                        ctx=Load()),
-                                    type_comment=None)],
-                            vararg=None,
-                            kwonlyargs=[],
-                            kw_defaults=[],
-                            kwarg=None,
-                            defaults=[]),
-                        body=[Assign(
-                            targets=[Attribute(
+        name='ActionPoints',
+        bases=[],
+        keywords=[],
+        body=[
+            FunctionDef(
+                name='__init__',
+                args=arguments(
+                    args=[
+                        arg(
+                            arg='self',
+                            annotation=None,
+                            type_comment=None),
+                        arg(
+                            arg='res',
+                            annotation=Name(
+                                id='Resources',
+                                ctx=Load()),
+                            type_comment=None)],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[]),
+                body=[Assign(
+                    targets=[Attribute(
+                        value=Name(
+                            id='self',
+                            ctx=Load()),
+                        attr='_res',
+                        ctx=Store())],
+                    value=Name(
+                        id='res',
+                        ctx=Load()),
+                    type_comment=None)],
+                decorator_list=[],
+                returns=None,
+                type_comment=None)],
+        decorator_list=[])
+
+    for obj in project.objects:
+        for ap in obj.action_points:
+            fd = FunctionDef(
+                name=clean(ap.id),  # TODO avoid possible collisions
+                args=arguments(
+                    args=[arg(arg='self', annotation=None, type_comment=None)],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[]),
+                body=[Return(value=Call(
+                    func=Attribute(
+                        value=Attribute(
+                            value=Attribute(
                                 value=Name(
                                     id='self',
                                     ctx=Load()),
                                 attr='_res',
-                                ctx=Store())],
-                            value=Name(
-                                id='res',
+                                ctx=Load()),
+                            attr='project',
+                            ctx=Load()),
+                        attr='action_point',
+                        ctx=Load()),
+                    args=[Str(
+                        s=ap.id,
+                        kind='')],
+                    keywords=[]))],
+                decorator_list=[Name(
+                    id='property',
+                    ctx=Load())],
+                returns=Name(
+                    id='ActionPoint',
+                    ctx=Load()),
+                type_comment=None)
+
+            cls_def.body.append(fd)
+
+    tree.body.append(cls_def)
+    return tree_to_str(tree)
+
+
+def global_actions_class(project: Project) -> str:
+    tree = Module(body=[])
+    tree.body.append(ImportFrom(
+        module='resources',
+        names=[alias(
+            name='Resources',
+            asname=None)],
+        level=0))
+
+    cls_def = ClassDef(
+        name='Actions',
+        bases=[],
+        keywords=[],
+        body=[
+            FunctionDef(
+                name='__init__',
+                args=arguments(
+                    args=[
+                        arg(
+                            arg='self',
+                            annotation=None,
+                            type_comment=None),
+                        arg(
+                            arg='res',
+                            annotation=Name(
+                                id='Resources',
                                 ctx=Load()),
                             type_comment=None)],
-                        decorator_list=[],
-                        returns=None,
-                        type_comment=None)],
-                decorator_list=[])
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[]),
+                body=[Assign(
+                    targets=[Attribute(
+                        value=Name(
+                            id='self',
+                            ctx=Load()),
+                        attr='_res',
+                        ctx=Store())],
+                    value=Name(
+                        id='res',
+                        ctx=Load()),
+                    type_comment=None)],
+                decorator_list=[],
+                returns=None,
+                type_comment=None)],
+        decorator_list=[])
 
     for obj in project.objects:
         for ap in obj.action_points:
             for action in ap.actions:
-
                 ac_obj, ac_type = action.parse_type()
 
                 m = FunctionDef(
-                        name=action.id,
-                        args=arguments(
-                            args=[arg(
-                                arg='self',
-                                annotation=None,
-                                type_comment=None)],
-                            vararg=None,
-                            kwonlyargs=[],
-                            kw_defaults=[],
-                            kwarg=None,
-                            defaults=[]),
-                        body=[Expr(value=Call(
-                            func=Attribute(
-                                value=Subscript(
-                                    value=Attribute(
-                                        value=Attribute(
-                                            value=Name(
-                                                id='self',
-                                                ctx=Load()),
-                                            attr='_res',
-                                            ctx=Load()),
-                                        attr='all_instances',
-                                        ctx=Load()),
-                                    slice=Index(value=Str(
-                                        s=ac_obj,
-                                        kind='')),
-                                    ctx=Load()),
-                                attr=ac_type,
-                                ctx=Load()),
-                            args=[Attribute(
+                    name=action.id,
+                    args=arguments(
+                        args=[arg(
+                            arg='self',
+                            annotation=None,
+                            type_comment=None)],
+                        vararg=None,
+                        kwonlyargs=[],
+                        kw_defaults=[],
+                        kwarg=None,
+                        defaults=[]),
+                    body=[Expr(value=Call(
+                        func=Attribute(
+                            value=Subscript(
                                 value=Attribute(
-                                    value=Name(
-                                        id='self',
+                                    value=Attribute(
+                                        value=Name(
+                                            id='self',
+                                            ctx=Load()),
+                                        attr='_res',
                                         ctx=Load()),
-                                    attr='_res',
+                                    attr='all_instances',
                                     ctx=Load()),
-                                attr=action.id,
-                                ctx=Load())],
-                            keywords=[]))],
-                        decorator_list=[],
-                        returns=None,
-                        type_comment=None)
+                                slice=Index(value=Str(
+                                    s=ac_obj,
+                                    kind='')),
+                                ctx=Load()),
+                            attr=ac_type,
+                            ctx=Load()),
+                        args=[Attribute(
+                            value=Attribute(
+                                value=Name(
+                                    id='self',
+                                    ctx=Load()),
+                                attr='_res',
+                                ctx=Load()),
+                            attr=action.id,
+                            ctx=Load())],
+                        keywords=[]))],
+                    decorator_list=[],
+                    returns=None,
+                    type_comment=None)
 
                 cls_def.body.append(m)
 
@@ -481,7 +578,6 @@ def global_actions_class(project: Project) -> str:
 
 
 def derived_resources_class(project: Project) -> str:
-
     # TODO temporary and ugly solution of circular import
     from arcor2.resources import ResourcesBase
 

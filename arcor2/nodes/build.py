@@ -18,7 +18,7 @@ import horast
 import arcor2
 from arcor2 import persistent_storage as ps
 from arcor2.source.logic import program_src  # , get_logic_from_source
-from arcor2.source.utils import derived_resources_class, global_actions_class
+from arcor2.source.utils import derived_resources_class, global_actions_class, global_action_points_class
 from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.helpers import camel_case_to_snake_case
@@ -125,6 +125,9 @@ def _publish(project_id: str, template: bool = False):
 
             with open(os.path.join(project_dir, 'actions.py'), "w") as act:
                 act.write(global_actions_class(project))
+
+            with open(os.path.join(project_dir, 'action_points.py'), "w") as aps:
+                aps.write(global_action_points_class(project))
 
         except SourceException as e:
             return str(e), 501

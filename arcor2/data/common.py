@@ -138,7 +138,7 @@ class ActionPoint(JsonSchemaMixin):
     orientations: List[NamedOrientation] = field(default_factory=list)
     robot_joints: List[RobotJoints] = field(default_factory=list)
 
-    def pose(self, orientation_id: str) -> Pose:
+    def pose(self, orientation_id: str = "default") -> Pose:
 
         for ori in self.orientations:
             if ori.id == orientation_id:
