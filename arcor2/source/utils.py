@@ -11,7 +11,7 @@ from horast import parse, unparse
 from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef, \
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str, \
     ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem, Subscript, \
-    Index, Assert, AST
+    Index, Assert, AST, stmt
 
 from arcor2.data.common import Project, ActionPoint
 from arcor2.source import SourceException, SCRIPT_HEADER
@@ -28,7 +28,7 @@ def main_loop_body(tree: Module) -> List[Any]:
     raise SourceException("Main loop not found.")
 
 
-def empty_script_tree() -> Module:
+def empty_script_tree(add_main_loop: bool = True) -> Module:
     """
     Creates barebones of the script (empty 'main' function).
 
@@ -36,6 +36,19 @@ def empty_script_tree() -> Module:
     -------
 
     """
+
+    main_body: List[stmt] = []
+
+    if add_main_loop:
+        main_body.append(While(
+                        test=NameConstant(value=True),
+                        body=[Pass()],
+                        orelse=[]))
+    else:
+        """
+        put there "pass" in order to make code valid even if there is no other statement (e.g. no object from resources)
+        """
+        main_body.append(Pass())
 
     # TODO helper function for try ... except
 
@@ -55,10 +68,7 @@ def empty_script_tree() -> Module:
                     kw_defaults=[],
                     kwarg=None,
                     defaults=[]),
-                body=[While(
-                    test=NameConstant(value=True),
-                    body=[Pass()],
-                    orelse=[])],
+                body=main_body,
                 decorator_list=[],
                 returns=NameConstant(value=None),
                 type_comment=None),
@@ -373,7 +383,8 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
         make_executable(out_file)
 
 
-def clean(x): re.sub('\W|^(?=\d)', '_', x)  # noqa
+def clean(x):
+    return re.sub('\W|^(?=\d)', '_', x)  # noqa
 
 
 def global_action_points_class(project: Project) -> str:
