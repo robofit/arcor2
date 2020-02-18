@@ -16,7 +16,7 @@ import arcor2.object_types
 
 def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:
 
-    tree = empty_script_tree()
+    tree = empty_script_tree(add_main_loop=add_logic)
 
     # get object instances from resources object
     for obj in scene.objects:
