@@ -1,8 +1,10 @@
 import json
 import requests
 from typing import Type, TypeVar, Dict, Callable, List, Union, Any, Optional, Sequence
+import io
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
+from PIL import Image, UnidentifiedImageError  # type: ignore
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case
@@ -37,19 +39,17 @@ def handle_response(resp: requests.Response) -> None:
     try:
         resp.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(e)
 
         try:
             resp_body = json.loads(resp.content)
         except json.JSONDecodeError:
             resp_body = resp.content
 
-        raise RestException(f"Status code: {resp.status_code}, "
-                            f"body: {resp_body}.")
+        raise RestException(f"Status code: {resp.status_code}, "f"body: {resp_body}.", str(e))
 
 
 def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[JsonSchemaMixin]]] = None,
-          params: Optional[Dict] = None, get_response=False) -> Optional[Dict]:
+          params: Optional[Dict] = None, get_response=False) -> Union[None, Dict, List]:
 
     if data:
         if isinstance(data, list):
@@ -70,21 +70,17 @@ def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[Jso
         resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'},
                   params=params)
     except requests.exceptions.RequestException as e:
-        print(e)
-        raise RestException(f"Catastrophic error: {e}")
+        raise RestException(f"Catastrophic system error.", str(e))
 
     handle_response(resp)
 
     if not get_response:
         return None
 
-    print(resp.text)
-
     try:
-        return json.loads(resp.text)
+        return convert_keys(json.loads(resp.text), camel_case_to_snake_case)
     except (json.JSONDecodeError, TypeError) as e:
-        print(e)
-        raise RestException("Invalid JSON.")
+        raise RestException("Invalid JSON.", str(e))
 
 
 def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
@@ -102,7 +98,28 @@ def put(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin
         return data_cls.from_dict(ret)  # type: ignore
     except ValidationError as e:
         print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
-        raise RestException("Invalid data.")
+        raise RestException("Invalid data.", str(e))
+
+
+def put_returning_list(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]] = None,
+                       params: Optional[Dict] = None, data_cls: Type[T] = None) -> List[T]:
+
+    ret = _send(url, requests.put, data, params, get_response=data_cls is not None)  # type: ignore
+
+    if not data_cls:
+        return []  # type: ignore
+
+    assert isinstance(ret, list)
+
+    d = []
+    for dd in ret:
+        try:
+            d.append(data_cls.from_dict(dd))
+        except ValidationError as e:
+            print(f'{data_cls.__name__}: validation error "{e}" while parsing "{ret}".')
+            raise RestException("Invalid data.", str(e))
+
+    return d
 
 
 def delete(url: str):
@@ -110,8 +127,7 @@ def delete(url: str):
     try:
         resp = requests.delete(url, timeout=TIMEOUT)
     except requests.exceptions.RequestException as e:
-        print(e)
-        raise RestException(f"Catastrophic error: {e}")
+        raise RestException(f"Catastrophic system error.", str(e))
 
     handle_response(resp)
 
@@ -121,12 +137,12 @@ def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[
     data = _get(url, body, params)
 
     if not isinstance(data, (list, dict)):
-        raise RestException("Invalid data.")
+        raise RestException("Invalid data, not list or dict.")
 
     return convert_keys(data, camel_case_to_snake_case)
 
 
-def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Any:
+def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> requests.Response:
 
     if body is None:
         body_dict = {}  # type: ignore
@@ -142,15 +158,40 @@ def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict
         resp = requests.get(url, timeout=TIMEOUT, data=body_dict, params=params)
     except requests.exceptions.RequestException as e:
         print(e)
-        raise RestException(f"Catastrophic error: {e}")
+        raise RestException(f"Catastrophic system error.", str(e))
 
     handle_response(resp)
+
+    return resp
+
+
+def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Any:
+
+    resp = _get_response(url, body, params)
 
     try:
         return json.loads(resp.text)
     except (json.JSONDecodeError, TypeError) as e:
-        print(e)
-        raise RestException("Invalid JSON.")
+        raise RestException("Invalid JSON.", str(e))
+
+
+def get_image(url: str) -> Image.Image:
+
+    # TODO check content type?
+    try:
+        return Image.open(io.BytesIO(_get_response(url).content))
+    except (UnidentifiedImageError, TypeError) as e:
+        raise RestException(e)
+
+
+def get_str(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> str:
+
+    value = _get(url, body, params)
+
+    try:
+        return str(value)
+    except ValueError as e:
+        raise RestException(e)
 
 
 def get_float(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> float:
@@ -183,7 +224,22 @@ def get_list(url: str, data_cls: Type[T]) -> List[T]:
             ret.append(data_cls.from_dict(val))
         except ValidationError as e:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
-            raise RestException("Invalid data.")
+            raise RestException("Invalid data.", str(e))
+
+    return ret
+
+
+S = TypeVar('S', str, int, float)
+
+
+def get_list_primitive(url: str, desired_type: Type[S]) -> List[S]:
+
+    data = get_data(url)
+
+    ret: List[S] = []
+
+    for val in data:
+        ret.append(desired_type(val))
 
     return ret
 
@@ -197,8 +253,7 @@ def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None) -> 
     try:
         return data_cls.from_dict(data)
     except ValidationError as e:
-        print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
-        raise RestException("Invalid data.")
+        raise RestException("Invalid data.", str(e))
 
 
 def download(url: str, path: str) -> None:
@@ -207,8 +262,7 @@ def download(url: str, path: str) -> None:
     try:
         r = requests.get(url, allow_redirects=True)
     except requests.exceptions.RequestException as e:
-        print(e)
-        raise RestException("Download of file failed.")
+        raise RestException("Download of file failed.", str(e))
 
     handle_response(r)
 
