@@ -357,7 +357,6 @@ class ProjectStateEnum(Enum):
     RUNNING: str = "running"
     STOPPED: str = "stopped"
     PAUSED: str = "paused"
-    RESUMED: str = "resumed"
 
 
 class ActionStateEnum(Enum):
