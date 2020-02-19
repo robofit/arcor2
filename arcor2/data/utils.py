@@ -23,6 +23,7 @@ def generate_swagger() -> str:
         plugins=[FlaskPlugin(), DataclassesPlugin()],
     )
 
+    # TODO avoid explicit naming of all sub-modules in rpc module
     for module in (arcor2.data.common, arcor2.data.object_type, rpc.common, rpc.execution, rpc.objects,
                    rpc.robot, rpc.scene_project, rpc.services,
                    rpc.storage, arcor2.data.events):
