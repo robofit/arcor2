@@ -36,7 +36,7 @@ def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], wher
         while True:
             ctrl_cmd = read_stdin(0.1)
             if ctrl_cmd == "r":
-                print_event(ProjectStateEvent(data=ProjectState(ProjectStateEnum.RESUMED)))
+                print_event(ProjectStateEvent(data=ProjectState(ProjectStateEnum.RUNNING)))
                 break
 
 
