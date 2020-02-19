@@ -17,7 +17,7 @@ class RestException(Arcor2Exception):
 TIMEOUT = (1.0, 20.0)  # connect, read
 
 T = TypeVar('T', bound=JsonSchemaMixin)
-S = TypeVar('S', str, int, float)
+S = TypeVar('S', str, int, float, bool)
 
 OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]]
 
@@ -195,32 +195,13 @@ def get_image(url: str) -> Image.Image:
         raise RestException(e)
 
 
-def get_str(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> str:
+def get_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None,
+                  params: Optional[Dict] = None) -> S:
 
     value = _get(url, body, params)
 
     try:
-        return str(value)
-    except ValueError as e:
-        raise RestException(e)
-
-
-def get_float(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> float:
-
-    value = _get(url, body, params)
-
-    try:
-        return float(value)
-    except ValueError as e:
-        raise RestException(e)
-
-
-def get_bool(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> bool:
-
-    value = _get(url, body, params)
-
-    try:
-        return bool(value)
+        return desired_type(value)
     except ValueError as e:
         raise RestException(e)
 
