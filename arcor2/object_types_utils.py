@@ -160,44 +160,43 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
         for name, ttype in get_type_hints(method_def).items():
 
-            try:
-                if name == "return":
+            if name == "return":
+                try:
                     data.returns = ttype.__name__  # TODO remap to supported types of parameters
-                    continue
+                except AttributeError:
+                    data.returns = str(ttype)  # temporal workaround for stuff like typing.List[str]
+                continue
 
-                try:
-                    param_type = plugins[ttype]
-                except KeyError:
-                    for k, v in plugins.items():
-                        if not v.EXACT_TYPE and issubclass(ttype, k):
-                            param_type = v
-                            break
-                    else:
-                        raise ObjectTypeException(f"Unknown parameter type {ttype.__name__}.")
+            try:
+                param_type = plugins[ttype]
+            except KeyError:
+                for k, v in plugins.items():
+                    if not v.EXACT_TYPE and issubclass(ttype, k):
+                        param_type = v
+                        break
+                else:
+                    raise ObjectTypeException(f"Unknown parameter type {ttype.__name__}.")
 
-                args = ActionParameterMeta(name=name, type=param_type.type_name())
-                try:
-                    param_type.meta(args, method_def, method_tree)
-                except ParameterPluginException as e:
-                    raise ObjectTypeException(e)
+            args = ActionParameterMeta(name=name, type=param_type.type_name())
+            try:
+                param_type.meta(args, method_def, method_tree)
+            except ParameterPluginException as e:
+                raise ObjectTypeException(e)
 
-                if name in type_def.DYNAMIC_PARAMS:
-                    args.dynamic_value = True
-                    args.dynamic_value_parents = type_def.DYNAMIC_PARAMS[name][1]
+            if name in type_def.DYNAMIC_PARAMS:
+                args.dynamic_value = True
+                args.dynamic_value_parents = type_def.DYNAMIC_PARAMS[name][1]
 
-                def_val = signature.parameters[name].default
-                if def_val is not inspect.Parameter.empty:
-                    args.default_value = def_val
+            def_val = signature.parameters[name].default
+            if def_val is not inspect.Parameter.empty:
+                args.default_value = def_val
 
-                try:
-                    args.description = doc["params"][name].strip()
-                except KeyError:
-                    pass
+            try:
+                args.description = doc["params"][name].strip()
+            except KeyError:
+                pass
 
-                data.parameters.append(args)
-
-            except AttributeError:
-                print(f"Skipping {ttype}")  # TODO make a fix for Union
+            data.parameters.append(args)
 
         ret.append(data)
 
