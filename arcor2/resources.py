@@ -3,16 +3,15 @@
 
 
 from os import path
-from typing import Dict, Union, TypeVar, List, Optional, Any, Tuple, Type
+from typing import Dict, Union, TypeVar, List, Optional, Any, Type
 import importlib
 import json
-import inspect
 
 from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, ActionParameter, CurrentAction, StrEnum, IntEnum
-from arcor2.data.object_type import ObjectModel, Models, ActionParameterMeta, ObjectActionsDict, ObjectTypeMetaDict
+from arcor2.data.common import Project, Scene, CurrentAction
+from arcor2.data.object_type import ObjectModel, Models
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
@@ -23,7 +22,7 @@ from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs, print_exception
 import arcor2.object_types_utils as otu
 
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
+from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
 
 
@@ -41,10 +40,6 @@ class IntResources:
 
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
-
-        # keys: obj_type, action_name, arg_name
-        self.action_args: Dict[str, Dict[str, Dict[str, ActionParameterMeta]]] = {}
-        self.action_id_to_type_and_action_name: Dict[str, Tuple[str, str]] = {}
 
         self.services: Dict[str, Service] = {}
         self.objects: Dict[str, Generic] = {}
@@ -105,51 +100,17 @@ class IntResources:
 
         self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
-        # add action points to the object_types
+        # make all poses absolute
         for project_obj in self.project.objects:
             for aps in project_obj.action_points:
 
                 obj_inst = self.objects[project_obj.id]
-
-                for action in aps.actions:
-                    assert action.id not in self.action_id_to_type_and_action_name
-                    action_obj_id, action_type = action.parse_type()
-                    self.action_id_to_type_and_action_name[action.id] = \
-                        self.all_instances[action_obj_id].__class__.__name__, action_type
 
                 # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
                 obj_inst.action_points[aps.id] = aps
                 aps.position = make_position_abs(obj_inst.pose.position, aps.position)
                 for ori in aps.orientations:
                     ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
-
-        # add parameters from ancestors
-        object_actions_dict: ObjectActionsDict = otu.built_in_types_actions(TYPE_TO_PLUGIN)
-        object_types_meta_dict: ObjectTypeMetaDict = otu.built_in_types_meta()
-
-        for type_def in self.type_defs.values():
-
-            if issubclass(type_def, Generic):
-                object_types_meta_dict[type_def.__name__] = otu.meta_from_def(type_def)
-
-            object_actions_dict[type_def.__name__] = otu.object_actions(TYPE_TO_PLUGIN,
-                                                                        type_def, inspect.getsource(type_def))
-
-        for type_def in self.type_defs.values():
-
-            # so far, we deal with inheritance only in case of objects (not services)
-            if not issubclass(type_def, Generic):
-                continue
-
-            otu.add_ancestor_actions(type_def.__name__, object_actions_dict, object_types_meta_dict)
-
-        for type_def in self.type_defs.values():
-
-            self.action_args[type_def.__name__] = {}
-            for obj_action in object_actions_dict[type_def.__name__]:
-                self.action_args[type_def.__name__][obj_action.name] = {}
-                for arg in obj_action.parameters:
-                    self.action_args[type_def.__name__][obj_action.name][arg.name] = arg
 
     def __enter__(self):
         return self
@@ -170,24 +131,9 @@ class IntResources:
 
     def print_info(self, action_id: str, args: Dict[str, Any]) -> None:
         """Helper method used to print out info about the action going to be executed."""
-
-        args_list: List[ActionParameter] = []
-
-        for k, v in args.items():
-
-            vv = v
-
-            # this is needed because of "value: Any"
-            if hasattr(v, "to_dict"):
-                vv = v.to_dict()  # type: ignore
-            elif isinstance(v, (StrEnum, IntEnum)):
-                vv = v.value
-
-            obj_type_name, action_name = self.action_id_to_type_and_action_name[action_id]
-            arg = self.action_args[obj_type_name][action_name][k]
-            args_list.append(ActionParameter(k, vv, arg.type))
-
-        print_event(CurrentActionEvent(data=CurrentAction(action_id, args_list)))
+        # TODO to be used for parameters that are result of previous action(s)
+        # ...there is no need to send parameters that are already in the project
+        print_event(CurrentActionEvent(data=CurrentAction(action_id)))
 
     def parameters(self, action_id: str) -> Dict[str, Any]:
 
