@@ -43,7 +43,8 @@ setup(
         'fastcache',
         'flask_swagger_ui',
         'websocket-client',
-        'pyyaml'  # dependency of apispec, for some reason not installed automatically...
+        'pyyaml',  # dependency of apispec, for some reason not installed automatically...
+        'Pillow'
     ],
     extras_require={
         'test': [
