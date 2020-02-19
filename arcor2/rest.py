@@ -17,6 +17,9 @@ class RestException(Arcor2Exception):
 TIMEOUT = (1.0, 20.0)  # connect, read
 
 T = TypeVar('T', bound=JsonSchemaMixin)
+S = TypeVar('S', str, int, float, bool)
+
+OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]]
 
 
 def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict, List]:
@@ -48,7 +51,7 @@ def handle_response(resp: requests.Response) -> None:
         raise RestException(f"Status code: {resp.status_code}, "f"body: {resp_body}.", str(e))
 
 
-def _send(url: str, op: Callable, data: Optional[Union[JsonSchemaMixin, List[JsonSchemaMixin]]] = None,
+def _send(url: str, op: Callable, data: OptionalData = None,
           params: Optional[Dict] = None, get_response=False) -> Union[None, Dict, List]:
 
     if data:
@@ -87,8 +90,16 @@ def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
     _send(url, requests.post, data, params)
 
 
-def put(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]] = None,
-        params: Optional[Dict] = None, data_cls: Type[T] = None) -> T:
+def put_returning_primitive(url: str, desired_type: Type[S], data: OptionalData = None,
+                            params: Optional[Dict] = None) -> S:
+
+    try:
+        return desired_type(_send(url, requests.put, data, params, get_response=True))  # type: ignore
+    except ValueError as e:
+        raise RestException(e)
+
+
+def put(url: str, data: OptionalData = None, params: Optional[Dict] = None, data_cls: Type[T] = None) -> T:
     ret = _send(url, requests.put, data, params, get_response=data_cls is not None)  # type: ignore
 
     if not data_cls:
@@ -101,7 +112,7 @@ def put(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin
         raise RestException("Invalid data.", str(e))
 
 
-def put_returning_list(url: str, data: Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]] = None,
+def put_returning_list(url: str, data: OptionalData = None,
                        params: Optional[Dict] = None, data_cls: Type[T] = None) -> List[T]:
 
     ret = _send(url, requests.put, data, params, get_response=data_cls is not None)  # type: ignore
@@ -184,32 +195,13 @@ def get_image(url: str) -> Image.Image:
         raise RestException(e)
 
 
-def get_str(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> str:
+def get_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None,
+                  params: Optional[Dict] = None) -> S:
 
     value = _get(url, body, params)
 
     try:
-        return str(value)
-    except ValueError as e:
-        raise RestException(e)
-
-
-def get_float(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> float:
-
-    value = _get(url, body, params)
-
-    try:
-        return float(value)
-    except ValueError as e:
-        raise RestException(e)
-
-
-def get_bool(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> bool:
-
-    value = _get(url, body, params)
-
-    try:
-        return bool(value)
+        return desired_type(value)
     except ValueError as e:
         raise RestException(e)
 
@@ -227,9 +219,6 @@ def get_list(url: str, data_cls: Type[T]) -> List[T]:
             raise RestException("Invalid data.", str(e))
 
     return ret
-
-
-S = TypeVar('S', str, int, float)
 
 
 def get_list_primitive(url: str, desired_type: Type[S]) -> List[S]:
