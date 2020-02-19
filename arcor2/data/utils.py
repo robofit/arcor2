@@ -23,7 +23,7 @@ def generate_swagger() -> str:
         plugins=[FlaskPlugin(), DataclassesPlugin()],
     )
 
-    for module in (arcor2.data.common, arcor2.data.object_type, rpc.execution, rpc.objects,
+    for module in (arcor2.data.common, arcor2.data.object_type, rpc.common, rpc.execution, rpc.objects,
                    rpc.robot, rpc.scene_project, rpc.services,
                    rpc.storage, arcor2.data.events):
         for name, obj in inspect.getmembers(module):
