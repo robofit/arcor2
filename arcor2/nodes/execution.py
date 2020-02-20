@@ -77,13 +77,16 @@ async def read_proc_stdout() -> None:
         except asyncio.exceptions.IncompleteReadError:
             break
 
+        stripped = stdout.decode("utf-8").strip()
+
         try:
-            data = json.loads(stdout.decode("utf-8").strip())
+            data = json.loads(stripped)
         except json.decoder.JSONDecodeError as e:
-            await logger.error(e)
+            await logger.error(f"Script printed out: {stripped}")
+            await logger.debug(e)
             continue
 
-        if "event" not in data:
+        if not isinstance(data, dict) or "event" not in data:
             await logger.error("Strange data from script: {}".format(data))
             continue
 
