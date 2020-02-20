@@ -125,7 +125,12 @@ async def server(client: Any,
             try:
                 data = json.loads(message)
             except json.decoder.JSONDecodeError as e:
-                await logger.error(e)
+                await logger.error(f"Invalid data: '{message}'.")
+                await logger.debug(e)
+                continue
+
+            if not isinstance(data, dict):
+                await logger.error(f"Invalid data: '{data}'.")
                 continue
 
             if "request" in data:  # ...then it is RPC
