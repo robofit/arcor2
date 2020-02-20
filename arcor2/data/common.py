@@ -118,7 +118,7 @@ class ActionMetadata(JsonSchemaMixin):
 class Joint(JsonSchemaMixin):
 
     name: str
-    rotation: float
+    value: float
 
 
 @dataclass
