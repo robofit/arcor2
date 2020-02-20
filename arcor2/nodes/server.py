@@ -655,6 +655,11 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
     action_ids: Set[str] = set()
     problems: List[str] = []
 
+    unknown_types = ({obj.type for obj in scene.objects} | scene_services) - ACTIONS.keys()
+
+    if unknown_types:
+        return [f"Scene invalid, contains unknown types: {unknown_types}."]
+
     for obj in project.objects:
 
         # test if all objects exists in scene
