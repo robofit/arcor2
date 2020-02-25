@@ -105,7 +105,7 @@ class ObjectModel(JsonSchemaMixin):
     mesh: Optional[Mesh] = None
 
     def model(self) -> Models:
-        return getattr(self, str(self.type.value))
+        return getattr(self, str(self.type.value).lower())
 
     def __post_init__(self) -> None:
 
