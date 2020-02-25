@@ -9,11 +9,11 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 class ModelTypeEnum(Enum):
 
-    NONE: str = "none"
-    BOX: str = "box"
-    CYLINDER: str = "cylinder"
-    SPHERE: str = "sphere"
-    MESH: str = "mesh"
+    NONE: str = "None"
+    BOX: str = "Box"
+    CYLINDER: str = "Cylinder"
+    SPHERE: str = "Sphere"
+    MESH: str = "Mesh"
 
 
 @dataclass
