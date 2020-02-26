@@ -71,4 +71,4 @@ class IntegerPlugin(ParameterPlugin):
 
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> int:
-        return super(IntegerPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
+        return cls.type()(super(IntegerPlugin, cls).value(type_defs, scene, project, action_id, parameter_id))

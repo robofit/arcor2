@@ -1,5 +1,6 @@
 from typing import get_type_hints, Callable
 from enum import Enum
+import json
 
 from typed_ast import ast3 as ast
 
@@ -46,4 +47,4 @@ class IntegerEnumPlugin(ParameterPlugin):
         if not issubclass(ttype, cls.type()):
             raise ParameterPluginException(f"Type {ttype.__name__} is not subclass of {cls.type().__name__}.")
 
-        return ttype(param.value)
+        return ttype(json.loads(param.value))

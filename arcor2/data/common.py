@@ -211,7 +211,7 @@ class Scene(JsonSchemaMixin):
 class IdValue(JsonSchemaMixin):
 
     id: str
-    value: Any
+    value: str
 
 
 class ActionParameterException(Arcor2Exception):

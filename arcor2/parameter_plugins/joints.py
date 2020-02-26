@@ -1,3 +1,5 @@
+import json
+
 from arcor2.data.common import Project, RobotJoints, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict, ParameterPluginException
 from arcor2.services import RobotService
@@ -28,7 +30,7 @@ class JointsPlugin(ParameterPlugin):
 
             for param in action.parameters:
                 if param.id == "robot_id":
-                    robot_id = param.value
+                    robot_id = json.loads(param.value)
                     break
             else:
                 raise ParameterPluginException(f"Parameter {param.id} of action {action.id} depends on"
