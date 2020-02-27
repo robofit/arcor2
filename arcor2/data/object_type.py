@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Union, Set, Any
+from typing import Optional, List, Dict, Union, Set
 from enum import Enum
 
 from arcor2.data import DataException
@@ -151,14 +151,11 @@ class ActionParameterMeta(JsonSchemaMixin):
 
     name: str
     type: str
-    allowed_values: Optional[Set[Any]] = None
     dynamic_value: bool = False  # client should ask for allowed values using RPC
     dynamic_value_parents: Optional[Set[str]] = None
     description: str = ""
-    default_value: Any = None
-    minimum: Any = None
-    maximum: Any = None
-    extra: Any = None
+    default_value: Optional[str] = None
+    extra: Optional[str] = None
 
 
 @dataclass
