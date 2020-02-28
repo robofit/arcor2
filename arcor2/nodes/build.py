@@ -78,7 +78,7 @@ def _publish(project_id: str):
                     obj_types_with_models.add(obj_type.id)
 
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
-                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value: model})
+                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})
 
                     with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
                             as model_file:
