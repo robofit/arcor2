@@ -22,11 +22,6 @@ class RelativePosePlugin(ParameterPlugin):
         param = project.action(action_id).parameter(parameter_id)
 
         try:
-            if isinstance(param.value, str):  # TODO support for str is only temporary, value should be dict!
-                return RelativePose.from_json(param.value)
-            elif isinstance(param.value, dict):
-                return RelativePose.from_dict(param.value)
-            else:
-                raise ParameterPluginException("Invalid type of parameter value!")
+            return RelativePose.from_json(param.value)
         except ValidationError as e:
             raise ParameterPluginException(e)

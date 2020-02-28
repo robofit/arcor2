@@ -1,5 +1,6 @@
 import abc
 from typing import Callable, Tuple, Any, Dict, Union, Type
+import json
 
 from typed_ast import ast3 as ast
 
@@ -46,11 +47,8 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def parse_id(cls, param: ActionParameter) -> Tuple[str, str, str]:  # TODO does it make sense here?
 
-        if not isinstance(param.value, str):
-            raise ParameterPluginException(f"Cannot parse non-str parameter {param.id}.")
-
         try:
-            obj_id, ap_id, value_id = param.value.split(".")
+            obj_id, ap_id, value_id = json.loads(param.value).split(".")
         except ValueError:
             raise ParameterPluginException(f"Parameter: {param.id} has invalid value: {param.value}.")
         return obj_id, ap_id, value_id
@@ -61,9 +59,4 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Any:
 
         param = project.action(action_id).parameter(parameter_id)
-
-        try:
-            return cls.type()(param.value)
-        except ValueError:
-            raise ParameterPluginException(f"Parameter {parameter_id} of action {action_id} has invalid param value: "
-                                           f"'{param.value}' (should be of type {cls.type().__name__}).")
+        return json.loads(param.value)

@@ -1,13 +1,22 @@
-from typing import get_type_hints, Callable
+from typing import get_type_hints, Callable, Optional, Set, Any
 from enum import Enum
+import json
+from dataclasses import dataclass
 
 from typed_ast import ast3 as ast
+from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import Project, IntEnum, Scene
 from arcor2.data.object_type import ActionParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict, ParameterPluginException
 
 # TODO move IntEnum definition here?
+
+
+@dataclass
+class IntegerEnumExtra(JsonSchemaMixin):
+
+    allowed_values: Optional[Set[Any]] = None
 
 
 class IntegerEnumPlugin(ParameterPlugin):
@@ -30,7 +39,7 @@ class IntegerEnumPlugin(ParameterPlugin):
         if not issubclass(ttype, cls.type()):
             raise ParameterPluginException(f"Type {ttype.__name__} is not subclass of {cls.type().__name__}.")
 
-        param_meta.allowed_values = ttype.set()
+        param_meta.extra = IntegerEnumExtra(ttype.set()).to_json()
 
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Enum:
@@ -46,4 +55,4 @@ class IntegerEnumPlugin(ParameterPlugin):
         if not issubclass(ttype, cls.type()):
             raise ParameterPluginException(f"Type {ttype.__name__} is not subclass of {cls.type().__name__}.")
 
-        return ttype(param.value)
+        return ttype(json.loads(param.value))
