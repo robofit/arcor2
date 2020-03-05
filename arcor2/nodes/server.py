@@ -26,8 +26,8 @@ from arcor2.source import SourceException
 from arcor2 import nodes
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
-    Joint, NamedOrientation, RobotJoints
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ModelTypeEnum, \
+    Joint, NamedOrientation, ProjectRobotJoints
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, Model3dType, \
     MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMeta
 from arcor2.data.robot import RobotMeta
@@ -573,7 +573,7 @@ async def update_ap_joints_cb(req: rpc.objects.UpdateActionPointJointsRequest) -
             joint.is_valid = True
             break
     else:
-        ap.robot_joints.append(RobotJoints(req.args.joints_id, req.args.robot_id, new_joints))
+        ap.robot_joints.append(ProjectRobotJoints(req.args.joints_id, req.args.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -617,7 +617,7 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
             joint.is_valid = True
             break
     else:
-        ap.robot_joints.append(RobotJoints(req.args.orientation_id, req.args.robot.robot_id, new_joints))
+        ap.robot_joints.append(ProjectRobotJoints(req.args.orientation_id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -788,12 +788,12 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
     obj = meta.to_object_type()
     obj.source = new_object_type_source(OBJECT_TYPES[meta.base], meta)
 
-    if meta.object_model and meta.object_model.type != ModelTypeEnum.MESH:
+    if meta.object_model and meta.object_model.type != Model3dType.MESH:
         assert meta.type == meta.object_model.model().id
         await storage.put_model(meta.object_model.model())
 
     # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
-    if meta.object_model and meta.object_model.type == ModelTypeEnum.MESH:
+    if meta.object_model and meta.object_model.type == Model3dType.MESH:
         # ...get whole mesh (focus_points) based on mesh id
         assert meta.object_model.mesh
         try:
@@ -839,7 +839,7 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest) -> Uni
 
     obj_type = OBJECT_TYPES[get_obj_type_name(obj_id)]
 
-    if not obj_type.object_model or obj_type.object_model.type != ModelTypeEnum.MESH:
+    if not obj_type.object_model or obj_type.object_model.type != Model3dType.MESH:
         return False, "Only available for objects with mesh model."
 
     assert obj_type.object_model.mesh

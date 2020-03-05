@@ -1,6 +1,6 @@
 import json
 
-from arcor2.data.common import Project, RobotJoints, Scene
+from arcor2.data.common import Project, ProjectRobotJoints, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict, ParameterPluginException
 from arcor2.services import RobotService
 
@@ -9,7 +9,7 @@ class JointsPlugin(ParameterPlugin):
 
     @classmethod
     def type(cls):
-        return RobotJoints
+        return ProjectRobotJoints
 
     @classmethod
     def type_name(cls) -> str:
@@ -17,7 +17,7 @@ class JointsPlugin(ParameterPlugin):
 
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> \
-            RobotJoints:
+            ProjectRobotJoints:
 
         param = project.action(action_id).parameter(parameter_id)
         _, ap_id, value_id = cls.parse_id(param)
