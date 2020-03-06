@@ -1,4 +1,5 @@
 import inspect
+from typing import Type
 
 from arcor2.source.services import check_service_type
 from arcor2.source import SourceException
@@ -13,12 +14,7 @@ class UploadException(Arcor2Exception):
     pass
 
 
-def upload(module_cls: str) -> None:
-
-    try:
-        _, cls = import_cls(module_cls)
-    except ImportClsException as e:
-        raise UploadException(e)
+def upload_cls(cls: Type[Service]) -> None:
 
     path = inspect.getfile(cls)
 
@@ -32,9 +28,21 @@ def upload(module_cls: str) -> None:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{cls.__name__}'.")
 
-        assert issubclass(cls, Service)
-
         srv_type = ServiceType(id=cls.__name__, source=source, desc=cls.description())
 
         print(f"Storing '{srv_type.id}'...")
         storage.update_service_type(srv_type)
+
+
+def upload(module_cls: str) -> None:
+
+    try:
+        _, cls = import_cls(module_cls)
+    except ImportClsException as e:
+        raise UploadException(e)
+
+    if not issubclass(cls, Service):
+        print("Not subclass of Service!")
+        return
+
+    upload_cls(cls)

@@ -13,6 +13,7 @@ from arcor2.services import Service
 from arcor2.docstring import parse_docstring
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
 from arcor2.source.utils import find_function
+from arcor2.service_types_utils import built_in_services
 
 SERVICES_METHOD_NAME = "from_services"
 
@@ -119,8 +120,10 @@ def built_in_types_actions(plugins: Dict[Type, Type[ParameterPlugin]]) -> Object
 
     d: ObjectActionsDict = {}
 
-    # built-in object types
-    for type_name, type_def in built_in_types():
+    # built-in object types / services
+    for type_name, type_def in (*built_in_types(), *built_in_services()):
+
+        assert issubclass(type_def, (Generic, Service))
 
         if type_name not in d:
             d[type_name] = []

@@ -29,7 +29,7 @@ from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, Scen
     Joint, NamedOrientation, ProjectRobotJoints
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, Model3dType, \
     MeshFocusAction, ObjectModel, Models
-from arcor2.data.services import ServiceTypeMeta
+from arcor2.data.services import ServiceTypeMetaDict
 from arcor2.data.robot import RobotMeta
 from arcor2.data import rpc
 from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
@@ -73,7 +73,7 @@ MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
 MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 OBJECT_TYPES: ObjectTypeMetaDict = {}
-SERVICE_TYPES: Dict[str, ServiceTypeMeta] = {}
+SERVICE_TYPES: ServiceTypeMetaDict = {}
 ROBOT_META: Dict[str, RobotMeta] = {}
 TYPE_DEF_DICT: TypesDict = {}
 
@@ -240,7 +240,7 @@ async def _initialize_server() -> None:
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
 
     await logger.info("Server initialized.")
-    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', 6789)])
+    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', int(os.getenv("ARCOR2_SERVER_PORT", 6789)))])
 
 
 async def _get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
@@ -254,13 +254,14 @@ async def _get_service_types() -> None:
 
     global SERVICE_TYPES
 
-    service_types: Dict[str, ServiceTypeMeta] = {}
+    service_types: ServiceTypeMetaDict = {}
 
     srv_ids = await storage.get_service_type_ids()
 
     for srv_id in srv_ids.items:
 
         srv_type = await storage.get_service_type(srv_id.id)
+
         try:
             type_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
             service_types[srv_id.id] = stu.meta_from_def(type_def)
@@ -445,6 +446,10 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
 
     # get services' actions
     for service_type, service_meta in SERVICE_TYPES.items():
+
+        if service_meta.built_in:
+            continue
+
         srv_type = await storage.get_service_type(service_type)
         try:
             srv_type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
@@ -1243,7 +1248,6 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
         return False, "Service already in scene."
 
     srv_type = await storage.get_service_type(srv.type)
-
     cls_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
 
     if issubclass(cls_def, RobotService) and find_robot_service():

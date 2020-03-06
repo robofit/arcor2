@@ -14,6 +14,7 @@ setup(
                       'arcor2_build = arcor2.nodes.build:main',
                       'arcor2_upload_ot = arcor2.scripts.upload_object_type:main',
                       'arcor2_swagger_models = arcor2.scripts.swagger_models:main',
+                      'arcor2_upload_services = arcor2.scripts.upload_services:main',
                       'arcor2_execution_proxy = arcor2.nodes.execution_proxy:main'
                   ],
               },
