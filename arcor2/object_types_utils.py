@@ -155,7 +155,9 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
         data = ObjectAction(name=method_name, meta=meta)
 
         doc = parse_docstring(method_def.__doc__)
-        data.description = doc["short_description"]
+        doc_short = doc["short_description"]
+        if doc_short:
+            data.description = doc_short
 
         signature = inspect.signature(method_def)
 
@@ -163,22 +165,26 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
         for name, ttype in get_type_hints(method_def).items():
 
-            if name == "return":
-                try:
-                    data.returns = ttype.__name__  # TODO remap to supported types of parameters
-                except AttributeError:
-                    data.returns = str(ttype)  # temporal workaround for stuff like typing.List[str]
-                continue
-
             try:
                 param_type = plugins[ttype]
             except KeyError:
                 for k, v in plugins.items():
-                    if not v.EXACT_TYPE and issubclass(ttype, k):
+                    if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
                         param_type = v
                         break
                 else:
+                    if name == "return":
+                        if isinstance(ttype, type(None)):
+                            # temporal workaround for so far unsupported stuff like typing.List[str]
+                            data.returns = str(ttype)
+                        # ...just ignore NoneType
+                        continue
+
                     raise ObjectTypeException(f"Unknown parameter type {ttype.__name__}.")
+
+            if name == "return":
+                data.returns = param_type.type_name()
+                continue
 
             args = ActionParameterMeta(name=name, type=param_type.type_name())
             try:
@@ -188,7 +194,9 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
             if name in type_def.DYNAMIC_PARAMS:
                 args.dynamic_value = True
-                args.dynamic_value_parents = type_def.DYNAMIC_PARAMS[name][1]
+                dvp = type_def.DYNAMIC_PARAMS[name][1]
+                if dvp:
+                    args.dynamic_value_parents = dvp
 
             def_val = signature.parameters[name].default
             if def_val is not inspect.Parameter.empty:
