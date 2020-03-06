@@ -60,3 +60,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
 
         param = project.action(action_id).parameter(parameter_id)
         return json.loads(param.value)
+
+    @classmethod
+    def value_to_json(cls, value: Any) -> str:
+        return json.dumps(value)

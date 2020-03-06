@@ -13,5 +13,5 @@ class BooleanPlugin(ParameterPlugin):
         return "boolean"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> str:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> bool:
         return cls.type()(super(BooleanPlugin, cls).value(type_defs, scene, project, action_id, parameter_id))

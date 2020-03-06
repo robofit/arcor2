@@ -31,9 +31,7 @@ from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, Model
     MeshFocusAction, ObjectModel, Models
 from arcor2.data.services import ServiceTypeMetaDict
 from arcor2.data.robot import RobotMeta
-from arcor2.data import rpc
-from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
-    ProjectStateEvent, ActionStateEvent, CurrentActionEvent
+from arcor2.data import rpc, events
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.persistent_storage import PersistentStorageException
 from arcor2 import aio_persistent_storage as storage
@@ -182,24 +180,24 @@ async def project_manager_client() -> None:
             await asyncio.sleep(delay=1.0)
 
 
-def scene_event() -> SceneChangedEvent:
+def scene_event() -> events.SceneChangedEvent:
 
-    return SceneChangedEvent(SCENE)
-
-
-def project_event() -> ProjectChangedEvent:
-
-    return ProjectChangedEvent(PROJECT)
+    return events.SceneChangedEvent(SCENE)
 
 
-async def notify(event: Event, exclude_ui=None):
+def project_event() -> events.ProjectChangedEvent:
+
+    return events.ProjectChangedEvent(PROJECT)
+
+
+async def notify(event: events.Event, exclude_ui=None):
 
     if (exclude_ui is None and INTERFACES) or (exclude_ui and len(INTERFACES) > 1):
         message = event.to_json()
         await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != exclude_ui])
 
 
-async def _notify(interface, msg_source: Callable[[], Event]):
+async def _notify(interface, msg_source: Callable[[], events.Event]):
 
     await notify(msg_source(), interface)
 
@@ -459,7 +457,7 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
 
     ACTIONS = object_actions_dict
 
-    await notify(ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
+    await notify(events.ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
 
 
 async def _check_manager() -> None:
@@ -814,7 +812,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
                                             hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, ACTIONS, OBJECT_TYPES)
 
-    asyncio.ensure_future(notify(ObjectTypesChangedEvent(data=[meta.type])))
+    asyncio.ensure_future(notify(events.ObjectTypesChangedEvent(data=[meta.type])))
     return None
 
 
@@ -1016,11 +1014,11 @@ async def register(websocket) -> None:
     resp = cast(rpc.execution.ProjectStateResponse,
                 await manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
-    await asyncio.wait([websocket.send(ProjectStateEvent(data=resp.data.project).to_json())])
+    await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
-        await asyncio.wait([websocket.send(ActionStateEvent(data=resp.data.action).to_json())])
+        await asyncio.wait([websocket.send(events.ActionStateEvent(data=resp.data.action).to_json())])
     if resp.data.action_args:
-        await asyncio.wait([websocket.send(CurrentActionEvent(data=resp.data.action_args).to_json())])
+        await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
 
 
 async def unregister(websocket) -> None:
@@ -1503,12 +1501,25 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     global RUNNING_ACTION
 
+    assert RUNNING_ACTION
+
+    evt = events.ActionResultEvent()
+    evt.data.action_id = RUNNING_ACTION
+
     try:
-        await hlp.run_in_executor(action_method, *params.values())
+        action_result = await hlp.run_in_executor(action_method, *params.values())
     except (Arcor2Exception, TypeError) as e:
         await logger.error(e)
+        evt.data.error = str(e)
+    else:
+        if action_result is not None:
+            try:
+                evt.data.result = TYPE_TO_PLUGIN[type(action_result)].value_to_json(action_result)
+            except KeyError:
+                # temporal workaround for unsupported types
+                evt.data.result = str(action_result)
 
-    # TODO send event with results
+    await notify(evt)
     RUNNING_ACTION = None
 
 
@@ -1560,7 +1571,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
     await logger.info("Updated projects: {}".format(updated_project_ids))
 
 
-async def scene_change(ui, event: SceneChangedEvent) -> None:
+async def scene_change(ui, event: events.SceneChangedEvent) -> None:
 
     global SCENE
 
@@ -1594,7 +1605,7 @@ async def scene_change(ui, event: SceneChangedEvent) -> None:
     await notify_scene_change_to_others(ui)
 
 
-async def project_change(ui, event: ProjectChangedEvent) -> None:
+async def project_change(ui, event: events.ProjectChangedEvent) -> None:
 
     global PROJECT
 
@@ -1643,8 +1654,8 @@ for k, v in nodes.execution.RPC_DICT.items():
 
 
 EVENT_DICT: hlp.EVENT_DICT_TYPE = {
-    SceneChangedEvent: scene_change,
-    ProjectChangedEvent: project_change
+    events.SceneChangedEvent: scene_change,
+    events.ProjectChangedEvent: project_change
 }
 
 

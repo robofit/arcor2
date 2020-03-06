@@ -37,3 +37,7 @@ class JointsPlugin(ParameterPlugin):
                                                f" 'robot_id' parameter, which could not be found.")
 
         return project.action_point(ap_id).get_joints(robot_id, value_id)
+
+    @classmethod
+    def value_to_json(cls, value: ProjectRobotJoints) -> str:
+        return value.to_json()
