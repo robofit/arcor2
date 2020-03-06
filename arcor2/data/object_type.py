@@ -153,7 +153,7 @@ class ActionParameterMeta(JsonSchemaMixin):
     type: str
     dynamic_value: bool = False  # client should ask for allowed values using RPC
     dynamic_value_parents: Optional[Set[str]] = None
-    description: str = ""
+    description: Optional[str] = None
     default_value: Optional[str] = None
     extra: Optional[str] = None
 
@@ -162,11 +162,11 @@ class ActionParameterMeta(JsonSchemaMixin):
 class ObjectAction(JsonSchemaMixin):  # TODO description (from docstring)
 
     name: str
-    description: str = ""
+    description: Optional[str] = None
     parameters: List[ActionParameterMeta] = field(default_factory=list)
-    returns: str = "NoneType"
-    origins: str = ""
     meta: ActionMetadata = field(default_factory=ActionMetadata)
+    origins: Optional[str] = None
+    returns: Optional[str] = None
 
 
 ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]
