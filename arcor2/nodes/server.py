@@ -26,14 +26,12 @@ from arcor2.source import SourceException
 from arcor2 import nodes
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
-    Joint, NamedOrientation, RobotJoints
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, ModelTypeEnum, \
+    Joint, NamedOrientation, ProjectRobotJoints
+from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, Model3dType, \
     MeshFocusAction, ObjectModel, Models
-from arcor2.data.services import ServiceTypeMeta
+from arcor2.data.services import ServiceTypeMetaDict
 from arcor2.data.robot import RobotMeta
-from arcor2.data import rpc
-from arcor2.data.events import ProjectChangedEvent, SceneChangedEvent, Event, ObjectTypesChangedEvent, \
-    ProjectStateEvent, ActionStateEvent, CurrentActionEvent
+from arcor2.data import rpc, events
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.persistent_storage import PersistentStorageException
 from arcor2 import aio_persistent_storage as storage
@@ -73,7 +71,7 @@ MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
 MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 OBJECT_TYPES: ObjectTypeMetaDict = {}
-SERVICE_TYPES: Dict[str, ServiceTypeMeta] = {}
+SERVICE_TYPES: ServiceTypeMetaDict = {}
 ROBOT_META: Dict[str, RobotMeta] = {}
 TYPE_DEF_DICT: TypesDict = {}
 
@@ -182,24 +180,24 @@ async def project_manager_client() -> None:
             await asyncio.sleep(delay=1.0)
 
 
-def scene_event() -> SceneChangedEvent:
+def scene_event() -> events.SceneChangedEvent:
 
-    return SceneChangedEvent(SCENE)
-
-
-def project_event() -> ProjectChangedEvent:
-
-    return ProjectChangedEvent(PROJECT)
+    return events.SceneChangedEvent(SCENE)
 
 
-async def notify(event: Event, exclude_ui=None):
+def project_event() -> events.ProjectChangedEvent:
+
+    return events.ProjectChangedEvent(PROJECT)
+
+
+async def notify(event: events.Event, exclude_ui=None):
 
     if (exclude_ui is None and INTERFACES) or (exclude_ui and len(INTERFACES) > 1):
         message = event.to_json()
         await asyncio.wait([intf.send(message) for intf in INTERFACES if intf != exclude_ui])
 
 
-async def _notify(interface, msg_source: Callable[[], Event]):
+async def _notify(interface, msg_source: Callable[[], events.Event]):
 
     await notify(msg_source(), interface)
 
@@ -240,7 +238,7 @@ async def _initialize_server() -> None:
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
 
     await logger.info("Server initialized.")
-    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', 6789)])
+    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', int(os.getenv("ARCOR2_SERVER_PORT", 6789)))])
 
 
 async def _get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
@@ -254,13 +252,14 @@ async def _get_service_types() -> None:
 
     global SERVICE_TYPES
 
-    service_types: Dict[str, ServiceTypeMeta] = {}
+    service_types: ServiceTypeMetaDict = {}
 
     srv_ids = await storage.get_service_type_ids()
 
     for srv_id in srv_ids.items:
 
         srv_type = await storage.get_service_type(srv_id.id)
+
         try:
             type_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
             service_types[srv_id.id] = stu.meta_from_def(type_def)
@@ -445,6 +444,10 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
 
     # get services' actions
     for service_type, service_meta in SERVICE_TYPES.items():
+
+        if service_meta.built_in:
+            continue
+
         srv_type = await storage.get_service_type(service_type)
         try:
             srv_type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
@@ -454,7 +457,7 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
 
     ACTIONS = object_actions_dict
 
-    await notify(ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
+    await notify(events.ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
 
 
 async def _check_manager() -> None:
@@ -573,7 +576,7 @@ async def update_ap_joints_cb(req: rpc.objects.UpdateActionPointJointsRequest) -
             joint.is_valid = True
             break
     else:
-        ap.robot_joints.append(RobotJoints(req.args.joints_id, req.args.robot_id, new_joints))
+        ap.robot_joints.append(ProjectRobotJoints(req.args.joints_id, req.args.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -617,7 +620,7 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
             joint.is_valid = True
             break
     else:
-        ap.robot_joints.append(RobotJoints(req.args.orientation_id, req.args.robot.robot_id, new_joints))
+        ap.robot_joints.append(ProjectRobotJoints(req.args.orientation_id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notify_project_change_to_others())
     return None
@@ -788,12 +791,12 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
     obj = meta.to_object_type()
     obj.source = new_object_type_source(OBJECT_TYPES[meta.base], meta)
 
-    if meta.object_model and meta.object_model.type != ModelTypeEnum.MESH:
+    if meta.object_model and meta.object_model.type != Model3dType.MESH:
         assert meta.type == meta.object_model.model().id
         await storage.put_model(meta.object_model.model())
 
     # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
-    if meta.object_model and meta.object_model.type == ModelTypeEnum.MESH:
+    if meta.object_model and meta.object_model.type == Model3dType.MESH:
         # ...get whole mesh (focus_points) based on mesh id
         assert meta.object_model.mesh
         try:
@@ -809,7 +812,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
                                             hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, ACTIONS, OBJECT_TYPES)
 
-    asyncio.ensure_future(notify(ObjectTypesChangedEvent(data=[meta.type])))
+    asyncio.ensure_future(notify(events.ObjectTypesChangedEvent(data=[meta.type])))
     return None
 
 
@@ -839,7 +842,7 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest) -> Uni
 
     obj_type = OBJECT_TYPES[get_obj_type_name(obj_id)]
 
-    if not obj_type.object_model or obj_type.object_model.type != ModelTypeEnum.MESH:
+    if not obj_type.object_model or obj_type.object_model.type != Model3dType.MESH:
         return False, "Only available for objects with mesh model."
 
     assert obj_type.object_model.mesh
@@ -1011,11 +1014,11 @@ async def register(websocket) -> None:
     resp = cast(rpc.execution.ProjectStateResponse,
                 await manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
-    await asyncio.wait([websocket.send(ProjectStateEvent(data=resp.data.project).to_json())])
+    await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
-        await asyncio.wait([websocket.send(ActionStateEvent(data=resp.data.action).to_json())])
+        await asyncio.wait([websocket.send(events.ActionStateEvent(data=resp.data.action).to_json())])
     if resp.data.action_args:
-        await asyncio.wait([websocket.send(CurrentActionEvent(data=resp.data.action_args).to_json())])
+        await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
 
 
 async def unregister(websocket) -> None:
@@ -1243,7 +1246,6 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
         return False, "Service already in scene."
 
     srv_type = await storage.get_service_type(srv.type)
-
     cls_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
 
     if issubclass(cls_def, RobotService) and find_robot_service():
@@ -1499,12 +1501,25 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     global RUNNING_ACTION
 
+    assert RUNNING_ACTION
+
+    evt = events.ActionResultEvent()
+    evt.data.action_id = RUNNING_ACTION
+
     try:
-        await hlp.run_in_executor(action_method, *params.values())
+        action_result = await hlp.run_in_executor(action_method, *params.values())
     except (Arcor2Exception, TypeError) as e:
         await logger.error(e)
+        evt.data.error = str(e)
+    else:
+        if action_result is not None:
+            try:
+                evt.data.result = TYPE_TO_PLUGIN[type(action_result)].value_to_json(action_result)
+            except KeyError:
+                # temporal workaround for unsupported types
+                evt.data.result = str(action_result)
 
-    # TODO send event with results
+    await notify(evt)
     RUNNING_ACTION = None
 
 
@@ -1556,7 +1571,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
     await logger.info("Updated projects: {}".format(updated_project_ids))
 
 
-async def scene_change(ui, event: SceneChangedEvent) -> None:
+async def scene_change(ui, event: events.SceneChangedEvent) -> None:
 
     global SCENE
 
@@ -1590,7 +1605,7 @@ async def scene_change(ui, event: SceneChangedEvent) -> None:
     await notify_scene_change_to_others(ui)
 
 
-async def project_change(ui, event: ProjectChangedEvent) -> None:
+async def project_change(ui, event: events.ProjectChangedEvent) -> None:
 
     global PROJECT
 
@@ -1639,8 +1654,8 @@ for k, v in nodes.execution.RPC_DICT.items():
 
 
 EVENT_DICT: hlp.EVENT_DICT_TYPE = {
-    SceneChangedEvent: scene_change,
-    ProjectChangedEvent: project_change
+    events.SceneChangedEvent: scene_change,
+    events.ProjectChangedEvent: project_change
 }
 
 

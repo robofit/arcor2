@@ -11,12 +11,13 @@ from arcor2.parameter_plugins.pose import PosePlugin
 from arcor2.parameter_plugins.relative_pose import RelativePosePlugin
 from arcor2.parameter_plugins.string import StringPlugin
 from arcor2.parameter_plugins.string_enum import StringEnumPlugin
+from arcor2.parameter_plugins.boolean import BooleanPlugin
 
 PARAM_PLUGINS: Dict[str, Type[ParameterPlugin]] = {}
 
 # TODO temporary solution
 PLUGINS = [DoublePlugin, IntegerPlugin, IntegerEnumPlugin, JointsPlugin, PosePlugin, RelativePosePlugin,
-           StringPlugin, StringEnumPlugin]
+           StringPlugin, StringEnumPlugin, BooleanPlugin]
 TYPE_TO_PLUGIN: Dict[Type, Type[ParameterPlugin]] = {}
 
 for plug in PLUGINS:

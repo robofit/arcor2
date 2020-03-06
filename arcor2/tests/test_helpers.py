@@ -42,7 +42,8 @@ def test_camel_case_to_snake_case(input, output):
 @pytest.mark.parametrize('input,output', [
     ("snake_case_str", "SnakeCaseStr"),
     ("SnakeCaseStr", "SnakeCaseStr"),
-    ("snake", "Snake")
+    ("snake", "Snake"),
+    ("abc", "Abc")
 ])
 def test_snake_case_to_camel_case(input, output):
     assert hlp.snake_case_to_camel_case(input) == output
@@ -51,9 +52,13 @@ def test_snake_case_to_camel_case(input, output):
 @pytest.mark.parametrize('val', [
     "valid",
     "valid_ident",
+    "abc",
     pytest.param("InvalidIdent", marks=pytest.mark.xfail),
     pytest.param("invalid ident", marks=pytest.mark.xfail),
-    pytest.param("invalid?ident", marks=pytest.mark.xfail)
+    pytest.param("invalid?ident", marks=pytest.mark.xfail),
+    pytest.param("Abc", marks=pytest.mark.xfail),
+    pytest.param("def", marks=pytest.mark.xfail),
+    pytest.param("class", marks=pytest.mark.xfail)
 ])
 def test_is_valid_identifier(val):
     assert hlp.is_valid_identifier(val)
@@ -64,7 +69,8 @@ def test_is_valid_identifier(val):
     "ValidType",
     pytest.param("invalid_type", marks=pytest.mark.xfail),
     pytest.param("Invalid Type", marks=pytest.mark.xfail),
-    pytest.param("invalid?type", marks=pytest.mark.xfail)
+    pytest.param("invalid?type", marks=pytest.mark.xfail),
+    pytest.param("abc", marks=pytest.mark.xfail)
 ])
 def test_is_valid_type(val):
     assert hlp.is_valid_type(val)

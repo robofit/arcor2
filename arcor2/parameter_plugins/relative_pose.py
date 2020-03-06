@@ -25,3 +25,7 @@ class RelativePosePlugin(ParameterPlugin):
             return RelativePose.from_json(param.value)
         except ValidationError as e:
             raise ParameterPluginException(e)
+
+    @classmethod
+    def value_to_json(cls, value: RelativePose) -> str:
+        return value.to_json()

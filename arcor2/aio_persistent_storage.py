@@ -1,5 +1,5 @@
 from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
-from arcor2.data.object_type import ObjectType, Models, ModelTypeEnum, Mesh, MeshList
+from arcor2.data.object_type import ObjectType, Models, Model3dType, Mesh, MeshList
 from arcor2.data.services import ServiceType
 from arcor2.helpers import run_in_executor
 from arcor2 import persistent_storage
@@ -14,7 +14,7 @@ async def get_meshes() -> MeshList:
     return await run_in_executor(persistent_storage.get_meshes)
 
 
-async def get_model(model_id: str, model_type: ModelTypeEnum) -> Models:
+async def get_model(model_id: str, model_type: Model3dType) -> Models:
     return await run_in_executor(persistent_storage.get_model, model_id, model_type)
 
 

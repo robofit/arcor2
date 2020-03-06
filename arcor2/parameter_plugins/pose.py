@@ -13,3 +13,7 @@ class PosePlugin(ParameterPlugin):
 
         obj_id, ap_id, value_id = cls.parse_id(project.action(action_id).parameter(parameter_id))
         return project.action_point(ap_id).pose(value_id)
+
+    @classmethod
+    def value_to_json(cls, value: Pose) -> str:
+        return value.to_json()

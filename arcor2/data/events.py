@@ -99,6 +99,21 @@ class ActionStateEvent(Event):
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
+@dataclass
+class ActionResult(JsonSchemaMixin):
+
+    action_id: str = ""
+    result: Optional[str] = field(default=None, metadata=dict(description="JSON-encoded result of the action."))
+    error: Optional[str] = None
+
+
+@dataclass
+class ActionResultEvent(Event):
+
+    data: ActionResult = field(default_factory=ActionResult)
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
 """
 ------------------------------------------------------------------------------------------------------------------------
 Objects
