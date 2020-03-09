@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 
 from PIL.Image import Image  # type: ignore
 import PIL.Image  # type: ignore
@@ -27,6 +28,9 @@ class ImagePlugin(ParameterPlugin):
 
     @classmethod
     def value_to_json(cls, value: Image) -> str:
-        b64_bytes = base64.b64encode(value.tobytes())
-        b64_str = b64_bytes.decode()
-        return b64_str
+
+        with io.BytesIO() as output:
+            value.save(output, "jpeg")
+            b64_bytes = base64.b64encode(output.getvalue())
+            b64_str = b64_bytes.decode()
+            return json.dumps(b64_str)
