@@ -132,6 +132,10 @@ def built_in_types_actions(plugins: Dict[Type, Type[ParameterPlugin]]) -> Object
     return d
 
 
+class IgnoreActionException(Arcor2Exception):
+    pass
+
+
 def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[Type[Generic], Type[Service]],
                    source: str) -> ObjectActions:
 
@@ -163,51 +167,54 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
         method_tree = find_function(method_name, tree)
 
-        for name, ttype in get_type_hints(method_def).items():
+        try:
+            for name, ttype in get_type_hints(method_def).items():
 
-            try:
-                param_type = plugins[ttype]
-            except KeyError:
-                for k, v in plugins.items():
-                    if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
-                        param_type = v
-                        break
-                else:
-                    if name == "return":
-                        if isinstance(ttype, type(None)):
-                            # temporal workaround for so far unsupported stuff like typing.List[str]
-                            data.returns = str(ttype)
-                        # ...just ignore NoneType
-                        continue
+                try:
+                    param_type = plugins[ttype]
+                except KeyError:
+                    for k, v in plugins.items():
+                        if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
+                            param_type = v
+                            break
+                    else:
+                        if name == "return" and ttype == type(None):  # noqa: E721
+                            # ...just ignore NoneType for returns
+                            continue
 
-                    raise ObjectTypeException(f"Unknown parameter type {ttype.__name__}.")
+                        # ignore action with unknown parameter type
+                        raise IgnoreActionException(f"Parameter {name} has unknown type {ttype}.")
 
-            if name == "return":
-                data.returns = param_type.type_name()
-                continue
+                if name == "return":
+                    data.returns = param_type.type_name()
+                    continue
 
-            args = ActionParameterMeta(name=name, type=param_type.type_name())
-            try:
-                param_type.meta(args, method_def, method_tree)
-            except ParameterPluginException as e:
-                raise ObjectTypeException(e)
+                args = ActionParameterMeta(name=name, type=param_type.type_name())
+                try:
+                    param_type.meta(args, method_def, method_tree)
+                except ParameterPluginException as e:
+                    raise ObjectTypeException(e)
 
-            if name in type_def.DYNAMIC_PARAMS:
-                args.dynamic_value = True
-                dvp = type_def.DYNAMIC_PARAMS[name][1]
-                if dvp:
-                    args.dynamic_value_parents = dvp
+                if name in type_def.DYNAMIC_PARAMS:
+                    args.dynamic_value = True
+                    dvp = type_def.DYNAMIC_PARAMS[name][1]
+                    if dvp:
+                        args.dynamic_value_parents = dvp
 
-            def_val = signature.parameters[name].default
-            if def_val is not inspect.Parameter.empty:
-                args.default_value = def_val
+                def_val = signature.parameters[name].default
+                if def_val is not inspect.Parameter.empty:
+                    args.default_value = def_val
 
-            try:
-                args.description = doc["params"][name].strip()
-            except KeyError:
-                pass
+                try:
+                    args.description = doc["params"][name].strip()
+                except KeyError:
+                    pass
 
-            data.parameters.append(args)
+                data.parameters.append(args)
+
+        except IgnoreActionException:
+            # TODO let the user know somehow...
+            continue
 
         ret.append(data)
 

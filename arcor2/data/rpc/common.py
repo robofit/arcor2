@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Set
 import re
 
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -65,6 +65,7 @@ class SystemInfoData(JsonSchemaMixin):
 
     version: str = ""
     api_version: str = ""
+    supported_parameter_types: Set[str] = field(default_factory=set)
 
 
 @dataclass
