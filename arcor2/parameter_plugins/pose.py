@@ -36,7 +36,13 @@ class PoseListPlugin(ListParameterPlugin):
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) \
             -> List[Pose]:
-        return super(PoseListPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
+
+        ret: List[Pose] = []
+
+        for obj_id, ap_id, value_id in cls.parse_list_id(project.action(action_id).parameter(parameter_id)):
+            ret.append(project.action_point(ap_id).pose(value_id))
+
+        return ret
 
     @classmethod
     def value_to_json(cls, value: List[Pose]) -> str:
