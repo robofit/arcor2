@@ -135,7 +135,7 @@ class BroadcastProtocol(asyncio.DatagramProtocol):
 
     def broadcast(self):
         self.transport.sendto(BroadcastInfo(socket.gethostname(), PORT).to_json().encode(), self.target)
-        self.loop.call_later(5, self.broadcast)
+        self.loop.call_later(1, self.broadcast)
 
 
 class RobotPoseException(Arcor2Exception):
