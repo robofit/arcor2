@@ -6,6 +6,7 @@ import tempfile
 import shutil
 import argparse
 import json
+import logging
 
 from typing import Set
 
@@ -21,11 +22,17 @@ from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_actions_class, global_action_points_class
 from arcor2.source import SourceException
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.helpers import camel_case_to_snake_case
+from arcor2.helpers import camel_case_to_snake_case, logger_formatter
 from arcor2.data.object_type import ObjectModel
 
 PORT = 5007
 SERVICE_NAME = "ARCOR2 Build Service"
+
+logger = logging.getLogger("build")
+ch = logging.StreamHandler()
+ch.setFormatter(logger_formatter())
+logger.setLevel(logging.INFO)
+logger.addHandler(ch)
 
 # Create an APISpec
 spec = APISpec(
@@ -93,6 +100,7 @@ def _publish(project_id: str):
                     srv_file.write(srv.source)
 
         except ps.PersistentStorageException as e:
+            logger.exception("Failed to get something from the project service.")
             return str(e), 404
 
         try:
@@ -109,11 +117,14 @@ def _publish(project_id: str):
                         try:
                             horast.parse(script)
                         except SyntaxError:
+                            logger.exception("Failed to parse code of the uploaded script.")
                             return "Invalid code.", 501
 
                         script_file.write(script)
 
                     except ps.PersistentStorageException:
+
+                        logger.info("Script not found on project service, creating one from scratch.")
 
                         # write script without the main loop
                         script_file.write(program_src(project, scene, built_in_types_names(), False))
@@ -128,6 +139,7 @@ def _publish(project_id: str):
                 aps.write(global_action_points_class(project))
 
         except SourceException as e:
+            logger.exception("Failed to generate script.")
             return str(e), 501
 
         archive_path = os.path.join(tmpdirname, "arcor2_project")
