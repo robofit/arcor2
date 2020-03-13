@@ -384,3 +384,10 @@ class CurrentAction(JsonSchemaMixin):
 
     action_id: str = ""
     args: List[ActionParameter] = field(default_factory=list)
+
+
+@dataclass
+class BroadcastInfo(JsonSchemaMixin):
+
+    host: str
+    port: int
