@@ -8,6 +8,7 @@ import asyncio
 import importlib
 import re
 import keyword
+import logging
 
 from dataclasses_jsonschema import ValidationError
 
@@ -31,6 +32,8 @@ RPC_DICT_TYPE = Dict[Type[Request], Any]
 # EVENT_DICT_TYPE = Dict[Type[Event], Callable[[Any, Event], Coroutine[Any, Any, None]]]
 EVENT_DICT_TYPE = Dict[Type[Event], Any]
 
+LOG_FORMAT = '%(name)s - %(levelname)-8s: %(message)s'
+
 
 class ImportClsException(Arcor2Exception):
     pass
@@ -42,7 +45,12 @@ class TypeDefException(Arcor2Exception):
 
 def aiologger_formatter() -> Formatter:
 
-    return Formatter('%(name)s - %(levelname)-8s: %(message)s')
+    return Formatter(LOG_FORMAT)
+
+
+def logger_formatter() -> logging.Formatter:
+
+    return logging.Formatter(LOG_FORMAT)
 
 
 def import_cls(module_cls: str) -> Tuple[ModuleType, Type[Any]]:
