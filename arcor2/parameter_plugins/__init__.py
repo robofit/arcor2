@@ -1,27 +1,29 @@
-from typing import Dict, Type
+from typing import Dict, Type, Set
 import inspect
+import pkgutil
+import importlib
 
-# TODO just temporary solution
+# TODO just temporary solution - allow loading plugins based on env. var or from project service?
+from arcor2 import parameter_plugins
 from arcor2.parameter_plugins.base import ParameterPlugin
-from arcor2.parameter_plugins.double import DoublePlugin
-from arcor2.parameter_plugins.integer import IntegerPlugin
-from arcor2.parameter_plugins.integer_enum import IntegerEnumPlugin
-from arcor2.parameter_plugins.joints import JointsPlugin
-from arcor2.parameter_plugins.pose import PosePlugin
-from arcor2.parameter_plugins.relative_pose import RelativePosePlugin
-from arcor2.parameter_plugins.string import StringPlugin
-from arcor2.parameter_plugins.string_enum import StringEnumPlugin
-from arcor2.parameter_plugins.boolean import BooleanPlugin
 
 PARAM_PLUGINS: Dict[str, Type[ParameterPlugin]] = {}
 
-# TODO temporary solution
-PLUGINS = [DoublePlugin, IntegerPlugin, IntegerEnumPlugin, JointsPlugin, PosePlugin, RelativePosePlugin,
-           StringPlugin, StringEnumPlugin, BooleanPlugin]
+PLUGINS: Set[Type[ParameterPlugin]] = set()
+
+for _, module_name, _ in pkgutil.iter_modules(parameter_plugins.__path__):  # type: ignore
+
+    module = importlib.import_module(f"arcor2.parameter_plugins.{module_name}")
+
+    for name, obj in inspect.getmembers(module):
+        if not inspect.isclass(obj) or inspect.isabstract(obj) or not issubclass(obj, ParameterPlugin):
+            continue
+        PLUGINS.add(obj)
+
+
 TYPE_TO_PLUGIN: Dict[Type, Type[ParameterPlugin]] = {}
 
 for plug in PLUGINS:
-    assert not inspect.isabstract(plug)
     if plug.type_name() in PARAM_PLUGINS:
         print(f"Plugin for type {plug.type_name()} already registered.")
         continue

@@ -1471,6 +1471,7 @@ async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.
     resp = rpc.common.SystemInfoResponse()
     resp.data.version = arcor2.version()
     resp.data.api_version = arcor2.api_version()
+    resp.data.supported_parameter_types = set(PARAM_PLUGINS.keys())
     return resp
 
 

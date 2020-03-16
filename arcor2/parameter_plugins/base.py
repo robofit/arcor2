@@ -59,7 +59,10 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Any:
 
         param = project.action(action_id).parameter(parameter_id)
-        return json.loads(param.value)
+        try:
+            return json.loads(param.value)
+        except json.decoder.JSONDecodeError as e:
+            raise ParameterPluginException(f"Value of {action_id}/{parameter_id} is not a valid JSON.", e)
 
     @classmethod
     def value_to_json(cls, value: Any) -> str:
