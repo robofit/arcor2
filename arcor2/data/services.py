@@ -25,6 +25,8 @@ class ServiceTypeMeta(JsonSchemaMixin):
     description: str = field(default_factory=str)
     configuration_ids: Set[str] = field(default_factory=set)
     built_in: bool = False
+    disabled: bool = False
+    problem: Optional[str] = None
 
 
 ServiceTypeMetaDict = Dict[str, ServiceTypeMeta]
