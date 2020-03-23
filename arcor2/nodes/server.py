@@ -233,7 +233,7 @@ async def _initialize_server() -> None:
         except storage.PersistentStorageException:
             await asyncio.sleep(1)
 
-    await asyncio.wait([_get_object_types(), _get_service_types()])
+    await asyncio.wait([_get_service_types(), _get_object_types()])
     await asyncio.wait([_get_object_actions(), _check_manager()])
 
     bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
@@ -291,11 +291,23 @@ async def _get_object_types() -> None:
         obj = await storage.get_object_type(obj_id.id)
         try:
             type_def = hlp.type_def_from_source(obj.source, obj.id, Generic)
-            object_types[obj.id] = otu.meta_from_def(type_def)
+            meta = otu.meta_from_def(type_def)
+            object_types[obj.id] = meta
         except (otu.ObjectTypeException, hlp.TypeDefException) as e:
             await logger.exception(f"Disabling object type {obj.id}.")
             object_types[obj.id] = ObjectTypeMeta(obj_id.id, "Object type disabled.", disabled=True, problem=str(e))
             continue
+
+        for srv in meta.needs_services:
+            try:
+                if SERVICE_TYPES[srv].disabled:
+                    meta.disabled = True
+                    meta.problem = f"Depends on disabled service '{srv}'."
+                    break
+            except KeyError:
+                meta.disabled = True
+                meta.problem = f"Depends on unknown service '{srv}'."
+                break
 
         TYPE_DEF_DICT[obj.id] = type_def
 
