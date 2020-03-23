@@ -373,12 +373,12 @@ async def open_scene(scene_id: str):
     for srv in SCENE.services:
         res, msg = await add_service_to_scene(srv)
         if not res:
-            await logger.error(msg)
+            raise Arcor2Exception(msg)
 
     for obj in SCENE.objects:
         res, msg = await add_object_to_scene(obj, add_to_scene=False, srv_obj_ok=True)
         if not res:
-            await logger.error(msg)
+            raise Arcor2Exception(msg)
 
     assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
     assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
@@ -391,16 +391,14 @@ async def open_project(project_id: str) -> None:
     global PROJECT
 
     PROJECT = await storage.get_project(project_id)
-    await open_scene(PROJECT.scene_id)
+    res, msg = await open_scene(PROJECT.scene_id)
+    if not res:
+        raise Arcor2Exception(msg)
 
     assert SCENE
     for obj in PROJECT.objects:
-        try:
-            scene_obj = SCENE.object_or_service(obj.id)
-        except Arcor2Exception as e:
-            await logger.error(e)
-            # TODO remove object from project?
-            continue
+        # TODO how to handle missing object?
+        scene_obj = SCENE.object_or_service(obj.id)
         obj.uuid = scene_obj.uuid
 
     asyncio.ensure_future(notify_project_change_to_others())
@@ -410,7 +408,11 @@ async def open_project(project_id: str) -> None:
 async def open_scene_cb(req: rpc.scene_project.OpenSceneRequest) -> Union[rpc.scene_project.OpenSceneResponse,
                                                                           hlp.RPC_RETURN_TYPES]:
 
-    await open_scene(req.args.id)
+    try:
+        await open_scene(req.args.id)
+    except Arcor2Exception as e:
+        await logger.exception(f"Failed to open scene {req.args.id}.")
+        return False, str(e)
     return None
 
 
@@ -418,7 +420,12 @@ async def open_project_cb(req: rpc.scene_project.OpenProjectRequest) -> Union[rp
                                                                               hlp.RPC_RETURN_TYPES]:
 
     # TODO validate using project_problems?
-    await open_project(req.args.id)
+    try:
+        await open_project(req.args.id)
+    except Arcor2Exception as e:
+        await logger.exception(f"Failed to open project {req.args.id}.")
+        return False, str(e)
+
     return None
 
 
