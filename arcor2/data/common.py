@@ -4,6 +4,7 @@
 from typing import List, Any, Iterator, Optional, Tuple, Set, Dict, Union
 from enum import Enum, unique
 from uuid import UUID, uuid4
+from datetime import datetime
 
 from json import JSONEncoder
 from dataclasses import dataclass, field
@@ -94,7 +95,8 @@ class Orientation(IterableIndexable):
 @dataclass
 class NamedOrientation(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
     orientation: Orientation
 
 
@@ -124,7 +126,8 @@ class Joint(JsonSchemaMixin):
 @dataclass
 class ProjectRobotJoints(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
     robot_id: str
     joints: List[Joint]
     is_valid: bool = False
@@ -133,7 +136,9 @@ class ProjectRobotJoints(JsonSchemaMixin):
 @dataclass
 class ActionPoint(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
+    parent: str
     position: Position
     orientations: List[NamedOrientation] = field(default_factory=list)
     robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
@@ -156,7 +161,8 @@ class ActionPoint(JsonSchemaMixin):
 @dataclass
 class SceneObject(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
     type: str
     pose: Pose
     uuid: Optional[UUID] = None
@@ -183,10 +189,12 @@ class SceneService(JsonSchemaMixin):
 @dataclass
 class Scene(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
     objects: List[SceneObject] = field(default_factory=list)
     services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
+    last_modified: Optional[datetime] = None
 
     def __post_init__(self):
 
@@ -233,7 +241,8 @@ class ActionIO(JsonSchemaMixin):
 @dataclass
 class Action(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
     type: str
     parameters: List[ActionParameter] = field(default_factory=list)
     inputs: List[ActionIO] = field(default_factory=list)
@@ -266,7 +275,6 @@ class Action(JsonSchemaMixin):
 class ProjectActionPoint(ActionPoint):
 
     actions: List[Action] = field(default_factory=list)
-    uuid: Optional[UUID] = None
 
     def __post_init__(self):
 
@@ -285,33 +293,34 @@ class ProjectObject(JsonSchemaMixin):
 @dataclass
 class Project(JsonSchemaMixin):
 
-    id: str
+    id: UUID
+    user_id: str
     scene_id: str
-    objects: List[ProjectObject] = field(default_factory=list)
+    action_points: List[ProjectActionPoint] = field(default_factory=list)
     desc: str = field(default_factory=str)
     has_logic: bool = True
+    last_modified: Optional[datetime] = None
 
     def __post_init__(self):
 
-        self._action_cache: Dict[str, Action] = {}
-        self._ap_cache: Dict[str, ActionPoint] = {}
+        self._action_cache: Dict[UUID, Action] = {}
+        self._ap_cache: Dict[UUID, ActionPoint] = {}
 
     def _build_cache(self):
 
-        for obj in self.objects:
-            for aps in obj.action_points:
-                assert aps.id not in self._ap_cache, "Action point ID not unique."
-                self._ap_cache[aps.id] = aps
-                for act in aps.actions:
-                    assert act.id not in self._action_cache, "Action ID not unique."
-                    self._action_cache[act.id] = act
+        for aps in self.action_points:
+            assert aps.id not in self._ap_cache, "Action point ID not unique."
+            self._ap_cache[aps.id] = aps
+            for act in aps.actions:
+                assert act.id not in self._action_cache, "Action ID not unique."
+                self._action_cache[act.id] = act
 
     def invalidate_cache(self):
 
         self._action_cache.clear()
         self._ap_cache.clear()
 
-    def action(self, action_id: str) -> Action:
+    def action(self, action_id: UUID) -> Action:
 
         if not self._action_cache:
             self._build_cache()
@@ -321,7 +330,7 @@ class Project(JsonSchemaMixin):
         except KeyError:
             raise Arcor2Exception("Action not found")
 
-    def action_point(self, action_point_id: str) -> ActionPoint:
+    def action_point(self, action_point_id: UUID) -> ActionPoint:
 
         if not self._ap_cache:
             self._build_cache()
