@@ -128,6 +128,8 @@ class ObjectTypeMeta(JsonSchemaMixin):
     object_model: Optional[ObjectModel] = None
     needs_services: Set[str] = field(default_factory=set)
     abstract: bool = False
+    disabled: bool = False
+    problem: Optional[str] = None
 
     def to_object_type(self) -> ObjectType:
 
@@ -167,6 +169,8 @@ class ObjectAction(JsonSchemaMixin):  # TODO description (from docstring)
     meta: ActionMetadata = field(default_factory=ActionMetadata)
     origins: Optional[str] = None
     returns: Optional[str] = None
+    disabled: bool = False
+    problem: Optional[str] = None
 
 
 ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]

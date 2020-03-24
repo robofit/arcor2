@@ -8,12 +8,11 @@ import json
 import functools
 import sys
 from typing import Dict, Set, Union, TYPE_CHECKING, Tuple, Optional, List, Callable, cast, AsyncIterator, \
-    get_type_hints, Type, Any, Text
+    get_type_hints, Type, Any
 import uuid
 import argparse
 import os
 import tempfile
-import socket
 
 import websockets
 from websockets.server import WebSocketServerProtocol
@@ -27,10 +26,10 @@ from arcor2.source import SourceException
 from arcor2 import nodes
 from arcor2 import service_types_utils as stu, object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, Project, Pose, Position, SceneObject, SceneService, ActionIOEnum,\
-    Joint, NamedOrientation, ProjectRobotJoints, BroadcastInfo
+    Joint, NamedOrientation, ProjectRobotJoints
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict, Model3dType, \
-    MeshFocusAction, ObjectModel, Models
-from arcor2.data.services import ServiceTypeMetaDict
+    MeshFocusAction, ObjectModel, Models, ObjectTypeMeta
+from arcor2.data.services import ServiceTypeMetaDict, ServiceTypeMeta
 from arcor2.data.robot import RobotMeta
 from arcor2.data import rpc, events
 from arcor2.data.helpers import RPC_MAPPING
@@ -89,53 +88,6 @@ FOCUS_OBJECT_ROBOT: Dict[str, rpc.common.RobotArg] = {}  # key: object_id
 RUNNING_ACTION: Optional[str] = None
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
-BROADCAST_PORT: int = 6006
-
-
-def get_ip() -> str:
-
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        # doesn't even have to be reachable
-        s.connect(('10.255.255.255', 1))
-        ip = s.getsockname()[0]
-    except socket.error:
-        ip = '127.0.0.1'
-    finally:
-        s.close()
-    return ip
-
-
-def get_broadcast() -> str:
-
-    ip = get_ip()
-    ip_arr = ip.split(".")
-    ip_arr[-1] = "255"
-    return ".".join(ip_arr)
-
-
-Address = Tuple[str, int]
-
-
-class BroadcastProtocol(asyncio.DatagramProtocol):
-
-    def __init__(self, target: Address, *, loop: asyncio.AbstractEventLoop = None):
-        self.target = target
-        self.loop = asyncio.get_event_loop() if loop is None else loop
-
-    def connection_made(self, transport):
-        self.transport = transport
-        sock: socket.socket = transport.get_extra_info("socket")
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.broadcast()
-
-    def datagram_received(self, data: Union[bytes, Text], addr: Address):
-        pass
-
-    def broadcast(self):
-        self.transport.sendto(BroadcastInfo(socket.gethostname(), PORT).to_json().encode(), self.target)
-        self.loop.call_later(1, self.broadcast)
 
 
 class RobotPoseException(Arcor2Exception):
@@ -281,7 +233,7 @@ async def _initialize_server() -> None:
         except storage.PersistentStorageException:
             await asyncio.sleep(1)
 
-    await asyncio.wait([_get_object_types(), _get_service_types()])
+    await asyncio.wait([_get_service_types(), _get_object_types()])
     await asyncio.wait([_get_object_actions(), _check_manager()])
 
     bound_handler = functools.partial(hlp.server, logger=logger, register=register, unregister=unregister,
@@ -313,10 +265,13 @@ async def _get_service_types() -> None:
         try:
             type_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
             service_types[srv_id.id] = stu.meta_from_def(type_def)
-            TYPE_DEF_DICT[srv_id.id] = type_def
         except Arcor2Exception as e:
-            await logger.error(f"Ignoring service type {srv_type.id}: {e}")
+            await logger.exception(f"Disabling service type {srv_type.id}.")
+            service_types[srv_id.id] = ServiceTypeMeta(srv_id.id, "Service not available.", disabled=True,
+                                                       problem=str(e))
             continue
+
+        TYPE_DEF_DICT[srv_id.id] = type_def
 
         if issubclass(type_def, RobotService):
             asyncio.ensure_future(_get_robot_meta(type_def))
@@ -336,11 +291,25 @@ async def _get_object_types() -> None:
         obj = await storage.get_object_type(obj_id.id)
         try:
             type_def = hlp.type_def_from_source(obj.source, obj.id, Generic)
-            object_types[obj.id] = otu.meta_from_def(type_def)
-            TYPE_DEF_DICT[obj.id] = type_def
+            meta = otu.meta_from_def(type_def)
+            object_types[obj.id] = meta
         except (otu.ObjectTypeException, hlp.TypeDefException) as e:
-            await logger.error(f"Ignoring object type {obj.id}: {e}")
+            await logger.exception(f"Disabling object type {obj.id}.")
+            object_types[obj.id] = ObjectTypeMeta(obj_id.id, "Object type disabled.", disabled=True, problem=str(e))
             continue
+
+        for srv in meta.needs_services:
+            try:
+                if SERVICE_TYPES[srv].disabled:
+                    meta.disabled = True
+                    meta.problem = f"Depends on disabled service '{srv}'."
+                    break
+            except KeyError:
+                meta.disabled = True
+                meta.problem = f"Depends on unknown service '{srv}'."
+                break
+
+        TYPE_DEF_DICT[obj.id] = type_def
 
         if obj.model:
             model = await storage.get_model(obj.model.id, obj.model.type)
@@ -350,19 +319,15 @@ async def _get_object_types() -> None:
         if issubclass(type_def, Robot):
             asyncio.ensure_future(_get_robot_meta(type_def))
 
-    # if description is missing, try to get it from ancestor(s), or forget the object type
-    to_delete: Set[str] = set()
-
+    # if description is missing, try to get it from ancestor(s)
     for obj_type, obj_meta in object_types.items():
-        if not obj_meta.description:
-            try:
-                obj_meta.description = otu.obj_description_from_base(object_types, obj_meta)
-            except otu.DataError as e:
-                await logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
-                to_delete.add(obj_type)
+        if obj_meta.description:
+            continue
 
-    for obj_type in to_delete:
-        del object_types[obj_type]
+        try:
+            obj_meta.description = otu.obj_description_from_base(object_types, obj_meta)
+        except otu.DataError as e:
+            await logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
 
     OBJECT_TYPES = object_types
 
@@ -420,12 +385,12 @@ async def open_scene(scene_id: str):
     for srv in SCENE.services:
         res, msg = await add_service_to_scene(srv)
         if not res:
-            await logger.error(msg)
+            raise Arcor2Exception(msg)
 
     for obj in SCENE.objects:
         res, msg = await add_object_to_scene(obj, add_to_scene=False, srv_obj_ok=True)
         if not res:
-            await logger.error(msg)
+            raise Arcor2Exception(msg)
 
     assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
     assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
@@ -438,16 +403,14 @@ async def open_project(project_id: str) -> None:
     global PROJECT
 
     PROJECT = await storage.get_project(project_id)
-    await open_scene(PROJECT.scene_id)
+    res, msg = await open_scene(PROJECT.scene_id)
+    if not res:
+        raise Arcor2Exception(msg)
 
     assert SCENE
     for obj in PROJECT.objects:
-        try:
-            scene_obj = SCENE.object_or_service(obj.id)
-        except Arcor2Exception as e:
-            await logger.error(e)
-            # TODO remove object from project?
-            continue
+        # TODO how to handle missing object?
+        scene_obj = SCENE.object_or_service(obj.id)
         obj.uuid = scene_obj.uuid
 
     asyncio.ensure_future(notify_project_change_to_others())
@@ -457,7 +420,11 @@ async def open_project(project_id: str) -> None:
 async def open_scene_cb(req: rpc.scene_project.OpenSceneRequest) -> Union[rpc.scene_project.OpenSceneResponse,
                                                                           hlp.RPC_RETURN_TYPES]:
 
-    await open_scene(req.args.id)
+    try:
+        await open_scene(req.args.id)
+    except Arcor2Exception as e:
+        await logger.exception(f"Failed to open scene {req.args.id}.")
+        return False, str(e)
     return None
 
 
@@ -465,8 +432,31 @@ async def open_project_cb(req: rpc.scene_project.OpenProjectRequest) -> Union[rp
                                                                               hlp.RPC_RETURN_TYPES]:
 
     # TODO validate using project_problems?
-    await open_project(req.args.id)
+    try:
+        await open_project(req.args.id)
+    except Arcor2Exception as e:
+        await logger.exception(f"Failed to open project {req.args.id}.")
+        return False, str(e)
+
     return None
+
+
+def valid_object_types() -> ObjectTypeMetaDict:
+    """
+    To get only valid (not disabled) types.
+    :return:
+    """
+
+    return {obj_type: obj for obj_type, obj in OBJECT_TYPES.items() if not obj.disabled}
+
+
+def valid_service_types() -> ServiceTypeMetaDict:
+    """
+    To get only valid (not disabled) types.
+    :return:
+    """
+
+    return {srv_type: srv for srv_type, srv in SERVICE_TYPES.items() if not srv.disabled}
 
 
 async def _get_object_actions() -> None:  # TODO do it in parallel
@@ -475,7 +465,9 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
 
     object_actions_dict: ObjectActionsDict = otu.built_in_types_actions(TYPE_TO_PLUGIN)
 
-    for obj_type, obj in OBJECT_TYPES.items():
+    valid_types = valid_object_types()
+
+    for obj_type, obj in valid_types.items():
 
         if obj.built_in:  # built-in types are already there
             continue
@@ -489,11 +481,11 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
             await logger.error(e)
 
     # add actions from ancestors
-    for obj_type in OBJECT_TYPES.keys():
+    for obj_type in valid_types.keys():
         otu.add_ancestor_actions(obj_type, object_actions_dict, OBJECT_TYPES)
 
     # get services' actions
-    for service_type, service_meta in SERVICE_TYPES.items():
+    for service_type, service_meta in valid_service_types().items():
 
         if service_meta.built_in:
             continue
@@ -502,8 +494,8 @@ async def _get_object_actions() -> None:  # TODO do it in parallel
         try:
             srv_type_def = hlp.type_def_from_source(srv_type.source, service_type, Service)
             object_actions_dict[service_type] = otu.object_actions(TYPE_TO_PLUGIN, srv_type_def, srv_type.source)
-        except (hlp.TypeDefException, otu.ObjectTypeException) as e:
-            await logger.warning(e)
+        except Arcor2Exception:
+            await logger.exception(f"Error while processing service type {service_type}")
 
     ACTIONS = object_actions_dict
 
@@ -1118,9 +1110,12 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
 
     obj_meta = OBJECT_TYPES[obj.type]
 
+    if obj_meta.disabled:
+        return False, "Object type disabled."
+
     if srv_obj_ok:  # just for internal usage
 
-        if not obj_meta.needs_services <= SERVICE_TYPES.keys():
+        if not obj_meta.needs_services <= valid_service_types().keys():
             return False, "Some of required services is not available."
 
         if not obj_meta.needs_services <= SERVICES_INSTANCES.keys():
@@ -1207,7 +1202,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
     if obj_meta.abstract:
         return False, "Cannot instantiate abstract type."
 
-    if not obj_meta.needs_services <= SERVICE_TYPES.keys():
+    if not obj_meta.needs_services <= valid_service_types().keys():
         return False, "Some of required services is not available."
 
     if not obj_meta.needs_services <= SERVICES_INSTANCES.keys():
@@ -1291,6 +1286,9 @@ async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
 
     if srv.type not in SERVICE_TYPES:
         return False, "Unknown service type."
+
+    if SERVICE_TYPES[srv.type].disabled:
+        return False, "Service is disabled."
 
     if srv.type in SERVICES_INSTANCES:
         return False, "Service already in scene."
@@ -1660,6 +1658,7 @@ async def project_change(ui, event: events.ProjectChangedEvent) -> None:
 
     global PROJECT
 
+    # TODO check if all types/actions are valid (not disabled) or make RPC for all changes?
     PROJECT = event.data
 
     await notify_project_change_to_others(ui)
@@ -1731,12 +1730,7 @@ def main():
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
 
-    broadcast_coro = loop.create_datagram_endpoint(lambda: BroadcastProtocol((get_broadcast(), BROADCAST_PORT),
-                                                                             loop=loop),
-                                                   local_addr=('0.0.0.0', BROADCAST_PORT))
-
-    loop.run_until_complete(asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server(),
-                                                         broadcast_coro)]))
+    loop.run_until_complete(asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())]))
 
 
 if __name__ == "__main__":

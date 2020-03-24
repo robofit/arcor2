@@ -183,7 +183,8 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
                             continue
 
                         # ignore action with unknown parameter type
-                        raise IgnoreActionException(f"Parameter {name} has unknown type {ttype}.")
+                        raise IgnoreActionException(f"Parameter {name} of action {method_name}"
+                                                    f" has unknown type {ttype}.")
 
                 if name == "return":
                     data.returns = param_type.type_name()
@@ -193,7 +194,8 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
                 try:
                     param_type.meta(args, method_def, method_tree)
                 except ParameterPluginException as e:
-                    raise ObjectTypeException(e)
+                    # TODO log exception
+                    raise IgnoreActionException(e)
 
                 if name in type_def.DYNAMIC_PARAMS:
                     args.dynamic_value = True
@@ -212,9 +214,10 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
                 data.parameters.append(args)
 
-        except IgnoreActionException:
-            # TODO let the user know somehow...
-            continue
+        except IgnoreActionException as e:
+            data.disabled = True
+            data.problem = str(e)
+            # TODO log exception
 
         ret.append(data)
 
