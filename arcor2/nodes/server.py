@@ -389,21 +389,22 @@ async def save_project_cb(req: rpc.scene_project.SaveProjectRequest) -> Union[rp
 async def open_scene(scene_id: str):
 
     global SCENE
-    SCENE = await storage.get_scene(scene_id)
+    scene = await storage.get_scene(scene_id)
 
-    for srv in SCENE.services:
+    for srv in scene.services:
         res, msg = await add_service_to_scene(srv)
         if not res:
             raise Arcor2Exception(msg)
 
-    for obj in SCENE.objects:
+    for obj in scene.objects:
         res, msg = await add_object_to_scene(obj, add_to_scene=False, srv_obj_ok=True)
         if not res:
             raise Arcor2Exception(msg)
 
-    assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
-    assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
+    assert {srv.type for srv in scene.services} == SERVICES_INSTANCES.keys()
+    assert {obj.id for obj in scene.objects} == SCENE_OBJECT_INSTANCES.keys()
 
+    SCENE = scene
     asyncio.ensure_future(notify_scene_change_to_others())
 
 
