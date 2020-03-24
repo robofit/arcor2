@@ -401,7 +401,7 @@ async def clear_scene() -> None:
     SCENE = None
 
 
-async def open_scene(scene_id: str):
+async def open_scene(scene_id: str) -> None:
 
     global SCENE
     SCENE = await storage.get_scene(scene_id)
@@ -429,9 +429,7 @@ async def open_project(project_id: str) -> None:
     global PROJECT
 
     PROJECT = await storage.get_project(project_id)
-    res, msg = await open_scene(PROJECT.scene_id)
-    if not res:
-        raise Arcor2Exception(msg)
+    await open_scene(PROJECT.scene_id)
 
     assert SCENE
     for obj in PROJECT.objects:
