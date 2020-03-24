@@ -267,11 +267,17 @@ async def _get_service_types() -> None:
 
         try:
             type_def = hlp.type_def_from_source(srv_type.source, srv_type.id, Service)
-            service_types[srv_id.id] = stu.meta_from_def(type_def)
+            meta = stu.meta_from_def(type_def)
+            service_types[srv_id.id] = meta
         except Arcor2Exception as e:
             await logger.exception(f"Disabling service type {srv_type.id}.")
             service_types[srv_id.id] = ServiceTypeMeta(srv_id.id, "Service not available.", disabled=True,
                                                        problem=str(e))
+            continue
+
+        if not meta.configuration_ids:
+            meta.disabled = True
+            meta.problem = "No configuration available."
             continue
 
         TYPE_DEF_DICT[srv_id.id] = type_def
