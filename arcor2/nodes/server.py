@@ -386,25 +386,41 @@ async def save_project_cb(req: rpc.scene_project.SaveProjectRequest) -> Union[rp
     return None
 
 
+async def clear_scene() -> None:
+
+    global SCENE
+
+    await logger.info("Clearing the scene.")
+    rs = find_robot_service()
+    if rs:
+        for obj_inst in SCENE_OBJECT_INSTANCES.values():
+            await collision(obj_inst, rs, remove=True)
+    SCENE_OBJECT_INSTANCES.clear()
+    SERVICES_INSTANCES.clear()  # TODO call destroy
+
+    SCENE = None
+
+
 async def open_scene(scene_id: str):
 
     global SCENE
-    scene = await storage.get_scene(scene_id)
+    SCENE = await storage.get_scene(scene_id)
 
-    for srv in scene.services:
+    for srv in SCENE.services:
         res, msg = await add_service_to_scene(srv)
         if not res:
+            await clear_scene()
             raise Arcor2Exception(msg)
 
-    for obj in scene.objects:
+    for obj in SCENE.objects:
         res, msg = await add_object_to_scene(obj, add_to_scene=False, srv_obj_ok=True)
         if not res:
+            await clear_scene()
             raise Arcor2Exception(msg)
 
-    assert {srv.type for srv in scene.services} == SERVICES_INSTANCES.keys()
-    assert {obj.id for obj in scene.objects} == SCENE_OBJECT_INSTANCES.keys()
+    assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
+    assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
 
-    SCENE = scene
     asyncio.ensure_future(notify_scene_change_to_others())
 
 
@@ -1651,16 +1667,11 @@ async def scene_change(ui, event: events.SceneChangedEvent) -> None:
                 await notify_scene(ui)
                 await logger.warning("Ignoring scene changes: object added.")
                 return
-    else:
-        await logger.info("Clearing the scene.")
-        rs = find_robot_service()
-        if rs:
-            for obj_inst in SCENE_OBJECT_INSTANCES.values():
-                await collision(obj_inst, rs, remove=True)
-        SCENE_OBJECT_INSTANCES.clear()
-        SERVICES_INSTANCES.clear()
 
-    SCENE = event.data
+        SCENE = event.data
+    else:
+        await clear_scene()
+
     await notify_scene_change_to_others(ui)
 
 
