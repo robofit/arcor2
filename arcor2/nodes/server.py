@@ -145,7 +145,10 @@ async def _initialize_server() -> None:
         except storage.PersistentStorageException:
             await asyncio.sleep(1)
 
-    await asyncio.wait([osa.get_service_types(), osa.get_object_types()])
+    # this has to be done sequentially as objects might depend on services so (all) services has to be known first
+    await osa.get_service_types()
+    await osa.get_object_types()
+
     await asyncio.wait([osa.get_object_actions(), _check_manager()])
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,

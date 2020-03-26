@@ -1,3 +1,5 @@
+import arcor2.server.globals as glob
+
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
 
     if srv.type not in SERVICE_TYPES:
@@ -180,32 +182,36 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
     return True, "ok"
 
 
-async def clear_scene():
+async def clear_scene() -> None:
 
+    await glob.logger.info("Clearing the scene.")
     rs = find_robot_service()
     if rs:
-        for obj_inst in SCENE_OBJECT_INSTANCES.values():
+        for obj_inst in glob.SCENE_OBJECT_INSTANCES.values():
             await collision(obj_inst, rs, remove=True)
-    SCENE_OBJECT_INSTANCES.clear()
-    SERVICES_INSTANCES.clear()
+    glob.SCENE_OBJECT_INSTANCES.clear()
+    glob.SERVICES_INSTANCES.clear()  # TODO call destroy
+
+    glob.SCENE = None
 
 
-async def open_scene(scene_id: str):
+async def open_scene(scene_id: str) -> None:
 
-    global SCENE
-    SCENE = await storage.get_scene(scene_id)
+    glob.SCENE = await storage.get_scene(scene_id)
 
-    for srv in SCENE.services:
+    for srv in glob.SCENE.services:
         res, msg = await add_service_to_scene(srv)
         if not res:
+            await clear_scene()
             raise Arcor2Exception(msg)
 
-    for obj in SCENE.objects:
+    for obj in glob.SCENE.objects:
         res, msg = await add_object_to_scene(obj, add_to_scene=False, srv_obj_ok=True)
         if not res:
+            await clear_scene()
             raise Arcor2Exception(msg)
 
-    assert {srv.type for srv in SCENE.services} == SERVICES_INSTANCES.keys()
-    assert {obj.id for obj in SCENE.objects} == SCENE_OBJECT_INSTANCES.keys()
+    assert {srv.type for srv in glob.SCENE.services} == glob.SERVICES_INSTANCES.keys()
+    assert {obj.id for obj in glob.SCENE.objects} == glob.SCENE_OBJECT_INSTANCES.keys()
 
     asyncio.ensure_future(notify_scene_change_to_others())
