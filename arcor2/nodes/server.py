@@ -428,15 +428,16 @@ async def open_project(project_id: str) -> None:
 
     global PROJECT
 
-    PROJECT = await storage.get_project(project_id)
-    await open_scene(PROJECT.scene_id)
+    project = await storage.get_project(project_id)
+    await open_scene(project.scene_id)
 
     assert SCENE
-    for obj in PROJECT.objects:
+    for obj in project.objects:
         # TODO how to handle missing object?
         scene_obj = SCENE.object_or_service(obj.id)
         obj.uuid = scene_obj.uuid
 
+    PROJECT = project
     asyncio.ensure_future(notify_project_change_to_others())
 
 
