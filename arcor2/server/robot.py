@@ -53,7 +53,7 @@ async def get_robot_joints(robot_id: str) -> List[Joint]:
         raise Arcor2Exception("Not a robot instance.")
 
 
-async def _get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
+async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
 
     meta = RobotMeta(robot_type.__name__)
     meta.features.focus = hasattr(robot_type, "focus")  # TODO more sophisticated test? (attr(s) and return value?)

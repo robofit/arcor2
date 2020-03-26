@@ -1,3 +1,12 @@
+from typing import Set, AsyncIterator, List, Dict
+import asyncio
+
+from arcor2.data.common import ActionIOEnum, Project, Scene
+from arcor2.server import globals as glob, notifications as notif
+from arcor2.server.scene import open_scene
+import arcor2.aio_persistent_storage as storage
+from arcor2.parameter_plugins import PARAM_PLUGINS
+from arcor2.parameter_plugins.base import ParameterPluginException
 
 
 async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
@@ -13,13 +22,14 @@ async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
 
         await storage.update_project(project)
 
+
 async def remove_object_references_from_projects(obj_id: str) -> None:
 
-    assert SCENE
+    assert glob.SCENE
 
     updated_project_ids: Set[str] = set()
 
-    async for project in projects_using_object(SCENE.id, obj_id):
+    async for project in projects_using_object(glob.SCENE.id, obj_id):
 
         # delete object and its action points
         project.objects = [obj for obj in project.objects if obj.id != obj_id]
@@ -58,7 +68,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
         await storage.update_project(project)
         updated_project_ids.add(project.id)
 
-    await logger.info("Updated projects: {}".format(updated_project_ids))
+    await glob.logger.info("Updated projects: {}".format(updated_project_ids))
 
 
 async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
@@ -95,7 +105,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
     action_ids: Set[str] = set()
     problems: List[str] = []
 
-    unknown_types = ({obj.type for obj in scene.objects} | scene_services) - ACTIONS.keys()
+    unknown_types = ({obj.type for obj in scene.objects} | scene_services) - glob.ACTIONS.keys()
 
     if unknown_types:
         return [f"Scene invalid, contains unknown types: {unknown_types}."]
@@ -130,7 +140,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 except KeyError:
                     os_type = obj_id  # service
 
-                for act in ACTIONS[os_type]:
+                for act in glob.ACTIONS[os_type]:
                     if action_type == act.name:
                         break
                 else:
@@ -141,7 +151,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 action_params: Dict[str, str] = \
                     {param.id: param.type for param in action.parameters}
                 ot_params: Dict[str, str] = {param.name: param.type for param in act.parameters
-                                             for act in ACTIONS[os_type]}
+                                             for act in glob.ACTIONS[os_type]}
 
                 if action_params != ot_params:
                     problems.append(f"Action ID {action.id} of type {action.type} has invalid parameters.")
@@ -149,7 +159,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
                 # TODO validate parameter values / instances (for value) are not available here / how to solve it?
                 for param in action.parameters:
                     try:
-                        PARAM_PLUGINS[param.type].value(TYPE_DEF_DICT, scene, project, action.id, param.id)
+                        PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, scene, project, action.id, param.id)
                     except ParameterPluginException:
                         problems.append(f"Parameter {param.id} of action {act.name} "
                                         f"has invalid value: '{param.value}'.")
@@ -159,16 +169,14 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
 async def open_project(project_id: str) -> None:
 
-    global PROJECT
-
     project = await storage.get_project(project_id)
-    await open_scene(PROJECT.scene_id)
+    await open_scene(glob.PROJECT.scene_id)
 
-    assert SCENE
+    assert glob.SCENE
     for obj in project.objects:
         # TODO how to handle missing object?
-        scene_obj = SCENE.object_or_service(obj.id)
+        scene_obj = glob.SCENE.object_or_service(obj.id)
         obj.uuid = scene_obj.uuid
 
-    PROJECT = project
-    asyncio.ensure_future(notify_project_change_to_others())
+    glob.PROJECT = project
+    asyncio.ensure_future(notif.notify_project_change_to_others())

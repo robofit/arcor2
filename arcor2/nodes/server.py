@@ -6,12 +6,14 @@ import asyncio
 import json
 import functools
 import sys
-from typing import Callable, cast, Optional
+from typing import Callable, cast, Optional, Union
 import uuid
 import argparse
 import os
 
+import server.execution
 import websockets
+from aiologger.levels import LogLevel  # type: ignore
 
 import arcor2
 from arcor2 import nodes
@@ -24,15 +26,13 @@ from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
 from arcor2 import action as action_mod
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
-from arcor2.server import srpc
+from arcor2.server import srpc, notifications as notif
+from arcor2.data import rpc
+import arcor2.helpers as hlp
+from arcor2.object_types import Generic
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
-
-MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{nodes.execution.PORT}")
-BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{nodes.build.PORT}")
-
-PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 
 
 class RobotPoseException(Arcor2Exception):
@@ -68,7 +68,7 @@ async def project_manager_client() -> None:
 
         try:
 
-            async with websockets.connect(MANAGER_URL) as manager_client:
+            async with websockets.connect(glob.MANAGER_URL) as manager_client:
 
                 await glob.logger.info("Connected to manager.")
 
@@ -94,48 +94,6 @@ async def project_manager_client() -> None:
             await asyncio.sleep(delay=1.0)
 
 
-def scene_event() -> events.SceneChangedEvent:
-
-    return events.SceneChangedEvent(glob.SCENE)
-
-
-def project_event() -> events.ProjectChangedEvent:
-
-    return events.ProjectChangedEvent(glob.PROJECT)
-
-
-async def notify(event: events.Event, exclude_ui=None):
-
-    if (exclude_ui is None and glob.INTERFACES) or (exclude_ui and len(glob.INTERFACES) > 1):
-        message = event.to_json()
-        await asyncio.wait([intf.send(message) for intf in glob.INTERFACES if intf != exclude_ui])
-
-
-async def _notify(interface, msg_source: Callable[[], events.Event]):
-
-    await notify(msg_source(), interface)
-
-
-async def notify_scene_change_to_others(interface: Optional[WebSocketServerProtocol] = None) -> None:
-
-    await _notify(interface, scene_event)
-
-
-async def notify_project_change_to_others(interface=None) -> None:
-
-    await _notify(interface, project_event)
-
-
-async def notify_scene(interface) -> None:
-    message = scene_event().to_json()
-    await asyncio.wait([interface.send(message)])
-
-
-async def notify_project(interface) -> None:
-    message = project_event().to_json()
-    await asyncio.wait([interface.send(message)])
-
-
 async def _initialize_server() -> None:
 
     while True:  # wait until Project service becomes available
@@ -155,7 +113,7 @@ async def _initialize_server() -> None:
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
 
     await glob.logger.info("Server initialized.")
-    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', PORT)])
+    await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
 
@@ -167,24 +125,11 @@ async def _check_manager() -> None:
 
     # TODO avoid cast
     resp = cast(rpc.execution.ProjectStateResponse,
-                await manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+                await server.execution.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     # TODO is this still needed?
     # if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
     #    await open_project(resp.data.id)
-
-
-async def manager_request(req: rpc.common.Request) -> rpc.common.Response:
-
-    assert req.id not in glob.MANAGER_RPC_RESPONSES
-
-    glob.MANAGER_RPC_RESPONSES[req.id] = glob.RespQueue(maxsize=1)
-    await glob.MANAGER_RPC_REQUEST_QUEUE.put(req)
-
-    resp = await glob.MANAGER_RPC_RESPONSES[req.id].get()
-    del glob.MANAGER_RPC_RESPONSES[req.id]
-    return resp
-
 
 
 async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,
@@ -197,12 +142,12 @@ async def register(websocket) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    await notify_scene(websocket)
-    await notify_project(websocket)
+    await notif.notify_scene(websocket)
+    await notif.notify_project(websocket)
 
     # TODO avoid cast
     resp = cast(rpc.execution.ProjectStateResponse,
-                await manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+                await server.execution.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
