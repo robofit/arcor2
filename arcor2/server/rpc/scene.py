@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from typing import Union
+import asyncio
+import functools
+
 from arcor2.exceptions import Arcor2Exception
-from arcor2 import aio_persistent_storage as storage
+from arcor2 import aio_persistent_storage as storage, helpers as hlp
 from arcor2.server.decorators import scene_needed, no_project
-import arcor2.server.globals as glob
+from arcor2.server import globals as glob, notifications as notif
+from arcor2.data import rpc
 
 
 @scene_needed
@@ -62,7 +67,7 @@ async def add_object_to_scene_cb(req: rpc.scene_project.AddObjectToSceneRequest)
     if not res:
         return res, msg
 
-    asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
 
@@ -77,7 +82,7 @@ async def auto_add_object_to_scene_cb(req: rpc.scene_project.AutoAddObjectToScen
     if not res:
         return res, msg
 
-    asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
 
@@ -86,7 +91,7 @@ async def auto_add_object_to_scene_cb(req: rpc.scene_project.AutoAddObjectToScen
 async def add_service_to_scene_cb(req: rpc.scene_project.AddServiceToSceneRequest) ->\
         Union[rpc.scene_project.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
-    assert SCENE
+    assert glob.SCENE
 
     srv = req.args
     res, msg = await add_service_to_scene(srv)
@@ -94,8 +99,8 @@ async def add_service_to_scene_cb(req: rpc.scene_project.AddServiceToSceneReques
     if not res:
         return res, msg
 
-    SCENE.services.append(srv)
-    asyncio.ensure_future(notify_scene_change_to_others())
+    glob.SCENE.services.append(srv)
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
 @scene_needed
@@ -107,15 +112,15 @@ async def scene_object_usage_request_cb(req: rpc.scene_project.SceneObjectUsageR
     :return:
     """
 
-    assert SCENE
+    assert glob.SCENE
 
-    if not (any(obj.id == req.args.id for obj in SCENE.objects) or
-            any(srv.type == req.args.id for srv in SCENE.services)):
+    if not (any(obj.id == req.args.id for obj in glob.SCENE.objects) or
+            any(srv.type == req.args.id for srv in glob.SCENE.services)):
         return False, "Unknown ID."
 
     resp = rpc.scene_project.SceneObjectUsageResponse()
 
-    async for project in projects_using_object(SCENE.id, req.args.id):
+    async for project in projects_using_object(glob.SCENE.id, req.args.id):
         resp.data.add(project.id)
 
     return resp
@@ -128,10 +133,10 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
     inst: Union[None, Service, Generic] = None
 
     # TODO method to get object/service based on ID
-    if req.args.id in SCENE_OBJECT_INSTANCES:
-        inst = SCENE_OBJECT_INSTANCES[req.args.id]
-    elif req.args.id in SERVICES_INSTANCES:
-        inst = SERVICES_INSTANCES[req.args.id]
+    if req.args.id in glob.SCENE_OBJECT_INSTANCES:
+        inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
+    elif req.args.id in glob.SERVICES_INSTANCES:
+        inst = glob.SERVICES_INSTANCES[req.args.id]
     else:
         return False, "Unknown ID."
 
@@ -155,7 +160,7 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
     try:
         method = getattr(inst, method_name)
     except AttributeError:
-        await logger.error(f"Unable to get values for parameter {req.args.param_id}, "
+        await glob.logger.error(f"Unable to get values for parameter {req.args.param_id}, "
                            f"object/service {inst.id} has no method named {method_name}.")
         return False, "System error."
 
@@ -169,11 +174,11 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
 async def remove_from_scene_cb(req: rpc.scene_project.RemoveFromSceneRequest) -> \
         Union[rpc.scene_project.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
 
-    assert SCENE
+    assert glob.SCENE
 
-    if req.args.id in SCENE_OBJECT_INSTANCES:
+    if req.args.id in glob.SCENE_OBJECT_INSTANCES:
 
-        SCENE.objects = [obj for obj in SCENE.objects if obj.id != req.args.id]
+        glob.SCENE.objects = [obj for obj in SCENE.objects if obj.id != req.args.id]
         obj_inst = SCENE_OBJECT_INSTANCES[req.args.id]
         await collision(obj_inst, remove=True)
         del SCENE_OBJECT_INSTANCES[req.args.id]
@@ -185,14 +190,14 @@ async def remove_from_scene_cb(req: rpc.scene_project.RemoveFromSceneRequest) ->
             if req.args.id in OBJECT_TYPES[obj.type].needs_services:
                 return False, f"Object {obj.id} ({obj.type}) relies on the service to be removed: {req.args.id}."
 
-        SCENE.services = [srv for srv in SCENE.services if srv.type != req.args.id]
-        del SERVICES_INSTANCES[req.args.id]
+        glob.SCENE.services = [srv for srv in glob.SCENE.services if srv.type != req.args.id]
+        del glob.SERVICES_INSTANCES[req.args.id]
 
     else:
         return False, "Unknown id."
 
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
-    asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
 @scene_needed
@@ -200,13 +205,13 @@ async def remove_from_scene_cb(req: rpc.scene_project.RemoveFromSceneRequest) ->
 async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest) -> \
         Union[rpc.objects.UpdateActionObjectPoseRequest, hlp.RPC_RETURN_TYPES]:
 
-    assert SCENE
+    assert glob.SCENE
 
     if req.args.id == req.args.robot.robot_id:
         return False, "Robot cannot update its own pose."
 
     try:
-        scene_object = get_scene_object(SCENE, req.args.id)
+        scene_object = get_scene_object(glob.SCENE, req.args.id)
     except SceneObjectNotFound:
         return False, "Invalid action object."
 
@@ -215,5 +220,5 @@ async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest
     except RobotPoseException as e:
         return False, str(e)
 
-    asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None

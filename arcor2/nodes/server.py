@@ -35,10 +35,6 @@ from arcor2.object_types import Generic
 action_mod.HANDLE_ACTIONS = False
 
 
-class RobotPoseException(Arcor2Exception):
-    pass
-
-
 async def handle_manager_incoming_messages(manager_client):
 
     try:
@@ -159,32 +155,6 @@ async def register(websocket) -> None:
 async def unregister(websocket) -> None:
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
-
-
-async def collision(obj: Generic,
-                    rs: Optional[RobotService] = None, *, add: bool = False, remove: bool = False) -> None:
-    """
-
-    :param obj: Instance of the object.
-    :param add:
-    :param remove:
-    :param rs:
-    :return:
-    """
-
-    assert add ^ remove
-
-    if not obj.collision_model:
-        return
-
-    if rs is None:
-        rs = osa.find_robot_service()
-    if rs:
-        try:
-            # TODO notify user somehow when something went wrong?
-            await hlp.run_in_executor(rs.add_collision if add else rs.remove_collision, obj)
-        except Arcor2Exception as e:
-            await glob.logger.error(e)
 
 
 async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.SystemInfoResponse,

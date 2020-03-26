@@ -16,10 +16,10 @@ from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server.decorators import scene_needed, no_project
-import arcor2.server.objects_services_actions as osa
+from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose
+from arcor2.server.project import scene_object_pose_updated
 
-import arcor2.server.globals as glob
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
 FOCUS_OBJECT_ROBOT: Dict[str, rpc.common.RobotArg] = {}  # key: object_id
@@ -162,7 +162,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union
 
     clean_up_after_focus(obj_id)
 
-    asyncio.ensure_future(notify_scene_change_to_others())
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
     return None
 
@@ -176,7 +176,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
         return False, "Object type already exists."
 
     if meta.base not in glob.OBJECT_TYPES:
-        return False, f"Unknown base object type '{meta.base}', known types are: {', '.join(OBJECT_TYPES.keys())}."
+        return False, f"Unknown base object type '{meta.base}', known types are: {', '.join(glob.OBJECT_TYPES.keys())}."
 
     if not hlp.is_valid_type(meta.type):
         return False, "Object type invalid (should be CamelCase)."
@@ -205,7 +205,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
                                             hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, glob.ACTIONS, glob.OBJECT_TYPES)
 
-    asyncio.ensure_future(notify(events.ObjectTypesChangedEvent(data=[meta.type])))
+    asyncio.ensure_future(notif.notify(events.ObjectTypesChangedEvent(data=[meta.type])))
     return None
 
 
