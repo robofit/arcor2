@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
 import re
-
-from arcor2.data.common import ActionState, ProjectState, CurrentAction
 from dataclasses import dataclass, field
+from typing import List, Optional
+
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2.data.common import ActionState, ProjectState, CurrentAction
 from arcor2.data.common import Scene, Project
 
 

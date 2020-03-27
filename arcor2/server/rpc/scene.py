@@ -4,17 +4,68 @@
 from typing import Union
 import asyncio
 import functools
+import uuid
+from datetime import datetime
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
-from arcor2.server.decorators import scene_needed, no_project
-from arcor2.server import globals as glob, notifications as notif
 from arcor2.data import rpc
+from arcor2.data.common import Scene
+from arcor2.object_types import Generic
+from arcor2.services import Service
+from arcor2.scene_utils import get_scene_object, SceneObjectNotFound
+
+from arcor2.server.robot import get_end_effector_pose, RobotPoseException
+from arcor2.server.decorators import scene_needed, no_project, no_scene
+from arcor2.server import globals as glob, notifications as notif
+from arcor2.server.robot import collision
+from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene, clear_scene
+from arcor2.server.project import scene_object_pose_updated, projects_using_object, remove_object_references_from_projects
+
+
+@no_scene
+async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSceneResponse,
+                                                                          hlp.RPC_RETURN_TYPES]:
+    """
+    Creates a new scene on the server. Fails if any scene is open or if scene id/user_id already exists.
+    :param req:
+    :return:
+    """
+
+    glob.SCENE = Scene(uuid.uuid4(), req.args.user_id, desc=req.args.desc)
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
+    return None
 
 
 @scene_needed
 @no_project
-async def save_scene_cb(req: rpc.scene_project.SaveSceneRequest) -> Union[rpc.scene_project.SaveSceneResponse,
+async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.CloseSceneResponse,
+                                                                          hlp.RPC_RETURN_TYPES]:
+    """
+    Closes scene on the server.
+    :param req:
+    :return:
+    """
+
+    assert glob.SCENE
+
+    if req.args.force:
+        glob.SCENE = None
+    else:
+
+        saved_scene = await storage.get_scene(glob.SCENE.id)
+
+        if saved_scene.last_modified and glob.SCENE.last_modified and saved_scene.last_modified < glob.SCENE.last_modified:
+            return False, "Scene has unsaved changes."
+
+    await clear_scene()
+    asyncio.ensure_future(notif.notify_scene_change_to_others())
+    return None
+
+
+@scene_needed
+@no_project
+async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.SaveSceneResponse,
                                                                           hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -40,7 +91,7 @@ async def save_scene_cb(req: rpc.scene_project.SaveSceneRequest) -> Union[rpc.sc
 
 
 @no_project
-async def open_scene_cb(req: rpc.scene_project.OpenSceneRequest) -> Union[rpc.scene_project.OpenSceneResponse,
+async def open_scene_cb(req: rpc.scene.OpenSceneRequest) -> Union[rpc.scene.OpenSceneResponse,
                                                                           hlp.RPC_RETURN_TYPES]:
 
     try:
@@ -50,16 +101,18 @@ async def open_scene_cb(req: rpc.scene_project.OpenSceneRequest) -> Union[rpc.sc
         return False, str(e)
     return None
 
-async def list_scenes_cb(req: rpc.scene_project.ListScenesRequest) -> \
-        Union[rpc.scene_project.ListScenesResponse, hlp.RPC_RETURN_TYPES]:
+
+async def list_scenes_cb(req: rpc.scene.ListScenesRequest) -> \
+        Union[rpc.scene.ListScenesResponse, hlp.RPC_RETURN_TYPES]:
 
     scenes = await storage.get_scenes()
-    return rpc.scene_project.ListScenesResponse(data=scenes.items)
+    return rpc.scene.ListScenesResponse(data=scenes.items)
+
 
 @scene_needed
 @no_project
-async def add_object_to_scene_cb(req: rpc.scene_project.AddObjectToSceneRequest) -> \
-        Union[rpc.scene_project.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
+        Union[rpc.scene.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await add_object_to_scene(obj)
@@ -73,8 +126,8 @@ async def add_object_to_scene_cb(req: rpc.scene_project.AddObjectToSceneRequest)
 
 @scene_needed
 @no_project
-async def auto_add_object_to_scene_cb(req: rpc.scene_project.AutoAddObjectToSceneRequest) -> \
-        Union[rpc.scene_project.AutoAddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest) -> \
+        Union[rpc.scene.AutoAddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     obj = req.args
     res, msg = await auto_add_object_to_scene(obj.type)
@@ -88,8 +141,8 @@ async def auto_add_object_to_scene_cb(req: rpc.scene_project.AutoAddObjectToScen
 
 @scene_needed
 @no_project
-async def add_service_to_scene_cb(req: rpc.scene_project.AddServiceToSceneRequest) ->\
-        Union[rpc.scene_project.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest) ->\
+        Union[rpc.scene.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
 
@@ -103,9 +156,10 @@ async def add_service_to_scene_cb(req: rpc.scene_project.AddServiceToSceneReques
     asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
+
 @scene_needed
-async def scene_object_usage_request_cb(req: rpc.scene_project.SceneObjectUsageRequest) -> \
-        Union[rpc.scene_project.SceneObjectUsageResponse, hlp.RPC_RETURN_TYPES]:
+async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest) -> \
+        Union[rpc.scene.SceneObjectUsageResponse, hlp.RPC_RETURN_TYPES]:
     """
     Works for both services and objects.
     :param req:
@@ -118,7 +172,7 @@ async def scene_object_usage_request_cb(req: rpc.scene_project.SceneObjectUsageR
             any(srv.type == req.args.id for srv in glob.SCENE.services)):
         return False, "Unknown ID."
 
-    resp = rpc.scene_project.SceneObjectUsageResponse()
+    resp = rpc.scene.SceneObjectUsageResponse()
 
     async for project in projects_using_object(glob.SCENE.id, req.args.id):
         resp.data.add(project.id)
@@ -171,23 +225,23 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
 
 @scene_needed
 @no_project
-async def remove_from_scene_cb(req: rpc.scene_project.RemoveFromSceneRequest) -> \
-        Union[rpc.scene_project.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
+        Union[rpc.scene.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
 
     if req.args.id in glob.SCENE_OBJECT_INSTANCES:
 
-        glob.SCENE.objects = [obj for obj in SCENE.objects if obj.id != req.args.id]
-        obj_inst = SCENE_OBJECT_INSTANCES[req.args.id]
+        glob.SCENE.objects = [obj for obj in glob.SCENE.objects if obj.id != req.args.id]
+        obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
         await collision(obj_inst, remove=True)
-        del SCENE_OBJECT_INSTANCES[req.args.id]
+        del glob.SCENE_OBJECT_INSTANCES[req.args.id]
 
-    elif req.args.id in SERVICES_INSTANCES:
+    elif req.args.id in glob.SERVICES_INSTANCES:
 
         # first check if some object is not using it
-        for obj in SCENE.objects:
-            if req.args.id in OBJECT_TYPES[obj.type].needs_services:
+        for obj in glob.SCENE.objects:
+            if req.args.id in glob.OBJECT_TYPES[obj.type].needs_services:
                 return False, f"Object {obj.id} ({obj.type}) relies on the service to be removed: {req.args.id}."
 
         glob.SCENE.services = [srv for srv in glob.SCENE.services if srv.type != req.args.id]
@@ -200,10 +254,16 @@ async def remove_from_scene_cb(req: rpc.scene_project.RemoveFromSceneRequest) ->
     asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
+
 @scene_needed
 @no_project
 async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest) -> \
         Union[rpc.objects.UpdateActionObjectPoseRequest, hlp.RPC_RETURN_TYPES]:
+    """
+    Updates object's pose using a pose of the robot's end effector.
+    :param req:
+    :return:
+    """
 
     assert glob.SCENE
 
@@ -221,4 +281,38 @@ async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest
         return False, str(e)
 
     asyncio.ensure_future(notif.notify_scene_change_to_others())
+    return None
+
+
+@scene_needed
+@no_project
+async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
+        Union[rpc.scene.UpdateObjectPoseResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.SCENE
+
+    obj = glob.SCENE.object(req.args.object_id)
+    obj.pose = req.args.pose
+    glob.SCENE.last_modified = datetime.now()
+    # TODO object changed event
+    return None
+
+
+@scene_needed
+@no_project
+async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
+        Union[rpc.scene.RenameObjectResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.SCENE
+
+    target_obj = glob.SCENE.object(req.args.object_id)
+
+    for obj in glob.SCENE.objects:
+
+        if obj.user_id == req.args.new_user_id:
+            return False, f"User_id already exists."
+
+    target_obj.user_id = req.args.new_user_id
+
+    # TODO object changed event
     return None

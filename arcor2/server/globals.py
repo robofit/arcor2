@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-import asyncio
-from typing import Dict, Set, Union, TYPE_CHECKING, Optional
+from typing import Dict, Set, Union, Optional
 import os
 
 from websockets.server import WebSocketServerProtocol
@@ -15,7 +14,6 @@ from arcor2.data.common import Scene, Project
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict
 from arcor2.data.services import ServiceTypeMetaDict
 from arcor2.data.robot import RobotMeta
-from arcor2.data import rpc
 from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.parameter_plugins.base import TypesDict

@@ -2,34 +2,30 @@
 # -*- coding: utf-8 -*-
 
 
-import asyncio
-import json
-import functools
-import sys
-from typing import Callable, cast, Optional, Union
-import uuid
 import argparse
-import os
+import asyncio
+import functools
+import json
+import sys
+import uuid
+from typing import Union, cast
 
-import server.execution
 import websockets
 from aiologger.levels import LogLevel  # type: ignore
 
 import arcor2
+import arcor2.helpers as hlp
+from arcor2 import action as action_mod
+from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
 from arcor2.data import events
+from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING
-from arcor2 import aio_persistent_storage as storage
-from arcor2.exceptions import Arcor2Exception
-from arcor2.services import RobotService
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN, PARAM_PLUGINS
-from arcor2 import action as action_mod
+from arcor2.parameter_plugins import PARAM_PLUGINS
+
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
-from arcor2.server import srpc, notifications as notif
-from arcor2.data import rpc
-import arcor2.helpers as hlp
-from arcor2.object_types import Generic
+from arcor2.server import execution as exe, notifications as notif, rpc as srpc
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -50,44 +46,10 @@ async def handle_manager_incoming_messages(manager_client):
                 # TODO handle potential errors
                 _, resp_cls = RPC_MAPPING[msg["response"]]
                 resp = resp_cls.from_dict(msg)
-                glob.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
+                exe.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
     except websockets.exceptions.ConnectionClosed:
         await glob.logger.error("Connection to manager closed.")
-
-
-async def project_manager_client() -> None:
-
-    while True:
-
-        await glob.logger.info("Attempting connection to manager...")
-
-        try:
-
-            async with websockets.connect(glob.MANAGER_URL) as manager_client:
-
-                await glob.logger.info("Connected to manager.")
-
-                future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
-
-                while True:
-
-                    if future.done():
-                        break
-
-                    try:
-                        msg = await asyncio.wait_for(glob.MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
-                    except asyncio.TimeoutError:
-                        continue
-
-                    try:
-                        await manager_client.send(msg.to_json())
-                    except websockets.exceptions.ConnectionClosed:
-                        await glob.MANAGER_RPC_REQUEST_QUEUE.put(msg)
-                        break
-        except ConnectionRefusedError as e:
-            await glob.logger.error(e)
-            await asyncio.sleep(delay=1.0)
 
 
 async def _initialize_server() -> None:
@@ -112,7 +74,6 @@ async def _initialize_server() -> None:
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
-
 async def _check_manager() -> None:
     """
     Loads project if it is loaded on manager
@@ -121,7 +82,7 @@ async def _check_manager() -> None:
 
     # TODO avoid cast
     resp = cast(rpc.execution.ProjectStateResponse,
-                await server.execution.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     # TODO is this still needed?
     # if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
@@ -143,7 +104,7 @@ async def register(websocket) -> None:
 
     # TODO avoid cast
     resp = cast(rpc.execution.ProjectStateResponse,
-                await server.execution.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
@@ -172,14 +133,14 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.execution.BuildProjectRequest: srpc.execution.build_project_cb,
     rpc.objects.GetObjectTypesRequest: srpc.objects.get_object_types_cb,
     rpc.objects.GetActionsRequest: srpc.objects.get_object_actions_cb,
-    rpc.objects.UpdateActionPointPoseRequest: srpc.objects.update_action_point_cb,
-    rpc.objects.UpdateActionPointJointsRequest: srpc.objects.update_ap_joints_cb,
-    rpc.objects.UpdateActionObjectPoseRequest: srpc.objects.update_action_object_cb,
+    rpc.objects.UpdateActionPointPoseRequest: srpc.project.update_action_point_cb,
+    rpc.objects.UpdateActionPointJointsRequest: srpc.project.update_ap_joints_cb,
+    rpc.objects.UpdateActionObjectPoseRequest: srpc.scene.update_action_object_cb,
     rpc.objects.NewObjectTypeRequest: srpc.objects.new_object_type_cb,
     rpc.objects.FocusObjectRequest: srpc.objects.focus_object_cb,
     rpc.objects.FocusObjectStartRequest: srpc.objects.focus_object_start_cb,
     rpc.objects.FocusObjectDoneRequest: srpc.objects.focus_object_done_cb,
-    rpc.objects.ActionParamValuesRequest: srpc.objects.action_param_values_cb,
+    rpc.objects.ActionParamValuesRequest: srpc.scene.action_param_values_cb,
     rpc.robot.GetRobotMetaRequest: srpc.robot.get_robot_meta_cb,
 
     rpc.scene.NewSceneRequest: srpc.scene.new_scene_cb,
@@ -196,8 +157,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.project.OpenProjectRequest: srpc.project.open_project_cb,
     rpc.project.ListProjectsRequest: srpc.project.list_projects_cb,
     rpc.project.ExecuteActionRequest: srpc.project.execute_action_cb,
-    rpc.services.GetServicesRequest: srpc.project.get_services_cb,
-    rpc.storage.ListMeshesRequest: srpc.project.list_meshes_cb
+    rpc.services.GetServicesRequest: srpc.services.get_services_cb,
+    rpc.storage.ListMeshesRequest: list_meshes_cb
 }
 
 # add Project Manager RPC API
@@ -206,7 +167,7 @@ for k, v in nodes.execution.RPC_DICT.items():
     if v.__name__.startswith("_"):
         continue
 
-    RPC_DICT[k] = manager_request
+    RPC_DICT[k] = exe.manager_request
 
 
 # events from clients
@@ -234,7 +195,8 @@ def main():
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
 
-    loop.run_until_complete(asyncio.wait([asyncio.gather(project_manager_client(), _initialize_server())]))
+    loop.run_until_complete(asyncio.wait([asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
+                                                         _initialize_server())]))
 
 
 if __name__ == "__main__":

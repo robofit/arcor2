@@ -6,6 +6,7 @@ from arcor2.exceptions import Arcor2Exception
 import arcor2.helpers as hlp
 from arcor2.object_types import Robot, Generic
 from arcor2.services import RobotService
+
 from arcor2.server import objects_services_actions as osa, globals as glob
 
 

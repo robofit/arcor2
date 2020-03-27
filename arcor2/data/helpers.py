@@ -1,10 +1,10 @@
 import inspect
 from typing import Dict, Tuple, Type
-from arcor2.data.rpc.common import Request, Response
-from arcor2.data.events import Event
+
 import arcor2.data.events
 from arcor2.data import rpc
-
+from arcor2.data.events import Event
+from arcor2.data.rpc.common import Request, Response
 
 RPC_MAPPING: Dict[str, Tuple[Type[Request], Type[Response]]] = {}
 
@@ -12,7 +12,7 @@ _requests: Dict[str, Type[Request]] = {}
 _responses: Dict[str, Type[Response]] = {}
 
 # TODO avoid explicit naming of all sub-modules in rpc module
-for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene_project, rpc.services, rpc.storage):
+for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene, rpc.project, rpc.services, rpc.storage):
     for name, obj in inspect.getmembers(rpc_module):
 
         if not inspect.isclass(obj):

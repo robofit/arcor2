@@ -15,6 +15,7 @@ from arcor2.object_types import Generic
 from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
+
 from arcor2.server.decorators import scene_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose

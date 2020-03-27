@@ -2,32 +2,33 @@
 # -*- coding: utf-8 -*-
 
 
-import asyncio
-import json
-import functools
-import sys
-from typing import Union, Set, Optional
-import os
 import argparse
-import tempfile
+import asyncio
 import base64
-import zipfile
+import functools
+import json
+import os
 import shutil
+import sys
+import tempfile
+import zipfile
+from typing import Optional, Set, Union
 
 import websockets
-from websockets.server import WebSocketServerProtocol
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
+from websockets.server import WebSocketServerProtocol
 
 import arcor2
-from arcor2.helpers import server, aiologger_formatter, RPC_RETURN_TYPES, RPC_DICT_TYPE
-from arcor2.source.utils import make_executable
-from arcor2.settings import PROJECT_PATH
 from arcor2.data import rpc
-from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent, CurrentActionEvent
-from arcor2.data.common import ProjectStateEnum, ProjectState
+from arcor2.data.common import ProjectState, ProjectStateEnum
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, ProjectStateEvent
 from arcor2.data.helpers import EVENT_MAPPING
+from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
+from arcor2.settings import PROJECT_PATH
+from arcor2.source.utils import make_executable
+
 
 PORT = 6790
 

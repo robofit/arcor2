@@ -1,7 +1,11 @@
 import asyncio
 from typing import TYPE_CHECKING, Dict
 
+import websockets
+
 from arcor2.data import rpc
+
+from arcor2.server import globals as glob
 
 
 if TYPE_CHECKING:
@@ -25,3 +29,37 @@ async def manager_request(req: rpc.common.Request) -> rpc.common.Response:
     resp = await MANAGER_RPC_RESPONSES[req.id].get()
     del MANAGER_RPC_RESPONSES[req.id]
     return resp
+
+
+async def project_manager_client(handle_manager_incoming_messages) -> None:
+
+    while True:
+
+        await glob.logger.info("Attempting connection to manager...")
+
+        try:
+
+            async with websockets.connect(glob.MANAGER_URL) as manager_client:
+
+                await glob.logger.info("Connected to manager.")
+
+                future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
+
+                while True:
+
+                    if future.done():
+                        break
+
+                    try:
+                        msg = await asyncio.wait_for(exe.MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
+                    except asyncio.TimeoutError:
+                        continue
+
+                    try:
+                        await manager_client.send(msg.to_json())
+                    except websockets.exceptions.ConnectionClosed:
+                        await exe.MANAGER_RPC_REQUEST_QUEUE.put(msg)
+                        break
+        except ConnectionRefusedError as e:
+            await glob.logger.error(e)
+            await asyncio.sleep(delay=1.0)

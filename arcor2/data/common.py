@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Tuple, Set, Dict, Union
-from enum import Enum, unique
-from uuid import UUID, uuid4
-from datetime import datetime
-
-from json import JSONEncoder
 from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum, unique
+from json import JSONEncoder
+from typing import List, Any, Iterator, Optional, Tuple, Set, Dict, Union
+from uuid import UUID, uuid4
 
 import numpy as np  # type: ignore
 import quaternion  # type: ignore
-
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception
@@ -196,23 +194,26 @@ class Scene(JsonSchemaMixin):
     desc: str = field(default_factory=str)
     last_modified: Optional[datetime] = None
 
-    def __post_init__(self):
+    def object(self, object_id: UUID) -> SceneObject:
 
-        self._id_cache: Dict[str, Union[SceneObject, SceneService]] = {}
+        for obj in self.objects:
+            if obj.id == object_id:
+                return obj
+        raise Arcor2Exception(f"Object ID {object_id} not found.")
 
-    def object_or_service(self, object_or_service_id: str) -> Union[SceneObject, SceneService]:
+    def service(self, service_type: str) -> SceneService:
 
-        if not self._id_cache:
-            for obj in self.objects:
-                self._id_cache[obj.id] = obj
-            for srv in self.services:
-                self._id_cache[srv.type] = srv
+        for srv in self.services:
+            if srv.type == service_type:
+                return srv
+        raise Arcor2Exception(f"Service of type {service_type} not found.")
 
-        try:
-            return self._id_cache[object_or_service_id]
-        except KeyError:
-            raise Arcor2Exception(f"Unknown object/service id: {object_or_service_id}, "
-                                  f"known are: {self._id_cache.keys()}")  # TODO DataException?
+    def object_or_service(self, object_or_service_id: Union[UUID, str]) -> Union[SceneObject, SceneService]:
+
+        if isinstance(object_or_service_id, UUID):
+            return self.object(object_or_service_id)
+        else:
+            return self.service(object_or_service_id)
 
 
 @dataclass

@@ -1,16 +1,16 @@
 import inspect
 
 from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from apispec.exceptions import DuplicateComponentNameError  # type: ignore
+from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 
-from arcor2.data import rpc
-import arcor2.data.events
-import arcor2.data.common
-import arcor2.data.object_type
 import arcor2
-from dataclasses_jsonschema import JsonSchemaMixin
+import arcor2.data.common
+import arcor2.data.events
+import arcor2.data.object_type
+from arcor2.data import rpc
 
 
 def generate_swagger() -> str:
@@ -25,7 +25,7 @@ def generate_swagger() -> str:
 
     # TODO avoid explicit naming of all sub-modules in rpc module
     for module in (arcor2.data.common, arcor2.data.object_type, rpc.common, rpc.execution, rpc.objects,
-                   rpc.robot, rpc.scene_project, rpc.services,
+                   rpc.robot, rpc.scene, rpc.project, rpc.services,
                    rpc.storage, arcor2.data.events):
         for name, obj in inspect.getmembers(module):
 

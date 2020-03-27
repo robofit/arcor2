@@ -4,6 +4,7 @@ from typing import Optional, Callable
 from websockets.server import WebSocketServerProtocol
 
 from arcor2.data import events
+
 from arcor2.server import globals as glob
 
 

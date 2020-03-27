@@ -6,7 +6,7 @@ from uuid import UUID
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, SceneObject, SceneService
+from arcor2.data.common import IdDesc, SceneObject, SceneService, Pose
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs
 
 
@@ -137,7 +137,6 @@ class ListScenesResponse(Response):
 @dataclass
 class NewSceneRequestArgs(JsonSchemaMixin):
 
-    id: UUID
     user_id: str
     desc: str
 
@@ -156,3 +155,65 @@ class NewSceneResponse(Response):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+
+@dataclass
+class CloseSceneRequestArgs(JsonSchemaMixin):
+
+    force: bool = False
+
+
+@dataclass
+class CloseSceneRequest(Request):
+
+    args: CloseSceneRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class CloseSceneResponse(Response):
+
+    response: str = field(default=CloseSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateObjectPoseRequestArgs(JsonSchemaMixin):
+
+    object_id: UUID
+    pose: Pose
+
+
+@dataclass
+class UpdateObjectPoseRequest(Request):
+
+    args: UpdateObjectPoseRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateObjectPoseResponse(Response):
+
+    response: str = field(default=CloseSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenameObjectRequestArgs(JsonSchemaMixin):
+
+    object_id: UUID
+    new_user_id: str
+
+
+@dataclass
+class RenameObjectRequest(Request):
+
+    args: RenameObjectRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenameObjectResponse(Response):
+
+    response: str = field(default=RenameObjectRequest.request, init=False)

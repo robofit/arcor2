@@ -12,12 +12,13 @@ from arcor2.object_types import Robot
 from arcor2.exceptions import Arcor2Exception
 from arcor2.services import RobotService, Service
 from arcor2.object_types import Generic
-from arcor2.server import globals as glob
-from arcor2.server.robot import get_robot_meta
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-from arcor2.server import notifications as notif
 import arcor2.helpers as hlp
 from arcor2.data import events
+
+from arcor2.server import globals as glob
+from arcor2.server.robot import get_robot_meta
+from arcor2.server import notifications as notif
 
 
 def find_robot_service() -> Union[None, RobotService]:

@@ -12,17 +12,21 @@ from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.exceptions import Arcor2Exception
-from arcor2.server.decorators import scene_needed, project_needed
-from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
-from arcor2.server.robot import get_end_effector_pose
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
+from arcor2.source.logic import program_src, SourceException
+from arcor2.project_utils import get_object_ap, ActionPointNotFound
+
+from arcor2.server.decorators import scene_needed, project_needed
+from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
+from arcor2.server.robot import get_end_effector_pose, get_robot_joints, RobotPoseException
+from arcor2.server.project import project_problems, open_project
 
 
 @scene_needed
 @project_needed
-async def execute_action_cb(req: rpc.scene_project.ExecuteActionRequest) -> \
-        Union[rpc.scene_project.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
+async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
+        Union[rpc.project.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -65,10 +69,10 @@ async def execute_action_cb(req: rpc.scene_project.ExecuteActionRequest) -> \
     return None
 
 
-async def list_projects_cb(req: rpc.scene_project.ListProjectsRequest) -> \
-        Union[rpc.scene_project.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
+async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
+        Union[rpc.project.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
 
-    data: List[rpc.scene_project.ListProjectsResponseData] = []
+    data: List[rpc.project.ListProjectsResponseData] = []
 
     projects = await storage.get_projects()
 
@@ -82,7 +86,7 @@ async def list_projects_cb(req: rpc.scene_project.ListProjectsRequest) -> \
             await glob.logger.warning(f"Ignoring project {project_iddesc.id} due to error: {e}")
             continue
 
-        pd = rpc.scene_project.ListProjectsResponseData(id=project.id, desc=project.desc)
+        pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc)
         data.append(pd)
 
         if project.scene_id not in scenes:
@@ -104,7 +108,8 @@ async def list_projects_cb(req: rpc.scene_project.ListProjectsRequest) -> \
         except SourceException as e:
             pd.problems.append(str(e))
 
-    return rpc.scene_project.ListProjectsResponse(data=data)
+    return rpc.project.ListProjectsResponse(data=data)
+
 
 @scene_needed
 @project_needed
@@ -184,7 +189,7 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
     return None
 
 
-async def open_project_cb(req: rpc.scene_project.OpenProjectRequest) -> Union[rpc.scene_project.OpenProjectResponse,
+async def open_project_cb(req: rpc.project.OpenProjectRequest) -> Union[rpc.project.OpenProjectResponse,
                                                                               hlp.RPC_RETURN_TYPES]:
 
     # TODO validate using project_problems?
@@ -199,7 +204,7 @@ async def open_project_cb(req: rpc.scene_project.OpenProjectRequest) -> Union[rp
 
 @scene_needed
 @project_needed
-async def save_project_cb(req: rpc.scene_project.SaveProjectRequest) -> Union[rpc.scene_project.SaveProjectResponse,
+async def save_project_cb(req: rpc.project.SaveProjectRequest) -> Union[rpc.project.SaveProjectResponse,
                                                                               hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT

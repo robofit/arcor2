@@ -2,11 +2,12 @@ from typing import Set, AsyncIterator, List, Dict
 import asyncio
 
 from arcor2.data.common import ActionIOEnum, Project, Scene
-from arcor2.server import globals as glob, notifications as notif
-from arcor2.server.scene import open_scene
 import arcor2.aio_persistent_storage as storage
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
+
+from arcor2.server import globals as glob, notifications as notif
+from arcor2.server.scene import open_scene
 
 
 async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
@@ -170,7 +171,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 async def open_project(project_id: str) -> None:
 
     project = await storage.get_project(project_id)
-    await open_scene(glob.PROJECT.scene_id)
+    await open_scene(project.scene_id)
 
     assert glob.SCENE
     for obj in project.objects:

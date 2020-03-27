@@ -1,29 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import tempfile
-import shutil
 import argparse
 import json
 import logging
-
+import os
+import shutil
+import tempfile
 from typing import Set
 
+import horast
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, send_file
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
-import horast
 
 import arcor2
 from arcor2 import persistent_storage as ps
-from arcor2.source.logic import program_src  # , get_logic_from_source
-from arcor2.source.utils import derived_resources_class, global_actions_class, global_action_points_class
-from arcor2.source import SourceException
-from arcor2.object_types_utils import built_in_types_names
-from arcor2.helpers import camel_case_to_snake_case, logger_formatter
 from arcor2.data.object_type import ObjectModel
+from arcor2.helpers import camel_case_to_snake_case, logger_formatter
+from arcor2.object_types_utils import built_in_types_names
+from arcor2.source import SourceException
+from arcor2.source.logic import program_src  # , get_logic_from_source
+from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
 
 PORT = 5007
 SERVICE_NAME = "ARCOR2 Build Service"

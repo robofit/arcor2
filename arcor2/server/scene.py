@@ -3,12 +3,13 @@ from typing import Tuple, Optional, List, get_type_hints
 
 from arcor2.data.common import SceneService, SceneObject
 from arcor2.data.object_type import Models
-from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
-from arcor2.server.robot import collision
 from arcor2.exceptions import Arcor2Exception
 from arcor2.services import Service, RobotService
 from arcor2.object_types import Generic
 from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu
+
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server.robot import collision
 
 
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
