@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from typing import List, Set
-from uuid import UUID
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -180,7 +179,7 @@ class CloseSceneResponse(Response):
 @dataclass
 class UpdateObjectPoseRequestArgs(JsonSchemaMixin):
 
-    object_id: UUID
+    object_id: str
     pose: Pose
 
 
@@ -194,7 +193,7 @@ class UpdateObjectPoseRequest(Request):
 @dataclass
 class UpdateObjectPoseResponse(Response):
 
-    response: str = field(default=CloseSceneRequest.request, init=False)
+    response: str = field(default=UpdateObjectPoseRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -202,7 +201,7 @@ class UpdateObjectPoseResponse(Response):
 @dataclass
 class RenameObjectRequestArgs(JsonSchemaMixin):
 
-    object_id: UUID
+    object_id: str
     new_user_id: str
 
 

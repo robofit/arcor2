@@ -32,7 +32,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
     :return:
     """
 
-    glob.SCENE = Scene(uuid.uuid4(), req.args.user_id, desc=req.args.desc)
+    glob.SCENE = Scene(uuid.uuid4().hex, req.args.user_id, desc=req.args.desc)
     asyncio.ensure_future(notif.notify_scene_change_to_others())
     return None
 
@@ -55,7 +55,8 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
 
         saved_scene = await storage.get_scene(glob.SCENE.id)
 
-        if saved_scene.last_modified and glob.SCENE.last_modified and saved_scene.last_modified < glob.SCENE.last_modified:
+        if saved_scene.last_modified and glob.SCENE.last_modified and \
+                saved_scene.last_modified < glob.SCENE.last_modified:
             return False, "Scene has unsaved changes."
 
     await clear_scene()

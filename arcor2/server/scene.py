@@ -1,5 +1,5 @@
 import asyncio
-from typing import Tuple, Optional, List, get_type_hints
+from typing import Tuple, Optional, List, get_type_hints, Set
 
 from arcor2.data.common import SceneService, SceneObject
 from arcor2.data.object_type import Models
@@ -10,6 +10,10 @@ from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_typ
 
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.server.robot import collision
+
+
+def instances_user_ids() -> Set[str]:
+    return {obj.user_id for obj in glob.SCENE_OBJECT_INSTANCES.values()}
 
 
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
@@ -81,7 +85,10 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
     if obj.id in glob.SCENE_OBJECT_INSTANCES or obj.id in glob.SERVICES_INSTANCES:
         return False, "Object/service with that id already exists."
 
-    if not hlp.is_valid_identifier(obj.id):
+    if obj.user_id in instances_user_ids():
+        return False, "User_id is already used."
+
+    if not hlp.is_valid_identifier(obj.user_id):
         return False, "Object ID invalid (should be snake_case)."
 
     await glob.logger.debug(f"Creating instance {obj.id} ({obj.type}).")
@@ -99,7 +106,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
             coll_model = obj_meta.object_model.model()
 
         if not obj_meta.needs_services:
-            obj_inst = cls(obj.id, obj.pose, coll_model)
+            obj_inst = cls(obj.id, obj.user_id, obj.pose, coll_model)
         else:
 
             srv_args: List[Service] = []
@@ -171,13 +178,17 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
             assert isinstance(obj_inst, Generic)
 
-            if not hlp.is_valid_identifier(obj_inst.id):
+            if not hlp.is_valid_identifier(obj_inst.user_id):
                 # TODO add message to response
                 await glob.logger.warning(f"Object id {obj_inst.id} invalid.")
                 continue
 
             if obj_inst.id in glob.SCENE_OBJECT_INSTANCES:
                 await glob.logger.warning(f"Object id {obj_inst.id} already in scene.")
+                continue
+
+            if obj_inst.user_id in instances_user_ids():
+                await glob.logger.warning(f"Duplicate user_id {obj_inst.user_id}.")
                 continue
 
             glob.SCENE_OBJECT_INSTANCES[obj_inst.id] = obj_inst

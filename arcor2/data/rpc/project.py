@@ -1,14 +1,57 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Set
-from uuid import UUID
+from typing import List, Optional
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, SceneObject, SceneService
-from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs
+from arcor2.data.common import IdDesc, Position
+from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
+
+@dataclass
+class NewProjectRequestArgs(JsonSchemaMixin):
+
+    scene_id: str
+    user_id: str
+    desc: str = field(default_factory=str)
+
+
+@dataclass
+class NewProjectRequest(Request):
+
+    args: NewProjectRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class NewProjectResponse(Response):
+
+    response: str = field(default=NewProjectRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class CloseProjectRequestArgs(JsonSchemaMixin):
+
+    id: str
+    force: bool = False
+
+
+@dataclass
+class CloseProjectRequest(Request):
+
+    args: CloseProjectRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class CloseProjectResponse(Response):
+
+    response: str = field(default=CloseProjectRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 @dataclass
 class SaveProjectRequest(Request):
@@ -81,3 +124,26 @@ class ExecuteActionRequest(Request):
 class ExecuteActionResponse(Response):
 
     response: str = field(default=ExecuteActionRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class AddActionPointArgs(JsonSchemaMixin):
+
+    user_id: str
+    position: Position
+    parent: Optional[str] = None
+
+
+@dataclass
+class AddActionPointRequest(Request):
+
+    args: AddActionPointArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class AddActionPointResponse(Response):
+
+    response: str = field(default=AddActionPointRequest.request, init=False)

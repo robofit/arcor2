@@ -20,9 +20,10 @@ class Generic(metaclass=abc.ABCMeta):
 
     DYNAMIC_PARAMS: DynamicParamDict = {}
 
-    def __init__(self, obj_id: str, pose: Pose, collision_model: Optional[Models] = None) -> None:
+    def __init__(self, obj_id: str, user_id: str, pose: Pose, collision_model: Optional[Models] = None) -> None:
 
         self.id = obj_id
+        self.user_id = user_id
         self.pose = pose
         self.collision_model = collision_model
         self.action_points: Dict[str, ActionPoint] = {}
@@ -33,7 +34,7 @@ class Generic(metaclass=abc.ABCMeta):
         return parse_docstring(cls.__doc__)["short_description"]
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.__class__.__name__, self.pose)
+        return SceneObject(self.id, self.user_id, self.__class__.__name__, self.pose)
 
     def __repr__(self) -> str:
         return str(self.__dict__)

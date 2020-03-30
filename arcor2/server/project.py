@@ -5,21 +5,23 @@ from arcor2.data.common import ActionIOEnum, Project, Scene
 import arcor2.aio_persistent_storage as storage
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
+from arcor2.exceptions import Arcor2Exception
 
 from arcor2.server import globals as glob, notifications as notif
-from arcor2.server.scene import open_scene
+from arcor2.server.scene import open_scene, clear_scene
 
 
 async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
 
     async for project in projects_using_object(scene_id, obj_id):
 
-        for obj in project.objects:
-            if obj.id != obj_id:
+        for ap in project.action_points:
+
+            if ap.parent != obj_id:
                 continue
-            for ap in obj.action_points:
-                for joints in ap.robot_joints:
-                    joints.is_valid = False
+
+            for joints in ap.robot_joints:
+                joints.is_valid = False
 
         await storage.update_project(project)
 
@@ -83,19 +85,21 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Pro
         if project.scene_id != scene_id:
             continue
 
-        for obj in project.objects:
+        for ap in project.action_points_with_parent:
 
-            if obj.id == obj_id:
+            assert ap.parent
+
+            if ap.parent == obj_id:
                 yield project
                 break
 
-            for ap in obj.action_points:
-                for action in ap.actions:
-                    action_obj_id, _ = action.parse_type()
+        for ap in project.action_points:
+            for action in ap.actions:
+                action_obj_id, _ = action.parse_type()
 
-                    if action_obj_id == obj_id:
-                        yield project
-                        break
+                if action_obj_id == obj_id:
+                    yield project
+                    break
 
 
 def project_problems(scene: Scene, project: Project) -> List[str]:
@@ -174,10 +178,14 @@ async def open_project(project_id: str) -> None:
     await open_scene(project.scene_id)
 
     assert glob.SCENE
-    for obj in project.objects:
-        # TODO how to handle missing object?
-        scene_obj = glob.SCENE.object_or_service(obj.id)
-        obj.uuid = scene_obj.uuid
+    for ap in project.action_points_with_parent:
+
+        assert ap.parent
+        try:
+            glob.SCENE.object(ap.parent)
+        except Arcor2Exception:
+            await clear_scene()
+            raise Arcor2Exception(f"Action point's {ap.user_id} parent not available in the scene.")
 
     glob.PROJECT = project
     asyncio.ensure_future(notif.notify_project_change_to_others())

@@ -4,9 +4,10 @@
 
 import asyncio
 from typing import Union, List, Dict, Any, Optional
+import uuid
 
 from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data.common import Scene, ProjectRobotJoints, NamedOrientation
+from arcor2.data.common import Scene, ProjectRobotJoints, NamedOrientation, Project, ProjectActionPoint
 from arcor2.data import rpc
 from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic
@@ -15,9 +16,8 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.source.logic import program_src, SourceException
-from arcor2.project_utils import get_object_ap, ActionPointNotFound
 
-from arcor2.server.decorators import scene_needed, project_needed
+from arcor2.server.decorators import scene_needed, project_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints, RobotPoseException
 from arcor2.server.project import project_problems, open_project
@@ -119,8 +119,8 @@ async def update_ap_joints_cb(req: rpc.objects.UpdateActionPointJointsRequest) -
     assert glob.SCENE and glob.PROJECT
 
     try:
-        proj_obj, ap = get_object_ap(glob.PROJECT, req.args.id)
-    except ActionPointNotFound:
+        ap = glob.PROJECT.action_point(req.args.id)
+    except Arcor2Exception:
         return False, "Invalid action point."
 
     try:
@@ -153,8 +153,8 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
     assert glob.SCENE and glob.PROJECT
 
     try:
-        proj_obj, ap = get_object_ap(glob.PROJECT, req.args.id)
-    except ActionPointNotFound:
+        ap = glob.PROJECT.action_point(req.args.id)
+    except Arcor2Exception:
         return False, "Invalid action point."
 
     try:
@@ -164,17 +164,20 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
     except RobotPoseException as e:
         return False, str(e)
 
-    rel_pose = hlp.make_pose_rel(glob.SCENE_OBJECT_INSTANCES[proj_obj.id].pose, new_pose)
+    if ap.parent:
+
+        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
+        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
 
     if req.args.update_position:
-        ap.position = rel_pose.position
+        ap.position = new_pose.position
 
     for ori in ap.orientations:
         if ori.id == req.args.orientation_id:
-            ori.orientation = rel_pose.orientation
+            ori.orientation = new_pose.orientation
             break
     else:
-        ap.orientations.append(NamedOrientation(req.args.orientation_id, rel_pose.orientation))
+        ap.orientations.append(NamedOrientation(uuid.uuid4().hex, req.args.orientation_id, new_pose.orientation))
 
     for joint in ap.robot_joints:
         if joint.id == req.args.orientation_id:
@@ -183,7 +186,7 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
             joint.is_valid = True
             break
     else:
-        ap.robot_joints.append(ProjectRobotJoints(req.args.orientation_id, req.args.robot.robot_id, new_joints))
+        ap.robot_joints.append(ProjectRobotJoints(uuid.uuid4().hex, req.args.orientation_id, req.args.robot.robot_id, new_joints))
 
     asyncio.ensure_future(notif.notify_project_change_to_others())
     return None
@@ -209,4 +212,51 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> Union[rpc.proj
 
     assert glob.SCENE and glob.PROJECT
     await storage.update_project(glob.PROJECT)
+    return None
+
+
+@no_project
+async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
+                                                                      hlp.RPC_RETURN_TYPES]:
+
+    if req.args.scene_id not in {scene.id for scene in (await storage.get_scenes()).items}:
+        return False, "Unknown scene id."
+
+    # TODO make sure that user_id of the project is not already taken?
+
+    glob.PROJECT = Project(uuid.uuid4().hex, req.args.user_id, req.args.scene_id, desc=req.args.desc)
+    asyncio.ensure_future(notif.notify_project_change_to_others())
+    return None
+
+
+@scene_needed
+@project_needed
+async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.project.CloseProjectResponse,
+                                                                          hlp.RPC_RETURN_TYPES]:
+    assert glob.PROJECT
+
+    if not req.args.force:
+
+        saved_project = await storage.get_project(glob.PROJECT.id)
+
+        if saved_project.last_modified and glob.PROJECT.last_modified and \
+                saved_project.last_modified < glob.PROJECT.last_modified:
+            return False, "Project has unsaved changes."
+
+    glob.PROJECT = None
+    asyncio.ensure_future(notif.notify_project_change_to_others())
+    return None
+
+
+@scene_needed
+@project_needed
+async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> Union[rpc.project.AddActionPointResponse,
+                                                                          hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    if req.args.user_id in glob.PROJECT.action_points_user_ids:
+        return False, "Action point user id is already used."
+
+    glob.PROJECT.action_points.append(ProjectActionPoint(uuid.uuid4().hex, req.args.user_id, req.args.position))
     return None

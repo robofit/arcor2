@@ -23,7 +23,9 @@ for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene,
         elif issubclass(obj, Response) and obj != Response:
             _responses[obj.response] = obj
 
-assert _requests.keys() == _responses.keys()
+assert _requests.keys() == _responses.keys(),\
+    f"There is difference between requests/responses: " \
+    f"{set(_requests.keys()).symmetric_difference(set(_responses.keys()))}"
 
 for k, v in _requests.items():
     RPC_MAPPING[k] = (v, _responses[k])
