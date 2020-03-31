@@ -181,7 +181,7 @@ class CloseSceneRequestArgs(JsonSchemaMixin):
 @dataclass
 class CloseSceneRequest(Request):
 
-    args: CloseSceneRequestArgs
+    args: CloseSceneRequestArgs = field(default_factory=CloseSceneRequestArgs)
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

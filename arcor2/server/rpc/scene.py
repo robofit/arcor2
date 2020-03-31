@@ -31,6 +31,8 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
     :return:
     """
 
+    assert glob.SCENE is None
+
     glob.SCENE = common.Scene(uuid.uuid4().hex, req.args.user_id, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, glob.SCENE)))
     return None
@@ -52,11 +54,15 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
         glob.SCENE = None
     else:
 
-        saved_scene = await storage.get_scene(glob.SCENE.id)
+        try:
+            saved_scene = await storage.get_scene(glob.SCENE.id)
 
-        if saved_scene.last_modified and glob.SCENE.last_modified and \
-                saved_scene.last_modified < glob.SCENE.last_modified:
-            return False, "Scene has unsaved changes."
+            if saved_scene and saved_scene.last_modified and glob.SCENE.last_modified and \
+                    saved_scene.last_modified < glob.SCENE.last_modified:
+                return False, "Scene has unsaved changes."
+
+        except storage.PersistentStorageException:
+            pass
 
     await clear_scene()
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE)))
@@ -355,6 +361,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
     return None
 
 
+@no_scene
 async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
         Union[rpc.scene.DeleteSceneResponse, hlp.RPC_RETURN_TYPES]:
 

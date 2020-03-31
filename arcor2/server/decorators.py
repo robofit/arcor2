@@ -1,13 +1,13 @@
 import functools
 
-from arcor2.server.globals import SCENE, PROJECT
+from arcor2.server import globals as glob
 
 
-def no_scene(coro):  # TODO does not work
+def no_scene(coro):
     @functools.wraps(coro)
     async def async_wrapper(*args, **kwargs):
 
-        if SCENE:
+        if glob.SCENE:
             return False, "Scene has to be closed first."
         return await coro(*args, **kwargs)
 
@@ -18,7 +18,7 @@ def scene_needed(coro):
     @functools.wraps(coro)
     async def async_wrapper(*args, **kwargs):
 
-        if SCENE is None or not SCENE.id:
+        if glob.SCENE is None or not glob.SCENE.id:
             return False, "Scene not opened or has invalid id."
         return await coro(*args, **kwargs)
 
@@ -28,7 +28,7 @@ def scene_needed(coro):
 def no_project(coro):
     @functools.wraps(coro)
     async def async_wrapper(*args, **kwargs):
-        if PROJECT:
+        if glob.PROJECT:
             return False, "Not available during project editing."
         return await coro(*args, **kwargs)
 
@@ -39,7 +39,7 @@ def project_needed(coro):
     @functools.wraps(coro)
     async def async_wrapper(*args, **kwargs):
 
-        if PROJECT is None or not PROJECT.id:
+        if glob.PROJECT is None or not glob.PROJECT.id:
             return False, "Project not opened or has invalid id."
         return await coro(*args, **kwargs)
 
