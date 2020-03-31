@@ -154,6 +154,11 @@ class ActionPoint(JsonSchemaMixin):
                 return joints
         raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")
 
+    def invalidate_joints(self):
+
+        for joints in self.robot_joints:
+            joints.is_valid = False
+
 
 @dataclass
 class SceneObject(JsonSchemaMixin):
@@ -298,6 +303,19 @@ class Project(JsonSchemaMixin):
                     return ac
         else:
             raise Arcor2Exception("Action not found")
+
+    def actions(self) -> List[Action]:
+
+        ret: List[Action] = []
+
+        # TODO comprehension!
+        for ap in self.action_points:
+            for act in ap.actions:
+                ret.append(act)
+        return ret
+
+    def action_user_ids(self) -> Set[str]:
+        return {action.user_id for action in self.actions()}
 
     def action_point(self, action_point_id: str) -> ProjectActionPoint:
 

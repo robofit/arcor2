@@ -155,30 +155,6 @@ class FocusObjectDoneResponse(Response):
 
 
 @dataclass
-class UpdateActionPointPoseRequestArgs(IdArgs):
-
-    robot: RobotArg
-    update_position: bool
-    orientation_id: str = "default"
-
-
-@dataclass
-class UpdateActionPointPoseRequest(Request):
-
-    args: UpdateActionPointPoseRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointPoseResponse(Response):
-
-    response: str = field(default=UpdateActionPointPoseRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
 class UpdateActionPointJointsRequestArgs(IdArgs):
 
     robot_id: str

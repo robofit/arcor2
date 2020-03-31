@@ -165,8 +165,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.project.OpenProjectRequest: srpc.project.open_project_cb,
     rpc.project.ListProjectsRequest: srpc.project.list_projects_cb,
     rpc.project.ExecuteActionRequest: srpc.project.execute_action_cb,
+    rpc.project.UpdateActionPointOrientationRequest: srpc.project.update_action_point_orientation_cb,
     # TODO move from rpc.objects to rpc.project
-    rpc.objects.UpdateActionPointPoseRequest: srpc.project.update_action_point_cb,
     rpc.objects.UpdateActionPointJointsRequest: srpc.project.update_ap_joints_cb,
 
     rpc.services.GetServicesRequest: srpc.services.get_services_cb,
