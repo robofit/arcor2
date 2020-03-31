@@ -12,8 +12,14 @@ from arcor2.server.scene import open_scene, clear_scene
 
 
 async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
+    """
+    Invalidates robot joints if action point's parent has changed its pose.
+    :param scene_id:
+    :param obj_id:
+    :return:
+    """
 
-    async for project in projects_using_object(scene_id, obj_id):
+    async for project in projects_using_object_as_parent(scene_id, obj_id):
 
         for ap in project.action_points:
 
@@ -32,7 +38,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
     updated_project_ids: Set[str] = set()
 
-    async for project in projects_using_object(glob.SCENE.id, obj_id):
+    async for project in projects_using_object_as_parent(glob.SCENE.id, obj_id):
 
         # delete object and its action points
         project.objects = [obj for obj in project.objects if obj.id != obj_id]
@@ -74,7 +80,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
     await glob.logger.info("Updated projects: {}".format(updated_project_ids))
 
 
-async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+async def projects(scene_id: str) -> AsyncIterator[Project]:
 
     id_list = await storage.get_projects()
 
@@ -85,21 +91,58 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Pro
         if project.scene_id != scene_id:
             continue
 
-        for ap in project.action_points_with_parent:
+        yield project
 
-            assert ap.parent
 
-            if ap.parent == obj_id:
-                yield project
-                break
+def _project_using_object_as_parent(project: Project, obj_id: str) -> bool:
 
-        for ap in project.action_points:
-            for action in ap.actions:
-                action_obj_id, _ = action.parse_type()
+    for ap in project.action_points_with_parent:
 
-                if action_obj_id == obj_id:
-                    yield project
-                    break
+        assert ap.parent
+
+        if ap.parent == obj_id:
+            return True
+
+    return False
+
+
+def _project_referencing_object(project: Project, obj_id: str) -> bool:
+
+    for ap in project.action_points:
+        for action in ap.actions:
+            action_obj_id, _ = action.parse_type()
+
+            if action_obj_id == obj_id:
+                return True
+
+    return False
+
+
+async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+    """
+    Combines functionality of projects_using_object_as_parent and projects_referencing_object.
+    :param scene_id:
+    :param obj_id:
+    :return:
+    """
+
+    async for project in projects(scene_id):
+        if _project_using_object_as_parent(project, obj_id) or _project_referencing_object(project, obj_id):
+            yield project
+
+
+async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+
+    async for project in projects(scene_id):
+        if _project_using_object_as_parent(project, obj_id):
+            yield project
+
+
+async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+
+    async for project in projects(scene_id):
+        if _project_referencing_object(project, obj_id):
+            yield project
 
 
 def project_problems(scene: Scene, project: Project) -> List[str]:

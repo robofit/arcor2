@@ -2,6 +2,7 @@ import asyncio
 from typing import Tuple, Optional, List, get_type_hints, Set
 
 from arcor2.data.common import SceneService, SceneObject
+from arcor2.data import events
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
 from arcor2.services import Service, RobotService
@@ -192,7 +193,11 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
                 continue
 
             glob.SCENE_OBJECT_INSTANCES[obj_inst.id] = obj_inst
-            glob.SCENE.objects.append(obj_inst.scene_object())
+
+            obj = obj_inst.scene_object()
+            glob.SCENE.objects.append(obj)
+
+            asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, obj)))
 
             if obj_meta.object_model:
                 obj_inst.collision_model = obj_meta.object_model.model()
@@ -237,4 +242,4 @@ async def open_scene(scene_id: str) -> None:
     assert {srv.type for srv in glob.SCENE.services} == glob.SERVICES_INSTANCES.keys()
     assert {obj.id for obj in glob.SCENE.objects} == glob.SCENE_OBJECT_INSTANCES.keys()
 
-    asyncio.ensure_future(notif.notify_scene_change_to_others())
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, glob.SCENE)))

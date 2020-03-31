@@ -8,7 +8,7 @@ import uuid
 
 from arcor2 import object_types_utils as otu, helpers as hlp
 from arcor2.data.common import Scene, ProjectRobotJoints, NamedOrientation, Project, ProjectActionPoint
-from arcor2.data import rpc
+from arcor2.data import rpc, events
 from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic
 from arcor2.services import Service
@@ -188,7 +188,7 @@ async def update_action_point_cb(req: rpc.objects.UpdateActionPointPoseRequest) 
     else:
         ap.robot_joints.append(ProjectRobotJoints(uuid.uuid4().hex, req.args.orientation_id, req.args.robot.robot_id, new_joints))
 
-    asyncio.ensure_future(notif.notify_project_change_to_others())
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE, ap)))
     return None
 
 
@@ -225,7 +225,7 @@ async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.projec
     # TODO make sure that user_id of the project is not already taken?
 
     glob.PROJECT = Project(uuid.uuid4().hex, req.args.user_id, req.args.scene_id, desc=req.args.desc)
-    asyncio.ensure_future(notif.notify_project_change_to_others())
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChangedEvent(events.EventType.ADD, glob.PROJECT)))
     return None
 
 
@@ -244,7 +244,7 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.pr
             return False, "Project has unsaved changes."
 
     glob.PROJECT = None
-    asyncio.ensure_future(notif.notify_project_change_to_others())
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChangedEvent(events.EventType.UPDATE)))
     return None
 
 
@@ -258,5 +258,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> Union[r
     if req.args.user_id in glob.PROJECT.action_points_user_ids:
         return False, "Action point user id is already used."
 
-    glob.PROJECT.action_points.append(ProjectActionPoint(uuid.uuid4().hex, req.args.user_id, req.args.position))
+    ap = ProjectActionPoint(uuid.uuid4().hex, req.args.user_id, req.args.position)
+    glob.PROJECT.action_points.append(ap)
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.ADD, ap)))
     return None

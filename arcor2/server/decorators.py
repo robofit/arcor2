@@ -3,7 +3,7 @@ import functools
 from arcor2.server.globals import SCENE, PROJECT
 
 
-def no_scene(coro):
+def no_scene(coro):  # TODO does not work
     @functools.wraps(coro)
     async def async_wrapper(*args, **kwargs):
 

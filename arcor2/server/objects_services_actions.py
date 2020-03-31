@@ -59,6 +59,7 @@ async def get_service_types() -> None:
 
     srv_ids = await storage.get_service_type_ids()
 
+    # TODO do it in parallel
     for srv_id in srv_ids.items:
 
         srv_type = await storage.get_service_type(srv_id.id)
@@ -92,6 +93,7 @@ async def get_object_types() -> None:
 
     obj_ids = await storage.get_object_type_ids()
 
+    # TODO do it in parallel
     for obj_id in obj_ids.items:
         obj = await storage.get_object_type(obj_id.id)
         try:
@@ -177,7 +179,7 @@ async def get_object_actions() -> None:  # TODO do it in parallel
 
     glob.ACTIONS = object_actions_dict
 
-    await notif.notify(events.ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
+    await notif.broadcast_event(events.ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
 
 
 async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Union[Robot, RobotService]:
@@ -219,5 +221,5 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
                 # temporal workaround for unsupported types
                 evt.data.result = str(action_result)
 
-    await notif.notify(evt)
+    await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None

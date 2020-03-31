@@ -10,6 +10,15 @@ from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArg
 
 
 @dataclass
+class RenameArgs(JsonSchemaMixin):
+
+    id: str
+    new_user_id: str
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
 class SceneObjectUsageRequest(Request):
 
     args: IdArgs = field(metadata=dict(description="ID could be object or service."))
@@ -42,9 +51,17 @@ class AutoAddObjectToSceneResponse(Response):
 # ----------------------------------------------------------------------------------------------------------------------
 
 @dataclass
+class AddObjectToSceneRequestArgs(JsonSchemaMixin):
+
+    user_id: str
+    type: str
+    pose: Pose
+
+
+@dataclass
 class AddObjectToSceneRequest(Request):
 
-    args: SceneObject
+    args: AddObjectToSceneRequestArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -137,7 +154,7 @@ class ListScenesResponse(Response):
 class NewSceneRequestArgs(JsonSchemaMixin):
 
     user_id: str
-    desc: str
+    desc: str = field(default_factory=str)
 
 
 @dataclass
@@ -199,16 +216,9 @@ class UpdateObjectPoseResponse(Response):
 
 
 @dataclass
-class RenameObjectRequestArgs(JsonSchemaMixin):
-
-    object_id: str
-    new_user_id: str
-
-
-@dataclass
 class RenameObjectRequest(Request):
 
-    args: RenameObjectRequestArgs
+    args: RenameArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -216,3 +226,51 @@ class RenameObjectRequest(Request):
 class RenameObjectResponse(Response):
 
     response: str = field(default=RenameObjectRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenameSceneRequest(Request):
+
+    args: RenameArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenameSceneResponse(Response):
+
+    response: str = field(default=RenameSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class DeleteSceneRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class DeleteSceneResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=DeleteSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class ProjectsWithSceneRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ProjectsWithSceneResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=ProjectsWithSceneRequest.request, init=False)

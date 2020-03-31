@@ -51,14 +51,14 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
                         break
 
                     try:
-                        msg = await asyncio.wait_for(exe.MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
+                        msg = await asyncio.wait_for(MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
                     except asyncio.TimeoutError:
                         continue
 
                     try:
                         await manager_client.send(msg.to_json())
                     except websockets.exceptions.ConnectionClosed:
-                        await exe.MANAGER_RPC_REQUEST_QUEUE.put(msg)
+                        await MANAGER_RPC_REQUEST_QUEUE.put(msg)
                         break
         except ConnectionRefusedError as e:
             await glob.logger.error(e)

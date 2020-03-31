@@ -12,7 +12,6 @@ from arcor2.data.object_type import Model3dType, MeshFocusAction
 from arcor2.data import rpc, events
 from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic
-from arcor2.scene_utils import get_scene_object
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 
@@ -139,7 +138,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union
 
     assert glob.SCENE
 
-    obj = get_scene_object(glob.SCENE, obj_id)
+    obj = glob.SCENE.object(obj_id)
 
     fp: List[Position] = []
     rp: List[Position] = []
@@ -206,7 +205,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
                                             hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, glob.ACTIONS, glob.OBJECT_TYPES)
 
-    asyncio.ensure_future(notif.notify(events.ObjectTypesChangedEvent(data=[meta.type])))
+    asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(data=[meta.type])))
     return None
 
 

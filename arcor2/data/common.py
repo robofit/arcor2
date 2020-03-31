@@ -299,7 +299,7 @@ class Project(JsonSchemaMixin):
         else:
             raise Arcor2Exception("Action not found")
 
-    def action_point(self, action_point_id: str) -> ActionPoint:
+    def action_point(self, action_point_id: str) -> ProjectActionPoint:
 
         for ap in self.action_points:
             if ap.id == action_point_id:
