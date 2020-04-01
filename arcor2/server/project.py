@@ -2,6 +2,7 @@ from typing import Set, AsyncIterator, List, Dict
 import asyncio
 
 from arcor2.data.common import ActionIOEnum, Project, Scene
+from arcor2.data import events
 import arcor2.aio_persistent_storage as storage
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
@@ -224,4 +225,4 @@ async def open_project(project_id: str) -> None:
             raise Arcor2Exception(f"Action point's {ap.user_id} parent not available in the scene.")
 
     glob.PROJECT = project
-    asyncio.ensure_future(notif.notify_project_change_to_others())
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChangedEvent(events.EventType.UPDATE, data=glob.PROJECT)))

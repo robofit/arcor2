@@ -74,6 +74,7 @@ class SystemInfoData(JsonSchemaMixin):
     version: str = ""
     api_version: str = ""
     supported_parameter_types: Set[str] = field(default_factory=set)
+    supported_rpc_requests: Set[str] = field(default_factory=set)
 
 
 @dataclass

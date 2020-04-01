@@ -99,8 +99,8 @@ async def register(websocket) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, glob.SCENE))
-    await notif.event(websocket, events.ProjectChangedEvent(events.EventType.UPDATE, glob.PROJECT))
+    await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE))
+    await notif.event(websocket, events.ProjectChangedEvent(events.EventType.UPDATE, data=glob.PROJECT))
 
     # TODO avoid cast
     resp = cast(rpc.execution.ProjectStateResponse,
@@ -125,6 +125,7 @@ async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.
     resp.data.version = arcor2.version()
     resp.data.api_version = arcor2.api_version()
     resp.data.supported_parameter_types = set(PARAM_PLUGINS.keys())
+    resp.data.supported_rpc_requests = {key.request for key in RPC_DICT.keys()}
     return resp
 
 
@@ -158,16 +159,30 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.scene.DeleteSceneRequest: srpc.scene.delete_scene_cb,
     rpc.scene.ProjectsWithSceneRequest: srpc.scene.projects_with_scene_cb,
     # TODO move to scene
-    rpc.objects.UpdateActionObjectPoseRequest: srpc.scene.update_action_object_cb,
+    rpc.objects.UpdateObjectPoseUsingRobotRequest: srpc.scene.update_object_pose_using_robot_cb,
     rpc.objects.ActionParamValuesRequest: srpc.scene.action_param_values_cb,
 
+    rpc.project.NewProjectRequest: srpc.project.new_project_cb,
     rpc.project.SaveProjectRequest: srpc.project.save_project_cb,
     rpc.project.OpenProjectRequest: srpc.project.open_project_cb,
+    rpc.project.CloseProjectRequest: srpc.project.close_project_cb,
     rpc.project.ListProjectsRequest: srpc.project.list_projects_cb,
     rpc.project.ExecuteActionRequest: srpc.project.execute_action_cb,
+    rpc.project.AddActionPointRequest: srpc.project.add_action_point_cb,
+    rpc.project.UpdateActionPointRequest: srpc.project.update_action_point_cb,
+    rpc.project.UpdateActionPointUsingRobotRequest: srpc.project.update_action_point_using_robot_cb,
+    rpc.project.AddActionPointJointsRequest: srpc.project.add_action_point_joints_cb,
+    rpc.project.UpdateActionPointJointsRequest: srpc.project.update_action_point_joints_cb,
+    rpc.project.RemoveActionPointJointsRequest: srpc.project.remove_action_point_joints_cb,
+    rpc.project.AddActionPointOrientationRequest: srpc.project.add_action_point_orientation_cb,
     rpc.project.UpdateActionPointOrientationRequest: srpc.project.update_action_point_orientation_cb,
-    # TODO move from rpc.objects to rpc.project
-    rpc.objects.UpdateActionPointJointsRequest: srpc.project.update_ap_joints_cb,
+    rpc.project.AddActionPointOrientationUsingRobotRequest: srpc.project.add_action_point_orientation_using_robot_cb,
+    rpc.project.UpdateActionPointOrientationUsingRobotRequest: srpc.project.update_action_point_orientation_using_robot_cb,
+    rpc.project.RemoveActionPointOrientationRequest: srpc.project.remove_action_point_orientation_cb,
+    rpc.project.AddActionRequest: srpc.project.add_action_cb,
+    rpc.project.UpdateActionRequest: srpc.project.update_action_cb,
+    rpc.project.RemoveActionRequest: srpc.project.remove_action_cb,
+    rpc.project.UpdateActionLogicRequest: srpc.project.update_action_logic_cb,
 
     rpc.services.GetServicesRequest: srpc.services.get_services_cb,
     rpc.storage.ListMeshesRequest: list_meshes_cb

@@ -67,3 +67,11 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def value_to_json(cls, value: Any) -> str:
         return json.dumps(value)
+
+    @classmethod
+    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+        return False
+
+    @classmethod
+    def uses_robot_joints(cls, project: Project, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+        return False

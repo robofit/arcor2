@@ -197,7 +197,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
             obj = obj_inst.scene_object()
             glob.SCENE.objects.append(obj)
 
-            asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, obj)))
+            asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, data=obj)))
 
             if obj_meta.object_model:
                 obj_inst.collision_model = obj_meta.object_model.model()
@@ -242,4 +242,4 @@ async def open_scene(scene_id: str) -> None:
     assert {srv.type for srv in glob.SCENE.services} == glob.SERVICES_INSTANCES.keys()
     assert {obj.id for obj in glob.SCENE.objects} == glob.SCENE_OBJECT_INSTANCES.keys()
 
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, glob.SCENE)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE)))

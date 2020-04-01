@@ -162,7 +162,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union
 
     clean_up_after_focus(obj_id)
 
-    asyncio.ensure_future(notif.notify_scene_change_to_others())
+    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
     return None
 

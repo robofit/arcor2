@@ -22,6 +22,12 @@ class PosePlugin(ParameterPlugin):
     def value_to_json(cls, value: Pose) -> str:
         return value.to_json()
 
+    @classmethod
+    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+
+        _, _, value_id = cls.parse_id(project.action(action_id).parameter(parameter_id))
+        return value_id == orientation_id
+
 
 class PoseListPlugin(ListParameterPlugin):
 
@@ -47,3 +53,11 @@ class PoseListPlugin(ListParameterPlugin):
     @classmethod
     def value_to_json(cls, value: List[Pose]) -> str:
         return json.dumps([v.to_json() for v in value])
+
+    @classmethod
+    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+
+        for _, _, value_id in cls.parse_list_id(project.action(action_id).parameter(parameter_id)):
+            if value_id == orientation_id:
+                return True
+        return False

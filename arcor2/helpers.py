@@ -162,8 +162,8 @@ async def server(client: Any,
                 try:
                     resp = await rpc_dict[req_cls](req)
                 except Arcor2Exception as e:
-                    await logger.exception(e)
-                    resp = False, "System error."
+                    await logger.exception("Unhandled Arcor2Exception in RPC callback.")
+                    resp = False, f"System error. {str(e)}"
 
                 if resp is None:  # default response
                     resp = resp_cls()

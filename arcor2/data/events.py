@@ -12,11 +12,13 @@ from arcor2.data import common
 def wo_suffix(name: str) -> str:
     return re.sub('Event$', '', name)
 
+
 class EventType(common.StrEnum):
 
     ADD: str = "add"
     UPDATE: str = "update"
-    DELETE: str = "delete"
+    REMOVE: str = "remove"
+    UPDATE_BASE: str = "update_base"
 
 
 """
@@ -31,6 +33,7 @@ class Event(JsonSchemaMixin):
 
     event: str = field(default="", init=False)
     change_type: Optional[EventType] = None
+    parent_id: Optional[str] = None
 
 
 """
@@ -48,6 +51,12 @@ class SceneChanged(Event):
 
 
 @dataclass
+class SceneSaved(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ProjectChangedEvent(Event):
 
     data: Optional[common.Project] = None
@@ -55,9 +64,36 @@ class ProjectChangedEvent(Event):
 
 
 @dataclass
+class ProjectSaved(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ActionPointChanged(Event):
 
     data: Optional[common.ProjectActionPoint] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ActionChanged(Event):
+
+    data: Optional[common.Action] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class OrientationChanged(Event):
+
+    data: Optional[common.NamedOrientation] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class JointsChanged(Event):
+
+    data: Optional[common.ProjectRobotJoints] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

@@ -36,8 +36,16 @@ class JointsPlugin(ParameterPlugin):
                 raise ParameterPluginException(f"Parameter {param.id} of action {action.id} depends on"
                                                f" 'robot_id' parameter, which could not be found.")
 
-        return project.action_point(ap_id).get_joints(robot_id, value_id)
+        return project.action_point(ap_id).joints_for_robot(robot_id, value_id)
 
     @classmethod
     def value_to_json(cls, value: ProjectRobotJoints) -> str:
         return value.to_json()
+
+    @classmethod
+    def uses_robot_joints(cls, project: Project, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+
+        param = project.action(action_id).parameter(parameter_id)
+        _, _, value_id = cls.parse_id(param)
+
+        return value_id == robot_joints_id

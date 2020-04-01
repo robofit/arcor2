@@ -147,12 +147,28 @@ class ActionPoint(JsonSchemaMixin):
                 return Pose(self.position, ori.orientation)
         raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
 
-    def get_joints(self, robot_id: str, joints_id: str) -> ProjectRobotJoints:
+    def orientation(self, orientation_id: str) -> NamedOrientation:
+
+        for ori in self.orientations:
+            if ori.id == orientation_id:
+                return ori
+        raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
+
+    def joints(self, joints_id: str) -> ProjectRobotJoints:
 
         for joints in self.robot_joints:
-            if joints.id == joints_id and robot_id == joints.robot_id:
+            if joints.id == joints_id:
                 return joints
         raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")
+
+    def joints_for_robot(self, robot_id: str, joints_id: str) -> ProjectRobotJoints:
+
+        joints = self.joints(joints_id)
+
+        if joints.robot_id != robot_id:
+            raise Arcor2Exception("Joints for a different robot.")
+
+        return joints
 
     def invalidate_joints(self):
 
@@ -304,6 +320,15 @@ class Project(JsonSchemaMixin):
         else:
             raise Arcor2Exception("Action not found")
 
+    def action_point_and_action(self, action_id: str) -> Tuple[ProjectActionPoint, Action]:
+
+        for ap in self.action_points:
+            for ac in ap.actions:
+                if ac.id == action_id:
+                    return ap, ac
+        else:
+            raise Arcor2Exception("Action not found")
+
     def actions(self) -> List[Action]:
 
         ret: List[Action] = []
@@ -313,6 +338,9 @@ class Project(JsonSchemaMixin):
             for act in ap.actions:
                 ret.append(act)
         return ret
+
+    def action_ids(self) -> Set[str]:
+        return {action.id for action in self.actions()}
 
     def action_user_ids(self) -> Set[str]:
         return {action.user_id for action in self.actions()}

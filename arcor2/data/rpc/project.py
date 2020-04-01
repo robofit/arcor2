@@ -5,7 +5,7 @@ from typing import List, Optional
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, Position, ActionParameter
+from arcor2.data.common import IdDesc, Position, ActionParameter, ActionIO, Orientation
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, RobotArg
 
 
@@ -87,6 +87,7 @@ class OpenProjectResponse(Response):
 @dataclass
 class ListProjectsResponseData(IdDesc):
 
+    scene_id: str = field(default_factory=str)
     valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
     executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
     problems: List[str] = field(default_factory=list)
@@ -195,6 +196,75 @@ class UpdateActionPointResponse(Response):
 
     response: str = field(default=UpdateActionPointRequest.request, init=False)
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionPointUsingRobotRequestArgs(JsonSchemaMixin):
+
+    action_point_id: str
+    robot: RobotArg
+
+
+@dataclass
+class UpdateActionPointUsingRobotRequest(Request):
+
+    args: UpdateActionPointUsingRobotRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointUsingRobotResponse(Response):
+
+    response: str = field(default=UpdateActionPointUsingRobotRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class AddActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
+
+    action_point_id: str
+    robot: RobotArg
+    user_id: str = "default"
+
+
+@dataclass
+class AddActionPointOrientationUsingRobotRequest(Request):
+
+    args: AddActionPointOrientationUsingRobotRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class AddActionPointOrientationUsingRobotResponse(Response):
+
+    response: str = field(default=AddActionPointOrientationUsingRobotRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
+
+    action_point_id: str
+    robot: RobotArg
+    orientation_id: str
+
+
+@dataclass
+class UpdateActionPointOrientationUsingRobotRequest(Request):
+
+    args: UpdateActionPointOrientationUsingRobotRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointOrientationUsingRobotResponse(Response):
+
+    response: str = field(default=UpdateActionPointOrientationUsingRobotRequest.request, init=False)
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 
@@ -202,7 +272,7 @@ class UpdateActionPointResponse(Response):
 class AddActionPointOrientationRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
-    robot: RobotArg
+    orientation: Orientation
     user_id: str = "default"
 
 
@@ -225,8 +295,8 @@ class AddActionPointOrientationResponse(Response):
 class UpdateActionPointOrientationRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
-    robot: RobotArg
     orientation_id: str
+    orientation: Orientation
 
 
 @dataclass
@@ -240,6 +310,25 @@ class UpdateActionPointOrientationRequest(Request):
 class UpdateActionPointOrientationResponse(Response):
 
     response: str = field(default=UpdateActionPointOrientationRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RemoveActionPointOrientationRequestArgs(JsonSchemaMixin):
+    action_point_id: str
+    orientation_id: str
+
+
+@dataclass
+class RemoveActionPointOrientationRequest(Request):
+    args: RemoveActionPointOrientationRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+@dataclass
+class RemoveActionPointOrientationResponse(Response):
+    response: str = field(default=RemoveActionPointOrientationRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -264,3 +353,109 @@ class AddActionRequest(Request):
 class AddActionResponse(Response):
 
     response: str = field(default=AddActionRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionRequestArgs(JsonSchemaMixin):
+
+    action_id: str
+    parameters: List[ActionParameter] = field(default_factory=list)
+
+
+@dataclass
+class UpdateActionRequest(Request):
+
+    args: UpdateActionRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionResponse(Response):
+
+    response: str = field(default=UpdateActionRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RemoveActionRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RemoveActionResponse(Response):
+
+    response: str = field(default=RemoveActionRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionLogicArgs(JsonSchemaMixin):
+
+    action_id: str
+    inputs: List[ActionIO] = field(default_factory=list)
+    outputs: List[ActionIO] = field(default_factory=list)
+
+
+@dataclass
+class UpdateActionLogicRequest(Request):
+
+    args: UpdateActionLogicArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionLogicResponse(Response):
+
+    response: str = field(default=UpdateActionLogicRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionPointJointsRequestArgs(IdArgs):
+
+    robot_id: str
+    joints_id: str = "default"
+
+
+@dataclass
+class UpdateActionPointJointsRequest(Request):
+
+    args: UpdateActionPointJointsRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointJointsResponse(Response):
+
+    response: str = field(default=UpdateActionPointJointsRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RemoveActionPointJointsRequestArgs(JsonSchemaMixin):
+
+    action_point_id: str
+    joints_id: str
+
+
+@dataclass
+class RemoveActionPointJointsRequest(Request):
+
+    args: RemoveActionPointJointsRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RemoveActionPointJointsResponse(Response):
+
+    response: str = field(default=RemoveActionPointJointsRequest.request, init=False)

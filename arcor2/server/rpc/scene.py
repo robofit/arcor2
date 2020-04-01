@@ -34,7 +34,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
     assert glob.SCENE is None
 
     glob.SCENE = common.Scene(uuid.uuid4().hex, req.args.user_id, desc=req.args.desc)
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, glob.SCENE)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
     return None
 
 
@@ -81,6 +81,7 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
     except storage.PersistentStorageException:
         # new scene, no need for further checks
         await storage.update_scene(glob.SCENE)
+        asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
         return None
 
     # let's check if something important has changed
@@ -93,6 +94,7 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
                 asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, new_obj.id))
 
     await storage.update_scene(glob.SCENE)
+    asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
     return None
 
 
@@ -131,7 +133,7 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
         return res, msg
 
     glob.SCENE.last_modified = datetime.now()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, obj)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, data=obj)))
     return None
 
 
@@ -166,7 +168,7 @@ async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest) ->\
 
     glob.SCENE.services.append(srv)
     glob.SCENE.last_modified = datetime.now()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.ADD, srv)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.ADD, data=srv)))
     return None
 
 
@@ -250,7 +252,7 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
         obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
         await collision(obj_inst, remove=True)
         del glob.SCENE_OBJECT_INSTANCES[req.args.id]
-        asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.DELETE, obj)))
+        asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.REMOVE, data=obj)))
 
     elif req.args.id in glob.SERVICES_INSTANCES:
 
@@ -262,7 +264,7 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
         srv = glob.SCENE.service(req.args.id)
         glob.SCENE.services = [srv for srv in glob.SCENE.services if srv.type != req.args.id]
         del glob.SERVICES_INSTANCES[req.args.id]
-        asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.DELETE, srv)))
+        asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.REMOVE, data=srv)))
 
     else:
         return False, "Unknown id."
@@ -274,8 +276,8 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
 
 @scene_needed
 @no_project
-async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest) -> \
-        Union[rpc.objects.UpdateActionObjectPoseRequest, hlp.RPC_RETURN_TYPES]:
+async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsingRobotRequest) -> \
+        Union[rpc.objects.UpdateObjectPoseUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
     """
     Updates object's pose using a pose of the robot's end effector.
     :param req:
@@ -298,7 +300,7 @@ async def update_action_object_cb(req: rpc.objects.UpdateActionObjectPoseRequest
         return False, str(e)
 
     glob.SCENE.last_modified = datetime.now()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, scene_object)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
     return None
 
 
@@ -312,7 +314,7 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
     obj = glob.SCENE.object(req.args.object_id)
     obj.pose = req.args.pose
     glob.SCENE.last_modified = datetime.now()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, obj)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
     return None
 
 
@@ -333,7 +335,7 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
     target_obj.user_id = req.args.new_user_id
 
     glob.SCENE.last_modified = datetime.now()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, target_obj)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=target_obj)))
     return None
 
 
@@ -357,7 +359,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
     if save_back:
         asyncio.ensure_future(storage.update_scene(scene))
 
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, scene)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, data=scene)))
     return None
 
 
