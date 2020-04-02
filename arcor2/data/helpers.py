@@ -12,7 +12,8 @@ _requests: Dict[str, Type[Request]] = {}
 _responses: Dict[str, Type[Response]] = {}
 
 # TODO avoid explicit naming of all sub-modules in rpc module
-for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene, rpc.project, rpc.services, rpc.storage):
+for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene, rpc.project, rpc.services,
+                   rpc.storage):
     for name, obj in inspect.getmembers(rpc_module):
 
         if not inspect.isclass(obj):

@@ -5,7 +5,7 @@ from typing import List, Set
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, SceneObject, SceneService, Pose
+from arcor2.data.common import IdDesc, SceneService, Pose
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs
 
 

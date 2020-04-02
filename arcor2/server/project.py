@@ -163,7 +163,8 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
         for joints in ap.robot_joints:
             if not joints.is_valid:
-                problems.append(f"Action point {ap.user_id} has invalid joints: {joints.user_id} (robot {joints.robot_id}).")
+                problems.append(f"Action point {ap.user_id} has invalid joints: {joints.user_id} "
+                                f"(robot {joints.robot_id}).")
 
         for action in ap.actions:
 

@@ -101,16 +101,17 @@ class IntResources:
         self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
         # make all poses absolute
-        for project_obj in self.project.objects:
-            for aps in project_obj.action_points:
+        for aps in project.action_points_with_parent:
 
-                obj_inst = self.objects[project_obj.id]
+            assert aps.parent
 
-                # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
-                obj_inst.action_points[aps.id] = aps
-                aps.position = make_position_abs(obj_inst.pose.position, aps.position)
-                for ori in aps.orientations:
-                    ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
+            obj_inst = self.objects[aps.parent]
+
+            # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
+            obj_inst.action_points[aps.id] = aps
+            aps.position = make_position_abs(obj_inst.pose.position, aps.position)
+            for ori in aps.orientations:
+                ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
 
     def __enter__(self):
         return self

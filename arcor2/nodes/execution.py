@@ -70,7 +70,7 @@ async def read_proc_stdout() -> None:
     assert PROCESS is not None
     assert PROCESS.stdout is not None
 
-    await project_state(ProjectStateEvent(ProjectState(ProjectStateEnum.RUNNING)))
+    await project_state(ProjectStateEvent(data=ProjectState(ProjectStateEnum.RUNNING)))
 
     while process_running():
         try:
@@ -111,7 +111,7 @@ async def read_proc_stdout() -> None:
     ACTION_ARGS_EVENT = None
     PROJECT_ID = None
 
-    await project_state(ProjectStateEvent(ProjectState(ProjectStateEnum.STOPPED)))
+    await project_state(ProjectStateEvent(data=ProjectState(ProjectStateEnum.STOPPED)))
 
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 

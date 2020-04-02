@@ -202,7 +202,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
 
     glob.OBJECT_TYPES[meta.type] = meta
     glob.ACTIONS[meta.type] = otu.object_actions(TYPE_TO_PLUGIN,
-                                            hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
+                                                 hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, glob.ACTIONS, glob.OBJECT_TYPES)
 
     asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(data=[meta.type])))
@@ -217,6 +217,6 @@ async def get_object_actions_cb(req: rpc.objects.GetActionsRequest) -> Union[rpc
     except KeyError:
         return False, f"Unknown object type: '{req.args.type}'."
 
-    
+
 async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest) -> rpc.objects.GetObjectTypesResponse:
     return rpc.objects.GetObjectTypesResponse(data=list(glob.OBJECT_TYPES.values()))

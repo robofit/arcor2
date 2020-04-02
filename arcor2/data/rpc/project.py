@@ -15,6 +15,7 @@ class NewProjectRequestArgs(JsonSchemaMixin):
     scene_id: str
     user_id: str
     desc: str = field(default_factory=str)
+    has_logic: bool = True
 
 
 @dataclass
@@ -52,6 +53,7 @@ class CloseProjectResponse(Response):
     response: str = field(default=CloseProjectRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
+
 
 @dataclass
 class SaveProjectRequest(Request):
@@ -325,6 +327,7 @@ class RemoveActionPointOrientationRequestArgs(JsonSchemaMixin):
 class RemoveActionPointOrientationRequest(Request):
     args: RemoveActionPointOrientationRequestArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
 
 @dataclass
 class RemoveActionPointOrientationResponse(Response):

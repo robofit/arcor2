@@ -18,13 +18,15 @@ from arcor2.server.robot import get_end_effector_pose, RobotPoseException
 from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
-from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene, clear_scene
-from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects, projects_using_object, projects
+from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
+    clear_scene
+from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
+    projects_using_object, projects
 
 
 @no_scene
 async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSceneResponse,
-                                                                          hlp.RPC_RETURN_TYPES]:
+                                                                hlp.RPC_RETURN_TYPES]:
     """
     Creates and opens a new scene on the server. Fails if any scene is open or if scene id/user_id already exists.
     :param req:
@@ -41,7 +43,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
 @scene_needed
 @no_project
 async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.CloseSceneResponse,
-                                                                          hlp.RPC_RETURN_TYPES]:
+                                                                    hlp.RPC_RETURN_TYPES]:
     """
     Closes scene on the server.
     :param req:
@@ -72,7 +74,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
 @scene_needed
 @no_project
 async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.SaveSceneResponse,
-                                                                          hlp.RPC_RETURN_TYPES]:
+                                                                  hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
 
@@ -124,8 +126,7 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
 
     assert glob.SCENE
 
-    obj = common.SceneObject(uuid.uuid4().hex, req.args.user_id, req.args.type,
-                                                            req.args.pose)
+    obj = common.SceneObject(uuid.uuid4().hex, req.args.user_id, req.args.type, req.args.pose)
 
     res, msg = await add_object_to_scene(obj)
 
@@ -230,7 +231,7 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
         method = getattr(inst, method_name)
     except AttributeError:
         await glob.logger.error(f"Unable to get values for parameter {req.args.param_id}, "
-                           f"object/service {inst.id} has no method named {method_name}.")
+                                f"object/service {inst.id} has no method named {method_name}.")
         return False, "System error."
 
     # TODO update hlp.run_in_executor to support kwargs

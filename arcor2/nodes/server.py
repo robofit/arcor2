@@ -26,6 +26,7 @@ from arcor2.parameter_plugins import PARAM_PLUGINS
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
 from arcor2.server import execution as exe, notifications as notif, rpc as srpc
+from arcor2.server.project import open_project
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -76,7 +77,7 @@ async def _initialize_server() -> None:
 
 async def _check_manager() -> None:
     """
-    Loads project if it is loaded on manager
+    Loads project if it is loaded on manager (e.g. in a case when execution unit runs script and server is started).
     :return:
     """
 
@@ -84,9 +85,8 @@ async def _check_manager() -> None:
     resp = cast(rpc.execution.ProjectStateResponse,
                 await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
-    # TODO is this still needed?
-    # if resp.data.id is not None and (PROJECT is None or PROJECT.id != resp.data.id):
-    #    await open_project(resp.data.id)
+    if resp.data.id is not None and (glob.PROJECT is None or glob.PROJECT.id != resp.data.id):
+        await open_project(resp.data.id)
 
 
 async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,
@@ -177,7 +177,8 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.project.AddActionPointOrientationRequest: srpc.project.add_action_point_orientation_cb,
     rpc.project.UpdateActionPointOrientationRequest: srpc.project.update_action_point_orientation_cb,
     rpc.project.AddActionPointOrientationUsingRobotRequest: srpc.project.add_action_point_orientation_using_robot_cb,
-    rpc.project.UpdateActionPointOrientationUsingRobotRequest: srpc.project.update_action_point_orientation_using_robot_cb,
+    rpc.project.UpdateActionPointOrientationUsingRobotRequest:
+        srpc.project.update_action_point_orientation_using_robot_cb,
     rpc.project.RemoveActionPointOrientationRequest: srpc.project.remove_action_point_orientation_cb,
     rpc.project.AddActionRequest: srpc.project.add_action_cb,
     rpc.project.UpdateActionRequest: srpc.project.update_action_cb,
