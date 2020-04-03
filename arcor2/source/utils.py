@@ -16,7 +16,6 @@ from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, Functio
 from arcor2.data.common import Project, ActionPoint
 from arcor2.source import SourceException, SCRIPT_HEADER
 import arcor2.data.common
-import arcor2.resources
 
 
 def main_loop_body(tree: Module) -> List[Any]:
@@ -589,6 +588,7 @@ def global_actions_class(project: Project) -> str:
 
 def derived_resources_class(project: Project) -> str:
     # TODO temporary and ugly solution of circular import
+    import arcor2.resources
     from arcor2.resources import ResourcesBase
 
     tree = Module(body=[])
