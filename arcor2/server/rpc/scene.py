@@ -17,9 +17,9 @@ from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
 from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene, associated_projects
+    clear_scene
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
-    projects_using_object
+    projects_using_object, associated_projects
 
 
 @no_scene

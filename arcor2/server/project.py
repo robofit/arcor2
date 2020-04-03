@@ -12,6 +12,10 @@ from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.scene import open_scene, clear_scene
 
 
+async def associated_projects(scene_id: str) -> Set[str]:
+    return {project.id async for project in projects(scene_id)}
+
+
 async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
     """
     Invalidates robot joints if action point's parent has changed its pose.
