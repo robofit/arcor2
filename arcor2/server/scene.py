@@ -13,8 +13,8 @@ from arcor2.server import globals as glob, notifications as notif, objects_servi
 from arcor2.server.robot import collision
 
 
-def instances_user_ids() -> Set[str]:
-    return {obj.user_id for obj in glob.SCENE_OBJECT_INSTANCES.values()}
+def instances_names() -> Set[str]:
+    return {obj.name for obj in glob.SCENE_OBJECT_INSTANCES.values()}
 
 
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:
@@ -86,11 +86,11 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
     if obj.id in glob.SCENE_OBJECT_INSTANCES or obj.id in glob.SERVICES_INSTANCES:
         return False, "Object/service with that id already exists."
 
-    if obj.user_id in instances_user_ids():
-        return False, "User_id is already used."
+    if obj.name in instances_names():
+        return False, "Name is already used."
 
-    if not hlp.is_valid_identifier(obj.user_id):
-        return False, "Object ID invalid (should be snake_case)."
+    if not hlp.is_valid_identifier(obj.name):
+        return False, "Object name invalid (should be snake_case)."
 
     await glob.logger.debug(f"Creating instance {obj.id} ({obj.type}).")
 
@@ -107,7 +107,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
             coll_model = obj_meta.object_model.model()
 
         if not obj_meta.needs_services:
-            obj_inst = cls(obj.id, obj.user_id, obj.pose, coll_model)
+            obj_inst = cls(obj.id, obj.name, obj.pose, coll_model)
         else:
 
             srv_args: List[Service] = []
@@ -179,7 +179,7 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
 
             assert isinstance(obj_inst, Generic)
 
-            if not hlp.is_valid_identifier(obj_inst.user_id):
+            if not hlp.is_valid_identifier(obj_inst.name):
                 # TODO add message to response
                 await glob.logger.warning(f"Object id {obj_inst.id} invalid.")
                 continue
@@ -188,8 +188,8 @@ async def auto_add_object_to_scene(obj_type_name: str) -> Tuple[bool, str]:
                 await glob.logger.warning(f"Object id {obj_inst.id} already in scene.")
                 continue
 
-            if obj_inst.user_id in instances_user_ids():
-                await glob.logger.warning(f"Duplicate user_id {obj_inst.user_id}.")
+            if obj_inst.name in instances_names():
+                await glob.logger.warning(f"Duplicate object name {obj_inst.name}.")
                 continue
 
             glob.SCENE_OBJECT_INSTANCES[obj_inst.id] = obj_inst

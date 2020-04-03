@@ -158,24 +158,24 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 
         # test if all objects exists in scene
         if ap.parent and ap.parent not in scene_objects:
-            problems.append(f"Action point '{ap.user_id}' has parent '{ap.parent}' that does not exist in the scene.")
+            problems.append(f"Action point '{ap.name}' has parent '{ap.parent}' that does not exist in the scene.")
             continue
 
         for joints in ap.robot_joints:
             if not joints.is_valid:
-                problems.append(f"Action point {ap.user_id} has invalid joints: {joints.user_id} "
+                problems.append(f"Action point {ap.name} has invalid joints: {joints.name} "
                                 f"(robot {joints.robot_id}).")
 
         for action in ap.actions:
 
             if action.id in action_ids:
-                problems.append(f"Action ID {action.user_id} of the {ap.user_id} is not unique.")
+                problems.append(f"Action ID {action.name} of the {ap.name} is not unique.")
 
             # check if objects have used actions
             obj_id, action_type = action.parse_type()
 
             if obj_id not in scene_objects.keys() | scene_services:
-                problems.append(f"Object ID {obj_id} which action is used in {action.user_id} does not exist in scene.")
+                problems.append(f"Object ID {obj_id} which action is used in {action.name} does not exist in scene.")
                 continue
 
             try:
@@ -213,7 +213,12 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
 async def open_project(project_id: str) -> None:
 
     project = await storage.get_project(project_id)
-    await open_scene(project.scene_id)
+
+    if glob.SCENE:
+        if glob.SCENE.id != project.scene_id:
+            raise Arcor2Exception("Required project is associated to another scene.")
+    else:
+        await open_scene(project.scene_id)
 
     assert glob.SCENE
     for ap in project.action_points_with_parent:
@@ -223,7 +228,7 @@ async def open_project(project_id: str) -> None:
             glob.SCENE.object(ap.parent)
         except Arcor2Exception:
             await clear_scene()
-            raise Arcor2Exception(f"Action point's {ap.user_id} parent not available in the scene.")
+            raise Arcor2Exception(f"Action point's {ap.name} parent not available in the scene.")
 
     glob.PROJECT = project
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChangedEvent(events.EventType.UPDATE, data=glob.PROJECT)))
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT)))

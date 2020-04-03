@@ -13,7 +13,7 @@ from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArg
 class RenameArgs(JsonSchemaMixin):
 
     id: str
-    new_user_id: str
+    new_name: str
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ class AutoAddObjectToSceneResponse(Response):
 @dataclass
 class AddObjectToSceneRequestArgs(JsonSchemaMixin):
 
-    user_id: str
+    name: str
     type: str
     pose: Pose
 
@@ -153,7 +153,7 @@ class ListScenesResponse(Response):
 @dataclass
 class NewSceneRequestArgs(JsonSchemaMixin):
 
-    user_id: str
+    name: str
     desc: str = field(default_factory=str)
 
 

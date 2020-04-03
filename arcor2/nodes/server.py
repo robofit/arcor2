@@ -100,7 +100,7 @@ async def register(websocket) -> None:
     glob.INTERFACES.add(websocket)
 
     await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE))
-    await notif.event(websocket, events.ProjectChangedEvent(events.EventType.UPDATE, data=glob.PROJECT))
+    await notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT))
 
     # TODO avoid cast
     resp = cast(rpc.execution.ProjectStateResponse,

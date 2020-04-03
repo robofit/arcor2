@@ -23,6 +23,7 @@ from arcor2.server.decorators import scene_needed, project_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints, RobotPoseException
 from arcor2.server.project import project_problems, open_project
+from arcor2.server.scene import open_scene, clear_scene
 
 
 @scene_needed
@@ -127,16 +128,17 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
         return False, "Invalid action point."
 
     for joints in ap.robot_joints:
-        if req.args.user_id == joints.user_id:
-            return False, "User id already exists."
+        if req.args.name == joints.name:
+            return False, "Name already exists."
 
     try:
         new_joints = await get_robot_joints(req.args.robot_id)
     except Arcor2Exception as e:
         return False, str(e)
 
-    prj = ProjectRobotJoints(uuid.uuid4().hex, req.args.user_id, req.args.robot_id, new_joints, True)
+    prj = ProjectRobotJoints(uuid.uuid4().hex, req.args.name, req.args.robot_id, new_joints, True)
     ap.robot_joints.append(prj)
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.ADD, ap.id, data=prj)))
     return None
 
@@ -169,6 +171,7 @@ async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJoints
     robot_joints.robot_id = req.args.robot_id
     robot_joints.is_valid = True
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, ap.id,
                                                                      data=robot_joints)))
     return None
@@ -201,11 +204,12 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
     for act in glob.PROJECT.actions():
         for param in act.parameters:
             if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, req.args.joints_id):
-                return False, f"Joints used in action {act.user_id} (parameter {param.id})."
+                return False, f"Joints used in action {act.name} (parameter {param.id})."
 
     joints_to_be_removed = ap.joints(req.args.joints_id)
     ap.robot_joints = [joints for joints in ap.robot_joints if joints.id != req.args.joints_id]
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.REMOVE, ap.id,
                                                                      data=joints_to_be_removed)))
     return None
@@ -222,15 +226,15 @@ async def update_action_point_cb(req: rpc.project.UpdateActionPointRequest) -> \
 
     change = False
 
-    if req.args.new_user_id is not None:
+    if req.args.new_name is not None:
 
-        if not hlp.is_valid_identifier(req.args.new_user_id):
-            return False, "User id is not a valid Python identifier."
+        if not hlp.is_valid_identifier(req.args.new_name):
+            return False, "Name has to be valid Python identifier."
 
-        if req.args.new_user_id in glob.PROJECT.action_points_user_ids:
-            return False, "User id is not unique."
+        if req.args.new_name in glob.PROJECT.action_points_names:
+            return False, "Name is not unique."
 
-        ap.user_id = req.args.new_user_id
+        ap.name = req.args.new_name
         change = True
 
     if req.args.new_parent_id is not None:
@@ -258,8 +262,9 @@ async def update_action_point_cb(req: rpc.project.UpdateActionPointRequest) -> \
     if not change:
         return False, "No change requested."
 
-    # TODO send just bare ActionPoint (without actions, orientations, joints...)
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE, data=ap)))
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
+                                                                          data=ap.bare())))
     return None
 
 
@@ -292,8 +297,10 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
 
     ap.position = new_pose.position
 
-    # TODO send just bare ActionPoint (without actions, orientations, joints...)
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE, data=ap)))
+    glob.PROJECT.update_modified()
+
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
+                                                                          data=ap.bare())))
     return None
 
 
@@ -315,12 +322,13 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
         return False, "Invalid action point."
 
     for ori in ap.orientations:
-        if ori.user_id == req.args.user_id:
-            return False, "Orientation with desired user id already exists."
+        if ori.name == req.args.name:
+            return False, "Orientation with desired name already exists."
 
-    orientation = NamedOrientation(uuid.uuid4().hex, req.args.user_id, req.args.orientation)
+    orientation = NamedOrientation(uuid.uuid4().hex, req.args.name, req.args.orientation)
     ap.orientations.append(orientation)
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.ADD, ap.id,
                                                                           data=orientation)))
     return None
@@ -342,6 +350,7 @@ async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointO
     orientation = ap.orientation(req.args.orientation_id)
     orientation.orientation = req.args.orientation
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.UPDATE, ap.id,
                                                                           data=orientation)))
     return None
@@ -365,8 +374,8 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
         return False, "Invalid action point."
 
     for ori in ap.orientations:
-        if ori.user_id == req.args.user_id:
-            return False, "Orientation with desired user id already exists."
+        if ori.name == req.args.name:
+            return False, "Orientation with desired name already exists."
 
     try:
         new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
@@ -377,9 +386,10 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
         obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
         new_pose = hlp.make_pose_rel(obj.pose, new_pose)
 
-    orientation = NamedOrientation(uuid.uuid4().hex, req.args.user_id, new_pose.orientation)
+    orientation = NamedOrientation(uuid.uuid4().hex, req.args.name, new_pose.orientation)
     ap.orientations.append(orientation)
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.ADD, ap.id,
                                                                           data=orientation)))
     return None
@@ -421,6 +431,7 @@ async def update_action_point_orientation_using_robot_cb(
     else:
         return False, "Unknown orientation."
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.UPDATE, ap.id,
                                                                           data=orientation)))
     return None
@@ -453,10 +464,11 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     for act in glob.PROJECT.actions():
         for param in act.parameters:
             if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, req.args.orientation_id):
-                return False, f"Orientation used in action {act.user_id} (parameter {param.id})."
+                return False, f"Orientation used in action {act.name} (parameter {param.id})."
 
     ap.orientations = [ori for ori in ap.orientations if ori.id != req.args.orientation_id]
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.REMOVE, ap.id,
                                                                           data=orientation)))
     return None
@@ -482,6 +494,7 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 
     assert glob.SCENE and glob.PROJECT
     await storage.update_project(glob.PROJECT)
+    # TODO get generated 'modified' from storage and update ours?
     asyncio.ensure_future(notif.broadcast_event(events.ProjectSaved()))
     return None
 
@@ -490,14 +503,27 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
 
-    if req.args.scene_id not in {scene.id for scene in (await storage.get_scenes()).items}:
-        return False, "Unknown scene id."
+    for project_id in (await storage.get_projects()).items:
+        project = await storage.get_project(project_id.id)
+        if req.args.name == project.name:
+            return False, "Name already used."
 
-    # TODO make sure that user_id of the project is not already taken?
+    if glob.SCENE:
+        if glob.SCENE.id != req.args.scene_id:
+            return False, "Another scene is opened."
 
-    glob.PROJECT = Project(uuid.uuid4().hex, req.args.user_id, req.args.scene_id, desc=req.args.desc,
+        # TODO save scene if not saved?
+
+    else:
+
+        if req.args.scene_id not in {scene.id for scene in (await storage.get_scenes()).items}:
+            return False, "Unknown scene id."
+
+        await open_scene(req.args.scene_id)
+
+    glob.PROJECT = Project(uuid.uuid4().hex, req.args.name, req.args.scene_id, desc=req.args.desc,
                            has_logic=req.args.has_logic)
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChangedEvent(events.EventType.ADD, data=glob.PROJECT)))
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.ADD, data=glob.PROJECT)))
     return None
 
 
@@ -511,12 +537,16 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.pr
 
         saved_project = await storage.get_project(glob.PROJECT.id)
 
-        if saved_project.last_modified and glob.PROJECT.last_modified and \
-                saved_project.last_modified < glob.PROJECT.last_modified:
+        if saved_project.modified and glob.PROJECT.modified and \
+                saved_project.modified < glob.PROJECT.modified:
             return False, "Project has unsaved changes."
 
     glob.PROJECT = None
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChangedEvent(events.EventType.UPDATE)))
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE)))
+
+    await clear_scene()
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE)))
+
     return None
 
 
@@ -527,11 +557,13 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
 
     assert glob.PROJECT
 
-    if req.args.user_id in glob.PROJECT.action_points_user_ids:
-        return False, "Action point user id is already used."
+    if req.args.name in glob.PROJECT.action_points_names:
+        return False, "Action point name is already used."
 
-    ap = ProjectActionPoint(uuid.uuid4().hex, req.args.user_id, req.args.position)
+    ap = ProjectActionPoint(uuid.uuid4().hex, req.args.name, req.args.position)
     glob.PROJECT.action_points.append(ap)
+
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.ADD, data=ap)))
     return None
 
@@ -546,12 +578,12 @@ def check_action_params(action: Action) -> None:
     for param in action.parameters:
 
         if param.type not in PARAM_PLUGINS:
-            raise Arcor2Exception(f"Parameter {param.id} of action {action.user_id} has unknown type: {param.type}.")
+            raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has unknown type: {param.type}.")
 
         try:
             PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, glob.SCENE, glob.PROJECT, action.id, param.id)
         except ParameterPluginException as e:
-            raise Arcor2Exception(f"Parameter {param.id} of action {action.user_id} has invalid value. {str(e)}")
+            raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has invalid value. {str(e)}")
 
 
 @scene_needed
@@ -567,13 +599,13 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     except Arcor2Exception as e:
         return False, str(e)
 
-    if req.args.user_id in glob.PROJECT.action_user_ids():
-        return False, "Action user id already exists."
+    if req.args.name in glob.PROJECT.action_user_names():
+        return False, "Action name already exists."
 
-    if not hlp.is_valid_identifier(req.args.user_id):
-        return False, "Action user id is not a valid Python identifier."
+    if not hlp.is_valid_identifier(req.args.name):
+        return False, "Action name has to be valid Python identifier."
 
-    action = Action(uuid.uuid4().hex, req.args.user_id, req.args.type, req.args.parameters)
+    action = Action(uuid.uuid4().hex, req.args.name, req.args.type, req.args.parameters)
 
     try:
         obj_id, action_type = action.parse_type()
@@ -599,6 +631,8 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
         return False, str(e)
 
     ap.actions.append(action)
+
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.ADD, ap.id, data=action)))
     return None
 
@@ -625,6 +659,8 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.pr
         return False, str(e)
 
     action.parameters = req.args.parameters
+
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE, ap.id,
                                                                      data=updated_action)))
     return None
@@ -647,10 +683,11 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.pr
         for act in ap.actions:
             for inp in act.inputs:
                 if inp.default == action.id:
-                    return False, f"Action used as an input for another action ({act.user_id})."
+                    return False, f"Action used as an input for another action ({act.name})."
 
     ap.actions = [act for act in ap.actions if act.id != req.args.id]
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.REMOVE, ap.id, data=action)))
     return None
 
@@ -681,5 +718,6 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest) -> \
     action.inputs = req.args.inputs
     action.outputs = req.args.outputs
 
+    glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE, ap.id, data=action)))
     return None

@@ -57,7 +57,7 @@ class SceneSaved(Event):
 
 
 @dataclass
-class ProjectChangedEvent(Event):
+class ProjectChanged(Event):
 
     data: Optional[common.Project] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821

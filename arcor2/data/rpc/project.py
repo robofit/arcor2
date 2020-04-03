@@ -13,7 +13,7 @@ from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, RobotAr
 class NewProjectRequestArgs(JsonSchemaMixin):
 
     scene_id: str
-    user_id: str
+    name: str
     desc: str = field(default_factory=str)
     has_logic: bool = True
 
@@ -134,7 +134,7 @@ class ExecuteActionResponse(Response):
 @dataclass
 class AddActionPointArgs(JsonSchemaMixin):
 
-    user_id: str
+    name: str
     position: Position
     parent: Optional[str] = None
 
@@ -159,7 +159,7 @@ class AddActionPointJointsRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
     robot_id: str
-    user_id: str = "default"
+    name: str = "default"
 
 
 @dataclass
@@ -182,7 +182,7 @@ class UpdateActionPointRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
     new_parent_id: Optional[str] = None
-    new_user_id: Optional[str] = None
+    new_name: Optional[str] = None
     new_position: Optional[Position] = None
 
 
@@ -229,7 +229,7 @@ class AddActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
     robot: RobotArg
-    user_id: str = "default"
+    name: str = "default"
 
 
 @dataclass
@@ -275,7 +275,7 @@ class AddActionPointOrientationRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
     orientation: Orientation
-    user_id: str = "default"
+    name: str = "default"
 
 
 @dataclass
@@ -340,7 +340,7 @@ class RemoveActionPointOrientationResponse(Response):
 class AddActionRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
-    user_id: str
+    name: str
     type: str
     parameters: List[ActionParameter] = field(default_factory=list)
 

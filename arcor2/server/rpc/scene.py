@@ -5,7 +5,6 @@ from typing import Union
 import asyncio
 import functools
 import uuid
-from datetime import datetime
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
@@ -28,14 +27,14 @@ from arcor2.server.project import scene_object_pose_updated, remove_object_refer
 async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSceneResponse,
                                                                 hlp.RPC_RETURN_TYPES]:
     """
-    Creates and opens a new scene on the server. Fails if any scene is open or if scene id/user_id already exists.
+    Creates and opens a new scene on the server. Fails if any scene is open or if scene id/name already exists.
     :param req:
     :return:
     """
 
     assert glob.SCENE is None
 
-    glob.SCENE = common.Scene(uuid.uuid4().hex, req.args.user_id, desc=req.args.desc)
+    glob.SCENE = common.Scene(uuid.uuid4().hex, req.args.name, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
     return None
 
@@ -52,15 +51,13 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
 
     assert glob.SCENE
 
-    if req.args.force:
-        glob.SCENE = None
-    else:
+    if not req.args.force:
 
         try:
             saved_scene = await storage.get_scene(glob.SCENE.id)
 
-            if saved_scene and saved_scene.last_modified and glob.SCENE.last_modified and \
-                    saved_scene.last_modified < glob.SCENE.last_modified:
+            if saved_scene and saved_scene.modified and glob.SCENE.modified and \
+                    saved_scene.modified < glob.SCENE.modified:
                 return False, "Scene has unsaved changes."
 
         except storage.PersistentStorageException:
@@ -126,14 +123,14 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
 
     assert glob.SCENE
 
-    obj = common.SceneObject(uuid.uuid4().hex, req.args.user_id, req.args.type, req.args.pose)
+    obj = common.SceneObject(uuid.uuid4().hex, req.args.name, req.args.type, req.args.pose)
 
     res, msg = await add_object_to_scene(obj)
 
     if not res:
         return res, msg
 
-    glob.SCENE.last_modified = datetime.now()
+    glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, data=obj)))
     return None
 
@@ -150,7 +147,7 @@ async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest
     if not res:
         return res, msg
 
-    glob.SCENE.last_modified = datetime.now()
+    glob.SCENE.update_modified()
     return None
 
 
@@ -168,7 +165,7 @@ async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest) ->\
         return res, msg
 
     glob.SCENE.services.append(srv)
-    glob.SCENE.last_modified = datetime.now()
+    glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.ADD, data=srv)))
     return None
 
@@ -270,7 +267,9 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
     else:
         return False, "Unknown id."
 
-    glob.SCENE.last_modified = datetime.now()
+    # TODO test if the service/object is not used in some project
+
+    glob.SCENE.update_modified()
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
     return None
 
@@ -300,7 +299,9 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     except RobotPoseException as e:
         return False, str(e)
 
-    glob.SCENE.last_modified = datetime.now()
+    # TODO invalidate joints
+
+    glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
     return None
 
@@ -314,7 +315,10 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
 
     obj = glob.SCENE.object(req.args.object_id)
     obj.pose = req.args.pose
-    glob.SCENE.last_modified = datetime.now()
+
+    # TODO invalidate joints
+
+    glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
     return None
 
@@ -330,12 +334,12 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
 
     for obj in glob.SCENE.objects:
 
-        if obj.user_id == req.args.new_user_id:
-            return False, f"User_id already exists."
+        if obj.name == req.args.new_name:
+            return False, f"Object name already exists."
 
-    target_obj.user_id = req.args.new_user_id
+    target_obj.name = req.args.new_name
 
-    glob.SCENE.last_modified = datetime.now()
+    glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=target_obj)))
     return None
 
@@ -346,6 +350,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
     save_back = False
 
     if glob.SCENE and glob.SCENE.id == req.args.id:
+        glob.SCENE.update_modified()
         scene = glob.SCENE
     else:
         try:
@@ -354,13 +359,12 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
             return False, str(e)
         save_back = True
 
-    scene.last_modified = datetime.now()
-    scene.user_id = req.args.new_user_id
+    scene.name = req.args.new_name
 
     if save_back:
         asyncio.ensure_future(storage.update_scene(scene))
 
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, data=scene)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE, data=scene.bare())))
     return None
 
 

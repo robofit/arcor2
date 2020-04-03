@@ -66,7 +66,7 @@ def ws_client(request, function_scoped_container_getter):
 
 def wait_for_expected_events(ws_client):
 
-    expected_events = [events.SceneChanged.event, events.ProjectChangedEvent.event, events.ProjectStateEvent.event]
+    expected_events = [events.SceneChanged.event, events.ProjectChanged.event, events.ProjectStateEvent.event]
 
     while expected_events:
         msg = json.loads(ws_client.recv())

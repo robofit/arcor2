@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
 from typing import List, Any, Iterator, Optional, Tuple, Set, Union
@@ -93,7 +93,7 @@ class Orientation(IterableIndexable):
 class NamedOrientation(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     orientation: Orientation
 
 
@@ -124,7 +124,7 @@ class Joint(JsonSchemaMixin):
 class ProjectRobotJoints(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     robot_id: str
     joints: List[Joint]
     is_valid: bool = False
@@ -134,7 +134,7 @@ class ProjectRobotJoints(JsonSchemaMixin):
 class ActionPoint(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     position: Position
     parent: Optional[str] = None
     orientations: List[NamedOrientation] = field(default_factory=list)
@@ -180,7 +180,7 @@ class ActionPoint(JsonSchemaMixin):
 class SceneObject(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     type: str
     pose: Pose
 
@@ -196,11 +196,17 @@ class SceneService(JsonSchemaMixin):
 class Scene(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     objects: List[SceneObject] = field(default_factory=list)
     services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
-    last_modified: Optional[datetime] = None
+    modified: Optional[datetime] = None
+
+    def bare(self) -> "Scene":
+        return Scene(self.id, self.name, desc=self.desc)
+
+    def update_modified(self):
+        self.modified = datetime.now(tz=timezone.utc)
 
     def object(self, object_id: str) -> SceneObject:
 
@@ -258,7 +264,7 @@ class ActionIO(JsonSchemaMixin):
 class Action(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     type: str
     parameters: List[ActionParameter] = field(default_factory=list)
     inputs: List[ActionIO] = field(default_factory=list)
@@ -286,17 +292,23 @@ class ProjectActionPoint(ActionPoint):
 
     actions: List[Action] = field(default_factory=list)
 
+    def bare(self) -> "ProjectActionPoint":
+        return ProjectActionPoint(self.id, self.name, self.position, self.parent)
+
 
 @dataclass
 class Project(JsonSchemaMixin):
 
     id: str
-    user_id: str
+    name: str
     scene_id: str
     action_points: List[ProjectActionPoint] = field(default_factory=list)
     desc: str = field(default_factory=str)
     has_logic: bool = True
-    last_modified: Optional[datetime] = None
+    modified: Optional[datetime] = None
+
+    def update_modified(self):
+        self.modified = datetime.now(tz=timezone.utc)
 
     @property
     def action_points_with_parent(self) -> List[ProjectActionPoint]:
@@ -308,8 +320,8 @@ class Project(JsonSchemaMixin):
         return [ap for ap in self.action_points if ap.parent]
 
     @property
-    def action_points_user_ids(self) -> Set[str]:
-        return {ap.user_id for ap in self.action_points}
+    def action_points_names(self) -> Set[str]:
+        return {ap.name for ap in self.action_points}
 
     def action(self, action_id: str) -> Action:
 
@@ -342,8 +354,8 @@ class Project(JsonSchemaMixin):
     def action_ids(self) -> Set[str]:
         return {action.id for action in self.actions()}
 
-    def action_user_ids(self) -> Set[str]:
-        return {action.user_id for action in self.actions()}
+    def action_user_names(self) -> Set[str]:
+        return {action.name for action in self.actions()}
 
     def action_point(self, action_point_id: str) -> ProjectActionPoint:
 
