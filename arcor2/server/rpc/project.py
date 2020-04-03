@@ -502,11 +502,13 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 @no_project
 async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
-
+    # TODO: enable following code
+    """
     for project_id in (await storage.get_projects()).items:
         project = await storage.get_project(project_id.id)
         if req.args.name == project.name:
             return False, "Name already used."
+    """
 
     if glob.SCENE:
         if glob.SCENE.id != req.args.scene_id:
@@ -560,7 +562,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
     if req.args.name in glob.PROJECT.action_points_names:
         return False, "Action point name is already used."
 
-    ap = ProjectActionPoint(uuid.uuid4().hex, req.args.name, req.args.position)
+    ap = ProjectActionPoint(uuid.uuid4().hex, req.args.name, req.args.position, req.args.parent)
     glob.PROJECT.action_points.append(ap)
 
     glob.PROJECT.update_modified()

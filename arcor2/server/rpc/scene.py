@@ -34,6 +34,14 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
 
     assert glob.SCENE is None
 
+    # TODO: enable following code
+    """
+    for scene_id in (await storage.get_scenes()).items:
+        scene = await storage.get_scene(scene_id.id)
+        if scene.name == req.args.name:
+            return False, "Scene with that name already exists."
+    """
+
     glob.SCENE = common.Scene(uuid.uuid4().hex, req.args.name, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
     return None
