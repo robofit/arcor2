@@ -89,9 +89,15 @@ class AddServiceToSceneResponse(Response):
 
 
 @dataclass
+class RemoveFromSceneArgs(IdArgs):
+
+    force: bool = False
+
+
+@dataclass
 class RemoveFromSceneRequest(Request):
 
-    args: IdArgs
+    args: RemoveFromSceneArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

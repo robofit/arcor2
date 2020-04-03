@@ -6,12 +6,17 @@ from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
 from typing import List, Any, Iterator, Optional, Tuple, Set, Union
+import uuid
 
 import numpy as np  # type: ignore
 import quaternion  # type: ignore
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception
+
+
+def uid() -> str:
+    return uuid.uuid4().hex
 
 
 @unique
@@ -201,12 +206,28 @@ class Scene(JsonSchemaMixin):
     services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
     modified: Optional[datetime] = None
+    _modified: Optional[datetime] = None
 
     def bare(self) -> "Scene":
         return Scene(self.id, self.name, desc=self.desc)
 
     def update_modified(self):
-        self.modified = datetime.now(tz=timezone.utc)
+        self._modified = datetime.now(tz=timezone.utc)
+
+    def has_changes(self) -> bool:
+
+        if self._modified is None:
+            return False
+
+        if self.modified is None:
+            return True
+
+        return self._modified > self.modified
+
+    def object_names(self) -> Iterator[str]:
+
+        for obj in self.objects:
+            yield obj.name
 
     def object(self, object_id: str) -> SceneObject:
 
@@ -306,9 +327,20 @@ class Project(JsonSchemaMixin):
     desc: str = field(default_factory=str)
     has_logic: bool = True
     modified: Optional[datetime] = None
+    _modified: Optional[datetime] = None
 
     def update_modified(self):
-        self.modified = datetime.now(tz=timezone.utc)
+        self._modified = datetime.now(tz=timezone.utc)
+
+    def has_changes(self) -> bool:
+
+        if self._modified is None:
+            return False
+
+        if self.modified is None:
+            return True
+
+        return self._modified > self.modified
 
     @property
     def action_points_with_parent(self) -> List[ProjectActionPoint]:

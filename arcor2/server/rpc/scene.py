@@ -4,7 +4,6 @@
 from typing import Union
 import asyncio
 import functools
-import uuid
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
@@ -18,9 +17,9 @@ from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
 from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene
+    clear_scene, associated_projects
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
-    projects_using_object, projects
+    projects_using_object
 
 
 @no_scene
@@ -36,13 +35,12 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
 
     # TODO: enable following code
     """
-    for scene_id in (await storage.get_scenes()).items:
-        scene = await storage.get_scene(scene_id.id)
+    async for scene in scenes():
         if scene.name == req.args.name:
             return False, "Scene with that name already exists."
     """
 
-    glob.SCENE = common.Scene(uuid.uuid4().hex, req.args.name, desc=req.args.desc)
+    glob.SCENE = common.Scene(common.uid(), req.args.name, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
     return None
 
@@ -59,17 +57,8 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
 
     assert glob.SCENE
 
-    if not req.args.force:
-
-        try:
-            saved_scene = await storage.get_scene(glob.SCENE.id)
-
-            if saved_scene and saved_scene.modified and glob.SCENE.modified and \
-                    saved_scene.modified < glob.SCENE.modified:
-                return False, "Scene has unsaved changes."
-
-        except storage.PersistentStorageException:
-            pass
+    if not req.args.force and glob.SCENE.has_changes():
+        return False, "Scene has unsaved changes."
 
     await clear_scene()
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE)))
@@ -82,25 +71,7 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
                                                                   hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
-
-    try:
-        stored_scene = await storage.get_scene(glob.SCENE.id)
-    except storage.PersistentStorageException:
-        # new scene, no need for further checks
-        await storage.update_scene(glob.SCENE)
-        asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
-        return None
-
-    # let's check if something important has changed
-    for old_obj in stored_scene.objects:
-        for new_obj in glob.SCENE.objects:
-            if old_obj.id != new_obj.id:
-                continue
-
-            if old_obj.pose != new_obj.pose:
-                asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, new_obj.id))
-
-    await storage.update_scene(glob.SCENE)
+    await storage.update_scene(glob.SCENE)  # TODO get modified
     asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
     return None
 
@@ -131,7 +102,7 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
 
     assert glob.SCENE
 
-    obj = common.SceneObject(uuid.uuid4().hex, req.args.name, req.args.type, req.args.pose)
+    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose)
 
     res, msg = await add_object_to_scene(obj)
 
@@ -251,6 +222,9 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
 
     assert glob.SCENE
 
+    if not req.args.force and {proj.name async for proj in projects_using_object(glob.SCENE.id, req.args.id)}:
+        return False, "Can't remove object/service that is used in project(s)."
+
     if req.args.id in glob.SCENE_OBJECT_INSTANCES:
 
         obj = glob.SCENE.object(req.args.id)
@@ -274,8 +248,6 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
 
     else:
         return False, "Unknown id."
-
-    # TODO test if the service/object is not used in some project
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
@@ -302,15 +274,16 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     except Arcor2Exception as e:
         return False, str(e)
 
+    # TODO do not allow for objects created by service (does this apply for all services?)
+
     try:
         scene_object.pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
     except RobotPoseException as e:
         return False, str(e)
 
-    # TODO invalidate joints
-
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
+    asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, scene_object.id))
     return None
 
 
@@ -322,12 +295,12 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
     assert glob.SCENE
 
     obj = glob.SCENE.object(req.args.object_id)
+    # TODO do not allow for objects created by service (does this apply for all services?)
     obj.pose = req.args.pose
-
-    # TODO invalidate joints
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
+    asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
     return None
 
 
@@ -340,9 +313,8 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
 
     target_obj = glob.SCENE.object(req.args.id)
 
-    for obj in glob.SCENE.objects:
-
-        if obj.name == req.args.new_name:
+    for obj_name in glob.SCENE.object_names():
+        if obj_name == req.args.new_name:
             return False, f"Object name already exists."
 
     target_obj.name = req.args.new_name
@@ -361,10 +333,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
         glob.SCENE.update_modified()
         scene = glob.SCENE
     else:
-        try:
-            scene = await storage.get_scene(req.args.id)
-        except storage.PersistentStorageException as e:
-            return False, str(e)
+        scene = await storage.get_scene(req.args.id)
         save_back = True
 
     scene.name = req.args.new_name
@@ -380,12 +349,12 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
 async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
         Union[rpc.scene.DeleteSceneResponse, hlp.RPC_RETURN_TYPES]:
 
-    associated_projects = {project.id async for project in projects(req.args.id)}
+    assoc_projects = await associated_projects(req.args.id)
 
-    if associated_projects:
+    if assoc_projects:
         resp = rpc.scene.DeleteSceneResponse(result=False)
         resp.messages = ["Scene has associated projects."]
-        resp.data = associated_projects
+        resp.data = assoc_projects
         return resp
 
     # TODO implement delete_scene in storage module
@@ -396,5 +365,5 @@ async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest) -> \
         Union[rpc.scene.ProjectsWithSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     resp = rpc.scene.ProjectsWithSceneResponse()
-    resp.data = {project.id async for project in projects(req.args.id)}
+    resp.data = await associated_projects(req.args.id)
     return resp

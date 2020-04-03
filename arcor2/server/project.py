@@ -27,8 +27,7 @@ async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
             if ap.parent != obj_id:
                 continue
 
-            for joints in ap.robot_joints:
-                joints.is_valid = False
+            ap.invalidate_joints()
 
         await storage.update_project(project)
 

@@ -1,7 +1,7 @@
 import asyncio
-from typing import Tuple, Optional, List, get_type_hints, Set
+from typing import Tuple, Optional, List, get_type_hints, Set, AsyncIterator
 
-from arcor2.data.common import SceneService, SceneObject
+from arcor2.data.common import SceneService, SceneObject, Scene
 from arcor2.data import events
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
@@ -11,10 +11,21 @@ from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_typ
 
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.server.robot import collision
+from arcor2.server.project import projects
 
 
 def instances_names() -> Set[str]:
     return {obj.name for obj in glob.SCENE_OBJECT_INSTANCES.values()}
+
+
+async def scenes() -> AsyncIterator[Scene]:
+
+    for scene_id in (await storage.get_scenes()).items:
+        yield await storage.get_scene(scene_id.id)
+
+
+async def associated_projects(scene_id: str) -> Set[str]:
+    return {project.id async for project in projects(scene_id)}
 
 
 async def add_service_to_scene(srv: SceneService) -> Tuple[bool, str]:

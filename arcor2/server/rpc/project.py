@@ -4,13 +4,10 @@
 
 import asyncio
 from typing import Union, List, Dict, Any, Optional
-import uuid
 import copy
 
 from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data.common import Scene, ProjectRobotJoints, NamedOrientation, Project, ProjectActionPoint, Action,\
-    ActionIOEnum
-from arcor2.data import rpc, events
+from arcor2.data import rpc, events, common
 from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic
 from arcor2.services import Service
@@ -36,10 +33,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
     if glob.RUNNING_ACTION:
         return False, f"Action {glob.RUNNING_ACTION} is being executed. Only one action can be executed at a time."
 
-    try:
-        action = glob.PROJECT.action(req.args.action_id)
-    except Arcor2Exception:
-        return False, "Unknown action."
+    action = glob.PROJECT.action(req.args.action_id)
 
     params: Dict[str, Any] = {}
 
@@ -79,7 +73,7 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
 
     projects = await storage.get_projects()
 
-    scenes: Dict[str, Scene] = {}
+    scenes: Dict[str, common.Scene] = {}
 
     # TODO do this in parallel?
     for project_iddesc in projects.items:
@@ -122,21 +116,15 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     for joints in ap.robot_joints:
         if req.args.name == joints.name:
             return False, "Name already exists."
 
-    try:
-        new_joints = await get_robot_joints(req.args.robot_id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    new_joints = await get_robot_joints(req.args.robot_id)
 
-    prj = ProjectRobotJoints(uuid.uuid4().hex, req.args.name, req.args.robot_id, new_joints, True)
+    prj = common.ProjectRobotJoints(common.uid(), req.args.name, req.args.robot_id, new_joints, True)
     ap.robot_joints.append(prj)
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.ADD, ap.id, data=prj)))
@@ -150,10 +138,7 @@ async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJoints
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.id)
 
     for joint in ap.robot_joints:  # update existing joints_id
         if joint.id == req.args.joints_id:
@@ -162,10 +147,7 @@ async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJoints
     else:
         return False, "Joints were not found."
 
-    try:
-        new_joints = await get_robot_joints(req.args.robot_id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    new_joints = await get_robot_joints(req.args.robot_id)
 
     robot_joints.joints = new_joints
     robot_joints.robot_id = req.args.robot_id
@@ -189,11 +171,7 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 
     assert glob.SCENE and glob.PROJECT
 
-    # TODO candidate for decorator?
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     for joints in ap.robot_joints:
         if joints.id == req.args.joints_id:
@@ -275,10 +253,7 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     try:
         new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
@@ -316,16 +291,13 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     for ori in ap.orientations:
         if ori.name == req.args.name:
             return False, "Orientation with desired name already exists."
 
-    orientation = NamedOrientation(uuid.uuid4().hex, req.args.name, req.args.orientation)
+    orientation = common.NamedOrientation(common.uid(), req.args.name, req.args.orientation)
     ap.orientations.append(orientation)
 
     glob.PROJECT.update_modified()
@@ -368,10 +340,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     for ori in ap.orientations:
         if ori.name == req.args.name:
@@ -386,7 +355,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
         obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
         new_pose = hlp.make_pose_rel(obj.pose, new_pose)
 
-    orientation = NamedOrientation(uuid.uuid4().hex, req.args.name, new_pose.orientation)
+    orientation = common.NamedOrientation(common.uid(), req.args.name, new_pose.orientation)
     ap.orientations.append(orientation)
 
     glob.PROJECT.update_modified()
@@ -408,15 +377,8 @@ async def update_action_point_orientation_using_robot_cb(
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
-
-    try:
-        new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
-    except RobotPoseException as e:
-        return False, str(e)
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
 
@@ -449,10 +411,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
 
     assert glob.SCENE and glob.PROJECT
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception:
-        return False, "Invalid action point."
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     for ori in ap.orientations:
         if ori.id == req.args.orientation_id:
@@ -523,8 +482,8 @@ async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.projec
 
         await open_scene(req.args.scene_id)
 
-    glob.PROJECT = Project(uuid.uuid4().hex, req.args.name, req.args.scene_id, desc=req.args.desc,
-                           has_logic=req.args.has_logic)
+    glob.PROJECT = common.Project(common.uid(), req.args.name, req.args.scene_id, desc=req.args.desc,
+                                  has_logic=req.args.has_logic)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.ADD, data=glob.PROJECT)))
     return None
 
@@ -535,13 +494,8 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.pr
                                                                           hlp.RPC_RETURN_TYPES]:
     assert glob.PROJECT
 
-    if not req.args.force:
-
-        saved_project = await storage.get_project(glob.PROJECT.id)
-
-        if saved_project.modified and glob.PROJECT.modified and \
-                saved_project.modified < glob.PROJECT.modified:
-            return False, "Project has unsaved changes."
+    if not req.args.force and glob.PROJECT.has_changes():
+        return False, "Project has unsaved changes."
 
     glob.PROJECT = None
     asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE)))
@@ -562,7 +516,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
     if req.args.name in glob.PROJECT.action_points_names:
         return False, "Action point name is already used."
 
-    ap = ProjectActionPoint(uuid.uuid4().hex, req.args.name, req.args.position, req.args.parent)
+    ap = common.ProjectActionPoint(common.uid(), req.args.name, req.args.position, req.args.parent)
     glob.PROJECT.action_points.append(ap)
 
     glob.PROJECT.update_modified()
@@ -570,7 +524,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
     return None
 
 
-def check_action_params(action: Action) -> None:
+def check_action_params(action: common.Action) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -607,17 +561,10 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     if not hlp.is_valid_identifier(req.args.name):
         return False, "Action name has to be valid Python identifier."
 
-    action = Action(uuid.uuid4().hex, req.args.name, req.args.type, req.args.parameters)
+    action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters)
 
-    try:
-        obj_id, action_type = action.parse_type()
-    except Arcor2Exception as e:
-        return False, str(e)
-
-    try:
-        glob.SCENE.object_or_service(obj_id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    obj_id, action_type = action.parse_type()
+    glob.SCENE.object_or_service(obj_id)
 
     for act in glob.ACTIONS[obj_id]:
         if action_type == act.name:
@@ -627,10 +574,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     else:
         return False, "Unknown action type."
 
-    try:
-        check_action_params(action)
-    except Arcor2Exception as e:
-        return False, str(e)
+    check_action_params(action)
 
     ap.actions.append(action)
 
@@ -647,10 +591,7 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.pr
     assert glob.PROJECT
     assert glob.SCENE
 
-    try:
-        ap, action = glob.PROJECT.action_point_and_action(req.args.action_id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    ap, action = glob.PROJECT.action_point_and_action(req.args.action_id)
 
     updated_action = copy.deepcopy(action)
     updated_action.parameters = req.args.parameters
@@ -676,10 +617,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.pr
     assert glob.PROJECT
     assert glob.SCENE
 
-    try:
-        ap, action = glob.PROJECT.action_point_and_action(req.args.id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    ap, action = glob.PROJECT.action_point_and_action(req.args.id)
 
     for ap in glob.PROJECT.action_points:
         for act in ap.actions:
@@ -702,12 +640,9 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest) -> \
     assert glob.PROJECT
     assert glob.SCENE
 
-    try:
-        ap, action = glob.PROJECT.action_point_and_action(req.args.action_id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    ap, action = glob.PROJECT.action_point_and_action(req.args.action_id)
 
-    allowed_values = glob.PROJECT.action_ids() | ActionIOEnum.set() | {""}
+    allowed_values = glob.PROJECT.action_ids() | common.ActionIOEnum.set() | {""}
 
     for inp in req.args.inputs:
         if inp.default not in allowed_values:
