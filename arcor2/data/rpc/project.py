@@ -36,7 +36,6 @@ class NewProjectResponse(Response):
 @dataclass
 class CloseProjectRequestArgs(JsonSchemaMixin):
 
-    id: str
     force: bool = False
 
 
