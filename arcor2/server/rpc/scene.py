@@ -105,11 +105,7 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
 async def open_scene_cb(req: rpc.scene.OpenSceneRequest) -> Union[rpc.scene.OpenSceneResponse,
                                                                   hlp.RPC_RETURN_TYPES]:
 
-    try:
-        await open_scene(req.args.id)
-    except Arcor2Exception as e:
-        await glob.logger.exception(f"Failed to open scene {req.args.id}.")
-        return False, str(e)
+    await open_scene(req.args.id)
     return None
 
 

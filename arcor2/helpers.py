@@ -121,10 +121,15 @@ async def server(client: Any,
                  register: Callable[[Any], Awaitable[None]],
                  unregister: Callable[[Any], Awaitable[None]],
                  rpc_dict: RPC_DICT_TYPE,
-                 event_dict: Optional[EVENT_DICT_TYPE] = None) -> None:
+                 event_dict: Optional[EVENT_DICT_TYPE] = None,
+                 verbose: bool = False) -> None:
 
     if event_dict is None:
         event_dict = {}
+
+    print("-------------------")
+    print(verbose)
+    print("-------------------")
 
     await register(client)
     try:
@@ -162,8 +167,9 @@ async def server(client: Any,
                 try:
                     resp = await rpc_dict[req_cls](req)
                 except Arcor2Exception as e:
-                    await logger.exception("Unhandled Arcor2Exception in RPC callback.")
-                    resp = False, f"System error. {str(e)}"
+                    if verbose:
+                        await logger.exception("Arcor2Exception in RPC callback.")
+                    resp = False, str(e)
 
                 if resp is None:  # default response
                     resp = resp_cls()

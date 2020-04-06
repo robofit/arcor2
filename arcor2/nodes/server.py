@@ -53,7 +53,7 @@ async def handle_manager_incoming_messages(manager_client):
         await glob.logger.error("Connection to manager closed.")
 
 
-async def _initialize_server() -> None:
+async def _initialize_server(verbose: bool = False) -> None:
 
     while True:  # wait until Project service becomes available
         try:
@@ -69,7 +69,7 @@ async def _initialize_server() -> None:
     await asyncio.wait([osa.get_object_actions(), _check_manager()])
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
-                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT)
+                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=verbose)
 
     await glob.logger.info("Server initialized.")
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
@@ -236,7 +236,7 @@ def main():
     loop.set_debug(enabled=args.asyncio_debug)
 
     loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
-                                           _initialize_server()))
+                                           _initialize_server(args.verbose == LogLevel.DEBUG)))
 
 
 if __name__ == "__main__":

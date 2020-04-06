@@ -527,10 +527,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     assert glob.PROJECT
     assert glob.SCENE
 
-    try:
-        ap = glob.PROJECT.action_point(req.args.action_point_id)
-    except Arcor2Exception as e:
-        return False, str(e)
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     unique_name(req.args.name, glob.PROJECT.action_user_names())
 
@@ -540,9 +537,9 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters)
 
     obj_id, action_type = action.parse_type()
-    glob.SCENE.object_or_service(obj_id)
+    scene_obj = glob.SCENE.object_or_service(obj_id)
 
-    for act in glob.ACTIONS[obj_id]:
+    for act in glob.ACTIONS[scene_obj.type]:
         if action_type == act.name:
             if act.disabled:
                 return False, "Action type is disabled."
