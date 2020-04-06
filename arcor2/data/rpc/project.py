@@ -295,7 +295,6 @@ class AddActionPointOrientationResponse(Response):
 @dataclass
 class UpdateActionPointOrientationRequestArgs(JsonSchemaMixin):
 
-    action_point_id: str
     orientation_id: str
     orientation: Orientation
 
@@ -422,7 +421,7 @@ class UpdateActionLogicResponse(Response):
 
 
 @dataclass
-class UpdateActionPointJointsRequestArgs(IdArgs):
+class UpdateActionPointJointsRequestArgs(JsonSchemaMixin):
 
     robot_id: str
     joints_id: str = "default"
@@ -446,7 +445,6 @@ class UpdateActionPointJointsResponse(Response):
 @dataclass
 class RemoveActionPointJointsRequestArgs(JsonSchemaMixin):
 
-    action_point_id: str
     joints_id: str
 
 

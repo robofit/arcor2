@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import List, Any, Iterator, Optional, Tuple, Set, Union
+from typing import List, Any, Iterator, Optional, Tuple, Set, Union, Dict
 import uuid
 
 import numpy as np  # type: ignore
@@ -165,6 +165,12 @@ class ActionPoint(JsonSchemaMixin):
             if joints.id == joints_id:
                 return joints
         raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")
+
+    def orientation_names(self) -> Set[str]:
+        return {ori.name for ori in self.orientations}
+
+    def joints_names(self) -> Set[str]:
+        return {joints.name for joints in self.robot_joints}
 
     def joints_for_robot(self, robot_id: str, joints_id: str) -> ProjectRobotJoints:
 
@@ -358,21 +364,27 @@ class Project(JsonSchemaMixin):
     def action_points_names(self) -> Set[str]:
         return {ap.name for ap in self.action_points}
 
-    def joints(self, joints_id: str) -> ProjectRobotJoints:
+    def ap_and_joints(self, joints_id: str) -> Tuple[ProjectActionPoint, ProjectRobotJoints]:
 
         for ap in self.action_points:
             for joints in ap.robot_joints:
                 if joints.id == joints_id:
-                    return joints
+                    return ap, joints
         raise Arcor2Exception("Unknown joints.")
 
-    def orientation(self, orientation_id: str) -> NamedOrientation:
+    def joints(self, joints_id: str) -> ProjectRobotJoints:
+        return self.ap_and_joints(joints_id)[1]
+
+    def ap_and_orientation(self, orientation_id: str) -> Tuple[ProjectActionPoint, NamedOrientation]:
 
         for ap in self.action_points:
             for ori in ap.orientations:
                 if ori.id == orientation_id:
-                    return ori
+                    return ap, ori
         raise Arcor2Exception("Unknown orientation.")
+
+    def orientation(self, orientation_id: str) -> NamedOrientation:
+        return self.ap_and_orientation(orientation_id)[1]
 
     def action(self, action_id: str) -> Action:
 
