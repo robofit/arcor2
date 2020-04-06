@@ -33,12 +33,9 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
 
     assert glob.SCENE is None
 
-    # TODO: enable following code
-    """
-    async for scene in scenes():
-        if scene.name == req.args.name:
-            return False, "Scene with that name already exists."
-    """
+    for scene_id in (await storage.get_scenes()).items:
+        if req.args.name == scene_id.name:
+            return False, "Name already used."
 
     glob.SCENE = common.Scene(common.uid(), req.args.name, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
@@ -71,7 +68,8 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
                                                                   hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
-    await storage.update_scene(glob.SCENE)  # TODO get modified
+    await storage.update_scene(glob.SCENE)
+    glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
     asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
     return None
 

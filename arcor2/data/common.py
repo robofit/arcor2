@@ -206,23 +206,23 @@ class Scene(JsonSchemaMixin):
     services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
     modified: Optional[datetime] = None
-    _modified: Optional[datetime] = None
+    int_modified: Optional[datetime] = None
 
     def bare(self) -> "Scene":
         return Scene(self.id, self.name, desc=self.desc)
 
     def update_modified(self):
-        self._modified = datetime.now(tz=timezone.utc)
+        self.int_modified = datetime.now(tz=timezone.utc)
 
     def has_changes(self) -> bool:
 
-        if self._modified is None:
+        if self.int_modified is None:
             return False
 
         if self.modified is None:
             return True
 
-        return self._modified > self.modified
+        return self.int_modified > self.modified
 
     def object_names(self) -> Iterator[str]:
 
@@ -327,20 +327,20 @@ class Project(JsonSchemaMixin):
     desc: str = field(default_factory=str)
     has_logic: bool = True
     modified: Optional[datetime] = None
-    _modified: Optional[datetime] = None
+    int_modified: Optional[datetime] = None
 
     def update_modified(self):
-        self._modified = datetime.now(tz=timezone.utc)
+        self.int_modified = datetime.now(tz=timezone.utc)
 
     def has_changes(self) -> bool:
 
-        if self._modified is None:
+        if self.int_modified is None:
             return False
 
         if self.modified is None:
             return True
 
-        return self._modified > self.modified
+        return self.int_modified > self.modified
 
     @property
     def action_points_with_parent(self) -> List[ProjectActionPoint]:
@@ -409,6 +409,7 @@ class ProjectSources(JsonSchemaMixin):
 @dataclass
 class IdDesc(JsonSchemaMixin):
     id: str
+    name: str
     desc: Optional[str] = None
 
 

@@ -453,7 +453,7 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 
     assert glob.SCENE and glob.PROJECT
     await storage.update_project(glob.PROJECT)
-    # TODO get generated 'modified' from storage and update ours?
+    glob.PROJECT.modified = (await storage.get_project(glob.PROJECT.id)).modified
     asyncio.ensure_future(notif.broadcast_event(events.ProjectSaved()))
     return None
 
@@ -461,19 +461,18 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 @no_project
 async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
-    # TODO: enable following code
-    """
+
     for project_id in (await storage.get_projects()).items:
-        project = await storage.get_project(project_id.id)
-        if req.args.name == project.name:
+        if req.args.name == project_id.name:
             return False, "Name already used."
-    """
 
     if glob.SCENE:
         if glob.SCENE.id != req.args.scene_id:
             return False, "Another scene is opened."
 
-        # TODO save scene if not saved?
+        if glob.SCENE.has_changes():
+            await storage.update_scene(glob.SCENE)
+            glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
 
     else:
 
