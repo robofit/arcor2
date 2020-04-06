@@ -12,6 +12,10 @@ from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.scene import open_scene, clear_scene
 
 
+async def project_names() -> Set[str]:
+    return {proj.name for proj in (await storage.get_projects()).items}
+
+
 async def associated_projects(scene_id: str) -> Set[str]:
     return {project.id async for project in projects(scene_id)}
 

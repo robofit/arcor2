@@ -329,6 +329,9 @@ class Project(JsonSchemaMixin):
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
 
+    def bare(self) -> "Project":
+        return Project(self.id, self.name, self.scene_id, desc=self.desc, has_logic=self.has_logic)
+
     def update_modified(self):
         self.int_modified = datetime.now(tz=timezone.utc)
 
@@ -354,6 +357,22 @@ class Project(JsonSchemaMixin):
     @property
     def action_points_names(self) -> Set[str]:
         return {ap.name for ap in self.action_points}
+
+    def joints(self, joints_id: str) -> ProjectRobotJoints:
+
+        for ap in self.action_points:
+            for joints in ap.robot_joints:
+                if joints.id == joints_id:
+                    return joints
+        raise Arcor2Exception("Unknown joints.")
+
+    def orientation(self, orientation_id: str) -> NamedOrientation:
+
+        for ap in self.action_points:
+            for ori in ap.orientations:
+                if ori.id == orientation_id:
+                    return ori
+        raise Arcor2Exception("Unknown orientation.")
 
     def action(self, action_id: str) -> Action:
 

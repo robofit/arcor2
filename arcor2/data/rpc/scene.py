@@ -280,3 +280,69 @@ class ProjectsWithSceneResponse(Response):
 
     data: Set[str] = field(default_factory=set)
     response: str = field(default=ProjectsWithSceneRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateSceneDescriptionArgs(JsonSchemaMixin):
+
+    new_description: str
+
+
+@dataclass
+class UpdateSceneDescriptionRequest(Request):
+
+    args: UpdateSceneDescriptionArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateSceneDescriptionResponse(Response):
+
+    response: str = field(default=UpdateSceneDescriptionRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateServiceConfigurationArgs(JsonSchemaMixin):
+
+    type: str
+    new_configuration: str
+
+
+@dataclass
+class UpdateServiceConfigurationRequest(Request):
+
+    args: UpdateServiceConfigurationArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateServiceConfigurationResponse(Response):
+
+    response: str = field(default=UpdateServiceConfigurationRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class CopySceneArgs(JsonSchemaMixin):
+
+    source_id: str
+    target_name: str
+
+
+@dataclass
+class CopySceneRequest(Request):
+
+    args: CopySceneArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class CopySceneResponse(Response):
+
+    data: str = ""
+    response: str = field(default=CopySceneRequest.request, init=False)

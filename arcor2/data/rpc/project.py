@@ -461,3 +461,169 @@ class RemoveActionPointJointsRequest(Request):
 class RemoveActionPointJointsResponse(Response):
 
     response: str = field(default=RemoveActionPointJointsRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class DeleteProjectRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class DeleteProjectResponse(Response):
+
+    response: str = field(default=DeleteProjectRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenameProjectRequestArgs(JsonSchemaMixin):
+
+    new_name: str
+
+
+@dataclass
+class RenameProjectRequest(Request):
+
+    args: RenameProjectRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenameProjectResponse(Response):
+
+    response: str = field(default=RenameProjectRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class CopyProjectRequestArgs(JsonSchemaMixin):
+
+    source_id: str
+    target_name: str
+
+
+@dataclass
+class CopyProjectRequest(Request):
+
+    args: CopyProjectRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class CopyProjectResponse(Response):
+
+    response: str = field(default=CopyProjectRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateProjectDescriptionRequestArgs(JsonSchemaMixin):
+
+    new_description: str
+
+
+@dataclass
+class UpdateProjectDescriptionRequest(Request):
+
+    args: UpdateProjectDescriptionRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateProjectDescriptionResponse(Response):
+
+    response: str = field(default=UpdateProjectDescriptionRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateProjectHasLogicRequestArgs(JsonSchemaMixin):
+
+    new_has_logic: bool
+
+
+@dataclass
+class UpdateProjectHasLogicRequest(Request):
+
+    args: UpdateProjectHasLogicRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateProjectHasLogicResponse(Response):
+
+    response: str = field(default=UpdateProjectHasLogicRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenameActionPointJointsRequestArgs(JsonSchemaMixin):
+
+    joints_id: str
+    new_name: str
+
+
+@dataclass
+class RenameActionPointJointsRequest(Request):
+
+    args: RenameActionPointJointsRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenameActionPointJointsResponse(Response):
+
+    response: str = field(default=RenameActionPointJointsRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenameActionPointOrientationRequestArgs(JsonSchemaMixin):
+
+    orientation_id: str
+    new_name: str
+
+
+@dataclass
+class RenameActionPointOrientationRequest(Request):
+
+    args: RenameActionPointOrientationRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenameActionPointOrientationResponse(Response):
+
+    response: str = field(default=RenameActionPointOrientationRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenameActionRequestArgs(JsonSchemaMixin):
+
+    action_id: str
+    new_name: str
+
+
+@dataclass
+class RenameActionRequest(Request):
+
+    args: RenameActionRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenameActionResponse(Response):
+
+    response: str = field(default=RenameActionRequest.request, init=False)

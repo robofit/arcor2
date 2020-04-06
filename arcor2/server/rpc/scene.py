@@ -355,7 +355,8 @@ async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
         resp.data = assoc_projects
         return resp
 
-    # TODO implement delete_scene in storage module
+    await storage.delete_scene(req.args.id)
+    # TODO notify somehow
     return None
 
 
@@ -365,3 +366,51 @@ async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest) -> \
     resp = rpc.scene.ProjectsWithSceneResponse()
     resp.data = await associated_projects(req.args.id)
     return resp
+
+
+@scene_needed
+async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionRequest) -> \
+        Union[rpc.scene.UpdateSceneDescriptionResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.SCENE
+
+    glob.SCENE.desc = req.args.new_description
+    glob.SCENE.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
+                                                                    data=glob.SCENE.bare())))
+    return None
+
+
+@scene_needed
+async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurationRequest) -> \
+        Union[rpc.scene.UpdateServiceConfigurationResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.SCENE
+
+    srv = glob.SCENE.service(req.args.type)
+
+    # first check if some object is not using it
+    for obj in glob.SCENE.objects:
+        if req.args.type in glob.OBJECT_TYPES[obj.type].needs_services:
+            return False, f"Object {obj.name} ({obj.type}) relies on the service to be removed: {req.args.type}."
+
+    # TODO destroy current instance
+    glob.SERVICES_INSTANCES[req.args.type] = await hlp.run_in_executor(glob.TYPE_DEF_DICT[req.args.type],
+                                                                       req.args.new_configuration)
+    srv.configuration_id = req.args.new_configuration
+
+    glob.SCENE.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.UPDATE, data=srv)))
+
+    return None
+
+
+@no_scene
+async def copy_scene_cb(req: rpc.scene.CopySceneRequest) -> \
+        Union[rpc.scene.CopySceneResponse, hlp.RPC_RETURN_TYPES]:
+
+    scene = await storage.get_scene(req.args.source_id)
+    scene.id = common.uid()
+    scene.name = req.args.target_name
+    await storage.update_scene(scene)
+    return None

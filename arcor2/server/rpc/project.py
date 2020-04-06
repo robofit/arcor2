@@ -19,7 +19,7 @@ from arcor2.source.logic import program_src, SourceException
 from arcor2.server.decorators import scene_needed, project_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints, RobotPoseException
-from arcor2.server.project import project_problems, open_project
+from arcor2.server.project import project_problems, open_project, project_names
 from arcor2.server.scene import open_scene, clear_scene
 
 
@@ -462,9 +462,8 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
 
-    for project_id in (await storage.get_projects()).items:
-        if req.args.name == project_id.name:
-            return False, "Name already used."
+    if req.args.name in (await project_names()):
+        return False, "Name already used."
 
     if glob.SCENE:
         if glob.SCENE.id != req.args.scene_id:
@@ -656,4 +655,124 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest) -> \
 
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE, ap.id, data=action)))
+    return None
+
+
+@no_project
+async def delete_project_cb(req: rpc.project.DeleteProjectRequest) -> \
+        Union[rpc.project.DeleteProjectResponse, hlp.RPC_RETURN_TYPES]:
+
+    await storage.delete_project(req.args.id)
+    # TODO notify somehow
+    return None
+
+
+@project_needed
+async def rename_project_cb(req: rpc.project.RenameProjectRequest) -> \
+        Union[rpc.project.RenameProjectResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    if req.args.new_name in (await project_names()):
+        return False, "Name already used."
+
+    glob.PROJECT.name = req.args.new_name
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                      data=glob.PROJECT.bare())))
+    return None
+
+
+@no_project
+async def copy_project_cb(req: rpc.project.CopyProjectRequest) -> \
+        Union[rpc.project.CopyProjectResponse, hlp.RPC_RETURN_TYPES]:
+
+    if req.args.target_name in (await project_names()):
+        return False, "Name already used."
+
+    project = await storage.get_project(req.args.source_id)
+    project.id = common.uid()
+    project.name = req.args.target_name
+    await storage.update_project(project)
+
+    # TODO notify somehow
+    return None
+
+
+@project_needed
+async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptionRequest) -> \
+        Union[rpc.project.UpdateProjectDescriptionResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    glob.PROJECT.desc = req.args.new_description
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                      data=glob.PROJECT.bare())))
+    return None
+
+
+@project_needed
+async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequest) -> \
+        Union[rpc.project.UpdateProjectHasLogicResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    if glob.PROJECT.has_logic and not req.args.new_has_logic:
+
+        for act in glob.PROJECT.actions():
+            act.inputs.clear()
+            act.outputs.clear()
+            asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE, data=act)))
+
+    glob.PROJECT.has_logic = req.args.new_has_logic
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                      data=glob.PROJECT.bare())))
+    return None
+
+
+@project_needed
+async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJointsRequest) -> \
+        Union[rpc.project.RenameActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    joints = glob.PROJECT.joints(req.args.joints_id)
+    joints.name = req.args.new_name
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE_BASE, data=joints)))
+
+    return None
+
+
+@project_needed
+async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointOrientationRequest) -> \
+        Union[rpc.project.RenameActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    ori = glob.PROJECT.orientation(req.args.orientation_id)
+    ori.name = req.args.new_name
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.UPDATE_BASE, data=ori)))
+
+    return None
+
+
+@project_needed
+async def rename_action_cb(req: rpc.project.RenameActionRequest) -> \
+        Union[rpc.project.RenameActionResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    if req.args.new_name in glob.PROJECT.action_user_names():
+        return False, "Action name already exists."
+
+    act = glob.PROJECT.action(req.args.action_id)
+    act.name = req.args.new_name
+
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE_BASE, data=act)))
+
     return None

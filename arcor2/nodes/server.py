@@ -158,6 +158,9 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.scene.RenameSceneRequest: srpc.scene.rename_scene_cb,
     rpc.scene.DeleteSceneRequest: srpc.scene.delete_scene_cb,
     rpc.scene.ProjectsWithSceneRequest: srpc.scene.projects_with_scene_cb,
+    rpc.scene.UpdateSceneDescriptionRequest: srpc.scene.update_scene_description_cb,
+    rpc.scene.UpdateServiceConfigurationRequest: srpc.scene.update_service_configuration_cb,
+    rpc.scene.CopySceneRequest: srpc.scene.copy_scene_cb,
     # TODO move to scene
     rpc.objects.UpdateObjectPoseUsingRobotRequest: srpc.scene.update_object_pose_using_robot_cb,
     rpc.objects.ActionParamValuesRequest: srpc.scene.action_param_values_cb,
@@ -184,6 +187,14 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.project.UpdateActionRequest: srpc.project.update_action_cb,
     rpc.project.RemoveActionRequest: srpc.project.remove_action_cb,
     rpc.project.UpdateActionLogicRequest: srpc.project.update_action_logic_cb,
+    rpc.project.DeleteProjectRequest: srpc.project.delete_project_cb,
+    rpc.project.RenameProjectRequest: srpc.project.rename_project_cb,
+    rpc.project.CopyProjectRequest: srpc.project.copy_project_cb,
+    rpc.project.UpdateProjectDescriptionRequest: srpc.project.update_project_description_cb,
+    rpc.project.UpdateProjectHasLogicRequest: srpc.project.update_project_has_logic_cb,
+    rpc.project.RenameActionPointJointsRequest: srpc.project.rename_action_point_joints_cb,
+    rpc.project.RenameActionPointOrientationRequest: srpc.project.rename_action_point_orientation_cb,
+    rpc.project.RenameActionRequest: srpc.project.rename_action_cb,
 
     rpc.services.GetServicesRequest: srpc.services.get_services_cb,
     rpc.storage.ListMeshesRequest: list_meshes_cb
