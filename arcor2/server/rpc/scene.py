@@ -4,6 +4,8 @@
 from typing import Union
 import asyncio
 import functools
+from contextlib import asynccontextmanager
+import copy
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
@@ -20,6 +22,31 @@ from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, o
     clear_scene
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
     projects_using_object, associated_projects
+
+
+@asynccontextmanager
+async def managed_scene(scene_id: str, make_copy: bool = False):
+
+    save_back = False
+
+    if glob.SCENE and glob.SCENE.id == scene_id:
+        if make_copy:
+            scene = copy.deepcopy(glob.SCENE)
+            save_back = True
+        else:
+            scene = glob.SCENE
+    else:
+        save_back = True
+        scene = await storage.get_scene(scene_id)
+
+    if make_copy:
+        scene.id = common.uid()
+
+    try:
+        yield scene
+    finally:
+        if save_back:
+            asyncio.ensure_future(storage.update_scene(scene))
 
 
 @no_scene
@@ -325,21 +352,10 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
 async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
         Union[rpc.scene.RenameSceneResponse, hlp.RPC_RETURN_TYPES]:
 
-    save_back = False
-
-    if glob.SCENE and glob.SCENE.id == req.args.id:
-        glob.SCENE.update_modified()
-        scene = glob.SCENE
-    else:
-        scene = await storage.get_scene(req.args.id)
-        save_back = True
-
-    scene.name = req.args.new_name
-
-    if save_back:
-        asyncio.ensure_future(storage.update_scene(scene))
-
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE, data=scene.bare())))
+    async with managed_scene(req.args.id) as scene:
+        scene.name = req.args.new_name
+        asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
+                                                                        data=scene.bare())))
     return None
 
 
@@ -368,16 +384,14 @@ async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest) -> \
     return resp
 
 
-@scene_needed
 async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionRequest) -> \
         Union[rpc.scene.UpdateSceneDescriptionResponse, hlp.RPC_RETURN_TYPES]:
 
-    assert glob.SCENE
-
-    glob.SCENE.desc = req.args.new_description
-    glob.SCENE.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
-                                                                    data=glob.SCENE.bare())))
+    async with managed_scene(req.args.scene_id) as scene:
+        scene.desc = req.args.new_description
+        scene.update_modified()
+        asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
+                                                                        data=scene.bare())))
     return None
 
 
@@ -405,12 +419,12 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
     return None
 
 
-@no_scene
 async def copy_scene_cb(req: rpc.scene.CopySceneRequest) -> \
         Union[rpc.scene.CopySceneResponse, hlp.RPC_RETURN_TYPES]:
 
-    scene = await storage.get_scene(req.args.source_id)
-    scene.id = common.uid()
-    scene.name = req.args.target_name
-    await storage.update_scene(scene)
+    async with managed_scene(req.args.source_id, make_copy=True) as scene:
+        scene.name = req.args.target_name
+        asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
+                                                                        data=scene.bare())))
+
     return None

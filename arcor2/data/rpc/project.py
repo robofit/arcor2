@@ -482,6 +482,7 @@ class DeleteProjectResponse(Response):
 @dataclass
 class RenameProjectRequestArgs(JsonSchemaMixin):
 
+    project_id: str
     new_name: str
 
 
@@ -525,6 +526,7 @@ class CopyProjectResponse(Response):
 @dataclass
 class UpdateProjectDescriptionRequestArgs(JsonSchemaMixin):
 
+    project_id: str
     new_description: str
 
 
@@ -546,6 +548,7 @@ class UpdateProjectDescriptionResponse(Response):
 @dataclass
 class UpdateProjectHasLogicRequestArgs(JsonSchemaMixin):
 
+    project_id: str
     new_has_logic: bool
 
 

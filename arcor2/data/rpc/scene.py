@@ -287,6 +287,7 @@ class ProjectsWithSceneResponse(Response):
 @dataclass
 class UpdateSceneDescriptionArgs(JsonSchemaMixin):
 
+    scene_id: str
     new_description: str
 
 

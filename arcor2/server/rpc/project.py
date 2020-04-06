@@ -5,6 +5,7 @@
 import asyncio
 from typing import Union, List, Dict, Any, Optional, Set
 import copy
+from contextlib import asynccontextmanager
 
 from arcor2 import object_types_utils as otu, helpers as hlp
 from arcor2.data import rpc, events, common
@@ -21,6 +22,31 @@ from arcor2.server import objects_services_actions as osa, notifications as noti
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.project import project_problems, open_project, project_names
 from arcor2.server.scene import open_scene, clear_scene
+
+
+@asynccontextmanager
+async def managed_project(project_id: str, make_copy: bool = False):
+
+    save_back = False
+
+    if glob.PROJECT and glob.PROJECT.id == project_id:
+        if make_copy:
+            project = copy.deepcopy(glob.PROJECT)
+            save_back = True
+        else:
+            project = glob.PROJECT
+    else:
+        save_back = True
+        project = await storage.get_project(project_id)
+
+    if make_copy:
+        project.id = common.uid()
+
+    try:
+        yield project
+    finally:
+        if save_back:
+            asyncio.ensure_future(storage.update_project(project))
 
 
 def unique_name(name: str, existing_names: Set[str]) -> None:
@@ -614,69 +640,74 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest) -> \
 async def delete_project_cb(req: rpc.project.DeleteProjectRequest) -> \
         Union[rpc.project.DeleteProjectResponse, hlp.RPC_RETURN_TYPES]:
 
+    project = await storage.get_project(req.args.id)
     await storage.delete_project(req.args.id)
-    # TODO notify somehow
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.REMOVE,
+                                                                      data=project.bare())))
     return None
 
 
-@project_needed
 async def rename_project_cb(req: rpc.project.RenameProjectRequest) -> \
         Union[rpc.project.RenameProjectResponse, hlp.RPC_RETURN_TYPES]:
 
-    assert glob.PROJECT
-
     unique_name(req.args.new_name, (await project_names()))
-    glob.PROJECT.name = req.args.new_name
-    glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
-                                                                      data=glob.PROJECT.bare())))
+
+    async with managed_project(req.args.project_id) as project:
+
+        project.name = req.args.new_name
+        project.update_modified()
+
+        asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                          data=project.bare())))
     return None
 
 
-@no_project
 async def copy_project_cb(req: rpc.project.CopyProjectRequest) -> \
         Union[rpc.project.CopyProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     unique_name(req.args.target_name, (await project_names()))
-    project = await storage.get_project(req.args.source_id)
-    project.id = common.uid()
-    project.name = req.args.target_name
-    await storage.update_project(project)
 
-    # TODO notify somehow
+    async with managed_project(req.args.source_id, make_copy=True) as project:
+
+        project.name = req.args.target_name
+        asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                          data=project.bare())))
+
     return None
 
 
-@project_needed
 async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptionRequest) -> \
         Union[rpc.project.UpdateProjectDescriptionResponse, hlp.RPC_RETURN_TYPES]:
 
-    assert glob.PROJECT
+    async with managed_project(req.args.project_id) as project:
 
-    glob.PROJECT.desc = req.args.new_description
-    glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
-                                                                      data=glob.PROJECT.bare())))
+        project.desc = req.args.new_description
+        project.update_modified()
+
+        asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                          data=project.bare())))
     return None
 
 
-@project_needed
 async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequest) -> \
         Union[rpc.project.UpdateProjectHasLogicResponse, hlp.RPC_RETURN_TYPES]:
 
-    assert glob.PROJECT
+    async with managed_project(req.args.project_id) as project:
 
-    if glob.PROJECT.has_logic and not req.args.new_has_logic:
+        if project.has_logic and not req.args.new_has_logic:
 
-        for act in glob.PROJECT.actions():
-            act.inputs.clear()
-            act.outputs.clear()
-            asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE, data=act)))
+            for act in project.actions():
+                act.inputs.clear()
+                act.outputs.clear()
 
-    glob.PROJECT.has_logic = req.args.new_has_logic
-    glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
-                                                                      data=glob.PROJECT.bare())))
+                if glob.PROJECT and glob.PROJECT.id == req.args.project_id:
+                    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE,
+                                                                                     data=act)))
+
+        project.has_logic = req.args.new_has_logic
+        project.update_modified()
+        asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE_BASE,
+                                                                          data=project.bare())))
     return None
 
 
