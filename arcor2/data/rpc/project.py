@@ -88,6 +88,7 @@ class OpenProjectResponse(Response):
 @dataclass
 class ListProjectsResponseData(IdDesc):
 
+    name: str = field(default_factory=str)
     scene_id: str = field(default_factory=str)
     valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
     executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))

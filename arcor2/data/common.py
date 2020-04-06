@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import List, Any, Iterator, Optional, Tuple, Set, Union, Dict
+from typing import List, Any, Iterator, Optional, Tuple, Set, Union
 import uuid
 
 import numpy as np  # type: ignore

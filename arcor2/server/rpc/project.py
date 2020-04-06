@@ -18,7 +18,7 @@ from arcor2.source.logic import program_src, SourceException
 
 from arcor2.server.decorators import scene_needed, project_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
-from arcor2.server.robot import get_end_effector_pose, get_robot_joints, RobotPoseException
+from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.project import project_problems, open_project, project_names
 from arcor2.server.scene import open_scene, clear_scene
 
@@ -89,7 +89,8 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
             await glob.logger.warning(f"Ignoring project {project_iddesc.id} due to error: {e}")
             continue
 
-        pd = rpc.project.ListProjectsResponseData(project.id, project.desc, project.scene_id)
+        pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc, name=project.name,
+                                                  scene_id=project.scene_id)
         data.append(pd)
 
         if project.scene_id not in scenes:
