@@ -444,7 +444,7 @@ def global_action_points_class(project: Project) -> str:
 
     for ap in project.action_points:
         fd = FunctionDef(
-            name=clean(ap.id),  # TODO avoid possible collisions
+            name=clean(ap.name),  # TODO avoid possible collisions
             args=arguments(
                 args=[arg(arg='self', annotation=None, type_comment=None)],
                 vararg=None,
@@ -537,7 +537,7 @@ def global_actions_class(project: Project) -> str:
             ac_obj, ac_type = action.parse_type()
 
             m = FunctionDef(
-                name=action.id,
+                name=clean(action.name),
                 args=arguments(
                     args=[arg(
                         arg='self',
@@ -573,7 +573,7 @@ def global_actions_class(project: Project) -> str:
                                 ctx=Load()),
                             attr='_res',
                             ctx=Load()),
-                        attr=action.id,
+                        attr=clean(action.name),
                         ctx=Load())],
                     keywords=[]))],
                 decorator_list=[],
@@ -593,7 +593,7 @@ def derived_resources_class(project: Project) -> str:
 
     tree = Module(body=[])
 
-    parameters = [act.id for aps in project.action_points for act in aps.actions]
+    parameters = [(act.id, clean(act.name)) for aps in project.action_points for act in aps.actions]
 
     add_import(tree, arcor2.resources.__name__, ResourcesBase.__name__)
 
@@ -606,11 +606,11 @@ def derived_resources_class(project: Project) -> str:
                        attr='__init__', ctx=Load()), args=[Str(s=project.id)],
         keywords=[]))]
 
-    for param in parameters:
-        init_body.append(Assign(targets=[get_name_attr("self", "_" + param, Store)],
+    for a_id, a_name in parameters:
+        init_body.append(Assign(targets=[get_name_attr("self", "_" + a_name, Store)],
                                 value=Call(
                                     func=get_name_attr("self", "parameters"),
-                                    args=[Str(s=param)], keywords=[])))
+                                    args=[Str(s=a_id)], keywords=[])))
 
     cls_def = ClassDef(name=derived_cls_name,
                        bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
@@ -623,9 +623,9 @@ def derived_resources_class(project: Project) -> str:
 
     tree.body.append(cls_def)
 
-    for param in parameters:
+    for a_id, a_name in parameters:
         cls_def.body.append(FunctionDef(
-            name=param,
+            name=a_name,
             args=arguments(
                 args=[arg(
                     arg='self',
@@ -641,11 +641,11 @@ def derived_resources_class(project: Project) -> str:
                     func=Attribute(value=Name(id='self', ctx=Load()), attr='print_info', ctx=Load()),
                     args=[
                         Str(
-                            s=param,
+                            s=a_id,
                             kind=''),
-                        get_name_attr('self', '_' + param)],
+                        get_name_attr('self', '_' + a_name)],
                     keywords=[])),
-                Return(value=get_name_attr('self', '_' + param))],
+                Return(value=get_name_attr('self', '_' + a_name))],
             decorator_list=[Name(
                 id='property',
                 ctx=Load())],

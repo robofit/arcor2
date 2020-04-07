@@ -65,7 +65,7 @@ def new_object_type_source(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> str
     return tree_to_str(tree)
 
 
-def object_instance_from_res(tree: Module, object_id: str, cls_name: str,
+def object_instance_from_res(tree: Module, object_name: str, object_id: str, cls_name: str,
                              cls_type: Union[Literal["objects"], Literal["services"]]) -> None:
 
     main_body = find_function("main", tree).body
@@ -78,7 +78,7 @@ def object_instance_from_res(tree: Module, object_id: str, cls_name: str,
 
     assign = AnnAssign(
         target=Name(
-            id=fix_object_name(object_id),
+            id=fix_object_name(object_name),
             ctx=Store()),
         annotation=Name(
             id=cls_name,
