@@ -230,6 +230,23 @@ async def run_in_executor(func, *args):
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 
+def make_position_rel(parent: Position, child: Position) -> Position:
+
+    p = Position()
+
+    p.x = child.x - parent.x
+    p.y = child.y - parent.y
+    p.z = child.z - parent.z
+    return p
+
+
+def make_orientation_rel(parent: Orientation, child: Orientation) -> Orientation:
+
+    p = Orientation()
+    p.set_from_quaternion(child.as_quaternion() / parent.as_quaternion())
+    return p
+
+
 def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
     :param parent: e.g. scene object
@@ -238,20 +255,14 @@ def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-
-    p.position.x = child.position.x - parent.position.x
-    p.position.y = child.position.y - parent.position.y
-    p.position.z = child.position.z - parent.position.z
-
-    p.orientation.set_from_quaternion(child.orientation.as_quaternion()/parent.orientation.as_quaternion())
-
+    p.position = make_position_rel(parent.position, child.position)
+    p.orientation = make_orientation_rel(parent.orientation, child.orientation)
     return p
 
 
 def make_position_abs(parent: Position, child: Position) -> Position:
 
     p = Position()
-
     p.x = child.x + parent.x
     p.y = child.y + parent.y
     p.z = child.z + parent.z

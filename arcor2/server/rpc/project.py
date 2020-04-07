@@ -233,7 +233,7 @@ async def update_action_point_cb(req: rpc.project.UpdateActionPointRequest) -> \
 
     change = False
 
-    if req.args.new_name is not None:
+    if req.args.new_name is not None and ap.name != req.args.new_name:
 
         if not hlp.is_valid_identifier(req.args.new_name):
             return False, "Name has to be valid Python identifier."
@@ -242,20 +242,43 @@ async def update_action_point_cb(req: rpc.project.UpdateActionPointRequest) -> \
         ap.name = req.args.new_name
         change = True
 
-    if req.args.new_parent_id is not None:
+    if req.args.new_parent_id is not None and req.args.new_parent_id != ap.parent:
 
-        if req.args.new_parent_id:
+        if not ap.parent and req.args.new_parent_id:
+            # AP position and all orientations will become relative to the parent
+            new_parent = glob.SCENE.object(req.args.new_parent_id)
+            ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
+            for ori in ap.orientations:
+                ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
 
-            try:
-                glob.SCENE.object(req.args.new_parent_id)
-            except Arcor2Exception:
-                return False, "Unknown parent ID."
+        elif ap.parent and not req.args.new_parent_id:
+            # AP position and all orientations will become absolute
+            old_parent = glob.SCENE.object(ap.parent)
+            ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
+            for ori in ap.orientations:
+                ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
+        else:
+
+            assert ap.parent is not None
+
+            # AP position and all orientations will become relative to another parent
+            old_parent = glob.SCENE.object(ap.parent)
+            new_parent = glob.SCENE.object(req.args.new_parent_id)
+
+            ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
+            ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
+
+            for ori in ap.orientations:
+                ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
+                ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
 
         ap.parent = req.args.new_parent_id
-        ap.invalidate_joints()
-        change = True
+        glob.PROJECT.update_modified()
+        asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE,
+                                                                              data=ap)))
+        return None
 
-    if req.args.new_position is not None:
+    if req.args.new_position is not None and ap.position != req.args.new_position:
 
         ap.position = req.args.new_position
         ap.invalidate_joints()
