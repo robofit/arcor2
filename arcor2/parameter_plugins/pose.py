@@ -15,7 +15,10 @@ class PosePlugin(ParameterPlugin):
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Pose:
 
-        ori_id: str = cls.type()(super(PosePlugin, cls).value(type_defs, scene, project, action_id, parameter_id))
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+        ori_id: str = cls.param_value(param)
+
         ap, ori = project.ap_and_orientation(ori_id)
         return Pose(ap.position, ori.orientation)
 

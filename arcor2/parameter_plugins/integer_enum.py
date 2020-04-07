@@ -55,4 +55,7 @@ class IntegerEnumPlugin(ParameterPlugin):
         if not issubclass(ttype, cls.type()):
             raise ParameterPluginException(f"Type {ttype.__name__} is not subclass of {cls.type().__name__}.")
 
-        return ttype(json.loads(param.value))
+        try:
+            return ttype(json.loads(param.value))
+        except ValueError:
+            raise ParameterPluginException(f"Parameter {parameter_id} of action {action.name} has invalid value.")
