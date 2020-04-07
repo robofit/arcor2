@@ -501,10 +501,11 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
     return None
 
 
-def check_action_params(action: common.Action) -> None:
+def check_action_params(project: common.Project, action_id: str) -> None:
 
     assert glob.SCENE
-    assert glob.PROJECT
+
+    action = project.action(action_id)
 
     # TODO check if all required parameters are set
 
@@ -514,7 +515,7 @@ def check_action_params(action: common.Action) -> None:
             raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has unknown type: {param.type}.")
 
         try:
-            PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, glob.SCENE, glob.PROJECT, action.id, param.id)
+            PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, glob.SCENE, project, action.id, param.id)
         except ParameterPluginException as e:
             raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has invalid value. {str(e)}")
 
@@ -534,10 +535,14 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     if not hlp.is_valid_identifier(req.args.name):
         return False, "Action name has to be valid Python identifier."
 
-    action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters)
+    new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters)
 
-    obj_id, action_type = action.parse_type()
+    obj_id, action_type = new_action.parse_type()
     scene_obj = glob.SCENE.object_or_service(obj_id)
+
+    if scene_obj.type not in glob.ACTIONS:
+        await glob.logger.error(f"Unknown type {scene_obj.type}, known types are: {glob.ACTIONS.keys()}.")
+        return False, f"Unknown object/service type."
 
     for act in glob.ACTIONS[scene_obj.type]:
         if action_type == act.name:
@@ -547,12 +552,16 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
     else:
         return False, "Unknown action type."
 
-    check_action_params(action)
+    updated_project = copy.deepcopy(glob.PROJECT)
+    updated_ap = updated_project.action_point(req.args.action_point_id)
+    updated_ap.actions.append(new_action)
 
-    ap.actions.append(action)
+    check_action_params(updated_project, new_action.id)
+
+    ap.actions.append(new_action)
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.ADD, ap.id, data=action)))
+    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.ADD, ap.id, data=new_action)))
     return None
 
 
@@ -564,17 +573,15 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.pr
     assert glob.PROJECT
     assert glob.SCENE
 
-    ap, action = glob.PROJECT.action_point_and_action(req.args.action_id)
+    updated_project = copy.deepcopy(glob.PROJECT)
 
-    updated_action = copy.deepcopy(action)
+    updated_action = updated_project.action(req.args.action_id)
     updated_action.parameters = req.args.parameters
 
-    try:
-        check_action_params(updated_action)
-    except Arcor2Exception as e:
-        return False, str(e)
+    check_action_params(updated_project, updated_action.id)
 
-    action.parameters = req.args.parameters
+    orig_action = glob.PROJECT.action(req.args.action_id)
+    orig_action.parameters = updated_action.parameters
 
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE,

@@ -127,10 +127,6 @@ async def server(client: Any,
     if event_dict is None:
         event_dict = {}
 
-    print("-------------------")
-    print(verbose)
-    print("-------------------")
-
     await register(client)
     try:
         async for message in client:
