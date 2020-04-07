@@ -15,8 +15,9 @@ class PosePlugin(ParameterPlugin):
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Pose:
 
-        obj_id, ap_id, value_id = cls.parse_id(project.action(action_id).parameter(parameter_id))
-        return project.action_point(ap_id).pose(value_id)
+        ori_id: str = cls.type()(super(PosePlugin, cls).value(type_defs, scene, project, action_id, parameter_id))
+        ap, ori = project.ap_and_orientation(ori_id)
+        return Pose(ap.position, ori.orientation)
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
@@ -25,8 +26,9 @@ class PosePlugin(ParameterPlugin):
     @classmethod
     def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
 
-        _, _, value_id = cls.parse_id(project.action(action_id).parameter(parameter_id))
-        return value_id == orientation_id
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+        return orientation_id == cls.param_value(param)
 
 
 class PoseListPlugin(ListParameterPlugin):
@@ -45,8 +47,11 @@ class PoseListPlugin(ListParameterPlugin):
 
         ret: List[Pose] = []
 
-        for obj_id, ap_id, value_id in cls.parse_list_id(project.action(action_id).parameter(parameter_id)):
-            ret.append(project.action_point(ap_id).pose(value_id))
+        ap, action = project.action_point_and_action(action_id)
+        parameter = action.parameter(parameter_id)
+
+        for orientation_id in cls.param_value_list(parameter):
+            ret.append(Pose(ap.position, ap.orientation(orientation_id).orientation))
 
         return ret
 
@@ -57,7 +62,10 @@ class PoseListPlugin(ListParameterPlugin):
     @classmethod
     def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
 
-        for _, _, value_id in cls.parse_list_id(project.action(action_id).parameter(parameter_id)):
-            if value_id == orientation_id:
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+
+        for ori_id in cls.param_value_list(param):
+            if ori_id == orientation_id:
                 return True
         return False

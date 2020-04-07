@@ -19,10 +19,10 @@ class JointsPlugin(ParameterPlugin):
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> \
             ProjectRobotJoints:
 
-        param = project.action(action_id).parameter(parameter_id)
-        _, ap_id, value_id = cls.parse_id(param)
+        ap, action = project.action_point_and_action(action_id)
+        param = action.parameter(parameter_id)
+        joints_id = cls.param_value(param)
 
-        action = project.action(action_id)
         robot_id, action_method_name = action.parse_type()
         robot_type = scene.object_or_service(robot_id)
 
@@ -36,7 +36,7 @@ class JointsPlugin(ParameterPlugin):
                 raise ParameterPluginException(f"Parameter {param.id} of action {action.id} depends on"
                                                f" 'robot_id' parameter, which could not be found.")
 
-        return project.action_point(ap_id).joints_for_robot(robot_id, value_id)
+        return ap.joints_for_robot(robot_id, joints_id)
 
     @classmethod
     def value_to_json(cls, value: ProjectRobotJoints) -> str:
@@ -46,6 +46,6 @@ class JointsPlugin(ParameterPlugin):
     def uses_robot_joints(cls, project: Project, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
 
         param = project.action(action_id).parameter(parameter_id)
-        _, _, value_id = cls.parse_id(param)
+        value_id = cls.param_value(param)
 
         return value_id == robot_joints_id

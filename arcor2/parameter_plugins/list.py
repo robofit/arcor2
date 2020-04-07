@@ -1,5 +1,5 @@
 import abc
-from typing import Any, List, Type, Iterator, Tuple
+from typing import Any, List, Type
 import json
 
 
@@ -28,16 +28,11 @@ class ListParameterPlugin(ParameterPlugin):
         return val
 
     @classmethod
-    def parse_list_id(cls, param: ActionParameter) -> Iterator[Tuple[str, str, str]]:
+    def param_value_list(cls, param: ActionParameter) -> List[str]:
 
         lst = json.loads(param.value)
 
         if not isinstance(lst, list):
             raise ParameterPluginException("Parameter value should be list of references to action points.")
 
-        for val in lst:
-            try:
-                obj_id, ap_id, value_id = val.split(".")
-            except ValueError:
-                raise ParameterPluginException(f"Parameter: {param.id} has invalid value: {param.value}.")
-            yield obj_id, ap_id, value_id
+        return lst
