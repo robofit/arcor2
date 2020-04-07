@@ -8,7 +8,7 @@ import copy
 from contextlib import asynccontextmanager
 
 from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data import rpc, events, common
+from arcor2.data import rpc, events, common, object_type
 from arcor2 import aio_persistent_storage as storage
 from arcor2.object_types import Generic
 from arcor2.services import Service
@@ -22,6 +22,21 @@ from arcor2.server import objects_services_actions as osa, notifications as noti
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.project import project_problems, open_project, project_names
 from arcor2.server.scene import open_scene, clear_scene
+
+
+def find_object_action(action: common.Action) -> object_type.ObjectAction:
+
+    obj_type, action_type = action.parse_type()
+
+    if obj_type not in glob.ACTIONS:
+        raise Arcor2Exception("Unknown object/service type.")
+
+    for act in glob.ACTIONS[obj_type]:
+        if act.name == action_type:
+            if act.disabled:
+                raise Arcor2Exception("Action is disabled.")
+            return act
+    raise Arcor2Exception("Unknown type of action.")
 
 
 @asynccontextmanager
@@ -493,6 +508,10 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
     assert glob.PROJECT
 
     unique_name(req.args.name, glob.PROJECT.action_points_names)
+
+    if not hlp.is_valid_identifier(req.args.name):
+        return False, "Name has to be valid Python identifier."
+
     ap = common.ProjectActionPoint(common.uid(), req.args.name, req.args.position, req.args.parent)
     glob.PROJECT.action_points.append(ap)
 
@@ -529,14 +548,26 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest) -> \
     return None
 
 
-def check_action_params(project: common.Project, action_id: str) -> None:
+def check_action_params(project: common.Project, action: common.Action, object_action: object_type.ObjectAction) \
+        -> None:
 
     assert glob.SCENE
 
-    action = project.action(action_id)
+    _, action_type = action.parse_type()
 
-    # TODO check if all required parameters are set
+    assert action_type == object_action.name
 
+    if len(object_action.parameters) != len(action.parameters):
+        raise Arcor2Exception("Unexpected number of parameters.")
+
+    for req_param in object_action.parameters:
+        for given_param in action.parameters:
+            if req_param.name == given_param.id and req_param.type == given_param.type:
+                break
+        else:
+            raise Arcor2Exception(f"Action parameter {req_param.name}/{req_param.type} is not set or has invalid type.")
+
+    # check values of parameters
     for param in action.parameters:
 
         if param.type not in PARAM_PLUGINS:
@@ -565,26 +596,11 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
 
     new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters)
 
-    obj_id, action_type = new_action.parse_type()
-    scene_obj = glob.SCENE.object_or_service(obj_id)
-
-    if scene_obj.type not in glob.ACTIONS:
-        await glob.logger.error(f"Unknown type {scene_obj.type}, known types are: {glob.ACTIONS.keys()}.")
-        return False, f"Unknown object/service type."
-
-    for act in glob.ACTIONS[scene_obj.type]:
-        if action_type == act.name:
-            if act.disabled:
-                return False, "Action type is disabled."
-            break
-    else:
-        return False, "Unknown action type."
-
     updated_project = copy.deepcopy(glob.PROJECT)
     updated_ap = updated_project.action_point(req.args.action_point_id)
     updated_ap.actions.append(new_action)
 
-    check_action_params(updated_project, new_action.id)
+    check_action_params(updated_project, new_action, find_object_action(new_action))
 
     ap.actions.append(new_action)
 
@@ -606,7 +622,7 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.pr
     updated_action = updated_project.action(req.args.action_id)
     updated_action.parameters = req.args.parameters
 
-    check_action_params(updated_project, updated_action.id)
+    check_action_params(updated_project, updated_action, find_object_action(updated_action))
 
     orig_action = glob.PROJECT.action(req.args.action_id)
     orig_action.parameters = updated_action.parameters
