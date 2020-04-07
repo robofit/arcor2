@@ -26,12 +26,15 @@ from arcor2.server.scene import open_scene, clear_scene
 
 def find_object_action(action: common.Action) -> object_type.ObjectAction:
 
-    obj_type, action_type = action.parse_type()
+    assert glob.SCENE
 
-    if obj_type not in glob.ACTIONS:
+    obj_id, action_type = action.parse_type()
+    obj = glob.SCENE.object_or_service(obj_id)
+
+    if obj.type not in glob.ACTIONS:
         raise Arcor2Exception("Unknown object/service type.")
 
-    for act in glob.ACTIONS[obj_type]:
+    for act in glob.ACTIONS[obj.type]:
         if act.name == action_type:
             if act.disabled:
                 raise Arcor2Exception("Action is disabled.")
