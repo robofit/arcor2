@@ -155,6 +155,21 @@ class AddActionPointResponse(Response):
 
 
 @dataclass
+class RemoveActionPointRequest(Request):
+
+    args: IdArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RemoveActionPointResponse(Response):
+
+    response: str = field(default=RemoveActionPointRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
 class AddActionPointJointsRequestArgs(JsonSchemaMixin):
 
     action_point_id: str

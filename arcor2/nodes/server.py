@@ -173,6 +173,7 @@ RPC_DICT: hlp.RPC_DICT_TYPE = {
     rpc.project.ExecuteActionRequest: srpc.project.execute_action_cb,
     rpc.project.AddActionPointRequest: srpc.project.add_action_point_cb,
     rpc.project.UpdateActionPointRequest: srpc.project.update_action_point_cb,
+    rpc.project.RemoveActionPointRequest: srpc.project.remove_action_point_cb,
     rpc.project.UpdateActionPointUsingRobotRequest: srpc.project.update_action_point_using_robot_cb,
     rpc.project.AddActionPointJointsRequest: srpc.project.add_action_point_joints_cb,
     rpc.project.UpdateActionPointJointsRequest: srpc.project.update_action_point_joints_cb,

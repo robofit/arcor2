@@ -501,6 +501,34 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
     return None
 
 
+@scene_needed
+@project_needed
+async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest) -> \
+        Union[rpc.project.RemoveActionPointResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.PROJECT
+
+    ap = glob.PROJECT.action_point(req.args.id)
+
+    for act in glob.PROJECT.actions():
+        for param in act.parameters:
+
+            for joints in ap.robot_joints:
+                if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, joints.id):
+                    return False, f"Joints {joints.name} used in action {act.name} (parameter {param.id})."
+
+            for ori in ap.orientations:
+                if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, ori.id):
+                    return False, f"Orientation {ori.name} used in action {act.name} (parameter {param.id})."
+
+            # TODO some hypothetical parameter type could use just bare ActionPoint (its position)
+
+    glob.PROJECT.action_points = [acp for acp in glob.PROJECT.action_points if acp.id != req.args.id]
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.REMOVE, data=ap)))
+    return None
+
+
 def check_action_params(project: common.Project, action_id: str) -> None:
 
     assert glob.SCENE
