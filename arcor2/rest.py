@@ -21,6 +21,8 @@ S = TypeVar('S', str, int, float, bool)
 
 OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]]
 
+SESSION = requests.session()
+
 
 def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict, List]:
 
@@ -87,20 +89,20 @@ def _send(url: str, op: Callable, data: OptionalData = None,
 
 
 def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
-    _send(url, requests.post, data, params)
+    _send(url, SESSION.post, data, params)
 
 
 def put_returning_primitive(url: str, desired_type: Type[S], data: OptionalData = None,
                             params: Optional[Dict] = None) -> S:
 
     try:
-        return desired_type(_send(url, requests.put, data, params, get_response=True))  # type: ignore
+        return desired_type(_send(url, SESSION.put, data, params, get_response=True))  # type: ignore
     except ValueError as e:
         raise RestException(e)
 
 
 def put(url: str, data: OptionalData = None, params: Optional[Dict] = None, data_cls: Type[T] = None) -> T:
-    ret = _send(url, requests.put, data, params, get_response=data_cls is not None)  # type: ignore
+    ret = _send(url, SESSION.put, data, params, get_response=data_cls is not None)  # type: ignore
 
     if not data_cls:
         return None  # type: ignore
@@ -115,7 +117,7 @@ def put(url: str, data: OptionalData = None, params: Optional[Dict] = None, data
 def put_returning_list(url: str, data: OptionalData = None,
                        params: Optional[Dict] = None, data_cls: Type[T] = None) -> List[T]:
 
-    ret = _send(url, requests.put, data, params, get_response=data_cls is not None)  # type: ignore
+    ret = _send(url, SESSION.put, data, params, get_response=data_cls is not None)  # type: ignore
 
     if not data_cls:
         return []  # type: ignore
@@ -136,7 +138,7 @@ def put_returning_list(url: str, data: OptionalData = None,
 def delete(url: str):
 
     try:
-        resp = requests.delete(url, timeout=TIMEOUT)
+        resp = SESSION.delete(url, timeout=TIMEOUT)
     except requests.exceptions.RequestException as e:
         raise RestException(f"Catastrophic system error.", str(e))
 
@@ -166,7 +168,7 @@ def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Opti
         params = {}
 
     try:
-        resp = requests.get(url, timeout=TIMEOUT, data=body_dict, params=params)
+        resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params)
     except requests.exceptions.RequestException as e:
         print(e)
         raise RestException(f"Catastrophic system error.", str(e))
@@ -249,7 +251,7 @@ def download(url: str, path: str) -> None:
     # TODO check content type
 
     try:
-        r = requests.get(url, allow_redirects=True)
+        r = SESSION.get(url, allow_redirects=True)
     except requests.exceptions.RequestException as e:
         raise RestException("Download of file failed.", str(e))
 
