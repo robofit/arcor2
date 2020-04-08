@@ -4,6 +4,7 @@ import json
 from arcor2.data.common import Project, Pose, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
+from arcor2 import helpers as hlp
 
 
 class PosePlugin(ParameterPlugin):
@@ -15,12 +16,43 @@ class PosePlugin(ParameterPlugin):
     @classmethod
     def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Pose:
 
-        obj_id, ap_id, value_id = cls.parse_id(project.action(action_id).parameter(parameter_id))
-        return project.action_point(ap_id).pose(value_id)
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+        ori_id: str = cls.param_value(param)
+
+        ap, ori = project.ap_and_orientation(ori_id)
+        return Pose(ap.position, ori.orientation)
+
+    @classmethod
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str,
+                        parameter_id: str) -> Pose:
+
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+        ori_id: str = cls.param_value(param)
+
+        ap, ori = project.ap_and_orientation(ori_id)
+
+        if not ap.parent:
+            return Pose(ap.position, ori.orientation)
+
+        obj = scene.object(ap.parent)
+
+        p = Pose()
+        p.position = hlp.make_position_abs(obj.pose.position, ap.position)
+        p.orientation = hlp.make_orientation_abs(obj.pose.orientation, ori.orientation)
+        return p
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
         return value.to_json()
+
+    @classmethod
+    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+        return orientation_id == cls.param_value(param)
 
 
 class PoseListPlugin(ListParameterPlugin):
@@ -39,11 +71,48 @@ class PoseListPlugin(ListParameterPlugin):
 
         ret: List[Pose] = []
 
-        for obj_id, ap_id, value_id in cls.parse_list_id(project.action(action_id).parameter(parameter_id)):
-            ret.append(project.action_point(ap_id).pose(value_id))
+        ap, action = project.action_point_and_action(action_id)
+        parameter = action.parameter(parameter_id)
+
+        for orientation_id in cls.param_value_list(parameter):
+            ret.append(Pose(ap.position, ap.orientation(orientation_id).orientation))
+
+        return ret
+
+    @classmethod
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) \
+            -> List[Pose]:
+
+        ap, action = project.action_point_and_action(action_id)
+
+        if not ap.parent:
+            return cls.value(type_defs, scene, project, action_id, parameter_id)
+
+        parameter = action.parameter(parameter_id)
+        ret: List[Pose] = []
+
+        obj = scene.object(ap.parent)
+
+        pos = hlp.make_position_abs(obj.pose.position, ap.position)
+
+        for orientation_id in cls.param_value_list(parameter):
+
+            ret.append(Pose(pos, hlp.make_orientation_abs(obj.pose.orientation,
+                                                          ap.orientation(orientation_id).orientation)))
 
         return ret
 
     @classmethod
     def value_to_json(cls, value: List[Pose]) -> str:
         return json.dumps([v.to_json() for v in value])
+
+    @classmethod
+    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+
+        action = project.action(action_id)
+        param = action.parameter(parameter_id)
+
+        for ori_id in cls.param_value_list(param):
+            if ori_id == orientation_id:
+                return True
+        return False

@@ -127,3 +127,13 @@ def update_service_type(service_type: ServiceType) -> None:
 
     assert service_type.id
     rest.put(f"{URL}/service_type", service_type)
+
+
+@handle_exceptions
+def delete_scene(scene_id: str) -> None:
+    return rest.delete(f"{URL}/scene/{scene_id}")
+
+
+@handle_exceptions
+def delete_project(project_id: str) -> None:
+    return rest.delete(f"{URL}/project/{project_id}")

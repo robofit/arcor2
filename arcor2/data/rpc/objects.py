@@ -155,66 +155,19 @@ class FocusObjectDoneResponse(Response):
 
 
 @dataclass
-class UpdateActionPointPoseRequestArgs(IdArgs):
-
-    robot: RobotArg
-    update_position: bool
-    orientation_id: str = "default"
-
-
-@dataclass
-class UpdateActionPointPoseRequest(Request):
-
-    args: UpdateActionPointPoseRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointPoseResponse(Response):
-
-    response: str = field(default=UpdateActionPointPoseRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class UpdateActionPointJointsRequestArgs(IdArgs):
-
-    robot_id: str
-    joints_id: str = "default"
-
-
-@dataclass
-class UpdateActionPointJointsRequest(Request):
-
-    args: UpdateActionPointJointsRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointJointsResponse(Response):
-
-    response: str = field(default=UpdateActionPointJointsRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class UpdateActionObjectPoseRequestArgs(IdArgs):
+class UpdateObjectPoseUsingRobotArgs(IdArgs):
 
     robot: RobotArg
 
 
 @dataclass
-class UpdateActionObjectPoseRequest(Request):
+class UpdateObjectPoseUsingRobotRequest(Request):
 
-    args: UpdateActionObjectPoseRequestArgs
+    args: UpdateObjectPoseUsingRobotArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class UpdateActionObjectPoseResponse(Response):
+class UpdateObjectPoseUsingRobotResponse(Response):
 
-    response: str = field(default=UpdateActionObjectPoseRequest.request, init=False)
+    response: str = field(default=UpdateObjectPoseUsingRobotRequest.request, init=False)

@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import List, Any, Iterator, Optional, Tuple, Set, Dict, Union
-from enum import Enum, unique
-from uuid import UUID, uuid4
-
-from json import JSONEncoder
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum, unique
+from json import JSONEncoder
+from typing import List, Any, Iterator, Optional, Tuple, Set, Union
+import uuid
 
 import numpy as np  # type: ignore
 import quaternion  # type: ignore
-
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception
+
+
+def uid() -> str:
+    return uuid.uuid4().hex
 
 
 @unique
@@ -95,6 +98,7 @@ class Orientation(IterableIndexable):
 class NamedOrientation(JsonSchemaMixin):
 
     id: str
+    name: str
     orientation: Orientation
 
 
@@ -125,6 +129,7 @@ class Joint(JsonSchemaMixin):
 class ProjectRobotJoints(JsonSchemaMixin):
 
     id: str
+    name: str
     robot_id: str
     joints: List[Joint]
     is_valid: bool = False
@@ -134,7 +139,9 @@ class ProjectRobotJoints(JsonSchemaMixin):
 class ActionPoint(JsonSchemaMixin):
 
     id: str
+    name: str
     position: Position
+    parent: Optional[str] = None
     orientations: List[NamedOrientation] = field(default_factory=list)
     robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
 
@@ -145,26 +152,48 @@ class ActionPoint(JsonSchemaMixin):
                 return Pose(self.position, ori.orientation)
         raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
 
-    def get_joints(self, robot_id: str, joints_id: str) -> ProjectRobotJoints:
+    def orientation(self, orientation_id: str) -> NamedOrientation:
+
+        for ori in self.orientations:
+            if ori.id == orientation_id:
+                return ori
+        raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
+
+    def joints(self, joints_id: str) -> ProjectRobotJoints:
 
         for joints in self.robot_joints:
-            if joints.id == joints_id and robot_id == joints.robot_id:
+            if joints.id == joints_id:
                 return joints
         raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")
+
+    def orientation_names(self) -> Set[str]:
+        return {ori.name for ori in self.orientations}
+
+    def joints_names(self) -> Set[str]:
+        return {joints.name for joints in self.robot_joints}
+
+    def joints_for_robot(self, robot_id: str, joints_id: str) -> ProjectRobotJoints:
+
+        joints = self.joints(joints_id)
+
+        if joints.robot_id != robot_id:
+            raise Arcor2Exception("Joints for a different robot.")
+
+        return joints
+
+    def invalidate_joints(self):
+
+        for joints in self.robot_joints:
+            joints.is_valid = False
 
 
 @dataclass
 class SceneObject(JsonSchemaMixin):
 
     id: str
+    name: str
     type: str
     pose: Pose
-    uuid: Optional[UUID] = None
-
-    def __post_init__(self):
-
-        if not self.uuid:
-            self.uuid = uuid4()
 
 
 @dataclass
@@ -172,39 +201,67 @@ class SceneService(JsonSchemaMixin):
 
     type: str
     configuration_id: str
-    uuid: Optional[UUID] = None
-
-    def __post_init__(self):
-
-        if not self.uuid:
-            self.uuid = uuid4()
 
 
 @dataclass
 class Scene(JsonSchemaMixin):
 
     id: str
+    name: str
     objects: List[SceneObject] = field(default_factory=list)
     services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
+    modified: Optional[datetime] = None
+    int_modified: Optional[datetime] = None
 
-    def __post_init__(self):
+    def bare(self) -> "Scene":
+        return Scene(self.id, self.name, desc=self.desc)
 
-        self._id_cache: Dict[str, Union[SceneObject, SceneService]] = {}
+    def update_modified(self):
+        self.int_modified = datetime.now(tz=timezone.utc)
+
+    def has_changes(self) -> bool:
+
+        if self.int_modified is None:
+            return False
+
+        if self.modified is None:
+            return True
+
+        return self.int_modified > self.modified
+
+    def object_names(self) -> Iterator[str]:
+
+        for obj in self.objects:
+            yield obj.name
+
+    def object(self, object_id: str) -> SceneObject:
+
+        for obj in self.objects:
+            if obj.id == object_id:
+                return obj
+        raise Arcor2Exception(f"Object ID {object_id} not found.")
+
+    def service(self, service_type: str) -> SceneService:
+
+        for srv in self.services:
+            if srv.type == service_type:
+                return srv
+        raise Arcor2Exception(f"Service of type {service_type} not found.")
 
     def object_or_service(self, object_or_service_id: str) -> Union[SceneObject, SceneService]:
 
-        if not self._id_cache:
-            for obj in self.objects:
-                self._id_cache[obj.id] = obj
-            for srv in self.services:
-                self._id_cache[srv.type] = srv
+        try:
+            return self.object(object_or_service_id)
+        except Arcor2Exception:
+            pass
 
         try:
-            return self._id_cache[object_or_service_id]
-        except KeyError:
-            raise Arcor2Exception(f"Unknown object/service id: {object_or_service_id}, "
-                                  f"known are: {self._id_cache.keys()}")  # TODO DataException?
+            return self.service(object_or_service_id)
+        except Arcor2Exception:
+            pass
+
+        raise Arcor2Exception(f"Scene does not contain object/service with id '{object_or_service_id}'.")
 
 
 @dataclass
@@ -234,24 +291,19 @@ class ActionIO(JsonSchemaMixin):
 class Action(JsonSchemaMixin):
 
     id: str
+    name: str
     type: str
     parameters: List[ActionParameter] = field(default_factory=list)
     inputs: List[ActionIO] = field(default_factory=list)
     outputs: List[ActionIO] = field(default_factory=list)
-    uuid: Optional[UUID] = None
-
-    def __post_init__(self):
-
-        if not self.uuid:
-            self.uuid = uuid4()
 
     def parse_type(self) -> Tuple[str, str]:
 
         try:
-            obj_id, action = self.type.split("/")
+            obj_id_str, action = self.type.split("/")
         except ValueError:
             raise Arcor2Exception(f"Action: {self.id} has invalid type: {self.type}.")
-        return obj_id, action
+        return obj_id_str, action
 
     def parameter(self, parameter_id) -> ActionParameter:
 
@@ -266,69 +318,114 @@ class Action(JsonSchemaMixin):
 class ProjectActionPoint(ActionPoint):
 
     actions: List[Action] = field(default_factory=list)
-    uuid: Optional[UUID] = None
 
-    def __post_init__(self):
-
-        if not self.uuid:
-            self.uuid = uuid4()
-
-
-@dataclass
-class ProjectObject(JsonSchemaMixin):
-
-    id: str
-    action_points: List[ProjectActionPoint] = field(default_factory=list)
-    uuid: Optional[UUID] = None
+    def bare(self) -> "ProjectActionPoint":
+        return ProjectActionPoint(self.id, self.name, self.position, self.parent)
 
 
 @dataclass
 class Project(JsonSchemaMixin):
 
     id: str
+    name: str
     scene_id: str
-    objects: List[ProjectObject] = field(default_factory=list)
+    action_points: List[ProjectActionPoint] = field(default_factory=list)
     desc: str = field(default_factory=str)
     has_logic: bool = True
+    modified: Optional[datetime] = None
+    int_modified: Optional[datetime] = None
 
-    def __post_init__(self):
+    def bare(self) -> "Project":
+        return Project(self.id, self.name, self.scene_id, desc=self.desc, has_logic=self.has_logic)
 
-        self._action_cache: Dict[str, Action] = {}
-        self._ap_cache: Dict[str, ActionPoint] = {}
+    def update_modified(self):
+        self.int_modified = datetime.now(tz=timezone.utc)
 
-    def _build_cache(self):
+    def has_changes(self) -> bool:
 
-        for obj in self.objects:
-            for aps in obj.action_points:
-                assert aps.id not in self._ap_cache, "Action point ID not unique."
-                self._ap_cache[aps.id] = aps
-                for act in aps.actions:
-                    assert act.id not in self._action_cache, "Action ID not unique."
-                    self._action_cache[act.id] = act
+        if self.int_modified is None:
+            return False
 
-    def invalidate_cache(self):
+        if self.modified is None:
+            return True
 
-        self._action_cache.clear()
-        self._ap_cache.clear()
+        return self.int_modified > self.modified
+
+    @property
+    def action_points_with_parent(self) -> List[ProjectActionPoint]:
+        """
+        Get action points which are relative to something (parent is set).
+        :return:
+        """
+
+        return [ap for ap in self.action_points if ap.parent]
+
+    @property
+    def action_points_names(self) -> Set[str]:
+        return {ap.name for ap in self.action_points}
+
+    def ap_and_joints(self, joints_id: str) -> Tuple[ProjectActionPoint, ProjectRobotJoints]:
+
+        for ap in self.action_points:
+            for joints in ap.robot_joints:
+                if joints.id == joints_id:
+                    return ap, joints
+        raise Arcor2Exception("Unknown joints.")
+
+    def joints(self, joints_id: str) -> ProjectRobotJoints:
+        return self.ap_and_joints(joints_id)[1]
+
+    def ap_and_orientation(self, orientation_id: str) -> Tuple[ProjectActionPoint, NamedOrientation]:
+
+        for ap in self.action_points:
+            for ori in ap.orientations:
+                if ori.id == orientation_id:
+                    return ap, ori
+        raise Arcor2Exception("Unknown orientation.")
+
+    def orientation(self, orientation_id: str) -> NamedOrientation:
+        return self.ap_and_orientation(orientation_id)[1]
 
     def action(self, action_id: str) -> Action:
 
-        if not self._action_cache:
-            self._build_cache()
-
-        try:
-            return self._action_cache[action_id]
-        except KeyError:
+        for ap in self.action_points:
+            for ac in ap.actions:
+                if ac.id == action_id:
+                    return ac
+        else:
             raise Arcor2Exception("Action not found")
 
-    def action_point(self, action_point_id: str) -> ActionPoint:
+    def action_point_and_action(self, action_id: str) -> Tuple[ProjectActionPoint, Action]:
 
-        if not self._ap_cache:
-            self._build_cache()
+        for ap in self.action_points:
+            for ac in ap.actions:
+                if ac.id == action_id:
+                    return ap, ac
+        else:
+            raise Arcor2Exception("Action not found")
 
-        try:
-            return self._ap_cache[action_point_id]
-        except KeyError:
+    def actions(self) -> List[Action]:
+
+        ret: List[Action] = []
+
+        # TODO comprehension!
+        for ap in self.action_points:
+            for act in ap.actions:
+                ret.append(act)
+        return ret
+
+    def action_ids(self) -> Set[str]:
+        return {action.id for action in self.actions()}
+
+    def action_user_names(self) -> Set[str]:
+        return {action.name for action in self.actions()}
+
+    def action_point(self, action_point_id: str) -> ProjectActionPoint:
+
+        for ap in self.action_points:
+            if ap.id == action_point_id:
+                return ap
+        else:
             raise Arcor2Exception("Action point not found")
 
 
@@ -343,6 +440,7 @@ class ProjectSources(JsonSchemaMixin):
 @dataclass
 class IdDesc(JsonSchemaMixin):
     id: str
+    name: str
     desc: Optional[str] = None
 
 

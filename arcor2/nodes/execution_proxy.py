@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import json
-import uuid
-import tempfile
 import base64
+import json
 import os
 import shutil
+import tempfile
+import uuid
 
+import websocket  # type: ignore
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, jsonify, request, send_file
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
-import websocket  # type: ignore
 from werkzeug.utils import secure_filename
 
 import arcor2

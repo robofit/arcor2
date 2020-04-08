@@ -1,10 +1,10 @@
 import inspect
 from typing import Dict, Tuple, Type
-from arcor2.data.rpc.common import Request, Response
-from arcor2.data.events import Event
+
 import arcor2.data.events
 from arcor2.data import rpc
-
+from arcor2.data.events import Event
+from arcor2.data.rpc.common import Request, Response
 
 RPC_MAPPING: Dict[str, Tuple[Type[Request], Type[Response]]] = {}
 
@@ -12,7 +12,8 @@ _requests: Dict[str, Type[Request]] = {}
 _responses: Dict[str, Type[Response]] = {}
 
 # TODO avoid explicit naming of all sub-modules in rpc module
-for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene_project, rpc.services, rpc.storage):
+for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene, rpc.project, rpc.services,
+                   rpc.storage):
     for name, obj in inspect.getmembers(rpc_module):
 
         if not inspect.isclass(obj):
@@ -23,7 +24,9 @@ for rpc_module in (rpc.common, rpc.execution, rpc.objects, rpc.robot, rpc.scene_
         elif issubclass(obj, Response) and obj != Response:
             _responses[obj.response] = obj
 
-assert _requests.keys() == _responses.keys()
+assert _requests.keys() == _responses.keys(),\
+    f"There is difference between requests/responses: " \
+    f"{set(_requests.keys()).symmetric_difference(set(_responses.keys()))}"
 
 for k, v in _requests.items():
     RPC_MAPPING[k] = (v, _responses[k])

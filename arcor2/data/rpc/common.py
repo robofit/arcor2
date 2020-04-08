@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple, Set
 import re
+from enum import Enum
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -13,6 +14,13 @@ TODO: remove type: ignore once it is fixed
 
 def wo_suffix(name: str) -> str:
     return re.sub('Request$', '', name)
+
+
+class ChangeType(Enum):
+
+    ADD: str = "add"
+    UPDATE: str = "update"
+    DELETE: str = "delete"
 
 
 @dataclass
@@ -66,6 +74,7 @@ class SystemInfoData(JsonSchemaMixin):
     version: str = ""
     api_version: str = ""
     supported_parameter_types: Set[str] = field(default_factory=set)
+    supported_rpc_requests: Set[str] = field(default_factory=set)
 
 
 @dataclass

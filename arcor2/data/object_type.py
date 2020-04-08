@@ -1,10 +1,11 @@
-from typing import Optional, List, Dict, Union, Set
+from dataclasses import dataclass, field
 from enum import Enum
+from typing import Optional, List, Dict, Union, Set
+
+from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import DataException
 from arcor2.data.common import ActionMetadata, Pose, Position
-from dataclasses import dataclass, field
-from dataclasses_jsonschema import JsonSchemaMixin
 
 
 class Model3dType(Enum):

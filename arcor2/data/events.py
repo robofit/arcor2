@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
 import re
-
-from arcor2.data.common import ActionState, ProjectState, CurrentAction
 from dataclasses import dataclass, field
+from typing import List, Optional
+
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import Scene, Project
+from arcor2.data import common
 
 
 def wo_suffix(name: str) -> str:
     return re.sub('Event$', '', name)
+
+
+class EventType(common.StrEnum):
+
+    ADD: str = "add"
+    UPDATE: str = "update"
+    REMOVE: str = "remove"
+    UPDATE_BASE: str = "update_base"
 
 
 """
@@ -25,6 +32,8 @@ Common stuff
 class Event(JsonSchemaMixin):
 
     event: str = field(default="", init=False)
+    change_type: Optional[EventType] = None
+    parent_id: Optional[str] = None
 
 
 """
@@ -35,16 +44,70 @@ Project / scene
 
 
 @dataclass
-class SceneChangedEvent(Event):
+class SceneChanged(Event):
 
-    data: Optional[Scene] = None
+    data: Optional[common.Scene] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class ProjectChangedEvent(Event):
+class SceneSaved(Event):
 
-    data: Optional[Project] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ProjectChanged(Event):
+
+    data: Optional[common.Project] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ProjectSaved(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ActionPointChanged(Event):
+
+    data: Optional[common.ProjectActionPoint] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ActionChanged(Event):
+
+    data: Optional[common.Action] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class OrientationChanged(Event):
+
+    data: Optional[common.NamedOrientation] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class JointsChanged(Event):
+
+    data: Optional[common.ProjectRobotJoints] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class SceneObjectChanged(Event):
+
+    data: Optional[common.SceneObject] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class SceneServiceChanged(Event):
+
+    data: Optional[common.SceneService] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -76,7 +139,7 @@ class ProjectExceptionEvent(Event):
 @dataclass
 class CurrentActionEvent(Event):
 
-    data: CurrentAction = field(default_factory=CurrentAction)
+    data: common.CurrentAction = field(default_factory=common.CurrentAction)
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -86,7 +149,7 @@ class CurrentActionEvent(Event):
 @dataclass
 class ProjectStateEvent(Event):
 
-    data: ProjectState = field(default_factory=ProjectState)
+    data: common.ProjectState = field(default_factory=common.ProjectState)
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -95,7 +158,7 @@ class ProjectStateEvent(Event):
 @dataclass
 class ActionStateEvent(Event):
 
-    data: ActionState = field(default_factory=ActionState)
+    data: common.ActionState = field(default_factory=common.ActionState)
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

@@ -76,3 +76,11 @@ async def update_object_type(object_type: ObjectType) -> None:
 
 async def update_service_type(service_type: ServiceType) -> None:
     await run_in_executor(persistent_storage.update_service_type, service_type)
+
+
+async def delete_scene(scene_id: str) -> None:
+    await run_in_executor(persistent_storage.delete_scene, scene_id)
+
+
+async def delete_project(project_id: str) -> None:
+    await run_in_executor(persistent_storage.delete_project, project_id)

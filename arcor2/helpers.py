@@ -121,7 +121,8 @@ async def server(client: Any,
                  register: Callable[[Any], Awaitable[None]],
                  unregister: Callable[[Any], Awaitable[None]],
                  rpc_dict: RPC_DICT_TYPE,
-                 event_dict: Optional[EVENT_DICT_TYPE] = None) -> None:
+                 event_dict: Optional[EVENT_DICT_TYPE] = None,
+                 verbose: bool = False) -> None:
 
     if event_dict is None:
         event_dict = {}
@@ -162,8 +163,9 @@ async def server(client: Any,
                 try:
                     resp = await rpc_dict[req_cls](req)
                 except Arcor2Exception as e:
-                    await logger.exception(e)
-                    resp = False, "System error."
+                    if verbose:
+                        await logger.exception("Arcor2Exception in RPC callback.")
+                    resp = False, str(e)
 
                 if resp is None:  # default response
                     resp = resp_cls()
@@ -228,6 +230,23 @@ async def run_in_executor(func, *args):
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 
+def make_position_rel(parent: Position, child: Position) -> Position:
+
+    p = Position()
+
+    p.x = child.x - parent.x
+    p.y = child.y - parent.y
+    p.z = child.z - parent.z
+    return p
+
+
+def make_orientation_rel(parent: Orientation, child: Orientation) -> Orientation:
+
+    p = Orientation()
+    p.set_from_quaternion(child.as_quaternion() / parent.as_quaternion())
+    return p
+
+
 def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
     :param parent: e.g. scene object
@@ -236,20 +255,14 @@ def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-
-    p.position.x = child.position.x - parent.position.x
-    p.position.y = child.position.y - parent.position.y
-    p.position.z = child.position.z - parent.position.z
-
-    p.orientation.set_from_quaternion(child.orientation.as_quaternion()/parent.orientation.as_quaternion())
-
+    p.position = make_position_rel(parent.position, child.position)
+    p.orientation = make_orientation_rel(parent.orientation, child.orientation)
     return p
 
 
 def make_position_abs(parent: Position, child: Position) -> Position:
 
     p = Position()
-
     p.x = child.x + parent.x
     p.y = child.y + parent.y
     p.z = child.z + parent.z

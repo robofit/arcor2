@@ -1,5 +1,5 @@
 import abc
-from typing import Callable, Tuple, Any, Dict, Union, Type
+from typing import Callable, Any, Dict, Union, Type
 import json
 
 from typed_ast import ast3 as ast
@@ -45,13 +45,17 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         assert param_meta.name
 
     @classmethod
-    def parse_id(cls, param: ActionParameter) -> Tuple[str, str, str]:  # TODO does it make sense here?
+    def param_value(cls, param: ActionParameter) -> str:
 
         try:
-            obj_id, ap_id, value_id = json.loads(param.value).split(".")
+            ret = json.loads(param.value)
         except ValueError:
             raise ParameterPluginException(f"Parameter: {param.id} has invalid value: {param.value}.")
-        return obj_id, ap_id, value_id
+
+        if not isinstance(ret, str):
+            raise ParameterPluginException(f"Parameter: {param.id} has invalid value (string expected): {param.value}.")
+
+        return ret
 
     @classmethod
     @abc.abstractmethod
@@ -65,5 +69,19 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
             raise ParameterPluginException(f"Value of {action_id}/{parameter_id} is not a valid JSON.", e)
 
     @classmethod
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str,
+                        parameter_id: str) -> Any:
+
+        return cls.value(type_defs, scene, project, action_id, parameter_id)
+
+    @classmethod
     def value_to_json(cls, value: Any) -> str:
         return json.dumps(value)
+
+    @classmethod
+    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+        return False
+
+    @classmethod
+    def uses_robot_joints(cls, project: Project, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+        return False
