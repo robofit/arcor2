@@ -53,7 +53,7 @@ async def handle_manager_incoming_messages(manager_client):
         await glob.logger.error("Connection to manager closed.")
 
 
-async def _initialize_server(verbose: bool = False) -> None:
+async def _initialize_server() -> None:
 
     while True:  # wait until Project service becomes available
         try:
@@ -69,7 +69,7 @@ async def _initialize_server(verbose: bool = False) -> None:
     await asyncio.wait([osa.get_object_actions(), _check_manager()])
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
-                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=verbose)
+                                      rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=glob.VERBOSE)
 
     await glob.logger.info("Server initialized.")
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
@@ -221,7 +221,9 @@ def main():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-v", "--verbose", help="Increase output verbosity",
+    parser.add_argument("-v", "--verbose", help="Increase verbosity.",
+                        action="store_const", const=True, default=False)
+    parser.add_argument("-d", "--debug", help="Set logging level to debug.",
                         action="store_const", const=LogLevel.DEBUG, default=LogLevel.INFO)
     parser.add_argument('--version', action='version', version=arcor2.version(),
                         help="Shows ARCOR2 version and exits.")
@@ -231,13 +233,14 @@ def main():
                         action="store_const", const=True, default=False)
 
     args = parser.parse_args()
-    glob.logger.level = args.verbose
+    glob.logger.level = args.debug
+    glob.VERBOSE = args.verbose
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
 
     loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
-                                           _initialize_server(args.verbose == LogLevel.DEBUG)))
+                                           _initialize_server()))
 
 
 if __name__ == "__main__":
