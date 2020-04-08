@@ -69,6 +69,12 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
             raise ParameterPluginException(f"Value of {action_id}/{parameter_id} is not a valid JSON.", e)
 
     @classmethod
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str,
+                        parameter_id: str) -> Any:
+
+        return cls.value(type_defs, scene, project, action_id, parameter_id)
+
+    @classmethod
     def value_to_json(cls, value: Any) -> str:
         return json.dumps(value)
 

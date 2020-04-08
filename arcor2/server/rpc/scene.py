@@ -193,6 +193,7 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest) 
     return resp
 
 
+# TODO move to objects
 @scene_needed
 async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
         Union[rpc.objects.ActionParamValuesResponse, hlp.RPC_RETURN_TYPES]:
@@ -304,6 +305,8 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
+
+    # TODO this should be done when the scene is saved!
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, scene_object.id))
     return None
 
@@ -321,6 +324,8 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
+
+    # TODO this should be done when the scene is saved!
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
     return None
 

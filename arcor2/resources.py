@@ -100,8 +100,14 @@ class IntResources:
 
         self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
+    def make_all_poses_absolute(self) -> None:
+        """
+        This is only needed when the main script is written fully manually (actions are not defined in AR Editor).
+        :return:
+        """
+
         # make all poses absolute
-        for aps in project.action_points_with_parent:
+        for aps in self.project.action_points_with_parent:
 
             assert aps.parent
 
@@ -112,6 +118,8 @@ class IntResources:
             aps.position = make_position_abs(obj_inst.pose.position, aps.position)
             for ori in aps.orientations:
                 ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
+
+            aps.parent = None
 
     def __enter__(self):
         return self
@@ -146,8 +154,8 @@ class IntResources:
         ret: Dict[str, Any] = {}
 
         for param in act.parameters:
-            ret[param.id] = PARAM_PLUGINS[param.type].value(self.type_defs,
-                                                            self.scene, self.project, action_id, param.id)
+            ret[param.id] = PARAM_PLUGINS[param.type].execution_value(self.type_defs, self.scene, self.project,
+                                                                      action_id, param.id)
 
         return ret
 

@@ -88,8 +88,8 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
 
     for param in action.parameters:
         try:
-            params[param.id] = PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, glob.SCENE,
-                                                               glob.PROJECT, action.id, param.id)
+            params[param.id] = PARAM_PLUGINS[param.type].execution_value(glob.TYPE_DEF_DICT, glob.SCENE,
+                                                                         glob.PROJECT, action.id, param.id)
         except ParameterPluginException as e:
             await glob.logger.error(e)
             return False, f"Failed to get value for parameter {param.id}."
@@ -109,6 +109,8 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
         return False, "Internal error: object does not have the requested method."
 
     glob.RUNNING_ACTION = action.id
+
+    await glob.logger.debug(f"Running action {action_name} ({type(obj)}/{action_name}), params: {params}.")
 
     # schedule execution and return success
     asyncio.ensure_future(osa.execute_action(getattr(obj, action_name), params))
