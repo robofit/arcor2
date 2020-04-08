@@ -35,6 +35,7 @@ async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
             if ap.parent != obj_id:
                 continue
 
+            await glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
             ap.invalidate_joints()
 
         await storage.update_project(project)

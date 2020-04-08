@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union
+from typing import Union, Set
 import asyncio
 import functools
 from contextlib import asynccontextmanager
@@ -22,6 +22,9 @@ from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, o
     clear_scene
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
     projects_using_object, associated_projects
+
+
+OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 
 
 @asynccontextmanager
@@ -85,6 +88,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
         return False, "Scene has unsaved changes."
 
     await clear_scene()
+    OBJECTS_WITH_UPDATED_POSE.clear()
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE)))
     return None
 
@@ -98,6 +102,9 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
     await storage.update_scene(glob.SCENE)
     glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
     asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
+    for obj_id in OBJECTS_WITH_UPDATED_POSE:
+        asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj_id))
+    OBJECTS_WITH_UPDATED_POSE.clear()
     return None
 
 
@@ -254,6 +261,8 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
         obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
         await collision(obj_inst, remove=True)
         del glob.SCENE_OBJECT_INSTANCES[req.args.id]
+        if req.args.id in OBJECTS_WITH_UPDATED_POSE:
+            OBJECTS_WITH_UPDATED_POSE.remove(req.args.id)
         asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.REMOVE, data=obj)))
 
     elif req.args.id in glob.SERVICES_INSTANCES:
@@ -305,9 +314,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
-
-    # TODO this should be done when the scene is saved!
-    asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, scene_object.id))
+    OBJECTS_WITH_UPDATED_POSE.add(scene_object.id)
     return None
 
 
@@ -325,8 +332,7 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
 
-    # TODO this should be done when the scene is saved!
-    asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
+    OBJECTS_WITH_UPDATED_POSE.add(obj.id)
     return None
 
 
