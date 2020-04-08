@@ -69,7 +69,8 @@ async def get_service_types() -> None:
             meta = stu.meta_from_def(type_def)
             service_types[srv_id.id] = meta
         except Arcor2Exception as e:
-            await glob.logger.exception(f"Disabling service type {srv_type.id}.")
+            await glob.logger.warning(f"Disabling service type {srv_type.id}.")
+            await glob.logger.debug(e, exc_info=True)
             service_types[srv_id.id] = ServiceTypeMeta(srv_id.id, "Service not available.", disabled=True,
                                                        problem=str(e))
             continue
@@ -101,7 +102,8 @@ async def get_object_types() -> None:
             meta = otu.meta_from_def(type_def)
             object_types[obj.id] = meta
         except (otu.ObjectTypeException, hlp.TypeDefException) as e:
-            await glob.logger.exception(f"Disabling object type {obj.id}.")
+            await glob.logger.warning(f"Disabling object type {obj.id}.")
+            await glob.logger.debug(e, exc_info=True)
             object_types[obj.id] = ObjectTypeMeta(obj_id.id, "Object type disabled.", disabled=True, problem=str(e))
             continue
 

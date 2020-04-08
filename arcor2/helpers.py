@@ -163,8 +163,7 @@ async def server(client: Any,
                 try:
                     resp = await rpc_dict[req_cls](req)
                 except Arcor2Exception as e:
-                    if verbose:
-                        await logger.exception("Arcor2Exception in RPC callback.")
+                    await logger.debug(e, exc_info=True)
                     resp = False, str(e)
 
                 if resp is None:  # default response

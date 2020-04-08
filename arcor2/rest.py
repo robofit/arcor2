@@ -20,6 +20,7 @@ T = TypeVar('T', bound=JsonSchemaMixin)
 S = TypeVar('S', str, int, float, bool)
 
 OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]]
+ParamsDict = Optional[Dict[str, Any]]
 
 SESSION = requests.session()
 
@@ -54,7 +55,7 @@ def handle_response(resp: requests.Response) -> None:
 
 
 def _send(url: str, op: Callable, data: OptionalData = None,
-          params: Optional[Dict] = None, get_response=False) -> Union[None, Dict, List]:
+          params: ParamsDict = None, get_response=False) -> Union[None, Dict, List]:
 
     if data:
         if isinstance(data, list):
@@ -88,12 +89,12 @@ def _send(url: str, op: Callable, data: OptionalData = None,
         raise RestException("Invalid JSON.", str(e))
 
 
-def post(url: str, data: JsonSchemaMixin, params: Optional[Dict] = None):
+def post(url: str, data: JsonSchemaMixin, params: ParamsDict = None):
     _send(url, SESSION.post, data, params)
 
 
 def put_returning_primitive(url: str, desired_type: Type[S], data: OptionalData = None,
-                            params: Optional[Dict] = None) -> S:
+                            params: ParamsDict = None) -> S:
 
     try:
         return desired_type(_send(url, SESSION.put, data, params, get_response=True))  # type: ignore
@@ -101,7 +102,7 @@ def put_returning_primitive(url: str, desired_type: Type[S], data: OptionalData 
         raise RestException(e)
 
 
-def put(url: str, data: OptionalData = None, params: Optional[Dict] = None, data_cls: Type[T] = None) -> T:
+def put(url: str, data: OptionalData = None, params: ParamsDict = None, data_cls: Type[T] = None) -> T:
     ret = _send(url, SESSION.put, data, params, get_response=data_cls is not None)  # type: ignore
 
     if not data_cls:
@@ -115,7 +116,7 @@ def put(url: str, data: OptionalData = None, params: Optional[Dict] = None, data
 
 
 def put_returning_list(url: str, data: OptionalData = None,
-                       params: Optional[Dict] = None, data_cls: Type[T] = None) -> List[T]:
+                       params: ParamsDict = None, data_cls: Type[T] = None) -> List[T]:
 
     ret = _send(url, SESSION.put, data, params, get_response=data_cls is not None)  # type: ignore
 
@@ -145,7 +146,7 @@ def delete(url: str):
     handle_response(resp)
 
 
-def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Union[Dict, List]:
+def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> Union[Dict, List]:
 
     data = _get(url, body, params)
 
@@ -155,7 +156,7 @@ def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[
     return convert_keys(data, camel_case_to_snake_case)
 
 
-def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> requests.Response:
+def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> requests.Response:
 
     if body is None:
         body_dict = {}  # type: ignore
@@ -178,7 +179,7 @@ def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Opti
     return resp
 
 
-def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: Optional[Dict] = None) -> Any:
+def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> Any:
 
     resp = _get_response(url, body, params)
 
@@ -198,7 +199,7 @@ def get_image(url: str) -> Image.Image:
 
 
 def get_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None,
-                  params: Optional[Dict] = None) -> S:
+                  params: ParamsDict = None) -> S:
 
     value = _get(url, body, params)
 
@@ -208,8 +209,9 @@ def get_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixi
         raise RestException(e)
 
 
-def get_list(url: str, data_cls: Type[T]) -> List[T]:
-    data = get_data(url)
+def get_list(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> List[T]:
+
+    data = get_data(url, body, params)
 
     ret: List[T] = []
 
@@ -235,9 +237,9 @@ def get_list_primitive(url: str, desired_type: Type[S]) -> List[S]:
     return ret
 
 
-def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None) -> T:
+def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> T:
 
-    data = get_data(url, body)
+    data = get_data(url, body, params)
 
     assert isinstance(data, dict)
 
