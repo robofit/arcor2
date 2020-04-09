@@ -193,26 +193,69 @@ class AddActionPointJointsResponse(Response):
 
 
 @dataclass
-class UpdateActionPointRequestArgs(JsonSchemaMixin):
+class RenameActionPointRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
-    new_parent_id: Optional[str] = None
-    new_name: Optional[str] = None
-    new_position: Optional[Position] = None
+    new_name: str
 
 
 @dataclass
-class UpdateActionPointRequest(Request):
+class RenameActionPointRequest(Request):
 
-    args: UpdateActionPointRequestArgs
+    args: RenameActionPointRequestArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class UpdateActionPointResponse(Response):
+class RenameActionPointResponse(Response):
 
-    response: str = field(default=UpdateActionPointRequest.request, init=False)
+    response: str = field(default=RenameActionPointRequest.request, init=False)
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionPointParentRequestArgs(JsonSchemaMixin):
+
+    action_point_id: str
+    new_parent_id: str
+
+
+@dataclass
+class UpdateActionPointParentRequest(Request):
+
+    args: UpdateActionPointParentRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointParentResponse(Response):
+
+    response: str = field(default=UpdateActionPointParentRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionPointPositionRequestArgs(JsonSchemaMixin):
+
+    action_point_id: str
+    new_position: Position
+
+
+@dataclass
+class UpdateActionPointPositionRequest(Request):
+
+    args: UpdateActionPointPositionRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointPositionResponse(Response):
+
+    response: str = field(default=UpdateActionPointPositionRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 

@@ -229,71 +229,94 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 
 @scene_needed
 @project_needed
-async def update_action_point_cb(req: rpc.project.UpdateActionPointRequest) -> \
-        Union[rpc.project.UpdateActionPointResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest) -> \
+        Union[rpc.project.RenameActionPointResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
-    change = False
-
-    if req.args.new_name is not None and ap.name != req.args.new_name:
-
-        if not hlp.is_valid_identifier(req.args.new_name):
-            return False, "Name has to be valid Python identifier."
-
-        unique_name(req.args.new_name, glob.PROJECT.action_points_names)
-        ap.name = req.args.new_name
-        change = True
-
-    if req.args.new_parent_id is not None and req.args.new_parent_id != ap.parent:
-
-        if not ap.parent and req.args.new_parent_id:
-            # AP position and all orientations will become relative to the parent
-            new_parent = glob.SCENE.object(req.args.new_parent_id)
-            ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
-            for ori in ap.orientations:
-                ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
-
-        elif ap.parent and not req.args.new_parent_id:
-            # AP position and all orientations will become absolute
-            old_parent = glob.SCENE.object(ap.parent)
-            ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
-            for ori in ap.orientations:
-                ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
-        else:
-
-            assert ap.parent is not None
-
-            # AP position and all orientations will become relative to another parent
-            old_parent = glob.SCENE.object(ap.parent)
-            new_parent = glob.SCENE.object(req.args.new_parent_id)
-
-            ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
-            ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
-
-            for ori in ap.orientations:
-                ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
-                ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
-
-        ap.parent = req.args.new_parent_id
-        glob.PROJECT.update_modified()
-        asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE,
-                                                                              data=ap)))
+    if req.args.new_name == ap.name:
         return None
 
-    if req.args.new_position is not None and ap.position != req.args.new_position:
+    if not hlp.is_valid_identifier(req.args.new_name):
+        return False, "Name has to be valid Python identifier."
 
-        ap.position = req.args.new_position
-        ap.invalidate_joints()
-        for joints in ap.robot_joints:
-            asyncio.ensure_future(
-                notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, ap.id, data=joints)))
-        change = True
+    unique_name(req.args.new_name, glob.PROJECT.action_points_names)
+    ap.name = req.args.new_name
 
-    if not change:
-        return False, "No change requested."
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
+                                                                          data=ap.bare())))
+    return None
+
+
+@scene_needed
+@project_needed
+async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest) -> \
+        Union[rpc.project.UpdateActionPointParentResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.SCENE and glob.PROJECT
+
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
+
+    if req.args.new_parent_id == ap.parent:
+        return None
+
+    if not ap.parent and req.args.new_parent_id:
+        # AP position and all orientations will become relative to the parent
+        new_parent = glob.SCENE.object(req.args.new_parent_id)
+        ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
+        for ori in ap.orientations:
+            ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
+
+    elif ap.parent and not req.args.new_parent_id:
+        # AP position and all orientations will become absolute
+        old_parent = glob.SCENE.object(ap.parent)
+        ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
+        for ori in ap.orientations:
+            ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
+    else:
+
+        assert ap.parent is not None
+
+        # AP position and all orientations will become relative to another parent
+        old_parent = glob.SCENE.object(ap.parent)
+        new_parent = glob.SCENE.object(req.args.new_parent_id)
+
+        ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
+        ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
+
+        for ori in ap.orientations:
+            ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
+            ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
+
+    ap.parent = req.args.new_parent_id
+    glob.PROJECT.update_modified()
+
+    """
+    Can't send orientation changes and then ActionPointChanged/UPDATE_BASE (or vice versa)
+    because UI would display orientations wrongly (for a short moment).
+    """
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE,
+                                                                          data=ap)))
+    return None
+
+
+@scene_needed
+@project_needed
+async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest) -> \
+        Union[rpc.project.UpdateActionPointPositionResponse, hlp.RPC_RETURN_TYPES]:
+
+    assert glob.SCENE and glob.PROJECT
+
+    ap = glob.PROJECT.action_point(req.args.action_point_id)
+
+    ap.position = req.args.new_position
+    ap.invalidate_joints()
+    for joints in ap.robot_joints:
+        asyncio.ensure_future(
+            notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, ap.id, data=joints)))
 
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
