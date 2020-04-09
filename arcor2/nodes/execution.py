@@ -22,7 +22,7 @@ from websockets.server import WebSocketServerProtocol
 
 import arcor2
 from arcor2.data import rpc
-from arcor2.data.common import ProjectState, ProjectStateEnum
+from arcor2.data.common import ProjectState, ProjectStateEnum, Project
 from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, ProjectStateEvent
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
@@ -255,16 +255,23 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest) -> Union[rpc.
 
     subfolders = [f.path for f in os.scandir(PROJECT_PATH) if f.is_dir()]
 
-    from datetime import datetime, timedelta, timezone
-
     for folder_path in subfolders:
 
         if not os.path.isfile(os.path.join(folder_path, MAIN_SCRIPT_NAME)):
             continue
 
-        # TODO read actual project timestamp from data/project.json
-        resp.data.append(rpc.execution.PackageSummary(os.path.basename(folder_path),
-                                                      datetime.now(timezone.utc) - timedelta(hours=1)))
+        package_dir = os.path.basename(folder_path)
+
+        with open(os.path.join(folder_path, "data", "project.json")) as project_file:
+            try:
+                project = Project.from_json(project_file.read())
+            except ValidationError as e:
+                await logger.error(f"Failed to parse project file of {package_dir}: {e}")
+                continue
+
+        assert project.modified
+
+        resp.data.append(rpc.execution.PackageSummary(package_dir, project.modified))
 
         # TODO report manual changes (check last modification of files)?
 
