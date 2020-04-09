@@ -305,7 +305,8 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     except Arcor2Exception as e:
         return False, str(e)
 
-    # TODO do not allow for objects created by service (does this apply for all services?)
+    if glob.OBJECT_TYPES[scene_object.type].needs_services:
+        return False, "Can't manipulate object created by service."
 
     try:
         scene_object.pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
@@ -326,7 +327,10 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
     assert glob.SCENE
 
     obj = glob.SCENE.object(req.args.object_id)
-    # TODO do not allow for objects created by service (does this apply for all services?)
+
+    if glob.OBJECT_TYPES[obj.type].needs_services:
+        return False, "Can't manipulate object created by service."
+
     obj.pose = req.args.pose
 
     glob.SCENE.update_modified()

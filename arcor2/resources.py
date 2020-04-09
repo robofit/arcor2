@@ -124,7 +124,7 @@ class IntResources:
     def __enter__(self):
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback):  # TODO check for exception and print it
+    def __exit__(self, ex_type, ex_value, traceback):
 
         if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
             print_exception(ex_type(ex_value))
