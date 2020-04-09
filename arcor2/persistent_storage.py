@@ -9,7 +9,6 @@ from arcor2 import rest
 
 URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://0.0.0.0:11000")
 
-# TODO logger
 # TODO thread to poll changes? how to "detect" changes?
 
 

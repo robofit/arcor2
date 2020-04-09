@@ -67,7 +67,6 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
     assert glob.SCENE
 
     if obj.type not in glob.OBJECT_TYPES:
-        # TODO try to get it from storage
         return False, "Unknown object type."
 
     obj_meta = glob.OBJECT_TYPES[obj.type]
