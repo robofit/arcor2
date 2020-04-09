@@ -405,14 +405,7 @@ class Project(JsonSchemaMixin):
             raise Arcor2Exception("Action not found")
 
     def actions(self) -> List[Action]:
-
-        ret: List[Action] = []
-
-        # TODO comprehension!
-        for ap in self.action_points:
-            for act in ap.actions:
-                ret.append(act)
-        return ret
+        return [act for ap in self.action_points for act in ap.actions]
 
     def action_ids(self) -> Set[str]:
         return {action.id for action in self.actions()}
