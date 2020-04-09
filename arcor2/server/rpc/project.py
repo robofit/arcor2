@@ -572,7 +572,7 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest) -> \
 
     glob.PROJECT.action_points = [acp for acp in glob.PROJECT.action_points if acp.id != req.args.id]
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.REMOVE, data=ap)))
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.REMOVE, data=ap.bare())))
     return None
 
 
@@ -680,7 +680,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.pr
     ap.actions = [act for act in ap.actions if act.id != req.args.id]
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.REMOVE, data=action)))
+    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.REMOVE, data=action.bare())))
     return None
 
 

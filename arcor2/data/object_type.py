@@ -162,7 +162,7 @@ class ActionParameterMeta(JsonSchemaMixin):
 
 
 @dataclass
-class ObjectAction(JsonSchemaMixin):  # TODO description (from docstring)
+class ObjectAction(JsonSchemaMixin):
 
     name: str
     description: Optional[str] = None

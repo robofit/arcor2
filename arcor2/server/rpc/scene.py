@@ -378,8 +378,10 @@ async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
         resp.data = assoc_projects
         return resp
 
+    scene = await storage.get_scene(req.args.id)
     await storage.delete_scene(req.args.id)
-    # TODO notify somehow
+    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.REMOVE,
+                                                                    data=scene.bare())))
     return None
 
 
