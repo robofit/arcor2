@@ -313,6 +313,9 @@ class Action(JsonSchemaMixin):
 
         raise Arcor2Exception("Param not found")
 
+    def bare(self) -> "Action":
+        return Action(self.id, self.name, self.type)
+
 
 @dataclass
 class ProjectActionPoint(ActionPoint):
