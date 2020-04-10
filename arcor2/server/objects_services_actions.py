@@ -207,6 +207,8 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     assert glob.RUNNING_ACTION
 
+    await notif.broadcast_event(events.ActionExecutionEvent(data=events.ActionExecutionData(glob.RUNNING_ACTION)))
+
     evt = events.ActionResultEvent()
     evt.data.action_id = glob.RUNNING_ACTION
 

@@ -8,7 +8,8 @@ import functools
 import json
 import sys
 import uuid
-from typing import Union, cast
+from typing import Union, cast, get_type_hints
+import inspect
 
 import websockets
 from aiologger.levels import LogLevel  # type: ignore
@@ -129,80 +130,25 @@ async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.
     return resp
 
 
-# TODO go through the modules and make the following automatically?
 RPC_DICT: hlp.RPC_DICT_TYPE = {
-    rpc.common.SystemInfoRequest: system_info_cb,
-    rpc.execution.BuildProjectRequest: srpc.execution.build_project_cb,
-    rpc.objects.GetObjectTypesRequest: srpc.objects.get_object_types_cb,
-    rpc.objects.GetActionsRequest: srpc.objects.get_object_actions_cb,
-    rpc.objects.NewObjectTypeRequest: srpc.objects.new_object_type_cb,
-    rpc.robot.GetRobotMetaRequest: srpc.robot.get_robot_meta_cb,
-
-    # TODO move to .scene
-    rpc.objects.FocusObjectRequest: srpc.objects.focus_object_cb,
-    rpc.objects.FocusObjectStartRequest: srpc.objects.focus_object_start_cb,
-    rpc.objects.FocusObjectDoneRequest: srpc.objects.focus_object_done_cb,
-
-    rpc.scene.NewSceneRequest: srpc.scene.new_scene_cb,
-    rpc.scene.SaveSceneRequest: srpc.scene.save_scene_cb,
-    rpc.scene.ListScenesRequest: srpc.scene.list_scenes_cb,
-    rpc.scene.AddObjectToSceneRequest: srpc.scene.add_object_to_scene_cb,
-    rpc.scene.AutoAddObjectToSceneRequest: srpc.scene.auto_add_object_to_scene_cb,
-    rpc.scene.AddServiceToSceneRequest: srpc.scene.add_service_to_scene_cb,
-    rpc.scene.RemoveFromSceneRequest: srpc.scene.remove_from_scene_cb,
-    rpc.scene.SceneObjectUsageRequest: srpc.scene.scene_object_usage_request_cb,
-    rpc.scene.OpenSceneRequest: srpc.scene.open_scene_cb,
-    rpc.scene.CloseSceneRequest: srpc.scene.close_scene_cb,
-    rpc.scene.UpdateObjectPoseRequest: srpc.scene.update_object_pose_cb,
-    rpc.scene.RenameObjectRequest: srpc.scene.rename_object_cb,
-    rpc.scene.RenameSceneRequest: srpc.scene.rename_scene_cb,
-    rpc.scene.DeleteSceneRequest: srpc.scene.delete_scene_cb,
-    rpc.scene.ProjectsWithSceneRequest: srpc.scene.projects_with_scene_cb,
-    rpc.scene.UpdateSceneDescriptionRequest: srpc.scene.update_scene_description_cb,
-    rpc.scene.UpdateServiceConfigurationRequest: srpc.scene.update_service_configuration_cb,
-    rpc.scene.CopySceneRequest: srpc.scene.copy_scene_cb,
-    # TODO move to scene
-    rpc.objects.UpdateObjectPoseUsingRobotRequest: srpc.scene.update_object_pose_using_robot_cb,
-    rpc.objects.ActionParamValuesRequest: srpc.scene.action_param_values_cb,
-
-    rpc.project.NewProjectRequest: srpc.project.new_project_cb,
-    rpc.project.SaveProjectRequest: srpc.project.save_project_cb,
-    rpc.project.OpenProjectRequest: srpc.project.open_project_cb,
-    rpc.project.CloseProjectRequest: srpc.project.close_project_cb,
-    rpc.project.ListProjectsRequest: srpc.project.list_projects_cb,
-    rpc.project.ExecuteActionRequest: srpc.project.execute_action_cb,
-    rpc.project.AddActionPointRequest: srpc.project.add_action_point_cb,
-    rpc.project.RenameActionPointRequest: srpc.project.rename_action_point_cb,
-    rpc.project.UpdateActionPointParentRequest: srpc.project.update_action_point_parent_cb,
-    rpc.project.UpdateActionPointPositionRequest: srpc.project.update_action_point_position_cb,
-    rpc.project.RemoveActionPointRequest: srpc.project.remove_action_point_cb,
-    rpc.project.UpdateActionPointUsingRobotRequest: srpc.project.update_action_point_using_robot_cb,
-    rpc.project.AddActionPointJointsRequest: srpc.project.add_action_point_joints_cb,
-    rpc.project.UpdateActionPointJointsRequest: srpc.project.update_action_point_joints_cb,
-    rpc.project.RemoveActionPointJointsRequest: srpc.project.remove_action_point_joints_cb,
-    rpc.project.AddActionPointOrientationRequest: srpc.project.add_action_point_orientation_cb,
-    rpc.project.UpdateActionPointOrientationRequest: srpc.project.update_action_point_orientation_cb,
-    rpc.project.AddActionPointOrientationUsingRobotRequest: srpc.project.add_action_point_orientation_using_robot_cb,
-    rpc.project.UpdateActionPointOrientationUsingRobotRequest:
-        srpc.project.update_action_point_orientation_using_robot_cb,
-    rpc.project.RemoveActionPointOrientationRequest: srpc.project.remove_action_point_orientation_cb,
-    rpc.project.AddActionRequest: srpc.project.add_action_cb,
-    rpc.project.UpdateActionRequest: srpc.project.update_action_cb,
-    rpc.project.RemoveActionRequest: srpc.project.remove_action_cb,
-    rpc.project.UpdateActionLogicRequest: srpc.project.update_action_logic_cb,
-    rpc.project.DeleteProjectRequest: srpc.project.delete_project_cb,
-    rpc.project.RenameProjectRequest: srpc.project.rename_project_cb,
-    rpc.project.CopyProjectRequest: srpc.project.copy_project_cb,
-    rpc.project.UpdateProjectDescriptionRequest: srpc.project.update_project_description_cb,
-    rpc.project.UpdateProjectHasLogicRequest: srpc.project.update_project_has_logic_cb,
-    rpc.project.RenameActionPointJointsRequest: srpc.project.rename_action_point_joints_cb,
-    rpc.project.RenameActionPointOrientationRequest: srpc.project.rename_action_point_orientation_cb,
-    rpc.project.RenameActionRequest: srpc.project.rename_action_cb,
-
-    rpc.services.GetServicesRequest: srpc.services.get_services_cb,
-    rpc.storage.ListMeshesRequest: list_meshes_cb
-
+    rpc.common.SystemInfoRequest: system_info_cb
 }
+
+# discovery of RPC callbacks
+for _, rpc_module in inspect.getmembers(srpc, inspect.ismodule):
+    for rpc_cb_name, rpc_cb in inspect.getmembers(rpc_module):
+
+        if not rpc_cb_name.endswith("_cb"):
+            continue
+
+        hints = get_type_hints(rpc_cb)
+
+        try:
+            ttype = hints["req"]
+        except KeyError:
+            continue
+
+        RPC_DICT[ttype] = rpc_cb
 
 # add Project Manager RPC API
 for k, v in nodes.execution.RPC_DICT.items():
