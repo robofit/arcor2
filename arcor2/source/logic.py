@@ -12,6 +12,7 @@ from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, \
     append_method_call, tree_to_str, get_name_attr, clean
 from arcor2.source.object_types import object_instance_from_res
 import arcor2.object_types
+from arcor2.exceptions import Arcor2Exception
 
 
 def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:
@@ -33,7 +34,7 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_
         object_instance_from_res(tree, srv.type, srv.type, srv.type, "services")
 
     if add_logic:
-        add_logic_to_loop(tree, project)
+        add_logic_to_loop(tree, scene, project)
 
     return SCRIPT_HEADER + tree_to_str(tree)
 
@@ -121,7 +122,7 @@ def get_logic_from_source(source_code: str, project: Project) -> None:
         last_action = action
 
 
-def add_logic_to_loop(tree: Module, project: Project) -> None:
+def add_logic_to_loop(tree: Module, scene: Scene, project: Project) -> None:
 
     loop = main_loop_body(tree)
 
@@ -147,6 +148,13 @@ def add_logic_to_loop(tree: Module, project: Project) -> None:
             loop.clear()
 
         ac_obj, ac_type = act.type.split('/')
+
+        # for scene objects, convert ID to name
+        try:
+            ac_obj = scene.object(ac_obj).name
+        except Arcor2Exception:
+            pass
+
         append_method_call(loop, fix_object_name(ac_obj), ac_type, [get_name_attr("res", clean(act.name))], [])
 
         if act.id == last_action_id:
