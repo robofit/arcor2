@@ -2,6 +2,7 @@ import json
 import requests
 from typing import Type, TypeVar, Dict, Callable, List, Union, Any, Optional, Sequence
 import io
+import functools
 
 from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 from PIL import Image, UnidentifiedImageError  # type: ignore
@@ -23,6 +24,23 @@ OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]]
 ParamsDict = Optional[Dict[str, Any]]
 
 SESSION = requests.session()
+
+
+def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None):
+    def _handle_exceptions(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+
+            try:
+                return func(*args, **kwargs)
+            except RestException as e:
+                if message is not None:
+                    raise exception_type(message, str(e)) from e
+                else:
+                    raise exception_type(e.message) from e
+
+        return wrapper
+    return _handle_exceptions
 
 
 def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict, List]:
@@ -194,7 +212,7 @@ def get_image(url: str) -> Image.Image:
     try:
         return Image.open(io.BytesIO(_get_response(url).content))
     except (UnidentifiedImageError, TypeError) as e:
-        raise RestException(e) from e
+        raise RestException("Invalid image.", str(e)) from e
 
 
 def get_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None,
@@ -205,7 +223,7 @@ def get_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixi
     try:
         return desired_type(value)
     except ValueError as e:
-        raise RestException(e) from e
+        raise RestException("Invalid primitive.", str(e)) from e
 
 
 def get_list(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> List[T]:

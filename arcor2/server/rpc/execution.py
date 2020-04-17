@@ -31,7 +31,7 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest) -> \
             await hlp.run_in_executor(rest.download, f"{glob.BUILDER_URL}/project/{req.args.id}/publish", path)
         except rest.RestException as e:
             await glob.logger.error(e)
-            return False, str(e.args[0])
+            return False, str(e.message)
 
         with open(path, "rb") as zip_file:
             b64_bytes = base64.b64encode(zip_file.read())

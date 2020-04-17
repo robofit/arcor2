@@ -160,7 +160,7 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
             program_src(project, scenes[project.scene_id], otu.built_in_types_names())
             pd.executable = True
         except SourceException as e:
-            pd.problems.append(str(e))
+            pd.problems.append(e.message)
 
     return rpc.project.ListProjectsResponse(data=data)
 
@@ -493,7 +493,7 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest) -> \
         await open_project(req.args.id)
     except Arcor2Exception as e:
         await glob.logger.exception(f"Failed to open project {req.args.id}.")
-        return False, str(e)
+        return False, e.message
 
     return None
 

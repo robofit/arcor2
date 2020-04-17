@@ -54,7 +54,7 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest) -> Uni
     try:
         inst = await osa.get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
     except Arcor2Exception as e:
-        return False, str(e)
+        return False, e.message
 
     if not glob.ROBOT_META[inst.__class__.__name__].features.focus:
         return False, "Robot/service does not support focusing."

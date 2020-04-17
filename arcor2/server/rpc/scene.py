@@ -303,7 +303,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     try:
         scene_object = glob.SCENE.object(req.args.id)
     except Arcor2Exception as e:
-        return False, str(e)
+        return False, e.message
 
     if glob.OBJECT_TYPES[scene_object.type].needs_services:
         return False, "Can't manipulate object created by service."
@@ -311,7 +311,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     try:
         scene_object.pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
     except RobotPoseException as e:
-        return False, str(e)
+        return False, e.message
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
