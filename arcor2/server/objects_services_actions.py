@@ -72,7 +72,7 @@ async def get_service_types() -> None:
             await glob.logger.warning(f"Disabling service type {srv_type.id}.")
             await glob.logger.debug(e, exc_info=True)
             service_types[srv_id.id] = ServiceTypeMeta(srv_id.id, "Service not available.", disabled=True,
-                                                       problem=str(e))
+                                                       problem=e.message)
             continue
 
         if not meta.configuration_ids:
@@ -104,7 +104,8 @@ async def get_object_types() -> None:
         except (otu.ObjectTypeException, hlp.TypeDefException) as e:
             await glob.logger.warning(f"Disabling object type {obj.id}.")
             await glob.logger.debug(e, exc_info=True)
-            object_types[obj.id] = ObjectTypeMeta(obj_id.id, "Object type disabled.", disabled=True, problem=str(e))
+            object_types[obj.id] = ObjectTypeMeta(obj_id.id, "Object type disabled.", disabled=True,
+                                                  problem=e.message)
             continue
 
         for srv in meta.needs_services:
@@ -214,7 +215,10 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     try:
         action_result = await hlp.run_in_executor(action_method, *params.values())
-    except (Arcor2Exception, TypeError) as e:
+    except Arcor2Exception as e:
+        await glob.logger.error(e)
+        evt.data.error = e.message
+    except TypeError as e:
         await glob.logger.error(e)
         evt.data.error = str(e)
     else:

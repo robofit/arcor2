@@ -215,9 +215,11 @@ def format_stacktrace():
 
 def print_exception(e: Exception) -> None:
 
-    pee = ProjectExceptionEvent(data=ProjectExceptionEventData(str(e),
-                                                               e.__class__.__name__,
-                                                               isinstance(e, Arcor2Exception)))
+    if isinstance(e, Arcor2Exception):
+        pee = ProjectExceptionEvent(data=ProjectExceptionEventData(e.message, e.__class__.__name__, True))
+    else:
+        pee = ProjectExceptionEvent(data=ProjectExceptionEventData(str(e), e.__class__.__name__))
+
     print(pee.to_json())
     sys.stdout.flush()
 
