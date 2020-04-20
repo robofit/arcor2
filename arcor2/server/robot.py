@@ -1,4 +1,4 @@
-from typing import List, Union, Type, Optional
+from typing import List, Union, Type, Optional, Set
 
 from arcor2.data.common import Pose, Joint
 from arcor2.data.robot import RobotMeta
@@ -40,6 +40,48 @@ async def collision(obj: Generic,
             await glob.logger.error(e)
 
 
+async def get_end_effectors(robot_id: str) -> Set[str]:
+    """
+    :param robot_id:
+    :return: IDs of existing end effectors.
+    """
+
+    robot_inst = await osa.get_robot_instance(robot_id)
+
+    if isinstance(robot_inst, Robot):
+        return await hlp.run_in_executor(robot_inst.get_end_effectors_ids)
+    else:
+        return await hlp.run_in_executor(robot_inst.get_end_effectors_ids, robot_id)
+
+
+async def get_grippers(robot_id: str) -> Set[str]:
+    """
+    :param robot_id:
+    :return: IDs of existing grippers.
+    """
+
+    robot_inst = await osa.get_robot_instance(robot_id)
+
+    if isinstance(robot_inst, Robot):
+        return await hlp.run_in_executor(robot_inst.grippers)
+    else:
+        return await hlp.run_in_executor(robot_inst.grippers, robot_id)
+
+
+async def get_suctions(robot_id: str) -> Set[str]:
+    """
+    :param robot_id:
+    :return: IDs of existing suctions.
+    """
+
+    robot_inst = await osa.get_robot_instance(robot_id)
+
+    if isinstance(robot_inst, Robot):
+        return await hlp.run_in_executor(robot_inst.suctions)
+    else:
+        return await hlp.run_in_executor(robot_inst.suctions, robot_id)
+
+
 async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
     """
     :param robot_id:
@@ -50,21 +92,9 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> Pose:
     robot_inst = await osa.get_robot_instance(robot_id, end_effector)
 
     if isinstance(robot_inst, Robot):
-
-        try:
-            return await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
-        except NotImplementedError:
-            raise RobotPoseException("The robot does not support getting pose.")
-
-    elif isinstance(robot_inst, RobotService):
-
-        try:
-            return await hlp.run_in_executor(robot_inst.get_end_effector_pose, robot_id, end_effector)
-        except NotImplementedError:
-            raise RobotPoseException("The robot does not support getting pose.")
-
+        return await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
     else:
-        raise Arcor2Exception("Not a robot instance.")
+        return await hlp.run_in_executor(robot_inst.get_end_effector_pose, robot_id, end_effector)
 
 
 async def get_robot_joints(robot_id: str) -> List[Joint]:
@@ -76,21 +106,9 @@ async def get_robot_joints(robot_id: str) -> List[Joint]:
     robot_inst = await osa.get_robot_instance(robot_id)
 
     if isinstance(robot_inst, Robot):
-
-        try:
-            return await hlp.run_in_executor(robot_inst.robot_joints)
-        except NotImplementedError:
-            raise RobotPoseException("The robot does not support getting joints.")
-
-    elif isinstance(robot_inst, RobotService):
-
-        try:
-            return await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
-        except NotImplementedError:
-            raise RobotPoseException("The robot does not support getting joints.")
-
+        return await hlp.run_in_executor(robot_inst.robot_joints)
     else:
-        raise Arcor2Exception("Not a robot instance.")
+        return await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
 
 
 async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:

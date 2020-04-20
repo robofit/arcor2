@@ -21,3 +21,11 @@ class Robot(Generic, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def robot_joints(self) -> List[Joint]:
         pass
+
+    @abc.abstractmethod
+    def grippers(self) -> Set[str]:
+        return set()
+
+    @abc.abstractmethod
+    def suctions(self) -> Set[str]:
+        return set()

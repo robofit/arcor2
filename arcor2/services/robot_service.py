@@ -76,5 +76,9 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         return set()
 
     @abc.abstractmethod
+    def suctions(self, robot_id: str) -> Set[str]:
+        return set()
+
+    @abc.abstractmethod
     def robot_joints(self, robot_id: str) -> List[Joint]:
         pass
