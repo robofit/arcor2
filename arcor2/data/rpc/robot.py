@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import List
+from typing import List, Set
 from dataclasses import dataclass, field
 
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -66,3 +66,69 @@ class GetEndEffectorPoseResponse(Response):
 
     data: Pose = field(default_factory=Pose)
     response: str = field(default=GetEndEffectorPoseRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class GetEndEffectorsArgs(JsonSchemaMixin):
+
+    robot_id: str
+
+
+@dataclass
+class GetEndEffectorsRequest(Request):
+
+    args: GetEndEffectorsArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class GetEndEffectorsResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=GetEndEffectorsRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class GetGrippersArgs(JsonSchemaMixin):
+
+    robot_id: str
+
+
+@dataclass
+class GetGrippersRequest(Request):
+
+    args: GetGrippersArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class GetGrippersResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=GetGrippersRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class GetSuctionsArgs(JsonSchemaMixin):
+
+    robot_id: str
+
+
+@dataclass
+class GetSuctionsRequest(Request):
+
+    args: GetSuctionsArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class GetSuctionsResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=GetSuctionsRequest.request, init=False)
