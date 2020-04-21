@@ -7,14 +7,15 @@ import functools
 from contextlib import asynccontextmanager
 import copy
 
-from arcor2.exceptions import Arcor2Exception
+import quaternion  # type: ignore
+
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
 from arcor2.data import rpc, events
-from arcor2.data import common
+from arcor2.data import common, object_type
 from arcor2.object_types import Generic
 from arcor2.services import Service
 
-from arcor2.server.robot import get_end_effector_pose, RobotPoseException
+from arcor2.server.robot import get_end_effector_pose
 from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
@@ -300,18 +301,50 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     if req.args.id == req.args.robot.robot_id:
         return False, "Robot cannot update its own pose."
 
-    try:
-        scene_object = glob.SCENE.object(req.args.id)
-    except Arcor2Exception as e:
-        return False, e.message
+    scene_object = glob.SCENE.object(req.args.id)
 
     if glob.OBJECT_TYPES[scene_object.type].needs_services:
         return False, "Can't manipulate object created by service."
 
-    try:
-        scene_object.pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
-    except RobotPoseException as e:
-        return False, e.message
+    obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
+
+    if obj_inst.collision_model:
+        if isinstance(obj_inst.collision_model, object_type.Mesh) and req.args.pivot != rpc.objects.PivotEnum.MIDDLE:
+            return False, "Only middle pivot point is supported for objects with mesh collision model."
+    elif req.args.pivot != rpc.objects.PivotEnum.MIDDLE:
+        return False, "Only middle pivot point is supported for objects without collision model."
+
+    new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
+
+    position_delta = common.Position()
+
+    if obj_inst.collision_model:
+        if isinstance(obj_inst.collision_model, object_type.Box):
+            if req.args.pivot == rpc.objects.PivotEnum.TOP:
+                position_delta.z -= obj_inst.collision_model.size_z / 2
+            elif req.args.pivot == rpc.objects.PivotEnum.BOTTOM:
+                position_delta.z += obj_inst.collision_model.size_z / 2
+        elif isinstance(obj_inst.collision_model, object_type.Cylinder):
+            if req.args.pivot == rpc.objects.PivotEnum.TOP:
+                position_delta.z -= obj_inst.collision_model.height / 2
+            elif req.args.pivot == rpc.objects.PivotEnum.BOTTOM:
+                position_delta.z += obj_inst.collision_model.height / 2
+        elif isinstance(obj_inst.collision_model, object_type.Sphere):
+            if req.args.pivot == rpc.objects.PivotEnum.TOP:
+                position_delta.z -= obj_inst.collision_model.radius / 2
+            elif req.args.pivot == rpc.objects.PivotEnum.BOTTOM:
+                position_delta.z += obj_inst.collision_model.radius / 2
+
+    rotated_vector = quaternion.rotate_vectors([new_pose.orientation.as_quaternion()], [list(position_delta)])[0]
+    position_delta.x = rotated_vector[0]
+    position_delta.y = rotated_vector[1]
+    position_delta.z = rotated_vector[2]
+
+    scene_object.pose.position.x = new_pose.position.x + position_delta.x
+    scene_object.pose.position.y = new_pose.position.y + position_delta.y
+    scene_object.pose.position.z = new_pose.position.z + position_delta.z
+
+    scene_object.pose.orientation = new_pose.orientation
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
