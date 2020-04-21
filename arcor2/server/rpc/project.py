@@ -688,6 +688,17 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.pr
     return None
 
 
+def check_action_usage(action: common.Action) -> None:
+
+    assert glob.PROJECT
+
+    for ap in glob.PROJECT.action_points:
+        for act in ap.actions:
+            for inp in act.inputs:
+                if inp.default == action.id:
+                    raise Arcor2Exception(f"Action used as an input for another action ({act.name}).")
+
+
 @scene_needed
 @project_needed
 async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.project.RemoveActionResponse,
@@ -697,13 +708,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.pr
     assert glob.SCENE
 
     ap, action = glob.PROJECT.action_point_and_action(req.args.id)
-
-    for ap in glob.PROJECT.action_points:
-        for act in ap.actions:
-            for inp in act.inputs:
-                if inp.default == action.id:
-                    return False, f"Action used as an input for another action ({act.name})."
-
+    check_action_usage(action)
     ap.actions = [act for act in ap.actions if act.id != req.args.id]
 
     glob.PROJECT.update_modified()
