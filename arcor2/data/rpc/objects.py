@@ -5,7 +5,7 @@ from typing import List, Set
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdValue
+from arcor2.data.common import IdValue, StrEnum
 from arcor2.data.object_type import ObjectTypeMeta, ObjectActions
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs, RobotArg
 
@@ -153,11 +153,17 @@ class FocusObjectDoneResponse(Response):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+class PivotEnum(StrEnum):
+    TOP: str = "top"
+    MIDDLE: str = "middle"
+    BOTTOM: str = "bottom"
+
 
 @dataclass
 class UpdateObjectPoseUsingRobotArgs(IdArgs):
 
     robot: RobotArg
+    pivot: PivotEnum = PivotEnum.MIDDLE
 
 
 @dataclass
