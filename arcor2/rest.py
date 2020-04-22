@@ -67,9 +67,12 @@ def handle_response(resp: requests.Response) -> None:
         try:
             resp_body = json.loads(resp.content)
         except json.JSONDecodeError:
-            resp_body = resp.content
+            raise RestException(resp.content.decode("utf-8"), str(e)) from e
 
-        raise RestException(resp_body.decode("utf-8"), str(e)) from e
+        try:
+            raise RestException(resp_body["message"], str(e)) from e
+        except KeyError:
+            raise RestException(str(resp_body), str(e)) from e
 
 
 def _send(url: str, op: Callable, data: OptionalData = None,
