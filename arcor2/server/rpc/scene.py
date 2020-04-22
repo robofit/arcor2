@@ -335,20 +335,18 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
             elif req.args.pivot == rpc.objects.PivotEnum.BOTTOM:
                 position_delta.z += obj_inst.collision_model.radius / 2
 
-    new_pose.orientation.set_from_quaternion(
-        new_pose.orientation.as_quaternion()*quaternion.quaternion(0, -0.707, 0, 0.707))
-
     rotated_vector = quaternion.rotate_vectors([new_pose.orientation.as_quaternion()], [list(position_delta)])[0][0]
 
     position_delta.x = rotated_vector[0]
     position_delta.y = rotated_vector[1]
     position_delta.z = rotated_vector[2]
 
-    scene_object.pose.position.x = new_pose.position.x + position_delta.x
-    scene_object.pose.position.y = new_pose.position.y + position_delta.y
-    scene_object.pose.position.z = new_pose.position.z + position_delta.z
+    scene_object.pose.position.x = new_pose.position.x - position_delta.x
+    scene_object.pose.position.y = new_pose.position.y - position_delta.y
+    scene_object.pose.position.z = new_pose.position.z - position_delta.z
 
-    scene_object.pose.orientation = new_pose.orientation
+    scene_object.pose.orientation.set_from_quaternion(
+        new_pose.orientation.as_quaternion()*quaternion.quaternion(0, 1, 0, 0))
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))

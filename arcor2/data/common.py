@@ -83,15 +83,14 @@ class Orientation(IterableIndexable):
 
     def as_quaternion(self) -> quaternion.quaternion:
 
-        return np.quaternion(self.x, self.y, self.z, self.w)
+        return np.quaternion(self.w, self.x, self.y, self.z)
 
     def set_from_quaternion(self, q: quaternion.quaternion) -> None:
 
-        arr = quaternion.as_float_array(q)
-        self.x = arr[0]
-        self.y = arr[1]
-        self.z = arr[2]
-        self.w = arr[3]
+        self.x = q.x
+        self.y = q.y
+        self.z = q.z
+        self.w = q.w
 
 
 @dataclass
