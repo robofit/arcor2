@@ -697,6 +697,9 @@ def check_action_usage(action: common.Action) -> None:
             for inp in act.inputs:
                 if inp.default == action.id:
                     raise Arcor2Exception(f"Action used as an input for another action ({act.name}).")
+            for out in act.outputs:
+                if out.default == action.id:
+                    raise Arcor2Exception(f"Action used as an output for another action ({act.name}).")
 
 
 @scene_needed
