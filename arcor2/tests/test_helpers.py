@@ -1,10 +1,38 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import quaternion  # type: ignore
 
 import pytest  # type: ignore
 
 from arcor2 import helpers as hlp
+from arcor2.data.common import Orientation
+
+
+def test_make_orientation_abs():
+
+    parent_q = quaternion.quaternion(0, 0, 0.707, 0.707)
+    abs_child_q = quaternion.quaternion(0.707, 0.707, 0, 0)
+
+    parent = Orientation()
+    parent.set_from_quaternion(parent_q)
+
+    abs_child = Orientation()
+    abs_child.set_from_quaternion(abs_child_q)
+
+    rel_child = Orientation()
+    rel_child.set_from_quaternion(parent_q*abs_child_q)
+
+    assert abs_child == hlp.make_orientation_abs(parent, rel_child)
+
+
+def test_make_orientation_rel_and_then_again_abs():
+
+    parent = Orientation(0, -1, 0, 0)
+    obj = Orientation(0.707, 0, 0.707, 0)
+
+    rel_obj = hlp.make_orientation_rel(parent, obj)
+    assert obj == hlp.make_orientation_abs(parent, rel_obj)
 
 
 def test_import_cls_valid():
