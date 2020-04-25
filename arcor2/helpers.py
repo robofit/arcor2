@@ -256,7 +256,7 @@ def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-    p.position = make_position_rel(parent.position, child.position)
+    p.position = make_position_rel(parent.position, child.position).rotated(parent.orientation)
     p.orientation = make_orientation_rel(parent.orientation, child.orientation)
     return p
 
@@ -273,7 +273,7 @@ def make_position_abs(parent: Position, child: Position) -> Position:
 def make_orientation_abs(parent: Orientation, child: Orientation) -> Orientation:
 
     p = Orientation()
-    p.set_from_quaternion(parent.as_quaternion().inverse() * child.as_quaternion())
+    p.set_from_quaternion(child.as_quaternion()*parent.as_quaternion().conjugate().inverse())
     return p
 
 
@@ -285,7 +285,8 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-    p.position = make_position_abs(parent.position, child.position)
+    p.position = child.position.rotated(parent.orientation, inverse=True)
+    p.position = make_position_abs(parent.position, p.position)
     p.orientation = make_orientation_abs(parent.orientation, child.orientation)
     return p
 

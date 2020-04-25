@@ -1,29 +1,65 @@
 # -*- coding: utf-8 -*-
 
 import datetime
+import copy
 import quaternion  # type: ignore
 
 import pytest  # type: ignore
 
 from arcor2 import helpers as hlp
-from arcor2.data.common import Orientation
+from arcor2.data.common import Orientation, Pose, Position
 
 
-def test_make_orientation_abs():
+def test_make_pose_rel():
 
-    parent_q = quaternion.quaternion(0, 0, 0.707, 0.707)
-    abs_child_q = quaternion.quaternion(0.707, 0.707, 0, 0)
+    parent = Pose(Position(1, 2, 3), Orientation(0, 0, 1, 0))
+    child_to_be = copy.deepcopy(parent)
+    assert hlp.make_pose_rel(parent, child_to_be) == Pose()
 
-    parent = Orientation()
-    parent.set_from_quaternion(parent_q)
 
-    abs_child = Orientation()
-    abs_child.set_from_quaternion(abs_child_q)
+def test_make_pose_abs():
 
-    rel_child = Orientation()
-    rel_child.set_from_quaternion(parent_q*abs_child_q)
+    parent = Pose(Position(1, 2, 3), Orientation(0, 0, 1, 0))
+    child = Pose()
+    assert hlp.make_pose_abs(parent, child) == parent
 
-    assert abs_child == hlp.make_orientation_abs(parent, rel_child)
+
+def test_make_pose_rel_and_abs_again():
+
+    parent = Pose(Position(), Orientation(0, 0, 1, 0))
+    child_to_be = Pose(Position(1, 0, 0))
+    child = hlp.make_pose_rel(parent, child_to_be)
+    assert child == Pose(Position(-1, 0, 0), Orientation(0, 0, -1, 0))
+    assert hlp.make_pose_abs(parent, child) == child_to_be
+
+
+def test_make_orientation_abs_2():
+
+    parent = Orientation(0, 0, 0, 1)
+    child = Orientation(1, 0, 0, 0)
+    assert hlp.make_orientation_abs(parent, child) == child
+
+
+def test_make_orientation_abs_3():
+
+    parent = Orientation(0, 1, 0, 0)
+    child = Orientation(0, 0, 0, 1)
+    assert hlp.make_orientation_abs(parent, child) == parent
+
+
+def test_make_orientation_rel():
+
+    parent = Orientation(0.707, 0, 0.707, 0)
+    child = Orientation(0.707, 0, 0.707, 0)
+    assert hlp.make_orientation_rel(parent, child) == Orientation(0, 0, 0, 1)
+
+
+def test_make_orientation_rel_2():
+
+    parent = Orientation(0, 0, 0, 1)
+    child = Orientation()
+    child.set_from_quaternion(quaternion.from_euler_angles(0.123, 0.345, 0.987))
+    assert hlp.make_orientation_rel(parent, child) == child
 
 
 def test_make_orientation_rel_and_then_again_abs():

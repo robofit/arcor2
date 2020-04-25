@@ -37,10 +37,7 @@ class PosePlugin(ParameterPlugin):
             return Pose(ap.position, ori.orientation)
 
         obj = scene.object(ap.parent)
-
-        p = Pose()
-        p.position = hlp.make_position_abs(obj.pose.position, ap.position)
-        p.orientation = hlp.make_orientation_abs(obj.pose.orientation, ori.orientation)
+        p = hlp.make_pose_abs(obj.pose, Pose(ap.position, ori.orientation))
         return p
 
     @classmethod
@@ -93,12 +90,8 @@ class PoseListPlugin(ListParameterPlugin):
 
         obj = scene.object(ap.parent)
 
-        pos = hlp.make_position_abs(obj.pose.position, ap.position)
-
         for orientation_id in cls.param_value_list(parameter):
-
-            ret.append(Pose(pos, hlp.make_orientation_abs(obj.pose.orientation,
-                                                          ap.orientation(orientation_id).orientation)))
+            ret.append(hlp.make_pose_abs(obj.pose, Pose(ap.position, ap.orientation(orientation_id).orientation)))
 
         return ret
 

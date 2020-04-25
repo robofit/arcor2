@@ -335,11 +335,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
             elif req.args.pivot == rpc.objects.PivotEnum.BOTTOM:
                 position_delta.z += obj_inst.collision_model.radius / 2
 
-    rotated_vector = quaternion.rotate_vectors([new_pose.orientation.as_quaternion()], [list(position_delta)])[0][0]
-
-    position_delta.x = rotated_vector[0]
-    position_delta.y = rotated_vector[1]
-    position_delta.z = rotated_vector[2]
+    position_delta = position_delta.rotated(new_pose.orientation)
 
     scene_object.pose.position.x = new_pose.position.x - position_delta.x
     scene_object.pose.position.y = new_pose.position.y - position_delta.y
