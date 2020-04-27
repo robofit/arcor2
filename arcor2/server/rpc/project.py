@@ -114,7 +114,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
 
     glob.RUNNING_ACTION = action.id
 
-    await glob.logger.debug(f"Running action {action_name} ({type(obj)}/{action_name}), params: {params}.")
+    await glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
 
     # schedule execution and return success
     asyncio.ensure_future(osa.execute_action(getattr(obj, action_name), params))
