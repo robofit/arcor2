@@ -428,7 +428,6 @@ class Project(JsonSchemaMixin):
 class ProjectSources(JsonSchemaMixin):
 
     id: str  # project_id
-    resources: str
     script: str
 
 
