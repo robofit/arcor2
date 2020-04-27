@@ -31,6 +31,13 @@ def test_make_pose_abs_2():
     assert hlp.make_pose_abs(parent, child) == parent
 
 
+def test_make_pose_abs_3():
+
+    parent = Pose(Position(1, 1, 0), Orientation(0, 0, 0.707, 0.707))
+    child = Pose(Position(-1, 1, 0), Orientation())
+    assert hlp.make_pose_abs(parent, child) == Pose(Position(0, 0, 0), Orientation(0, 0, 0.707, 0.707))
+
+
 def test_make_pose_rel_and_abs_again():
 
     parent = Pose(Position(), Orientation(0, 0, 1, 0))

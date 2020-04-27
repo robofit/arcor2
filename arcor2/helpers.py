@@ -318,7 +318,7 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-    p.position = child.position.rotated(parent.orientation, inverse=True)
+    p.position = child.position.rotated(parent.orientation)
     p.position = make_position_abs(parent.position, p.position)
     p.orientation = make_orientation_abs(parent.orientation, child.orientation)
     return p
