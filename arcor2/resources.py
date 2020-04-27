@@ -10,7 +10,7 @@ import json
 from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, CurrentAction
+from arcor2.data.common import Project, Scene, CurrentAction, Pose, Orientation
 from arcor2.data.object_type import ObjectModel, Models
 from arcor2.data.events import CurrentActionEvent
 from arcor2.exceptions import ResourcesException, Arcor2Exception
@@ -19,7 +19,7 @@ from arcor2.object_types import Generic
 from arcor2.services import Service, RobotService
 from arcor2.action import print_event
 from arcor2.rest import convert_keys
-from arcor2.helpers import camel_case_to_snake_case, make_position_abs, make_orientation_abs, print_exception
+from arcor2.helpers import camel_case_to_snake_case, make_pose_abs, make_orientation_abs, print_exception
 import arcor2.object_types_utils as otu
 
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -115,7 +115,7 @@ class IntResources:
 
             # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
             obj_inst.action_points[aps.id] = aps
-            aps.position = make_position_abs(obj_inst.pose.position, aps.position)
+            aps.position = make_pose_abs(obj_inst.pose, Pose(aps.position, Orientation())).position
             for ori in aps.orientations:
                 ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
 

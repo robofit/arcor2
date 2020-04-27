@@ -8,7 +8,6 @@ from json import JSONEncoder
 from typing import List, Any, Iterator, Optional, Tuple, Set, Union
 import uuid
 
-import numpy as np  # type: ignore
 import quaternion  # type: ignore
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -72,6 +71,16 @@ class Position(IterableIndexable):
     y: float = 0.0
     z: float = 0.0
 
+    def rotated(self, rot: "Orientation", inverse: bool = False) -> "Position":
+
+        q = rot.as_quaternion()
+
+        if inverse:
+            q = q.inverse()
+
+        rotated_vector = quaternion.rotate_vectors([q], [list(self)])[0][0]
+        return Position(rotated_vector[0], rotated_vector[1], rotated_vector[2])
+
 
 @dataclass
 class Orientation(IterableIndexable):
@@ -82,15 +91,23 @@ class Orientation(IterableIndexable):
     w: float = 1.0
 
     def as_quaternion(self) -> quaternion.quaternion:
-
-        return np.quaternion(self.w, self.x, self.y, self.z)
+        return quaternion.quaternion(self.w, self.x, self.y, self.z).normalized()
 
     def set_from_quaternion(self, q: quaternion.quaternion) -> None:
 
-        self.x = q.x
-        self.y = q.y
-        self.z = q.z
-        self.w = q.w
+        nq = q.normalized()
+
+        self.x = nq.x
+        self.y = nq.y
+        self.z = nq.z
+        self.w = nq.w
+
+    def __eq__(self, other) -> bool:
+
+        if not isinstance(other, Orientation):
+            return False
+
+        return quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.e-8)[0]
 
 
 @dataclass
