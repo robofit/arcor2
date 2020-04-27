@@ -1,7 +1,7 @@
 import traceback
 import time
 import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, TypeVar
+from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, TypeVar, Set
 from types import ModuleType
 import json
 import asyncio
@@ -9,11 +9,13 @@ import importlib
 import re
 import keyword
 import logging
+from collections import deque
 
 from dataclasses_jsonschema import ValidationError
 
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
+from aiologger.levels import LogLevel  # type: ignore
 
 from arcor2.data.rpc.common import Request
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
@@ -127,6 +129,9 @@ async def server(client: Any,
     if event_dict is None:
         event_dict = {}
 
+    req_last_ts: Dict[str, deque] = {}
+    ignored_reqs: Set[str] = set()
+
     await register(client)
     try:
         async for message in client:
@@ -176,7 +181,35 @@ async def server(client: Any,
                 resp.id = req.id
 
                 await asyncio.wait([client.send(resp.to_json())])
-                await logger.debug(f"RPC request: {req}, result: {resp}")
+
+                if logger.level == LogLevel.DEBUG:
+
+                    # Silencing of repetitive log messages
+                    # ...maybe this could be done better and in a more general way using logging.Filter?
+
+                    now = time.monotonic()
+                    if req.request not in req_last_ts:
+                        req_last_ts[req.request] = deque()
+
+                    while req_last_ts[req.request]:
+                        if req_last_ts[req.request][0] < now - 5.0:
+                            req_last_ts[req.request].popleft()
+                        else:
+                            break
+
+                    req_last_ts[req.request].append(now)
+                    req_per_sec = len(req_last_ts[req.request])/5.0
+
+                    if req_per_sec > 2:
+                        if req.request not in ignored_reqs:
+                            ignored_reqs.add(req.request)
+                            await logger.debug(f"Request of type {req.request} will be silenced.")
+                    elif req_per_sec < 1:
+                        if req.request in ignored_reqs:
+                            ignored_reqs.remove(req.request)
+
+                    if req.request not in ignored_reqs:
+                        await logger.debug(f"RPC request: {req}, result: {resp}")
 
             elif "event" in data:  # ...event from UI
 
@@ -256,7 +289,7 @@ def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-    p.position = make_position_rel(parent.position, child.position)
+    p.position = make_position_rel(parent.position, child.position).rotated(parent.orientation)
     p.orientation = make_orientation_rel(parent.orientation, child.orientation)
     return p
 
@@ -273,7 +306,7 @@ def make_position_abs(parent: Position, child: Position) -> Position:
 def make_orientation_abs(parent: Orientation, child: Orientation) -> Orientation:
 
     p = Orientation()
-    p.set_from_quaternion(child.as_quaternion() * parent.as_quaternion())
+    p.set_from_quaternion(child.as_quaternion()*parent.as_quaternion().conjugate().inverse())
     return p
 
 
@@ -285,7 +318,8 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-    p.position = make_position_abs(parent.position, child.position)
+    p.position = child.position.rotated(parent.orientation)
+    p.position = make_position_abs(parent.position, p.position)
     p.orientation = make_orientation_abs(parent.orientation, child.orientation)
     return p
 

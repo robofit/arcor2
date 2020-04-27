@@ -114,7 +114,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
 
     glob.RUNNING_ACTION = action.id
 
-    await glob.logger.debug(f"Running action {action_name} ({type(obj)}/{action_name}), params: {params}.")
+    await glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
 
     # schedule execution and return success
     asyncio.ensure_future(osa.execute_action(getattr(obj, action_name), params))
@@ -270,14 +270,14 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
     if not ap.parent and req.args.new_parent_id:
         # AP position and all orientations will become relative to the parent
         new_parent = glob.SCENE.object(req.args.new_parent_id)
-        ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
+        ap.position = hlp.make_pose_rel(new_parent.pose, common.Pose(ap.position, common.Orientation())).position
         for ori in ap.orientations:
             ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
 
     elif ap.parent and not req.args.new_parent_id:
         # AP position and all orientations will become absolute
         old_parent = glob.SCENE.object(ap.parent)
-        ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
+        ap.position = hlp.make_pose_abs(old_parent.pose, common.Pose(ap.position, common.Orientation())).position
         for ori in ap.orientations:
             ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
     else:
@@ -288,8 +288,8 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
         old_parent = glob.SCENE.object(ap.parent)
         new_parent = glob.SCENE.object(req.args.new_parent_id)
 
-        ap.position = hlp.make_position_abs(old_parent.pose.position, ap.position)
-        ap.position = hlp.make_position_rel(new_parent.pose.position, ap.position)
+        abs_ap_pose = hlp.make_pose_abs(old_parent.pose, common.Pose(ap.position, common.Orientation()))
+        ap.position = hlp.make_pose_rel(new_parent.pose, abs_ap_pose).position
 
         for ori in ap.orientations:
             ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
