@@ -147,9 +147,9 @@ class CurrentActionEvent(Event):
 
 
 @dataclass
-class ProjectStateEvent(Event):
+class PackageStateEvent(Event):
 
-    data: common.ProjectState = field(default_factory=common.ProjectState)
+    data: common.PackageState = field(default_factory=common.PackageState)
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 # ----------------------------------------------------------------------------------------------------------------------

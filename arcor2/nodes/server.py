@@ -83,8 +83,8 @@ async def _check_manager() -> None:
     """
 
     # TODO avoid cast
-    resp = cast(rpc.execution.ProjectStateResponse,
-                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    resp = cast(rpc.execution.PackageStateResponse,
+                await exe.manager_request(rpc.execution.PackageStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
     if resp.data.id is not None and (glob.PROJECT is None or glob.PROJECT.id != resp.data.id):
         await open_project(resp.data.id)
@@ -104,10 +104,10 @@ async def register(websocket) -> None:
     await notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT))
 
     # TODO avoid cast
-    resp = cast(rpc.execution.ProjectStateResponse,
-                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    resp = cast(rpc.execution.PackageStateResponse,
+                await exe.manager_request(rpc.execution.PackageStateRequest(id=uuid.uuid4().int)))  # type: ignore
 
-    await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
+    await asyncio.wait([websocket.send(events.PackageStateEvent(data=resp.data.project).to_json())])
     if resp.data.action:
         await asyncio.wait([websocket.send(events.ActionStateEvent(data=resp.data.action).to_json())])
     if resp.data.action_args:

@@ -1,8 +1,8 @@
 import select
 import sys
 from typing import Union, Callable, Any, TYPE_CHECKING, no_type_check
-from arcor2.data.events import Event, ProjectStateEvent, ActionStateEvent
-from arcor2.data.common import ProjectStateEnum, ActionStateEnum, ActionState, ProjectState
+from arcor2.data.events import Event, PackageStateEvent, ActionStateEvent
+from arcor2.data.common import PackageStateEnum, ActionStateEnum, ActionState, PackageState
 from functools import wraps
 
 HANDLE_ACTIONS = True
@@ -32,11 +32,11 @@ def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], wher
     ctrl_cmd = read_stdin()
 
     if ctrl_cmd == "p":
-        print_event(ProjectStateEvent(data=ProjectState(ProjectStateEnum.PAUSED)))
+        print_event(PackageStateEvent(data=PackageState(PackageStateEnum.PAUSED)))
         while True:
             ctrl_cmd = read_stdin(0.1)
             if ctrl_cmd == "r":
-                print_event(ProjectStateEvent(data=ProjectState(ProjectStateEnum.RUNNING)))
+                print_event(PackageStateEvent(data=PackageState(PackageStateEnum.RUNNING)))
                 break
 
 
