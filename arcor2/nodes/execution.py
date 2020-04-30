@@ -12,7 +12,7 @@ import shutil
 import sys
 import tempfile
 import zipfile
-from typing import Optional, Set, Union
+from typing import Optional, Set, Union, Awaitable, List
 
 import websockets
 from aiologger import Logger  # type: ignore
@@ -23,7 +23,8 @@ from websockets.server import WebSocketServerProtocol
 import arcor2
 from arcor2.data import rpc
 from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene, PackageInfo
-from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
+    SceneCollisionsEvent
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
 from arcor2.settings import PROJECT_PATH
@@ -40,6 +41,7 @@ PROJECT_EVENT: PackageStateEvent = PackageStateEvent()
 PACKAGE_INFO: PackageInfoEvent = PackageInfoEvent()
 ACTION_EVENT: Optional[ActionStateEvent] = None
 ACTION_ARGS_EVENT: Optional[CurrentActionEvent] = None
+SCENE_COLLISION_EVENT: Optional[SceneCollisionsEvent] = None
 TASK = None
 
 CLIENTS: Set = set()
@@ -64,6 +66,7 @@ async def read_proc_stdout() -> None:
     global PROJECT_EVENT
     global ACTION_EVENT
     global ACTION_ARGS_EVENT
+    global SCENE_COLLISION_EVENT
 
     logger.info("Reading script stdout...")
 
@@ -104,12 +107,15 @@ async def read_proc_stdout() -> None:
             ACTION_EVENT = evt
         elif isinstance(evt, CurrentActionEvent):
             ACTION_ARGS_EVENT = evt
+        elif isinstance(evt, SceneCollisionsEvent):
+            SCENE_COLLISION_EVENT = evt
 
         await send_to_clients(evt)
 
     ACTION_EVENT = None
     ACTION_ARGS_EVENT = None
     PACKAGE_INFO.data = None
+    SCENE_COLLISION_EVENT = None
 
     await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED)))
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
@@ -166,6 +172,8 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest) -> Union[rpc.exec
 async def stop_package_cb(req: rpc.execution.StopPackageRequest) -> Union[rpc.execution.StopPackageResponse,
                                                                           RPC_RETURN_TYPES]:
 
+    global SCENE_COLLISION_EVENT
+
     if not process_running():
         return False, "Project not running."
 
@@ -177,6 +185,7 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest) -> Union[rpc.ex
     await logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
     PACKAGE_INFO.data = None
+    SCENE_COLLISION_EVENT = None
 
 
 async def pause_package_cb(req: rpc.execution.PausePackageRequest) -> Union[rpc.execution.PausePackageResponse,
@@ -320,7 +329,12 @@ async def register(websocket: WebSocketServerProtocol) -> None:
     await logger.info("Registering new client")
     CLIENTS.add(websocket)
 
-    await asyncio.gather(websocket.send(PROJECT_EVENT.to_json()), websocket.send(PACKAGE_INFO.to_json()))
+    tasks: List[Awaitable] = [websocket.send(PROJECT_EVENT.to_json()), websocket.send(PACKAGE_INFO.to_json())]
+
+    if SCENE_COLLISION_EVENT:
+        tasks.append(websocket.send(SCENE_COLLISION_EVENT.to_json()))
+
+    await asyncio.gather(*tasks)
 
 
 async def unregister(websocket: WebSocketServerProtocol) -> None:

@@ -7,7 +7,7 @@ import asyncio
 import functools
 import json
 import sys
-from typing import Union, get_type_hints
+from typing import Union, get_type_hints, List, Awaitable
 import inspect
 
 import websockets
@@ -58,11 +58,15 @@ async def handle_manager_incoming_messages(manager_client):
                     if evt.data.state == common.PackageStateEnum.STOPPED:
                         glob.CURRENT_ACTION = None
                         glob.ACTION_STATE = None
+                        glob.SCENE_COLLISIONS = None
+                        glob.PACKAGE_INFO = None
 
                 elif isinstance(evt, events.ActionStateEvent):
                     glob.ACTION_STATE = evt.data
                 elif isinstance(evt, events.CurrentActionEvent):
                     glob.CURRENT_ACTION = evt.data
+                elif isinstance(evt, events.SceneCollisionsEvent):
+                    glob.SCENE_COLLISIONS = evt.data
                 else:
                     await glob.logger.warn(f"Unhandled type of event from Execution: {evt.event}")
 
@@ -108,17 +112,22 @@ async def register(websocket) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE))
-    await notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT))
+    tasks: List[Awaitable] = []
 
-    await websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
+    tasks.append(notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT)))
+    tasks.append(notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE)))
+    tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
+
     if glob.PACKAGE_INFO:
-        await websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json())
-
+        tasks.append(websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json()))
     if glob.ACTION_STATE:
-        await websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json())
+        tasks.append(websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json()))
     if glob.CURRENT_ACTION:
-        await websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json())
+        tasks.append(websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json()))
+    if glob.SCENE_COLLISIONS:
+        tasks.append(websocket.send(events.SceneCollisionsEvent(data=glob.SCENE_COLLISIONS).to_json()))
+
+    await asyncio.gather(*tasks)
 
 
 async def unregister(websocket) -> None:

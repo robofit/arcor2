@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import common
+from arcor2.data import common, object_type
 
 
 def wo_suffix(name: str) -> str:
@@ -216,4 +216,20 @@ Objects
 class ObjectTypesChangedEvent(Event):
 
     data: List[str] = field(default_factory=list)  # changed object types
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class SceneCollisionsData(JsonSchemaMixin):
+
+    boxes: List[object_type.Box] = field(default_factory=list)
+    spheres: List[object_type.Sphere] = field(default_factory=list)
+    cylinders: List[object_type.Cylinder] = field(default_factory=list)
+    meshes: List[object_type.Mesh] = field(default_factory=list)
+
+
+@dataclass
+class SceneCollisionsEvent(Event):
+
+    data: SceneCollisionsData = field(default_factory=SceneCollisionsData)
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
