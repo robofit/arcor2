@@ -3,7 +3,7 @@
 
 
 import asyncio
-from typing import Union, List, Dict, Any, Optional, Set
+from typing import Union, Dict, Any, Optional, Set
 import copy
 from contextlib import asynccontextmanager
 
@@ -121,48 +121,49 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
     return None
 
 
+async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[str, common.Scene]) -> \
+        rpc.project.ListProjectsResponseData:
+
+    project = await storage.get_project(project_id)
+
+    pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc, name=project.name,
+                                              scene_id=project.scene_id)
+
+    try:
+        async with scenes_lock:
+            if project.scene_id not in scenes:
+                scenes[project.scene_id] = await storage.get_scene(project.scene_id)
+    except storage.PersistentStorageException:
+        pd.problems.append("Scene does not exist.")
+        return pd
+
+    pd.problems = project_problems(scenes[project.scene_id], project)
+    pd.valid = not pd.problems
+
+    if not pd.valid:
+        return pd
+
+    try:
+        program_src(project, scenes[project.scene_id], otu.built_in_types_names())
+        pd.executable = True
+    except SourceException as e:
+        pd.problems.append(e.message)
+
+    return pd
+
+
 async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
         Union[rpc.project.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
 
-    data: List[rpc.project.ListProjectsResponseData] = []
-
     projects = await storage.get_projects()
 
+    scenes_lock = asyncio.Lock()
     scenes: Dict[str, common.Scene] = {}
 
-    # TODO do this in parallel?
-    for project_iddesc in projects.items:
-
-        try:
-            project = await storage.get_project(project_iddesc.id)
-        except Arcor2Exception as e:
-            await glob.logger.warning(f"Ignoring project {project_iddesc.id} due to error: {e}")
-            continue
-
-        pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc, name=project.name,
-                                                  scene_id=project.scene_id)
-        data.append(pd)
-
-        if project.scene_id not in scenes:
-            try:
-                scenes[project.scene_id] = await storage.get_scene(project.scene_id)
-            except storage.PersistentStorageException:
-                pd.problems.append("Scene does not exist.")
-                continue
-
-        pd.problems = project_problems(scenes[project.scene_id], project)
-        pd.valid = not pd.problems
-
-        if not pd.valid:
-            continue
-
-        try:
-            program_src(project, scenes[project.scene_id], otu.built_in_types_names())
-            pd.executable = True
-        except SourceException as e:
-            pd.problems.append(e.message)
-
-    return rpc.project.ListProjectsResponse(data=data)
+    resp = rpc.project.ListProjectsResponse()
+    tasks = [project_info(project_iddesc.id, scenes_lock, scenes) for project_iddesc in projects.items]
+    resp.data = await asyncio.gather(*tasks)
+    return resp
 
 
 @scene_needed
