@@ -66,28 +66,13 @@ async def _initialize_server() -> None:
     # this has to be done sequentially as objects might depend on services so (all) services has to be known first
     await osa.get_service_types()
     await osa.get_object_types()
-
-    await asyncio.wait([osa.get_object_actions(), _check_manager()])
+    await osa.get_object_actions()
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=glob.VERBOSE)
 
     await glob.logger.info("Server initialized.")
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
-
-
-async def _check_manager() -> None:
-    """
-    Loads project if it is loaded on manager (e.g. in a case when execution unit runs script and server is started).
-    :return:
-    """
-
-    # TODO avoid cast
-    resp = cast(rpc.execution.PackageStateResponse,
-                await exe.manager_request(rpc.execution.PackageStateRequest(id=uuid.uuid4().int)))  # type: ignore
-
-    if resp.data.id is not None and (glob.PROJECT is None or glob.PROJECT.id != resp.data.id):
-        await open_project(resp.data.id)
 
 
 async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,

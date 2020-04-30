@@ -22,12 +22,14 @@ from websockets.server import WebSocketServerProtocol
 
 import arcor2
 from arcor2.data import rpc
-from arcor2.data.common import PackageState, PackageStateEnum, Project
-from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent
+from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
+    PackageInfo
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
 from arcor2.settings import PROJECT_PATH
 from arcor2.source.utils import make_executable
+from arcor2.exceptions import Arcor2Exception
 
 
 PORT = 6790
@@ -36,9 +38,9 @@ logger = Logger.with_default_handlers(name='manager', formatter=aiologger_format
 
 PROCESS: Union[asyncio.subprocess.Process, None] = None
 PROJECT_EVENT: PackageStateEvent = PackageStateEvent()
+PACKAGE_INFO: PackageInfoEvent = PackageInfoEvent()
 ACTION_EVENT: Optional[ActionStateEvent] = None
 ACTION_ARGS_EVENT: Optional[CurrentActionEvent] = None
-PROJECT_ID: Optional[str] = None
 TASK = None
 
 CLIENTS: Set = set()
@@ -63,7 +65,6 @@ async def read_proc_stdout() -> None:
     global PROJECT_EVENT
     global ACTION_EVENT
     global ACTION_ARGS_EVENT
-    global PROJECT_ID
 
     logger.info("Reading script stdout...")
 
@@ -109,19 +110,20 @@ async def read_proc_stdout() -> None:
 
     ACTION_EVENT = None
     ACTION_ARGS_EVENT = None
-    PROJECT_ID = None
 
     await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED)))
+
+    PACKAGE_INFO.data = None
+    await send_to_clients(PACKAGE_INFO)
 
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-async def project_run(req: rpc.execution.RunPackageRequest) -> Union[rpc.execution.RunPackageResponse,
-                                                                     RPC_RETURN_TYPES]:
+async def run_package_cb(req: rpc.execution.RunPackageRequest) -> Union[rpc.execution.RunPackageResponse,
+                                                                        RPC_RETURN_TYPES]:
 
     global PROCESS
     global TASK
-    global PROJECT_ID
 
     if process_running():
         return False, "Already running!"
@@ -146,12 +148,27 @@ async def project_run(req: rpc.execution.RunPackageRequest) -> Union[rpc.executi
                                                    stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is not None:
         return False, "Failed to start project."
-    PROJECT_ID = req.args.id
+
+    with open(os.path.join(package_path, "data", "project.json")) as project_file:
+        try:
+            project = Project.from_json(project_file.read())
+        except ValidationError as e:
+            raise Arcor2Exception(f"Failed to parse project.json file.") from e
+
+    with open(os.path.join(package_path, "data", "scene.json")) as scene_file:
+        try:
+            scene = Scene.from_json(scene_file.read())
+        except ValidationError as e:
+            raise Arcor2Exception(f"Failed to parse scene.json file.") from e
+
+    PACKAGE_INFO.data = PackageInfo(req.args.id, scene, project)
+    asyncio.ensure_future(send_to_clients(PACKAGE_INFO))
+
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
-async def project_stop(req: rpc.execution.StopPackageRequest) -> Union[rpc.execution.StopPackageResponse,
-                                                                       RPC_RETURN_TYPES]:
+async def stop_package_cb(req: rpc.execution.StopPackageRequest) -> Union[rpc.execution.StopPackageResponse,
+                                                                          RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -164,9 +181,12 @@ async def project_stop(req: rpc.execution.StopPackageRequest) -> Union[rpc.execu
     await logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
 
+    PACKAGE_INFO.data = None
+    asyncio.ensure_future(send_to_clients(PACKAGE_INFO))
 
-async def project_pause(req: rpc.execution.PausePackageRequest) -> Union[rpc.execution.PausePackageResponse,
-                                                                         RPC_RETURN_TYPES]:
+
+async def pause_package_cb(req: rpc.execution.PausePackageRequest) -> Union[rpc.execution.PausePackageResponse,
+                                                                            RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -182,8 +202,8 @@ async def project_pause(req: rpc.execution.PausePackageRequest) -> Union[rpc.exe
     return None
 
 
-async def project_resume(req: rpc.execution.ResumePackageRequest) -> Union[rpc.execution.ResumePackageResponse,
-                                                                           RPC_RETURN_TYPES]:
+async def resume_package_cb(req: rpc.execution.ResumePackageRequest) -> Union[rpc.execution.ResumePackageResponse,
+                                                                              RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -198,7 +218,7 @@ async def project_resume(req: rpc.execution.ResumePackageRequest) -> Union[rpc.e
     return None
 
 
-async def project_state_cb(req: rpc.execution.PackageStateRequest) -> Union[rpc.execution.PackageStateResponse,
+async def package_state_cb(req: rpc.execution.PackageStateRequest) -> Union[rpc.execution.PackageStateResponse,
                                                                             RPC_RETURN_TYPES]:
 
     resp = rpc.execution.PackageStateResponse()
@@ -207,7 +227,6 @@ async def project_state_cb(req: rpc.execution.PackageStateRequest) -> Union[rpc.
         resp.data.action = ACTION_EVENT.data
     if ACTION_ARGS_EVENT:
         resp.data.action_args = ACTION_ARGS_EVENT.data
-    resp.data.id = PROJECT_ID
     return resp
 
 
@@ -282,7 +301,7 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest) -> Union[rpc.
 async def delete_package_cb(req: rpc.execution.DeletePackageRequest) -> Union[rpc.execution.DeletePackageResponse,
                                                                               RPC_RETURN_TYPES]:
 
-    if PROJECT_ID and PROJECT_ID == req.args.id:
+    if PACKAGE_INFO.data and PACKAGE_INFO.data.package_id == req.args.id:
         return False, "Package is being executed."
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
@@ -306,7 +325,8 @@ async def register(websocket: WebSocketServerProtocol) -> None:
 
     await logger.info("Registering new client")
     CLIENTS.add(websocket)
-    # TODO send current state
+
+    await asyncio.gather(websocket.send(PROJECT_EVENT.to_json()), websocket.send(PACKAGE_INFO.to_json()))
 
 
 async def unregister(websocket: WebSocketServerProtocol) -> None:
@@ -314,11 +334,11 @@ async def unregister(websocket: WebSocketServerProtocol) -> None:
     CLIENTS.remove(websocket)
 
 RPC_DICT: RPC_DICT_TYPE = {
-    rpc.execution.RunPackageRequest: project_run,
-    rpc.execution.StopPackageRequest: project_stop,
-    rpc.execution.PausePackageRequest: project_pause,
-    rpc.execution.ResumePackageRequest: project_resume,
-    rpc.execution.PackageStateRequest: project_state_cb,
+    rpc.execution.RunPackageRequest: run_package_cb,
+    rpc.execution.StopPackageRequest: stop_package_cb,
+    rpc.execution.PausePackageRequest: pause_package_cb,
+    rpc.execution.ResumePackageRequest: resume_package_cb,
+    rpc.execution.PackageStateRequest: package_state_cb,
     rpc.execution.UploadPackageRequest: _upload_package_cb,
     rpc.execution.ListPackagesRequest: list_packages_cb,
     rpc.execution.DeletePackageRequest: delete_package_cb

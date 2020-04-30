@@ -167,7 +167,6 @@ class PackageStateRequest(Request):
 @dataclass
 class PackageStateData(JsonSchemaMixin):
 
-    id: Optional[str] = None
     project: PackageState = field(default_factory=PackageState)
     action: Optional[ActionState] = None
     action_args: Optional[CurrentAction] = None
