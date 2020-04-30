@@ -489,6 +489,9 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
 async def open_project_cb(req: rpc.project.OpenProjectRequest) -> \
         Union[rpc.project.OpenProjectResponse, hlp.RPC_RETURN_TYPES]:
 
+    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+        return False, "Can't open project while package runs."
+
     # TODO validate using project_problems?
     try:
         await open_project(req.args.id)
@@ -514,6 +517,9 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 @no_project
 async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
+
+    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+        return False, "Can't create project while package runs."
 
     unique_name(req.args.name, (await project_names()))
 

@@ -62,6 +62,9 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
     :return:
     """
 
+    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+        return False, "Can't create scene while package runs."
+
     assert glob.SCENE is None
 
     for scene_id in (await storage.get_scenes()).items:
@@ -112,6 +115,9 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
 @no_project
 async def open_scene_cb(req: rpc.scene.OpenSceneRequest) -> Union[rpc.scene.OpenSceneResponse,
                                                                   hlp.RPC_RETURN_TYPES]:
+
+    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+        return False, "Can't open scene while package runs."
 
     await open_scene(req.args.id)
     return None
