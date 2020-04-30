@@ -22,9 +22,8 @@ from websockets.server import WebSocketServerProtocol
 
 import arcor2
 from arcor2.data import rpc
-from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene
-from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
-    PackageInfo
+from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene, PackageInfo
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
 from arcor2.settings import PROJECT_PATH
@@ -110,12 +109,9 @@ async def read_proc_stdout() -> None:
 
     ACTION_EVENT = None
     ACTION_ARGS_EVENT = None
+    PACKAGE_INFO.data = None
 
     await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED)))
-
-    PACKAGE_INFO.data = None
-    await send_to_clients(PACKAGE_INFO)
-
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
@@ -180,9 +176,7 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest) -> Union[rpc.ex
     PROCESS.terminate()
     await logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
-
     PACKAGE_INFO.data = None
-    asyncio.ensure_future(send_to_clients(PACKAGE_INFO))
 
 
 async def pause_package_cb(req: rpc.execution.PausePackageRequest) -> Union[rpc.execution.PausePackageResponse,

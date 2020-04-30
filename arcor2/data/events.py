@@ -156,17 +156,9 @@ class PackageStateEvent(Event):
 
 
 @dataclass
-class PackageInfo(JsonSchemaMixin):
-
-    package_id: str
-    scene: common.Scene
-    project: common.Project
-
-
-@dataclass
 class PackageInfoEvent(Event):
 
-    data: Optional[PackageInfo] = None
+    data: Optional[common.PackageInfo] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

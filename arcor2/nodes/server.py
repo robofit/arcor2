@@ -7,27 +7,26 @@ import asyncio
 import functools
 import json
 import sys
-import uuid
-from typing import Union, cast, get_type_hints
+from typing import Union, get_type_hints
 import inspect
 
 import websockets
 from aiologger.levels import LogLevel  # type: ignore
+from dataclasses_jsonschema import ValidationError
 
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
-from arcor2.data import events
+from arcor2.data import events, common
 from arcor2.data import rpc
-from arcor2.data.helpers import RPC_MAPPING
+from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
 
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
 from arcor2.server import execution as exe, notifications as notif, rpc as srpc
-from arcor2.server.project import open_project
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -42,7 +41,31 @@ async def handle_manager_incoming_messages(manager_client):
             msg = json.loads(message)
 
             if "event" in msg and glob.INTERFACES:
+
                 await asyncio.wait([intf.send(message) for intf in glob.INTERFACES])
+
+                try:
+                    evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
+                except ValidationError as e:
+                    await glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
+                    continue
+
+                if isinstance(evt, events.PackageInfoEvent):
+                    glob.PACKAGE_INFO = evt.data
+                elif isinstance(evt, events.PackageStateEvent):
+                    glob.PACKAGE_STATE = evt.data
+
+                    if evt.data.state == common.PackageStateEnum.STOPPED:
+                        glob.CURRENT_ACTION = None
+                        glob.ACTION_STATE = None
+
+                elif isinstance(evt, events.ActionStateEvent):
+                    glob.ACTION_STATE = evt.data
+                elif isinstance(evt, events.CurrentActionEvent):
+                    glob.CURRENT_ACTION = evt.data
+                else:
+                    await glob.logger.warn(f"Unhandled type of event from Execution: {evt.event}")
+
             elif "response" in msg:
 
                 # TODO handle potential errors
@@ -88,15 +111,14 @@ async def register(websocket) -> None:
     await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE))
     await notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT))
 
-    # TODO avoid cast
-    resp = cast(rpc.execution.PackageStateResponse,
-                await exe.manager_request(rpc.execution.PackageStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    await websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
+    if glob.PACKAGE_INFO:
+        await websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json())
 
-    await asyncio.wait([websocket.send(events.PackageStateEvent(data=resp.data.project).to_json())])
-    if resp.data.action:
-        await asyncio.wait([websocket.send(events.ActionStateEvent(data=resp.data.action).to_json())])
-    if resp.data.action_args:
-        await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
+    if glob.ACTION_STATE:
+        await websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json())
+    if glob.CURRENT_ACTION:
+        await websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json())
 
 
 async def unregister(websocket) -> None:
