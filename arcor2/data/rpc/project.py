@@ -22,6 +22,7 @@ class NewProjectRequestArgs(JsonSchemaMixin):
 class NewProjectRequest(Request):
 
     args: NewProjectRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -43,6 +44,7 @@ class CloseProjectRequestArgs(JsonSchemaMixin):
 class CloseProjectRequest(Request):
 
     args: CloseProjectRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -143,6 +145,7 @@ class AddActionPointArgs(JsonSchemaMixin):
 class AddActionPointRequest(Request):
 
     args: AddActionPointArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -158,6 +161,7 @@ class AddActionPointResponse(Response):
 class RemoveActionPointRequest(Request):
 
     args: IdArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -181,6 +185,7 @@ class AddActionPointJointsRequestArgs(JsonSchemaMixin):
 class AddActionPointJointsRequest(Request):
 
     args: AddActionPointJointsRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -203,6 +208,7 @@ class RenameActionPointRequestArgs(JsonSchemaMixin):
 class RenameActionPointRequest(Request):
 
     args: RenameActionPointRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -294,6 +300,7 @@ class AddActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
 class AddActionPointOrientationUsingRobotRequest(Request):
 
     args: AddActionPointOrientationUsingRobotRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -340,6 +347,7 @@ class AddActionPointOrientationRequestArgs(JsonSchemaMixin):
 class AddActionPointOrientationRequest(Request):
 
     args: AddActionPointOrientationRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -383,6 +391,7 @@ class RemoveActionPointOrientationRequestArgs(JsonSchemaMixin):
 @dataclass
 class RemoveActionPointOrientationRequest(Request):
     args: RemoveActionPointOrientationRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -406,6 +415,7 @@ class AddActionRequestArgs(JsonSchemaMixin):
 class AddActionRequest(Request):
 
     args: AddActionRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -429,6 +439,7 @@ class UpdateActionRequestArgs(JsonSchemaMixin):
 class UpdateActionRequest(Request):
 
     args: UpdateActionRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -445,6 +456,7 @@ class UpdateActionResponse(Response):
 class RemoveActionRequest(Request):
 
     args: IdArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -548,6 +560,7 @@ class RenameProjectRequestArgs(JsonSchemaMixin):
 class RenameProjectRequest(Request):
 
     args: RenameProjectRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -570,6 +583,7 @@ class CopyProjectRequestArgs(JsonSchemaMixin):
 class CopyProjectRequest(Request):
 
     args: CopyProjectRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -636,6 +650,7 @@ class RenameActionPointJointsRequestArgs(JsonSchemaMixin):
 class RenameActionPointJointsRequest(Request):
 
     args: RenameActionPointJointsRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -658,6 +673,7 @@ class RenameActionPointOrientationRequestArgs(JsonSchemaMixin):
 class RenameActionPointOrientationRequest(Request):
 
     args: RenameActionPointOrientationRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -680,6 +696,7 @@ class RenameActionRequestArgs(JsonSchemaMixin):
 class RenameActionRequest(Request):
 
     args: RenameActionRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

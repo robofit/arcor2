@@ -72,6 +72,7 @@ class GetActionsResponse(Response):
 class NewObjectTypeRequest(Request):
 
     args: ObjectTypeMeta
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
