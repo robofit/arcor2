@@ -30,7 +30,6 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest) -> \
 
         path = os.path.join(tmpdirname, "publish.zip")
 
-        # TODO package_name (as optional param)
         await hlp.run_in_executor(rest.download, f"{glob.BUILDER_URL}/project/{req.args.project_id}/publish", path)
 
         with open(path, "rb") as zip_file:
@@ -38,6 +37,7 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest) -> \
             b64_str = b64_bytes.decode()
 
     # send data to execution service
+    # TODO package_name (instead of ID)
     exe_req = rpc.execution.UploadPackageRequest(uuid.uuid4().int,
                                                  args=rpc.execution.UploadPackageArgs(package_id, b64_str))
     exe_resp = await manager_request(exe_req)
