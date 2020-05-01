@@ -209,7 +209,7 @@ async def server(client: Any,
                             ignored_reqs.remove(req.request)
 
                     if req.request not in ignored_reqs:
-                        await logger.debug(f"RPC request: {req}, result: {resp}")
+                        asyncio.ensure_future(logger.debug(f"RPC request: {req}, result: {resp}"))
 
             elif "event" in data:  # ...event from UI
 
