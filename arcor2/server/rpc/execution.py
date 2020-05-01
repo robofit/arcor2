@@ -5,6 +5,8 @@ import base64
 import uuid
 
 
+from websockets.server import WebSocketServerProtocol as WsClient
+
 from arcor2.data import rpc
 import arcor2.helpers as hlp
 from arcor2 import rest
@@ -13,11 +15,12 @@ from arcor2.server.execution import manager_request
 import arcor2.server.globals as glob
 
 
-async def build_project_cb(req: rpc.execution.BuildProjectRequest) -> \
+async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient) -> \
         Union[rpc.execution.BuildProjectResponse, hlp.RPC_RETURN_TYPES]:
     """
     Builds and executes the project.
     :param req:
+    :param ui:
     :return:
     """
 

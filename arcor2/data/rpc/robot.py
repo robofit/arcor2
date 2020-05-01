@@ -132,3 +132,26 @@ class GetSuctionsResponse(Response):
 
     data: Set[str] = field(default_factory=set)
     response: str = field(default=GetSuctionsRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RegisterForJointsArgs(JsonSchemaMixin):
+
+    robot_id: str
+    send: bool
+
+
+@dataclass
+class RegisterForJointsRequest(Request):
+
+    args: RegisterForJointsArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RegisterForJointsResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=RegisterForJointsRequest.request, init=False)

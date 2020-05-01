@@ -12,6 +12,7 @@ from typing import Union, cast, get_type_hints
 import inspect
 
 import websockets
+from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
 
 import arcor2
@@ -19,7 +20,7 @@ import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
-from arcor2.data import events
+from arcor2.data import events, common
 from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -95,7 +96,7 @@ async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storag
     return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
-async def register(websocket) -> None:
+async def register(websocket: WsClient) -> None:
 
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
@@ -114,7 +115,7 @@ async def register(websocket) -> None:
         await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
 
 
-async def unregister(websocket) -> None:
+async def unregister(websocket: WsClient) -> None:
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
 

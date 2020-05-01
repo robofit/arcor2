@@ -5,7 +5,7 @@
 from typing import Dict, Set, Union, Optional
 import os
 
-from websockets.server import WebSocketServerProtocol
+from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
@@ -30,7 +30,7 @@ PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
 
-INTERFACES: Set[WebSocketServerProtocol] = set()
+INTERFACES: Set[WsClient] = set()
 
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 SERVICE_TYPES: ServiceTypeMetaDict = {}
@@ -45,3 +45,5 @@ ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / servi
 
 
 RUNNING_ACTION: Optional[str] = None
+
+ROBOT_JOINTS_REGISTERED_UIS: Dict[str, Set[WsClient]] = {}  # robot, UIs

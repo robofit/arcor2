@@ -7,6 +7,8 @@ from typing import Union, Dict, Any, Optional, Set
 import copy
 from contextlib import asynccontextmanager
 
+from websockets.server import WebSocketServerProtocol as WsClient
+
 from arcor2 import object_types_utils as otu, helpers as hlp
 from arcor2.data import rpc, events, common, object_type
 from arcor2 import aio_persistent_storage as storage
@@ -78,7 +80,7 @@ def unique_name(name: str, existing_names: Set[str]) -> None:
 
 @scene_needed
 @project_needed
-async def execute_action_cb(req: rpc.project.ExecuteActionRequest) -> \
+async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient) -> \
         Union[rpc.project.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -152,7 +154,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
     return pd
 
 
-async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
+async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -> \
         Union[rpc.project.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
 
     projects = await storage.get_projects()
@@ -168,7 +170,7 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest) -> \
 
 @scene_needed
 @project_needed
-async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsRequest) -> \
+async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsRequest, ui: WsClient) -> \
         Union[rpc.project.AddActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -188,7 +190,7 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
 @scene_needed
 @project_needed
-async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJointsRequest) -> \
+async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJointsRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -206,7 +208,7 @@ async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJoints
 
 @scene_needed
 @project_needed
-async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJointsRequest) -> \
+async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJointsRequest, ui: WsClient) -> \
         Union[rpc.project.RemoveActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
     """
     Removes joints from action point.
@@ -234,7 +236,7 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 
 @scene_needed
 @project_needed
-async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest) -> \
+async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: WsClient) -> \
         Union[rpc.project.RenameActionPointResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -258,7 +260,7 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest) -> \
 
 @scene_needed
 @project_needed
-async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest) -> \
+async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionPointParentResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -310,7 +312,7 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
 
 @scene_needed
 @project_needed
-async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest) -> \
+async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionPointPositionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -331,7 +333,7 @@ async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPosi
 
 @scene_needed
 @project_needed
-async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointUsingRobotRequest) -> \
+async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointUsingRobotRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionPointUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -360,7 +362,7 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
 
 @scene_needed
 @project_needed
-async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrientationRequest) -> \
+async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrientationRequest, ui: WsClient) -> \
         Union[rpc.project.AddActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
     """
     Adds orientation and joints to the action point.
@@ -384,7 +386,7 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
 
 @scene_needed
 @project_needed
-async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointOrientationRequest) -> \
+async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointOrientationRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionPointOrientationUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
     """
     Updates orientation of the action point.
@@ -404,7 +406,8 @@ async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointO
 
 @scene_needed
 @project_needed
-async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddActionPointOrientationUsingRobotRequest) -> \
+async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddActionPointOrientationUsingRobotRequest,
+                                                      ui: WsClient) -> \
         Union[rpc.project.AddActionPointOrientationUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
     """
     Adds orientation and joints to the action point.
@@ -434,7 +437,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
 @scene_needed
 @project_needed
 async def update_action_point_orientation_using_robot_cb(
-        req: rpc.project.UpdateActionPointOrientationUsingRobotRequest) -> \
+        req: rpc.project.UpdateActionPointOrientationUsingRobotRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionPointOrientationUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
     """
     Updates orientation and joint of the action point.
@@ -462,7 +465,7 @@ async def update_action_point_orientation_using_robot_cb(
 
 @scene_needed
 @project_needed
-async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointOrientationRequest) -> \
+async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointOrientationRequest, ui: WsClient) -> \
         Union[rpc.project.RemoveActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
     """
     Removes orientation.
@@ -486,7 +489,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     return None
 
 
-async def open_project_cb(req: rpc.project.OpenProjectRequest) -> \
+async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> \
         Union[rpc.project.OpenProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     # TODO validate using project_problems?
@@ -501,7 +504,7 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest) -> \
 
 @scene_needed
 @project_needed
-async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
+async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> \
         Union[rpc.project.SaveProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE and glob.PROJECT
@@ -512,7 +515,7 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest) -> \
 
 
 @no_project
-async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.project.NewProjectResponse,
+async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> Union[rpc.project.NewProjectResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
 
     unique_name(req.args.name, (await project_names()))
@@ -540,8 +543,9 @@ async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.projec
 
 @scene_needed
 @project_needed
-async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.project.CloseProjectResponse,
-                                                                          hlp.RPC_RETURN_TYPES]:
+async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -> \
+        Union[rpc.project.CloseProjectResponse, hlp.RPC_RETURN_TYPES]:
+
     assert glob.PROJECT
 
     if not req.args.force and glob.PROJECT.has_changes():
@@ -558,7 +562,7 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.pr
 
 @scene_needed
 @project_needed
-async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
+async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClient) -> \
         Union[rpc.project.AddActionPointResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
@@ -578,7 +582,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
 
 @scene_needed
 @project_needed
-async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest) -> \
+async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: WsClient) -> \
         Union[rpc.project.RemoveActionPointResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
@@ -637,7 +641,7 @@ def check_action_params(project: common.Project, action: common.Action, object_a
 
 @scene_needed
 @project_needed
-async def add_action_cb(req: rpc.project.AddActionRequest) -> \
+async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> \
         Union[rpc.project.AddActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
@@ -667,8 +671,8 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
 
 @scene_needed
 @project_needed
-async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.project.UpdateActionResponse,
-                                                                          hlp.RPC_RETURN_TYPES]:
+async def update_action_cb(req: rpc.project.UpdateActionRequest, ui: WsClient) -> \
+        Union[rpc.project.UpdateActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -705,8 +709,8 @@ def check_action_usage(action: common.Action) -> None:
 
 @scene_needed
 @project_needed
-async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.project.RemoveActionResponse,
-                                                                          hlp.RPC_RETURN_TYPES]:
+async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -> \
+        Union[rpc.project.RemoveActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -722,7 +726,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.pr
 
 @scene_needed
 @project_needed
-async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest) -> \
+async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateActionLogicResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
@@ -749,7 +753,7 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest) -> \
 
 
 @no_project
-async def delete_project_cb(req: rpc.project.DeleteProjectRequest) -> \
+async def delete_project_cb(req: rpc.project.DeleteProjectRequest, ui: WsClient) -> \
         Union[rpc.project.DeleteProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     project = await storage.get_project(req.args.id)
@@ -759,7 +763,7 @@ async def delete_project_cb(req: rpc.project.DeleteProjectRequest) -> \
     return None
 
 
-async def rename_project_cb(req: rpc.project.RenameProjectRequest) -> \
+async def rename_project_cb(req: rpc.project.RenameProjectRequest, ui: WsClient) -> \
         Union[rpc.project.RenameProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     unique_name(req.args.new_name, (await project_names()))
@@ -774,7 +778,7 @@ async def rename_project_cb(req: rpc.project.RenameProjectRequest) -> \
     return None
 
 
-async def copy_project_cb(req: rpc.project.CopyProjectRequest) -> \
+async def copy_project_cb(req: rpc.project.CopyProjectRequest, ui: WsClient) -> \
         Union[rpc.project.CopyProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     unique_name(req.args.target_name, (await project_names()))
@@ -788,7 +792,7 @@ async def copy_project_cb(req: rpc.project.CopyProjectRequest) -> \
     return None
 
 
-async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptionRequest) -> \
+async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptionRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateProjectDescriptionResponse, hlp.RPC_RETURN_TYPES]:
 
     async with managed_project(req.args.project_id) as project:
@@ -801,7 +805,7 @@ async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptio
     return None
 
 
-async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequest) -> \
+async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequest, ui: WsClient) -> \
         Union[rpc.project.UpdateProjectHasLogicResponse, hlp.RPC_RETURN_TYPES]:
 
     async with managed_project(req.args.project_id) as project:
@@ -824,7 +828,7 @@ async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequ
 
 
 @project_needed
-async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJointsRequest) -> \
+async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJointsRequest, ui: WsClient) -> \
         Union[rpc.project.RenameActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
@@ -839,7 +843,7 @@ async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJoints
 
 
 @project_needed
-async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointOrientationRequest) -> \
+async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointOrientationRequest, ui: WsClient) -> \
         Union[rpc.project.RenameActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
@@ -854,7 +858,7 @@ async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointO
 
 
 @project_needed
-async def rename_action_cb(req: rpc.project.RenameActionRequest) -> \
+async def rename_action_cb(req: rpc.project.RenameActionRequest, ui: WsClient) -> \
         Union[rpc.project.RenameActionResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.PROJECT
