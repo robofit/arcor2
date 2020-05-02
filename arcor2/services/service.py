@@ -1,5 +1,5 @@
 import abc
-from typing import Set
+from typing import FrozenSet
 from arcor2 import DynamicParamDict
 from arcor2.docstring import parse_docstring
 
@@ -23,5 +23,5 @@ class Service(metaclass=abc.ABCMeta):
         return parse_docstring(cls.__doc__)["short_description"]
 
     @staticmethod
-    def get_configuration_ids() -> Set[str]:
-        return set()
+    def get_configuration_ids() -> FrozenSet[str]:
+        return frozenset()

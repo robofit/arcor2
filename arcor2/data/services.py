@@ -1,4 +1,4 @@
-from typing import Set, Optional, Dict
+from typing import FrozenSet, Optional, Dict
 from dataclasses import dataclass, field
 
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -23,7 +23,7 @@ class ServiceTypeMeta(JsonSchemaMixin):
 
     type: str
     description: str = field(default_factory=str)
-    configuration_ids: Set[str] = field(default_factory=set)
+    configuration_ids: FrozenSet[str] = field(default_factory=frozenset)
     built_in: bool = False
     disabled: bool = False
     problem: Optional[str] = None
