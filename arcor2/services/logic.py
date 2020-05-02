@@ -1,4 +1,4 @@
-from typing import Set
+from typing import FrozenSet
 
 from arcor2.services import Service
 from arcor2.data.common import ActionMetadata
@@ -14,8 +14,8 @@ class LogicService(Service):
         super(LogicService, self).__init__(configuration_id)
 
     @staticmethod
-    def get_configuration_ids() -> Set[str]:
-        return {"default"}
+    def get_configuration_ids() -> FrozenSet[str]:
+        return frozenset({"default"})
 
     @action
     def equals(self, val1: int, val2: int) -> bool:
