@@ -515,8 +515,8 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> 
 
 
 @no_project
-async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> Union[rpc.project.NewProjectResponse,
-                                                                      hlp.RPC_RETURN_TYPES]:
+async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) ->\
+        Union[rpc.project.NewProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     unique_name(req.args.name, (await project_names()))
 

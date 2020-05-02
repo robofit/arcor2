@@ -42,8 +42,8 @@ def clean_up_after_focus(obj_id: str) -> None:
 
 @scene_needed
 @no_project
-async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: WsClient) -> Union[rpc.objects.FocusObjectStartResponse,
-                                                                                   hlp.RPC_RETURN_TYPES]:
+async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: WsClient) ->\
+        Union[rpc.objects.FocusObjectStartResponse, hlp.RPC_RETURN_TYPES]:
 
     obj_id = req.args.object_id
 
@@ -80,8 +80,8 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: Ws
 
 
 @no_project
-async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> Union[rpc.objects.FocusObjectResponse,
-                                                                        hlp.RPC_RETURN_TYPES]:
+async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) ->\
+        Union[rpc.objects.FocusObjectResponse, hlp.RPC_RETURN_TYPES]:
 
     obj_id = req.args.object_id
     pt_idx = req.args.point_idx
@@ -115,8 +115,8 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> 
 
 @scene_needed
 @no_project
-async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsClient) -> Union[rpc.objects.FocusObjectDoneResponse,
-                                                                                 hlp.RPC_RETURN_TYPES]:
+async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsClient) ->\
+        Union[rpc.objects.FocusObjectDoneResponse, hlp.RPC_RETURN_TYPES]:
 
     obj_id = req.args.id
 
@@ -169,8 +169,8 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
     return None
 
 
-async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient) -> Union[rpc.objects.NewObjectTypeResponse,
-                                                                             hlp.RPC_RETURN_TYPES]:
+async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient) ->\
+        Union[rpc.objects.NewObjectTypeResponse, hlp.RPC_RETURN_TYPES]:
 
     meta = req.args
 
@@ -211,8 +211,8 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
     return None
 
 
-async def get_object_actions_cb(req: rpc.objects.GetActionsRequest, ui: WsClient) -> Union[rpc.objects.GetActionsResponse,
-                                                                             hlp.RPC_RETURN_TYPES]:
+async def get_object_actions_cb(req: rpc.objects.GetActionsRequest, ui: WsClient) ->\
+        Union[rpc.objects.GetActionsResponse, hlp.RPC_RETURN_TYPES]:
 
     try:
         return rpc.objects.GetActionsResponse(data=glob.ACTIONS[req.args.type])

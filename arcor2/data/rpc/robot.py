@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.robot import RobotMeta
-from arcor2.data.common import Joint, Pose
+from arcor2.data.common import Joint, Pose, StrEnum
 from arcor2.data.rpc.common import Request, Response, wo_suffix
 
 
@@ -136,22 +136,29 @@ class GetSuctionsResponse(Response):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class RegisterEnum(StrEnum):
+
+    EEF_POSE: str = "eef_pose"
+    JOINTS: str = "joints"
+
+
 @dataclass
-class RegisterForJointsArgs(JsonSchemaMixin):
+class RegisterForRobotEventArgs(JsonSchemaMixin):
 
     robot_id: str
+    what: RegisterEnum
     send: bool
 
 
 @dataclass
-class RegisterForJointsRequest(Request):
+class RegisterForRobotEventRequest(Request):
 
-    args: RegisterForJointsArgs
+    args: RegisterForRobotEventArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class RegisterForJointsResponse(Response):
+class RegisterForRobotEventResponse(Response):
 
     data: Set[str] = field(default_factory=set)
-    response: str = field(default=RegisterForJointsRequest.request, init=False)
+    response: str = field(default=RegisterForRobotEventRequest.request, init=False)

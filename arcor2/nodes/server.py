@@ -20,7 +20,7 @@ import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
-from arcor2.data import events, common
+from arcor2.data import events
 from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -116,8 +116,16 @@ async def register(websocket: WsClient) -> None:
 
 
 async def unregister(websocket: WsClient) -> None:
+
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
+
+    for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
+    for registered_uis in glob.ROBOT_EEF_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
 
 
 async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.SystemInfoResponse,

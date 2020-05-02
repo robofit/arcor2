@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Dict, Set, Union, Optional
+from typing import Dict, Set, Union, Optional, DefaultDict
 import os
+from collections import defaultdict
 
 from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger import Logger  # type: ignore
@@ -46,4 +47,7 @@ ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / servi
 
 RUNNING_ACTION: Optional[str] = None
 
-ROBOT_JOINTS_REGISTERED_UIS: Dict[str, Set[WsClient]] = {}  # robot, UIs
+RegisteredUiDict = DefaultDict[str, Set[WsClient]]
+
+ROBOT_JOINTS_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs
+ROBOT_EEF_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs

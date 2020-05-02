@@ -55,8 +55,8 @@ async def managed_scene(scene_id: str, make_copy: bool = False):
 
 
 @no_scene
-async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> Union[rpc.scene.NewSceneResponse,
-                                                                hlp.RPC_RETURN_TYPES]:
+async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.NewSceneResponse, hlp.RPC_RETURN_TYPES]:
     """
     Creates and opens a new scene on the server. Fails if any scene is open or if scene id/name already exists.
     :param req:
@@ -76,8 +76,8 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> Union[rp
 
 @scene_needed
 @no_project
-async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> Union[rpc.scene.CloseSceneResponse,
-                                                                    hlp.RPC_RETURN_TYPES]:
+async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.CloseSceneResponse, hlp.RPC_RETURN_TYPES]:
     """
     Closes scene on the server.
     :param req:
@@ -97,8 +97,8 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> Unio
 
 @scene_needed
 @no_project
-async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> Union[rpc.scene.SaveSceneResponse,
-                                                                  hlp.RPC_RETURN_TYPES]:
+async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
     await storage.update_scene(glob.SCENE)
@@ -111,8 +111,8 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> Union[
 
 
 @no_project
-async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> Union[rpc.scene.OpenSceneResponse,
-                                                                  hlp.RPC_RETURN_TYPES]:
+async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.OpenSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     await open_scene(req.args.id)
     return None
