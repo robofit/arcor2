@@ -10,7 +10,7 @@ def meta_from_def(type_def: Type[Service], built_in: bool = False) -> ServiceTyp
 
     return ServiceTypeMeta(type_def.__name__,
                            type_def.description(),
-                           type_def.get_configuration_ids(),
+                           set(type_def.get_configuration_ids()),
                            built_in)
 
 
