@@ -1,4 +1,4 @@
-from typing import Set, Optional
+from typing import FrozenSet, Optional
 import time
 
 from arcor2.services import Service
@@ -16,8 +16,8 @@ class TimeService(Service):
         self._rate_start_time: Optional[float] = None
 
     @staticmethod
-    def get_configuration_ids() -> Set[str]:
-        return {"default"}
+    def get_configuration_ids() -> FrozenSet[str]:
+        return frozenset({"default"})
 
     @action
     def sleep(self, seconds: float = 1.0) -> None:
