@@ -1,5 +1,5 @@
 import abc
-from typing import Set, List
+from typing import List, FrozenSet
 
 from arcor2.services import Service
 from arcor2.data.common import Pose, Joint
@@ -32,7 +32,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_robot_ids(self) -> Set[str]:
+    def get_robot_ids(self) -> FrozenSet[str]:
         pass
 
     @abc.abstractmethod
@@ -43,7 +43,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_end_effectors_ids(self, robot_id: str) -> Set[str]:
+    def get_end_effectors_ids(self, robot_id: str) -> FrozenSet[str]:
         pass
 
     @abc.abstractmethod
@@ -58,11 +58,11 @@ class RobotService(Service, metaclass=abc.ABCMeta):
     def focus(self, mfa: MeshFocusAction) -> Pose:
         pass
 
-    def inputs(self, robot_id: str) -> Set[str]:
-        return set()
+    def inputs(self, robot_id: str) -> FrozenSet[str]:
+        return frozenset()
 
-    def outputs(self, robot_id: str) -> Set[str]:
-        return set()
+    def outputs(self, robot_id: str) -> FrozenSet[str]:
+        return frozenset()
 
     def get_input(self, robot_id: str, input_id: str) -> float:
         if input_id not in self.inputs(robot_id):
@@ -76,12 +76,12 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         return None
 
     @abc.abstractmethod
-    def grippers(self, robot_id: str) -> Set[str]:
-        return set()
+    def grippers(self, robot_id: str) -> FrozenSet[str]:
+        return frozenset()
 
     @abc.abstractmethod
-    def suctions(self, robot_id: str) -> Set[str]:
-        return set()
+    def suctions(self, robot_id: str) -> FrozenSet[str]:
+        return frozenset()
 
     @abc.abstractmethod
     def robot_joints(self, robot_id: str) -> List[Joint]:
