@@ -183,6 +183,9 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
     if not hlp.is_valid_type(meta.type):
         return False, "Object type invalid (should be CamelCase)."
 
+    if req.dry_run:
+        return None
+
     obj = meta.to_object_type()
     obj.source = new_object_type_source(glob.OBJECT_TYPES[meta.base], meta)
 
