@@ -223,5 +223,6 @@ async def get_object_actions_cb(req: rpc.objects.GetActionsRequest, ui: WsClient
         return False, f"Unknown object type: '{req.args.type}'."
 
 
-async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest) -> rpc.objects.GetObjectTypesResponse:
+async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest, ui: WsClient) ->\
+        rpc.objects.GetObjectTypesResponse:
     return rpc.objects.GetObjectTypesResponse(data=list(glob.OBJECT_TYPES.values()))
