@@ -12,6 +12,7 @@ from typing import Union, cast, get_type_hints
 import inspect
 
 import websockets
+from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
 
 import arcor2
@@ -90,12 +91,13 @@ async def _check_manager() -> None:
         await open_project(resp.data.id)
 
 
-async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,
-                                                                      hlp.RPC_RETURN_TYPES]:
+async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) ->\
+        Union[rpc.storage.ListMeshesResponse, hlp.RPC_RETURN_TYPES]:
+
     return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
-async def register(websocket) -> None:
+async def register(websocket: WsClient) -> None:
 
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
@@ -114,13 +116,21 @@ async def register(websocket) -> None:
         await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
 
 
-async def unregister(websocket) -> None:
+async def unregister(websocket: WsClient) -> None:
+
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
 
+    for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
+    for registered_uis in glob.ROBOT_EEF_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
 
-async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.SystemInfoResponse,
-                                                                     hlp.RPC_RETURN_TYPES]:
+
+async def system_info_cb(req: rpc.common.SystemInfoRequest, ui: WsClient) ->\
+        Union[rpc.common.SystemInfoResponse, hlp.RPC_RETURN_TYPES]:
 
     resp = rpc.common.SystemInfoResponse()
     resp.data.version = arcor2.version()

@@ -18,7 +18,7 @@ import websockets
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
-from websockets.server import WebSocketServerProtocol
+from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2
 from arcor2.data import rpc
@@ -116,8 +116,8 @@ async def read_proc_stdout() -> None:
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-async def project_run(req: rpc.execution.RunProjectRequest) -> Union[rpc.execution.RunProjectResponse,
-                                                                     RPC_RETURN_TYPES]:
+async def project_run(req: rpc.execution.RunProjectRequest, ui: WsClient) -> \
+        Union[rpc.execution.RunProjectResponse, RPC_RETURN_TYPES]:
 
     global PROCESS
     global TASK
@@ -150,8 +150,8 @@ async def project_run(req: rpc.execution.RunProjectRequest) -> Union[rpc.executi
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
-async def project_stop(req: rpc.execution.StopProjectRequest) -> Union[rpc.execution.StopProjectResponse,
-                                                                       RPC_RETURN_TYPES]:
+async def project_stop(req: rpc.execution.StopProjectRequest, ui: WsClient) ->\
+        Union[rpc.execution.StopProjectResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -165,8 +165,8 @@ async def project_stop(req: rpc.execution.StopProjectRequest) -> Union[rpc.execu
     await asyncio.wait([TASK])
 
 
-async def project_pause(req: rpc.execution.PauseProjectRequest) -> Union[rpc.execution.PauseProjectResponse,
-                                                                         RPC_RETURN_TYPES]:
+async def project_pause(req: rpc.execution.PauseProjectRequest, ui: WsClient) ->\
+        Union[rpc.execution.PauseProjectResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -182,8 +182,8 @@ async def project_pause(req: rpc.execution.PauseProjectRequest) -> Union[rpc.exe
     return None
 
 
-async def project_resume(req: rpc.execution.ResumeProjectRequest) -> Union[rpc.execution.ResumeProjectResponse,
-                                                                           RPC_RETURN_TYPES]:
+async def project_resume(req: rpc.execution.ResumeProjectRequest, ui: WsClient) -> \
+        Union[rpc.execution.ResumeProjectResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -198,8 +198,8 @@ async def project_resume(req: rpc.execution.ResumeProjectRequest) -> Union[rpc.e
     return None
 
 
-async def project_state_cb(req: rpc.execution.ProjectStateRequest) -> Union[rpc.execution.ProjectStateResponse,
-                                                                            RPC_RETURN_TYPES]:
+async def project_state_cb(req: rpc.execution.ProjectStateRequest, ui: WsClient) ->\
+        Union[rpc.execution.ProjectStateResponse, RPC_RETURN_TYPES]:
 
     resp = rpc.execution.ProjectStateResponse()
     resp.data.project = PROJECT_EVENT.data
@@ -211,8 +211,8 @@ async def project_state_cb(req: rpc.execution.ProjectStateRequest) -> Union[rpc.
     return resp
 
 
-async def _upload_package_cb(req: rpc.execution.UploadPackageRequest) -> Union[rpc.execution.UploadPackageResponse,
-                                                                               RPC_RETURN_TYPES]:
+async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.UploadPackageResponse, RPC_RETURN_TYPES]:
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
 
@@ -248,8 +248,8 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest) -> Union[r
     return None
 
 
-async def list_packages_cb(req: rpc.execution.ListPackagesRequest) -> Union[rpc.execution.ListPackagesResponse,
-                                                                            RPC_RETURN_TYPES]:
+async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient) ->\
+        Union[rpc.execution.ListPackagesResponse, RPC_RETURN_TYPES]:
 
     resp = rpc.execution.ListPackagesResponse()
 
@@ -278,8 +278,8 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest) -> Union[rpc.
     return resp
 
 
-async def delete_package_cb(req: rpc.execution.DeletePackageRequest) -> Union[rpc.execution.DeletePackageResponse,
-                                                                              RPC_RETURN_TYPES]:
+async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) -> \
+        Union[rpc.execution.DeletePackageResponse, RPC_RETURN_TYPES]:
 
     if PROJECT_ID and PROJECT_ID == req.args.id:
         return False, "Package is being executed."
@@ -301,14 +301,14 @@ async def send_to_clients(event: Event) -> None:
         await asyncio.wait([client.send(data) for client in CLIENTS])
 
 
-async def register(websocket: WebSocketServerProtocol) -> None:
+async def register(websocket: WsClient) -> None:
 
     await logger.info("Registering new client")
     CLIENTS.add(websocket)
     # TODO send current state
 
 
-async def unregister(websocket: WebSocketServerProtocol) -> None:
+async def unregister(websocket: WsClient) -> None:
     await logger.info("Unregistering client")
     CLIENTS.remove(websocket)
 

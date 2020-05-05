@@ -208,3 +208,45 @@ class ObjectTypesChangedEvent(Event):
 
     data: List[str] = field(default_factory=list)  # changed object types
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+"""
+------------------------------------------------------------------------------------------------------------------------
+Robots
+------------------------------------------------------------------------------------------------------------------------
+"""
+
+
+@dataclass
+class RobotJointsData(JsonSchemaMixin):
+
+    robot_id: str
+    joints: List[common.Joint]
+
+
+@dataclass
+class RobotJointsEvent(Event):
+
+    data: Optional[RobotJointsData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class EefPose(JsonSchemaMixin):
+
+    end_effector_id: str
+    pose: common.Pose
+
+
+@dataclass
+class RobotEefData(JsonSchemaMixin):
+
+    robot_id: str
+    end_effectors: List[EefPose] = field(default_factory=list)
+
+
+@dataclass
+class RobotEefEvent(Event):
+
+    data: Optional[RobotEefData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821

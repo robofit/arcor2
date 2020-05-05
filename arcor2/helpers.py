@@ -133,6 +133,7 @@ async def server(client: Any,
     ignored_reqs: Set[str] = set()
 
     await register(client)
+
     try:
         async for message in client:
 
@@ -166,7 +167,7 @@ async def server(client: Any,
                     continue
 
                 try:
-                    resp = await rpc_dict[req_cls](req)
+                    resp = await rpc_dict[req_cls](req, client)
                 except Arcor2Exception as e:
                     await logger.debug(e, exc_info=True)
                     resp = False, str(e)
