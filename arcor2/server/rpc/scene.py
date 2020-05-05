@@ -68,6 +68,9 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
         if req.args.name == scene_id.name:
             return False, "Name already used."
 
+    if req.dry_run:
+        return None
+
     glob.SCENE = common.Scene(common.uid(), req.args.name, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
     return None
@@ -87,6 +90,9 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
 
     if not req.args.force and glob.SCENE.has_changes():
         return False, "Scene has unsaved changes."
+
+    if req.dry_run:
+        return None
 
     await clear_scene()
     OBJECTS_WITH_UPDATED_POSE.clear()
@@ -133,10 +139,10 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
 
     obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose)
 
-    res, msg = await add_object_to_scene(obj)
+    await add_object_to_scene(obj, dry_run=req.dry_run)
 
-    if not res:
-        return res, msg
+    if req.dry_run:
+        return None
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, data=obj)))
@@ -150,10 +156,10 @@ async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest
     assert glob.SCENE
 
     obj = req.args
-    res, msg = await auto_add_object_to_scene(obj.type)
+    await auto_add_object_to_scene(obj.type, req.dry_run)
 
-    if not res:
-        return res, msg
+    if req.dry_run:
+        return None
 
     glob.SCENE.update_modified()
     return None
@@ -167,10 +173,10 @@ async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest) ->\
     assert glob.SCENE
 
     srv = req.args
-    res, msg = await add_service_to_scene(srv)
+    await add_service_to_scene(srv, req.dry_run)
 
-    if not res:
-        return res, msg
+    if req.dry_run:
+        return None
 
     glob.SCENE.services.append(srv)
     glob.SCENE.update_modified()
@@ -254,6 +260,9 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
 
     if not req.args.force and {proj.name async for proj in projects_using_object(glob.SCENE.id, req.args.id)}:
         return False, "Can't remove object/service that is used in project(s)."
+
+    if req.dry_run:
+        return None
 
     if req.args.id in glob.SCENE_OBJECT_INSTANCES:
 
@@ -384,6 +393,9 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
         if obj_name == req.args.new_name:
             return False, f"Object name already exists."
 
+    if req.dry_run:
+        return None
+
     target_obj.name = req.args.new_name
 
     glob.SCENE.update_modified()
@@ -393,6 +405,8 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
 
 async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
         Union[rpc.scene.RenameSceneResponse, hlp.RPC_RETURN_TYPES]:
+
+    # TODO unique_name(req.args.new_name, (await scene_names()))
 
     async with managed_scene(req.args.id) as scene:
         scene.name = req.args.new_name
@@ -412,6 +426,9 @@ async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
         resp.messages = ["Scene has associated projects."]
         resp.data = assoc_projects
         return resp
+
+    if req.dry_run:
+        return None
 
     scene = await storage.get_scene(req.args.id)
     await storage.delete_scene(req.args.id)
@@ -452,6 +469,9 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
         if req.args.type in glob.OBJECT_TYPES[obj.type].needs_services:
             return False, f"Object {obj.name} ({obj.type}) relies on the service to be removed: {req.args.type}."
 
+    if req.dry_run:
+        return None
+
     # TODO destroy current instance
     glob.SERVICES_INSTANCES[req.args.type] = await hlp.run_in_executor(glob.TYPE_DEF_DICT[req.args.type],
                                                                        req.args.new_configuration)
@@ -466,6 +486,7 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
 async def copy_scene_cb(req: rpc.scene.CopySceneRequest) -> \
         Union[rpc.scene.CopySceneResponse, hlp.RPC_RETURN_TYPES]:
 
+    # TODO check if target_name is unique
     async with managed_scene(req.args.source_id, make_copy=True) as scene:
         scene.name = req.args.target_name
         asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
