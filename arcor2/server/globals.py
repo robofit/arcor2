@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Dict, Set, Union, Optional
+from typing import Dict, Set, Union, Optional, DefaultDict
 import os
+from collections import defaultdict
 
-from websockets.server import WebSocketServerProtocol
+from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
@@ -31,7 +32,7 @@ PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 SCENE: Union[Scene, None] = None
 PROJECT: Union[Project, None] = None
 
-INTERFACES: Set[WebSocketServerProtocol] = set()
+INTERFACES: Set[WsClient] = set()
 
 OBJECT_TYPES: ObjectTypeMetaDict = {}
 SERVICE_TYPES: ServiceTypeMetaDict = {}
@@ -51,3 +52,8 @@ PACKAGE_INFO: Optional[PackageInfo] = None
 ACTION_STATE: Optional[ActionState] = None
 CURRENT_ACTION: Optional[CurrentAction] = None
 SCENE_COLLISIONS: Optional[events.SceneCollisionsData] = None
+
+RegisteredUiDict = DefaultDict[str, Set[WsClient]]
+
+ROBOT_JOINTS_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs
+ROBOT_EEF_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs

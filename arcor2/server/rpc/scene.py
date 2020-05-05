@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 import copy
 
 import quaternion  # type: ignore
+from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
 from arcor2.data import rpc, events
@@ -54,8 +55,8 @@ async def managed_scene(scene_id: str, make_copy: bool = False):
 
 
 @no_scene
-async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSceneResponse,
-                                                                hlp.RPC_RETURN_TYPES]:
+async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.NewSceneResponse, hlp.RPC_RETURN_TYPES]:
     """
     Creates and opens a new scene on the server. Fails if any scene is open or if scene id/name already exists.
     :param req:
@@ -81,8 +82,8 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest) -> Union[rpc.scene.NewSce
 
 @scene_needed
 @no_project
-async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.CloseSceneResponse,
-                                                                    hlp.RPC_RETURN_TYPES]:
+async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.CloseSceneResponse, hlp.RPC_RETURN_TYPES]:
     """
     Closes scene on the server.
     :param req:
@@ -105,8 +106,8 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest) -> Union[rpc.scene.Cl
 
 @scene_needed
 @no_project
-async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.SaveSceneResponse,
-                                                                  hlp.RPC_RETURN_TYPES]:
+async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
     await storage.update_scene(glob.SCENE)
@@ -119,8 +120,8 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest) -> Union[rpc.scene.Save
 
 
 @no_project
-async def open_scene_cb(req: rpc.scene.OpenSceneRequest) -> Union[rpc.scene.OpenSceneResponse,
-                                                                  hlp.RPC_RETURN_TYPES]:
+async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) ->\
+        Union[rpc.scene.OpenSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
         return False, "Can't open scene while package runs."
@@ -129,7 +130,7 @@ async def open_scene_cb(req: rpc.scene.OpenSceneRequest) -> Union[rpc.scene.Open
     return None
 
 
-async def list_scenes_cb(req: rpc.scene.ListScenesRequest) -> \
+async def list_scenes_cb(req: rpc.scene.ListScenesRequest, ui: WsClient) -> \
         Union[rpc.scene.ListScenesResponse, hlp.RPC_RETURN_TYPES]:
 
     scenes = await storage.get_scenes()
@@ -138,7 +139,7 @@ async def list_scenes_cb(req: rpc.scene.ListScenesRequest) -> \
 
 @scene_needed
 @no_project
-async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
+async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest, ui: WsClient) -> \
         Union[rpc.scene.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -157,7 +158,7 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest) -> \
 
 @scene_needed
 @no_project
-async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest) -> \
+async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest, ui: WsClient) -> \
         Union[rpc.scene.AutoAddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
     assert glob.SCENE
 
@@ -173,7 +174,7 @@ async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest
 
 @scene_needed
 @no_project
-async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest) ->\
+async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest, ui: WsClient) ->\
         Union[rpc.scene.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -191,7 +192,7 @@ async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest) ->\
 
 
 @scene_needed
-async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest) -> \
+async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, ui: WsClient) -> \
         Union[rpc.scene.SceneObjectUsageResponse, hlp.RPC_RETURN_TYPES]:
     """
     Works for both services and objects.
@@ -215,7 +216,7 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest) 
 
 # TODO move to objects
 @scene_needed
-async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
+async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: WsClient) -> \
         Union[rpc.objects.ActionParamValuesResponse, hlp.RPC_RETURN_TYPES]:
 
     inst: Union[None, Service, Generic] = None
@@ -259,7 +260,7 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest) -> \
 
 @scene_needed
 @no_project
-async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
+async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClient) -> \
         Union[rpc.scene.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -303,7 +304,7 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest) -> \
 
 @scene_needed
 @no_project
-async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsingRobotRequest) -> \
+async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsingRobotRequest, ui: WsClient) -> \
         Union[rpc.objects.UpdateObjectPoseUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
     """
     Updates object's pose using a pose of the robot's end effector.
@@ -367,7 +368,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
 @scene_needed
 @no_project
-async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
+async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest, ui: WsClient) -> \
         Union[rpc.scene.UpdateObjectPoseResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -388,7 +389,7 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest) -> \
 
 @scene_needed
 @no_project
-async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
+async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> \
         Union[rpc.scene.RenameObjectResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -409,7 +410,7 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
     return None
 
 
-async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
+async def rename_scene_cb(req: rpc.scene.RenameSceneRequest, ui: WsClient) -> \
         Union[rpc.scene.RenameSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     # TODO unique_name(req.args.new_name, (await scene_names()))
@@ -422,7 +423,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest) -> \
 
 
 @no_scene
-async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
+async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest, ui: WsClient) -> \
         Union[rpc.scene.DeleteSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     assoc_projects = await associated_projects(req.args.id)
@@ -443,7 +444,7 @@ async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest) -> \
     return None
 
 
-async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest) -> \
+async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest, ui: WsClient) -> \
         Union[rpc.scene.ProjectsWithSceneResponse, hlp.RPC_RETURN_TYPES]:
 
     resp = rpc.scene.ProjectsWithSceneResponse()
@@ -451,7 +452,7 @@ async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest) -> \
     return resp
 
 
-async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionRequest) -> \
+async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionRequest, ui: WsClient) -> \
         Union[rpc.scene.UpdateSceneDescriptionResponse, hlp.RPC_RETURN_TYPES]:
 
     async with managed_scene(req.args.scene_id) as scene:
@@ -463,7 +464,7 @@ async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionReque
 
 
 @scene_needed
-async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurationRequest) -> \
+async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurationRequest, ui: WsClient) -> \
         Union[rpc.scene.UpdateServiceConfigurationResponse, hlp.RPC_RETURN_TYPES]:
 
     assert glob.SCENE
@@ -489,7 +490,7 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
     return None
 
 
-async def copy_scene_cb(req: rpc.scene.CopySceneRequest) -> \
+async def copy_scene_cb(req: rpc.scene.CopySceneRequest, ui: WsClient) -> \
         Union[rpc.scene.CopySceneResponse, hlp.RPC_RETURN_TYPES]:
 
     # TODO check if target_name is unique

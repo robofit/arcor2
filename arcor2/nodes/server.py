@@ -11,6 +11,7 @@ from typing import Union, get_type_hints, List, Awaitable
 import inspect
 
 import websockets
+from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
@@ -102,12 +103,12 @@ async def _initialize_server() -> None:
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
-async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,
+async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) -> Union[rpc.storage.ListMeshesResponse,
                                                                       hlp.RPC_RETURN_TYPES]:
     return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
-async def register(websocket) -> None:
+async def register(websocket: WsClient) -> None:
 
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
@@ -130,12 +131,18 @@ async def register(websocket) -> None:
     await asyncio.gather(*tasks)
 
 
-async def unregister(websocket) -> None:
+async def unregister(websocket: WsClient) -> None:
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
 
+    for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
+    for registered_uis in glob.ROBOT_EEF_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
 
-async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.SystemInfoResponse,
+async def system_info_cb(req: rpc.common.SystemInfoRequest, ui: WsClient) -> Union[rpc.common.SystemInfoResponse,
                                                                      hlp.RPC_RETURN_TYPES]:
 
     resp = rpc.common.SystemInfoResponse()
