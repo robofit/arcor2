@@ -1,7 +1,8 @@
 import asyncio
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, Optional
 
 import websockets
+from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import rpc
 
@@ -19,7 +20,7 @@ MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
 MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 
-async def manager_request(req: rpc.common.Request) -> rpc.common.Response:
+async def manager_request(req: rpc.common.Request, ui: Optional[WsClient] = None) -> rpc.common.Response:
 
     assert req.id not in MANAGER_RPC_RESPONSES
 
