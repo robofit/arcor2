@@ -177,6 +177,9 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
     unique_name(req.args.name, ap.joints_names())
 
+    if req.dry_run:
+        return None
+
     new_joints = await get_robot_joints(req.args.robot_id)
 
     prj = common.ProjectRobotJoints(common.uid(), req.args.name, req.args.robot_id, new_joints, True)
@@ -248,6 +251,10 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest) -> \
         return False, "Name has to be valid Python identifier."
 
     unique_name(req.args.new_name, glob.PROJECT.action_points_names)
+
+    if req.dry_run:
+        return None
+
     ap.name = req.args.new_name
 
     glob.PROJECT.update_modified()
@@ -373,6 +380,10 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
     unique_name(req.args.name, ap.orientation_names())
+
+    if req.dry_run:
+        return None
+
     orientation = common.NamedOrientation(common.uid(), req.args.name, req.args.orientation)
     ap.orientations.append(orientation)
 
@@ -416,6 +427,10 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
     unique_name(req.args.name, ap.orientation_names())
+
+    if req.dry_run:
+        return None
+
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
@@ -479,6 +494,9 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
             if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, req.args.orientation_id):
                 return False, f"Orientation used in action {act.name} (parameter {param.id})."
 
+    if req.dry_run:
+        return None
+
     ap.orientations = [ori for ori in ap.orientations if ori.id != req.args.orientation_id]
 
     glob.PROJECT.update_modified()
@@ -523,6 +541,9 @@ async def new_project_cb(req: rpc.project.NewProjectRequest) -> Union[rpc.projec
 
     unique_name(req.args.name, (await project_names()))
 
+    if req.dry_run:
+        return None
+
     if glob.SCENE:
         if glob.SCENE.id != req.args.scene_id:
             return False, "Another scene is opened."
@@ -553,6 +574,9 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest) -> Union[rpc.pr
     if not req.args.force and glob.PROJECT.has_changes():
         return False, "Project has unsaved changes."
 
+    if req.dry_run:
+        return None
+
     glob.PROJECT = None
     asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE)))
 
@@ -573,6 +597,9 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest) -> \
 
     if not hlp.is_valid_identifier(req.args.name):
         return False, "Name has to be valid Python identifier."
+
+    if req.dry_run:
+        return None
 
     ap = common.ProjectActionPoint(common.uid(), req.args.name, req.args.position, req.args.parent)
     glob.PROJECT.action_points.append(ap)
@@ -603,6 +630,9 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest) -> \
                     return False, f"Orientation {ori.name} used in action {act.name} (parameter {param.id})."
 
             # TODO some hypothetical parameter type could use just bare ActionPoint (its position)
+
+    if req.dry_run:
+        return None
 
     glob.PROJECT.action_points = [acp for acp in glob.PROJECT.action_points if acp.id != req.args.id]
     glob.PROJECT.update_modified()
@@ -664,6 +694,9 @@ async def add_action_cb(req: rpc.project.AddActionRequest) -> \
 
     check_action_params(updated_project, new_action, find_object_action(new_action))
 
+    if req.dry_run:
+        return None
+
     ap.actions.append(new_action)
 
     glob.PROJECT.update_modified()
@@ -685,6 +718,9 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest) -> Union[rpc.pr
     updated_action.parameters = req.args.parameters
 
     check_action_params(updated_project, updated_action, find_object_action(updated_action))
+
+    if req.dry_run:
+        return None
 
     orig_action = glob.PROJECT.action(req.args.action_id)
     orig_action.parameters = updated_action.parameters
@@ -719,6 +755,10 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest) -> Union[rpc.pr
 
     ap, action = glob.PROJECT.action_point_and_action(req.args.id)
     check_action_usage(action)
+
+    if req.dry_run:
+        return None
+
     ap.actions = [act for act in ap.actions if act.id != req.args.id]
 
     glob.PROJECT.update_modified()
@@ -770,6 +810,9 @@ async def rename_project_cb(req: rpc.project.RenameProjectRequest) -> \
 
     unique_name(req.args.new_name, (await project_names()))
 
+    if req.dry_run:
+        return None
+
     async with managed_project(req.args.project_id) as project:
 
         project.name = req.args.new_name
@@ -784,6 +827,9 @@ async def copy_project_cb(req: rpc.project.CopyProjectRequest) -> \
         Union[rpc.project.CopyProjectResponse, hlp.RPC_RETURN_TYPES]:
 
     unique_name(req.args.target_name, (await project_names()))
+
+    if req.dry_run:
+        return None
 
     async with managed_project(req.args.source_id, make_copy=True) as project:
 
@@ -837,6 +883,10 @@ async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJoints
 
     ap, joints = glob.PROJECT.ap_and_joints(req.args.joints_id)
     unique_name(req.args.new_name, ap.joints_names())
+
+    if req.dry_run:
+        return None
+
     joints.name = req.args.new_name
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE_BASE, data=joints)))
@@ -852,6 +902,10 @@ async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointO
 
     ap, ori = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
     unique_name(req.args.new_name, ap.orientation_names())
+
+    if req.dry_run:
+        return None
+
     ori.name = req.args.new_name
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.UPDATE_BASE, data=ori)))
@@ -866,6 +920,10 @@ async def rename_action_cb(req: rpc.project.RenameActionRequest) -> \
     assert glob.PROJECT
 
     unique_name(req.args.new_name, glob.PROJECT.action_user_names())
+
+    if req.dry_run:
+        return None
+
     act = glob.PROJECT.action(req.args.action_id)
     act.name = req.args.new_name
 

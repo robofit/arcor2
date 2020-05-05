@@ -39,6 +39,7 @@ class SceneObjectUsageResponse(Response):
 class AutoAddObjectToSceneRequest(Request):
 
     args: TypeArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -62,6 +63,7 @@ class AddObjectToSceneRequestArgs(JsonSchemaMixin):
 class AddObjectToSceneRequest(Request):
 
     args: AddObjectToSceneRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -77,6 +79,7 @@ class AddObjectToSceneResponse(Response):
 class AddServiceToSceneRequest(Request):
 
     args: SceneService
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -98,6 +101,7 @@ class RemoveFromSceneArgs(IdArgs):
 class RemoveFromSceneRequest(Request):
 
     args: RemoveFromSceneArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -167,6 +171,7 @@ class NewSceneRequestArgs(JsonSchemaMixin):
 class NewSceneRequest(Request):
 
     args: NewSceneRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -188,6 +193,7 @@ class CloseSceneRequestArgs(JsonSchemaMixin):
 class CloseSceneRequest(Request):
 
     args: CloseSceneRequestArgs = field(default_factory=CloseSceneRequestArgs)
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -225,6 +231,7 @@ class UpdateObjectPoseResponse(Response):
 class RenameObjectRequest(Request):
 
     args: RenameArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -241,6 +248,7 @@ class RenameObjectResponse(Response):
 class RenameSceneRequest(Request):
 
     args: RenameArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -256,6 +264,7 @@ class RenameSceneResponse(Response):
 class DeleteSceneRequest(Request):
 
     args: IdArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -317,6 +326,7 @@ class UpdateServiceConfigurationArgs(JsonSchemaMixin):
 class UpdateServiceConfigurationRequest(Request):
 
     args: UpdateServiceConfigurationArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
