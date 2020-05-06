@@ -21,12 +21,13 @@ from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2
+from arcor2.exceptions import Arcor2Exception
 from arcor2.data import rpc
 from arcor2.data.common import PackageState, PackageStateEnum, Project
 from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
     SceneCollisionsEvent
 from arcor2.data.helpers import EVENT_MAPPING
-from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
+from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, server
 from arcor2.settings import PROJECT_PATH
 from arcor2.source.utils import make_executable
 
@@ -120,45 +121,43 @@ async def read_proc_stdout() -> None:
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) ->\
-        Union[rpc.execution.RunPackageResponse, RPC_RETURN_TYPES]:
+async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> None:
 
     global PROCESS
     global TASK
 
     if process_running():
-        return False, "Already running!"
+        raise Arcor2Exception("Already running!")
 
     package_path = os.path.join(PROJECT_PATH, req.args.id)
 
     try:
         os.chdir(package_path)
     except FileNotFoundError:
-        return False, "Not found."
+        raise Arcor2Exception("Not found.")
 
     script_path = os.path.join(package_path, MAIN_SCRIPT_NAME)
 
     try:
         make_executable(script_path)
     except FileNotFoundError:
-        return False, "Not an execution package."
+        raise Arcor2Exception("Not an execution package.")
 
     await logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(script_path, stdin=asyncio.subprocess.PIPE,
                                                    stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is not None:
-        return False, "Failed to start project."
+        raise Arcor2Exception("Failed to start project.")
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
-async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) ->\
-        Union[rpc.execution.StopPackageResponse, RPC_RETURN_TYPES]:
+async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -> None:
 
     global SCENE_COLLISION_EVENT
 
     if not process_running():
-        return False, "Project not running."
+        raise Arcor2Exception("Project not running.")
 
     assert PROCESS is not None
     assert TASK is not None
@@ -171,33 +170,31 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -
     SCENE_COLLISION_EVENT = None
 
 
-async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient) ->\
-        Union[rpc.execution.PausePackageResponse, RPC_RETURN_TYPES]:
+async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient) -> None:
 
     if not process_running():
-        return False, "Project not running."
+        raise Arcor2Exception("Project not running.")
 
     assert PROCESS is not None
     assert PROCESS.stdin is not None
 
     if PROJECT_EVENT.data.state != PackageStateEnum.RUNNING:
-        return False, "Cannot pause."
+        raise Arcor2Exception("Cannot pause.")
 
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
     return None
 
 
-async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClient) ->\
-        Union[rpc.execution.ResumePackageResponse, RPC_RETURN_TYPES]:
+async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClient) -> None:
 
     if not process_running():
-        return False, "Project not running."
+        raise Arcor2Exception("Project not running.")
 
     assert PROCESS is not None and PROCESS.stdin is not None
 
     if PROJECT_EVENT.data.state != PackageStateEnum.PAUSED:
-        return False, "Cannot resume."
+        raise Arcor2Exception("Cannot resume.")
 
     PROCESS.stdin.write("r\n".encode())
     await PROCESS.stdin.drain()
@@ -205,7 +202,7 @@ async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClien
 
 
 async def package_state_cb(req: rpc.execution.PackageStateRequest, ui: WsClient) ->\
-        Union[rpc.execution.PackageStateResponse, RPC_RETURN_TYPES]:
+        rpc.execution.PackageStateResponse:
 
     resp = rpc.execution.PackageStateResponse()
     resp.data.project = PROJECT_EVENT.data
@@ -216,8 +213,7 @@ async def package_state_cb(req: rpc.execution.PackageStateRequest, ui: WsClient)
     return resp
 
 
-async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClient) ->\
-        Union[rpc.execution.UploadPackageResponse, RPC_RETURN_TYPES]:
+async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClient) -> None:
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
 
@@ -238,7 +234,7 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClie
                 zip_ref.extractall(tmpdirname)
         except zipfile.BadZipFile as e:
             await logger.error(e)
-            return False, "Invalid zip file."
+            raise Arcor2Exception("Invalid zip file.")
 
         os.remove(zip_path)
 
@@ -254,7 +250,7 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClie
 
 
 async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient) ->\
-        Union[rpc.execution.ListPackagesResponse, RPC_RETURN_TYPES]:
+        rpc.execution.ListPackagesResponse:
 
     resp = rpc.execution.ListPackagesResponse()
 
@@ -284,18 +280,17 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient)
     return resp
 
 
-async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) ->\
-        Union[rpc.execution.DeletePackageResponse, RPC_RETURN_TYPES]:
+async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) -> None:
 
     if PACKAGE_INFO.data and PACKAGE_INFO.data.package_id == req.args.id:
-        return False, "Package is being executed."
+        raise Arcor2Exception("Package is being executed.")
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
 
     try:
         shutil.rmtree(target_path)
     except FileNotFoundError:
-        return False, "Not found."
+        raise Arcor2Exception("Not found.")
 
     return None
 

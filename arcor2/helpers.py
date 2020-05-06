@@ -1,7 +1,7 @@
 import traceback
 import time
 import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, TypeVar, Set
+from typing import Optional, Dict, Callable, Tuple, Type, Any, Awaitable, TypeVar, Set
 from types import ModuleType
 import json
 import asyncio
@@ -23,8 +23,6 @@ from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data.common import Pose, Position, Orientation
 
-
-RPC_RETURN_TYPES = Union[None, Tuple[bool, str]]
 
 # TODO what's wrong with following type?
 # RPC_DICT_TYPE = Dict[Type[Request], Callable[[Request], Coroutine[Any, Any, Union[Response, RPC_RETURN_TYPES]]]]
@@ -170,7 +168,7 @@ async def server(client: Any,
                     resp = await rpc_dict[req_cls](req, client)
                 except Arcor2Exception as e:
                     await logger.debug(e, exc_info=True)
-                    resp = False, str(e)
+                    resp = False, e.message
 
                 if resp is None:  # default response
                     resp = resp_cls()
