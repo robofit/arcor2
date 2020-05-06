@@ -190,7 +190,7 @@ def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Para
         params = {}
 
     try:
-        resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params)
+        resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params, allow_redirects=True)
     except requests.exceptions.RequestException as e:
         raise RestException(f"Catastrophic system error.", str(e)) from e
 
@@ -269,15 +269,9 @@ def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, par
         raise RestException("Invalid data.", str(e)) from e
 
 
-def download(url: str, path: str) -> None:
+def download(url: str, path: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> None:
     # TODO check content type
 
-    try:
-        r = SESSION.get(url, allow_redirects=True)
-    except requests.exceptions.RequestException as e:
-        raise RestException("Download of file failed.", str(e)) from e
-
-    handle_response(r)
-
+    r = _get_response(url, body, params)
     with open(path, 'wb') as file:
         file.write(r.content)

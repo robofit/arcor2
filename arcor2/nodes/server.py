@@ -7,28 +7,27 @@ import asyncio
 import functools
 import json
 import sys
-import uuid
-from typing import Union, cast, get_type_hints
+from typing import Union, get_type_hints, List, Awaitable
 import inspect
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
+from dataclasses_jsonschema import ValidationError
 
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
-from arcor2.data import events
+from arcor2.data import events, common
 from arcor2.data import rpc
-from arcor2.data.helpers import RPC_MAPPING
+from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
 
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
 from arcor2.server import execution as exe, notifications as notif, rpc as srpc
-from arcor2.server.project import open_project
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -43,7 +42,35 @@ async def handle_manager_incoming_messages(manager_client):
             msg = json.loads(message)
 
             if "event" in msg and glob.INTERFACES:
+
                 await asyncio.wait([intf.send(message) for intf in glob.INTERFACES])
+
+                try:
+                    evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
+                except ValidationError as e:
+                    await glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
+                    continue
+
+                if isinstance(evt, events.PackageInfoEvent):
+                    glob.PACKAGE_INFO = evt.data
+                elif isinstance(evt, events.PackageStateEvent):
+                    glob.PACKAGE_STATE = evt.data
+
+                    if evt.data.state == common.PackageStateEnum.STOPPED:
+                        glob.CURRENT_ACTION = None
+                        glob.ACTION_STATE = None
+                        glob.SCENE_COLLISIONS = None
+                        glob.PACKAGE_INFO = None
+
+                elif isinstance(evt, events.ActionStateEvent):
+                    glob.ACTION_STATE = evt.data
+                elif isinstance(evt, events.CurrentActionEvent):
+                    glob.CURRENT_ACTION = evt.data
+                elif isinstance(evt, events.SceneCollisionsEvent):
+                    glob.SCENE_COLLISIONS = evt.data
+                else:
+                    await glob.logger.warn(f"Unhandled type of event from Execution: {evt.event}")
+
             elif "response" in msg:
 
                 # TODO handle potential errors
@@ -67,8 +94,7 @@ async def _initialize_server() -> None:
     # this has to be done sequentially as objects might depend on services so (all) services has to be known first
     await osa.get_service_types()
     await osa.get_object_types()
-
-    await asyncio.wait([osa.get_object_actions(), _check_manager()])
+    await osa.get_object_actions()
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=glob.VERBOSE)
@@ -77,23 +103,8 @@ async def _initialize_server() -> None:
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
-async def _check_manager() -> None:
-    """
-    Loads project if it is loaded on manager (e.g. in a case when execution unit runs script and server is started).
-    :return:
-    """
-
-    # TODO avoid cast
-    resp = cast(rpc.execution.ProjectStateResponse,
-                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
-
-    if resp.data.id is not None and (glob.PROJECT is None or glob.PROJECT.id != resp.data.id):
-        await open_project(resp.data.id)
-
-
 async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) ->\
         Union[rpc.storage.ListMeshesResponse, hlp.RPC_RETURN_TYPES]:
-
     return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
@@ -102,22 +113,25 @@ async def register(websocket: WsClient) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE))
-    await notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT))
+    tasks: List[Awaitable] = []
 
-    # TODO avoid cast
-    resp = cast(rpc.execution.ProjectStateResponse,
-                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    tasks.append(notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT)))
+    tasks.append(notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE)))
+    tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
 
-    await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
-    if resp.data.action:
-        await asyncio.wait([websocket.send(events.ActionStateEvent(data=resp.data.action).to_json())])
-    if resp.data.action_args:
-        await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
+    if glob.PACKAGE_INFO:
+        tasks.append(websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json()))
+    if glob.ACTION_STATE:
+        tasks.append(websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json()))
+    if glob.CURRENT_ACTION:
+        tasks.append(websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json()))
+    if glob.SCENE_COLLISIONS:
+        tasks.append(websocket.send(events.SceneCollisionsEvent(data=glob.SCENE_COLLISIONS).to_json()))
+
+    await asyncio.gather(*tasks)
 
 
 async def unregister(websocket: WsClient) -> None:
-
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
 

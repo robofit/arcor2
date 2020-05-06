@@ -19,6 +19,10 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
+    def clear_collisions(self):
+        pass
+
+    @abc.abstractmethod
     def remove_collision(self, obj: Generic) -> None:
         """
         Removes collision model for object instance.

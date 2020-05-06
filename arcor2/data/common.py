@@ -461,7 +461,7 @@ class IdDescList(JsonSchemaMixin):
     items: List[IdDesc] = field(default_factory=list)
 
 
-class ProjectStateEnum(Enum):
+class PackageStateEnum(Enum):
 
     RUNNING: str = "running"
     STOPPED: str = "stopped"
@@ -483,9 +483,9 @@ class ActionState(JsonSchemaMixin):
 
 
 @dataclass
-class ProjectState(JsonSchemaMixin):
+class PackageState(JsonSchemaMixin):
 
-    state: ProjectStateEnum = ProjectStateEnum.STOPPED
+    state: PackageStateEnum = PackageStateEnum.STOPPED
 
 
 @dataclass
@@ -500,3 +500,11 @@ class BroadcastInfo(JsonSchemaMixin):
 
     host: str
     port: int
+
+
+@dataclass
+class PackageInfo(JsonSchemaMixin):
+
+    package_id: str
+    scene: Scene
+    project: Project

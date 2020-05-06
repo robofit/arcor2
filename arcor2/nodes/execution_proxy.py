@@ -265,7 +265,7 @@ def package_start(package_id: str):
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.RunProjectRequest(id=get_id(), args=rpc.common.IdArgs(id=package_id)))
+    resp = call_rpc(rpc.execution.RunPackageRequest(id=get_id(), args=rpc.common.IdArgs(id=package_id)))
 
     if resp.result:
         return "ok", 200
@@ -292,7 +292,7 @@ def packages_stop():
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.StopProjectRequest(id=get_id()))
+    resp = call_rpc(rpc.execution.StopPackageRequest(id=get_id()))
 
     if resp.result:
         return "ok", 200
@@ -319,7 +319,7 @@ def packages_pause():
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.PauseProjectRequest(id=get_id()))
+    resp = call_rpc(rpc.execution.PausePackageRequest(id=get_id()))
 
     if resp.result:
         return "ok", 200
@@ -346,7 +346,7 @@ def packages_resume():
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.ResumeProjectRequest(id=get_id()))
+    resp = call_rpc(rpc.execution.ResumePackageRequest(id=get_id()))
 
     if resp.result:
         return "ok", 200
@@ -372,8 +372,8 @@ def packages_active():
                     description: No project running
             """
 
-    resp = call_rpc(rpc.execution.ProjectStateRequest(id=get_id()))
-    assert isinstance(resp, rpc.execution.ProjectStateResponse)
+    resp = call_rpc(rpc.execution.PackageStateRequest(id=get_id()))
+    assert isinstance(resp, rpc.execution.PackageStateResponse)
 
     if resp.data.id:
         return resp.data.id, 200

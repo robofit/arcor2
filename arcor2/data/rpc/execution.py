@@ -6,8 +6,15 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ProjectState, ActionState, CurrentAction
+from arcor2.data.common import PackageState, ActionState, CurrentAction
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
+
+
+@dataclass
+class BuildProjectArgs(JsonSchemaMixin):
+
+    project_id: str
+    package_name: str
 
 
 @dataclass
@@ -16,13 +23,20 @@ class BuildProjectRequest(Request):
     Calls Build service to generate execution package and uploads it to the Execution service.
     """
 
-    args: IdArgs
+    args: BuildProjectArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class BuildProjectData(JsonSchemaMixin):
+
+    package_id: str
 
 
 @dataclass
 class BuildProjectResponse(Response):
 
+    data: Optional[BuildProjectData] = None
     response: str = field(default=BuildProjectRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -68,7 +82,10 @@ class ModifiedFile(JsonSchemaMixin):
 class PackageSummary(JsonSchemaMixin):
 
     id: str
-    date_time: datetime
+    name: str
+    project_id: str
+    modified: datetime = field(metadata=dict(
+        description="Last modification of the project embedded in the execution package."))
     # modified_files: List[ModifiedFile] = field(default_factory=list)
 
 
@@ -97,82 +114,81 @@ class DeletePackageResponse(Response):
 
 
 @dataclass
-class RunProjectRequest(Request):
+class RunPackageRequest(Request):
 
     args: IdArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class RunProjectResponse(Response):
+class RunPackageResponse(Response):
 
-    response: str = field(default=RunProjectRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class StopProjectRequest(Request):
-
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class StopProjectResponse(Response):
-
-    response: str = field(default=StopProjectRequest.request, init=False)
+    response: str = field(default=RunPackageRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class PauseProjectRequest(Request):
+class StopPackageRequest(Request):
 
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class PauseProjectResponse(Response):
+class StopPackageResponse(Response):
 
-    response: str = field(default=PauseProjectRequest.request, init=False)
+    response: str = field(default=StopPackageRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class PausePackageRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class PausePackageResponse(Response):
+
+    response: str = field(default=PausePackageRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 @dataclass
-class ProjectStateRequest(Request):
+class PackageStateRequest(Request):
 
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class ProjectStateData(JsonSchemaMixin):
+class PackageStateData(JsonSchemaMixin):
 
-    id: Optional[str] = None
-    project: ProjectState = field(default_factory=ProjectState)
+    project: PackageState = field(default_factory=PackageState)
     action: Optional[ActionState] = None
     action_args: Optional[CurrentAction] = None
 
 
 @dataclass
-class ProjectStateResponse(Response):
+class PackageStateResponse(Response):
 
-    data: ProjectStateData = field(default_factory=ProjectStateData)
-    response: str = field(default=ProjectStateRequest.request, init=False)
+    data: PackageStateData = field(default_factory=PackageStateData)
+    response: str = field(default=PackageStateRequest.request, init=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class ResumeProjectRequest(Request):
+class ResumePackageRequest(Request):
 
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class ResumeProjectResponse(Response):
+class ResumePackageResponse(Response):
 
-    response: str = field(default=ResumeProjectRequest.request, init=False)
+    response: str = field(default=ResumePackageRequest.request, init=False)
