@@ -44,6 +44,19 @@ Project / scene
 
 
 @dataclass
+class OpenSceneData(JsonSchemaMixin):
+
+    scene: common.Scene
+
+
+@dataclass
+class OpenScene(Event):
+
+    data: Optional[OpenSceneData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class SceneChanged(Event):
 
     data: Optional[common.Scene] = None
@@ -57,6 +70,12 @@ class SceneSaved(Event):
 
 
 @dataclass
+class SceneClosed(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ProjectChanged(Event):
 
     data: Optional[common.Project] = None
@@ -64,7 +83,27 @@ class ProjectChanged(Event):
 
 
 @dataclass
+class OpenProjectData(JsonSchemaMixin):
+
+    scene: common.Scene
+    project: common.Project
+
+
+@dataclass
+class OpenProject(Event):
+
+    data: Optional[OpenProjectData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ProjectSaved(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ProjectClosed(Event):
 
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 

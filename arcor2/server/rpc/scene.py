@@ -76,7 +76,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) ->\
         return None
 
     glob.SCENE = common.Scene(common.uid(), req.args.name, desc=req.args.desc)
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.ADD, data=glob.SCENE)))
+    asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
     return None
 
 
@@ -100,7 +100,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) ->\
 
     await clear_scene()
     OBJECTS_WITH_UPDATED_POSE.clear()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE)))
+    asyncio.ensure_future(notif.broadcast_event(events.SceneClosed()))
     return None
 
 
@@ -127,6 +127,8 @@ async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) ->\
         return False, "Can't open scene while package runs."
 
     await open_scene(req.args.id)
+    assert glob.SCENE
+    asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
     return None
 
 

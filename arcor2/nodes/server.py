@@ -115,8 +115,12 @@ async def register(websocket: WsClient) -> None:
 
     tasks: List[Awaitable] = []
 
-    tasks.append(notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT)))
-    tasks.append(notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE)))
+    if glob.PROJECT:
+        assert glob.SCENE
+        tasks.append(notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT))))
+    elif glob.SCENE:
+        tasks.append(notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
+
     tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
 
     if glob.PACKAGE_INFO:
