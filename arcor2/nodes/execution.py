@@ -22,14 +22,13 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2
 from arcor2.data import rpc
-from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene, PackageInfo
+from arcor2.data.common import PackageState, PackageStateEnum, Project
 from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
     SceneCollisionsEvent
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, RPC_RETURN_TYPES, aiologger_formatter, server
 from arcor2.settings import PROJECT_PATH
 from arcor2.source.utils import make_executable
-from arcor2.exceptions import Arcor2Exception
 
 
 PORT = 6790
@@ -121,8 +120,8 @@ async def read_proc_stdout() -> None:
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
-async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> Union[rpc.execution.RunPackageResponse,
-                                                                        RPC_RETURN_TYPES]:
+async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.RunPackageResponse, RPC_RETURN_TYPES]:
 
     global PROCESS
     global TASK
@@ -150,12 +149,11 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
                                                    stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is not None:
         return False, "Failed to start project."
-    PROJECT_ID = req.args.id
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
-async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -> Union[rpc.execution.StopPackageResponse,
-                                                                          RPC_RETURN_TYPES]:
+async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.StopPackageResponse, RPC_RETURN_TYPES]:
 
     global SCENE_COLLISION_EVENT
 
@@ -173,8 +171,8 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -
     SCENE_COLLISION_EVENT = None
 
 
-async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient) -> Union[rpc.execution.PausePackageResponse,
-                                                                            RPC_RETURN_TYPES]:
+async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.PausePackageResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
@@ -190,15 +188,15 @@ async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient)
     return None
 
 
-async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClient) -> Union[rpc.execution.ResumePackageResponse,
-                                                                              RPC_RETURN_TYPES]:
+async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.ResumePackageResponse, RPC_RETURN_TYPES]:
 
     if not process_running():
         return False, "Project not running."
 
     assert PROCESS is not None and PROCESS.stdin is not None
 
-    if PROJECT_EVENT.data.state != ProjectStateEnum.PAUSED:
+    if PROJECT_EVENT.data.state != PackageStateEnum.PAUSED:
         return False, "Cannot resume."
 
     PROCESS.stdin.write("r\n".encode())
@@ -206,8 +204,8 @@ async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClien
     return None
 
 
-async def package_state_cb(req: rpc.execution.PackageStateRequest, ui: WsClient) -> Union[rpc.execution.PackageStateResponse,
-                                                                            RPC_RETURN_TYPES]:
+async def package_state_cb(req: rpc.execution.PackageStateRequest, ui: WsClient) ->\
+        Union[rpc.execution.PackageStateResponse, RPC_RETURN_TYPES]:
 
     resp = rpc.execution.PackageStateResponse()
     resp.data.project = PROJECT_EVENT.data
@@ -218,8 +216,8 @@ async def package_state_cb(req: rpc.execution.PackageStateRequest, ui: WsClient)
     return resp
 
 
-async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClient) -> Union[rpc.execution.UploadPackageResponse,
-                                                                               RPC_RETURN_TYPES]:
+async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.UploadPackageResponse, RPC_RETURN_TYPES]:
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
 
@@ -255,8 +253,8 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClie
     return None
 
 
-async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient) -> Union[rpc.execution.ListPackagesResponse,
-                                                                            RPC_RETURN_TYPES]:
+async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient) ->\
+        Union[rpc.execution.ListPackagesResponse, RPC_RETURN_TYPES]:
 
     resp = rpc.execution.ListPackagesResponse()
 
@@ -286,8 +284,8 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient)
     return resp
 
 
-async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) -> Union[rpc.execution.DeletePackageResponse,
-                                                                              RPC_RETURN_TYPES]:
+async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) ->\
+        Union[rpc.execution.DeletePackageResponse, RPC_RETURN_TYPES]:
 
     if PACKAGE_INFO.data and PACKAGE_INFO.data.package_id == req.args.id:
         return False, "Package is being executed."

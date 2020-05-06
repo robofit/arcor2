@@ -228,6 +228,12 @@ class SceneCollisionsData(JsonSchemaMixin):
     meshes: List[object_type.Mesh] = field(default_factory=list)
 
 
+@dataclass
+class SceneCollisionsEvent(Event):
+
+    data: SceneCollisionsData = field(default_factory=SceneCollisionsData)
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
 
 """
 ------------------------------------------------------------------------------------------------------------------------

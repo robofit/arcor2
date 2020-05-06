@@ -103,8 +103,8 @@ async def _initialize_server() -> None:
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
-async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) -> Union[rpc.storage.ListMeshesResponse,
-                                                                      hlp.RPC_RETURN_TYPES]:
+async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) ->\
+        Union[rpc.storage.ListMeshesResponse, hlp.RPC_RETURN_TYPES]:
     return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
@@ -142,8 +142,9 @@ async def unregister(websocket: WsClient) -> None:
         if websocket in registered_uis:
             registered_uis.remove(websocket)
 
-async def system_info_cb(req: rpc.common.SystemInfoRequest, ui: WsClient) -> Union[rpc.common.SystemInfoResponse,
-                                                                     hlp.RPC_RETURN_TYPES]:
+
+async def system_info_cb(req: rpc.common.SystemInfoRequest, ui: WsClient) ->\
+        Union[rpc.common.SystemInfoResponse, hlp.RPC_RETURN_TYPES]:
 
     resp = rpc.common.SystemInfoResponse()
     resp.data.version = arcor2.version()
