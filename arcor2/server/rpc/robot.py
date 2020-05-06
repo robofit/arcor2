@@ -167,6 +167,10 @@ async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventReques
         await register(req, ui, ROBOT_JOINTS_TASKS, glob.ROBOT_JOINTS_REGISTERED_UIS,
                        robot_joints_event)
     elif req.args.what == rpc.robot.RegisterEnum.EEF_POSE:
+
+        if not (await robot.get_end_effectors(req.args.robot_id)):
+            raise Arcor2Exception("Robot does not have any end effector.")
+
         await register(req, ui, EEF_POSE_TASKS, glob.ROBOT_EEF_REGISTERED_UIS,
                        robot_eef_pose_event)
     else:
