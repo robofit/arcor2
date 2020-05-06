@@ -1,4 +1,3 @@
-from typing import Union
 import tempfile
 import os
 import base64
@@ -16,8 +15,7 @@ from arcor2.server.execution import manager_request
 import arcor2.server.globals as glob
 
 
-async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient) -> \
-        Union[rpc.execution.BuildProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient) -> rpc.execution.BuildProjectResponse:
     """
     Builds project and uploads resulting package to the execution unit.
     :param req:

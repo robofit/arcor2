@@ -80,13 +80,13 @@ def unique_name(name: str, existing_names: Set[str]) -> None:
 
 @scene_needed
 @project_needed
-async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient) -> \
-        Union[rpc.project.ExecuteActionResponse, hlp.RPC_RETURN_TYPES]:
+async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
     if glob.RUNNING_ACTION:
-        return False, f"Action {glob.RUNNING_ACTION} is being executed. Only one action can be executed at a time."
+        raise Arcor2Exception(f"Action {glob.RUNNING_ACTION} is being executed. "
+                              f"Only one action can be executed at a time.")
 
     action = glob.PROJECT.action(req.args.action_id)
 
@@ -98,7 +98,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
                                                                          glob.PROJECT, action.id, param.id)
         except ParameterPluginException as e:
             await glob.logger.error(e)
-            return False, f"Failed to get value for parameter {param.id}."
+            raise Arcor2Exception(f"Failed to get value for parameter {param.id}.")
 
     obj_id, action_name = action.parse_type()
 
@@ -109,10 +109,10 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
     elif obj_id in glob.SERVICES_INSTANCES:
         obj = glob.SERVICES_INSTANCES[obj_id]
     else:
-        return False, "Internal error: project not in sync with scene."
+        raise Arcor2Exception("Internal error: project not in sync with scene.")
 
     if not hasattr(obj, action_name):
-        return False, "Internal error: object does not have the requested method."
+        raise Arcor2Exception("Internal error: object does not have the requested method.")
 
     glob.RUNNING_ACTION = action.id
 
@@ -154,8 +154,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
     return pd
 
 
-async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -> \
-        Union[rpc.project.ListProjectsResponse, hlp.RPC_RETURN_TYPES]:
+async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -> rpc.project.ListProjectsResponse:
 
     projects = await storage.get_projects()
 
@@ -170,8 +169,7 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -
 
 @scene_needed
 @project_needed
-async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsRequest, ui: WsClient) -> \
-        Union[rpc.project.AddActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
+async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -193,8 +191,7 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
 @scene_needed
 @project_needed
-async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJointsRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
+async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJointsRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -211,8 +208,7 @@ async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJoints
 
 @scene_needed
 @project_needed
-async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJointsRequest, ui: WsClient) -> \
-        Union[rpc.project.RemoveActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
+async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJointsRequest, ui: WsClient) -> None:
     """
     Removes joints from action point.
     :param req:
@@ -226,7 +222,7 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
     for act in glob.PROJECT.actions():
         for param in act.parameters:
             if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, req.args.joints_id):
-                return False, f"Joints used in action {act.name} (parameter {param.id})."
+                raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.id}).")
 
     joints_to_be_removed = ap.joints(req.args.joints_id)
     ap.robot_joints = [joints for joints in ap.robot_joints if joints.id != req.args.joints_id]
@@ -239,8 +235,7 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 
 @scene_needed
 @project_needed
-async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: WsClient) -> \
-        Union[rpc.project.RenameActionPointResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -250,7 +245,7 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: 
         return None
 
     if not hlp.is_valid_identifier(req.args.new_name):
-        return False, "Name has to be valid Python identifier."
+        raise Arcor2Exception("Name has to be valid Python identifier.")
 
     unique_name(req.args.new_name, glob.PROJECT.action_points_names)
 
@@ -267,8 +262,7 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: 
 
 @scene_needed
 @project_needed
-async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionPointParentResponse, hlp.RPC_RETURN_TYPES]:
+async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -319,8 +313,7 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
 
 @scene_needed
 @project_needed
-async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionPointPositionResponse, hlp.RPC_RETURN_TYPES]:
+async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -340,8 +333,7 @@ async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPosi
 
 @scene_needed
 @project_needed
-async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointUsingRobotRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionPointUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
+async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointUsingRobotRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
 
@@ -369,8 +361,7 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
 
 @scene_needed
 @project_needed
-async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrientationRequest, ui: WsClient) -> \
-        Union[rpc.project.AddActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
+async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrientationRequest, ui: WsClient) -> None:
     """
     Adds orientation and joints to the action point.
     :param req:
@@ -398,7 +389,7 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
 @scene_needed
 @project_needed
 async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointOrientationRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionPointOrientationUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
+        None:
     """
     Updates orientation of the action point.
     :param req:
@@ -418,8 +409,7 @@ async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointO
 @scene_needed
 @project_needed
 async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddActionPointOrientationUsingRobotRequest,
-                                                      ui: WsClient) -> \
-        Union[rpc.project.AddActionPointOrientationUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
+                                                      ui: WsClient) -> None:
     """
     Adds orientation and joints to the action point.
     :param req:
@@ -452,8 +442,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
 @scene_needed
 @project_needed
 async def update_action_point_orientation_using_robot_cb(
-        req: rpc.project.UpdateActionPointOrientationUsingRobotRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionPointOrientationUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
+        req: rpc.project.UpdateActionPointOrientationUsingRobotRequest, ui: WsClient) -> None:
     """
     Updates orientation and joint of the action point.
     :param req:
@@ -481,7 +470,7 @@ async def update_action_point_orientation_using_robot_cb(
 @scene_needed
 @project_needed
 async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointOrientationRequest, ui: WsClient) -> \
-        Union[rpc.project.RemoveActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
+        None:
     """
     Removes orientation.
     :param req:
@@ -495,7 +484,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     for act in glob.PROJECT.actions():
         for param in act.parameters:
             if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, req.args.orientation_id):
-                return False, f"Orientation used in action {act.name} (parameter {param.id})."
+                raise Arcor2Exception(f"Orientation used in action {act.name} (parameter {param.id}).")
 
     if req.dry_run:
         return None
@@ -507,18 +496,13 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     return None
 
 
-async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> \
-        Union[rpc.project.OpenProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> None:
 
     if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
-        return False, "Can't open project while package runs."
+        raise Arcor2Exception("Can't open project while package runs.")
 
     # TODO validate using project_problems?
-    try:
-        await open_project(req.args.id)
-    except Arcor2Exception as e:
-        await glob.logger.exception(f"Failed to open project {req.args.id}.")
-        return False, e.message
+    await open_project(req.args.id)
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -531,8 +515,7 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> 
 
 @scene_needed
 @project_needed
-async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> \
-        Union[rpc.project.SaveProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
     await storage.update_project(glob.PROJECT)
@@ -542,11 +525,10 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> 
 
 
 @no_project
-async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) ->\
-        Union[rpc.project.NewProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> None:
 
     if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
-        return False, "Can't create project while package runs."
+        raise Arcor2Exception("Can't create project while package runs.")
 
     unique_name(req.args.name, (await project_names()))
 
@@ -555,7 +537,7 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) ->\
 
     if glob.SCENE:
         if glob.SCENE.id != req.args.scene_id:
-            return False, "Another scene is opened."
+            raise Arcor2Exception("Another scene is opened.")
 
         if glob.SCENE.has_changes():
             await storage.update_scene(glob.SCENE)
@@ -564,7 +546,7 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) ->\
     else:
 
         if req.args.scene_id not in {scene.id for scene in (await storage.get_scenes()).items}:
-            return False, "Unknown scene id."
+            raise Arcor2Exception("Unknown scene id.")
 
         await open_scene(req.args.scene_id)
 
@@ -580,13 +562,12 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) ->\
 
 @scene_needed
 @project_needed
-async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -> \
-        Union[rpc.project.CloseProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
     if not req.args.force and glob.PROJECT.has_changes():
-        return False, "Project has unsaved changes."
+        raise Arcor2Exception("Project has unsaved changes.")
 
     if req.dry_run:
         return None
@@ -600,15 +581,14 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -
 
 @scene_needed
 @project_needed
-async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClient) -> \
-        Union[rpc.project.AddActionPointResponse, hlp.RPC_RETURN_TYPES]:
+async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
     unique_name(req.args.name, glob.PROJECT.action_points_names)
 
     if not hlp.is_valid_identifier(req.args.name):
-        return False, "Name has to be valid Python identifier."
+        raise Arcor2Exception("Name has to be valid Python identifier.")
 
     if req.dry_run:
         return None
@@ -623,8 +603,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClie
 
 @scene_needed
 @project_needed
-async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: WsClient) -> \
-        Union[rpc.project.RemoveActionPointResponse, hlp.RPC_RETURN_TYPES]:
+async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -635,11 +614,11 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
 
             for joints in ap.robot_joints:
                 if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, joints.id):
-                    return False, f"Joints {joints.name} used in action {act.name} (parameter {param.id})."
+                    raise Arcor2Exception(f"Joints {joints.name} used in action {act.name} (parameter {param.id}).")
 
             for ori in ap.orientations:
                 if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, ori.id):
-                    return False, f"Orientation {ori.name} used in action {act.name} (parameter {param.id})."
+                    raise Arcor2Exception(f"Orientation {ori.name} used in action {act.name} (parameter {param.id}).")
 
             # TODO some hypothetical parameter type could use just bare ActionPoint (its position)
 
@@ -685,8 +664,7 @@ def check_action_params(project: common.Project, action: common.Action, object_a
 
 @scene_needed
 @project_needed
-async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> \
-        Union[rpc.project.AddActionResponse, hlp.RPC_RETURN_TYPES]:
+async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -696,7 +674,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> \
     unique_name(req.args.name, glob.PROJECT.action_user_names())
 
     if not hlp.is_valid_identifier(req.args.name):
-        return False, "Action name has to be valid Python identifier."
+        raise Arcor2Exception("Action name has to be valid Python identifier.")
 
     new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters)
 
@@ -718,8 +696,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> \
 
 @scene_needed
 @project_needed
-async def update_action_cb(req: rpc.project.UpdateActionRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionResponse, hlp.RPC_RETURN_TYPES]:
+async def update_action_cb(req: rpc.project.UpdateActionRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -759,8 +736,7 @@ def check_action_usage(action: common.Action) -> None:
 
 @scene_needed
 @project_needed
-async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -> \
-        Union[rpc.project.RemoveActionResponse, hlp.RPC_RETURN_TYPES]:
+async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -780,8 +756,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -
 
 @scene_needed
 @project_needed
-async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateActionLogicResponse, hlp.RPC_RETURN_TYPES]:
+async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -792,11 +767,11 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest, ui: 
 
     for inp in req.args.inputs:
         if inp.default not in allowed_values:
-            return False, "Unknown input value."
+            raise Arcor2Exception("Unknown input value.")
 
     for out in req.args.outputs:
         if out.default not in allowed_values:
-            return False, "Unknown output value."
+            raise Arcor2Exception("Unknown output value.")
 
     action.inputs = req.args.inputs
     action.outputs = req.args.outputs
@@ -807,8 +782,7 @@ async def update_action_logic_cb(req: rpc.project.UpdateActionLogicRequest, ui: 
 
 
 @no_project
-async def delete_project_cb(req: rpc.project.DeleteProjectRequest, ui: WsClient) -> \
-        Union[rpc.project.DeleteProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def delete_project_cb(req: rpc.project.DeleteProjectRequest, ui: WsClient) -> None:
 
     project = await storage.get_project(req.args.id)
     await storage.delete_project(req.args.id)
@@ -817,8 +791,7 @@ async def delete_project_cb(req: rpc.project.DeleteProjectRequest, ui: WsClient)
     return None
 
 
-async def rename_project_cb(req: rpc.project.RenameProjectRequest, ui: WsClient) -> \
-        Union[rpc.project.RenameProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_project_cb(req: rpc.project.RenameProjectRequest, ui: WsClient) -> None:
 
     unique_name(req.args.new_name, (await project_names()))
 
@@ -835,8 +808,7 @@ async def rename_project_cb(req: rpc.project.RenameProjectRequest, ui: WsClient)
     return None
 
 
-async def copy_project_cb(req: rpc.project.CopyProjectRequest, ui: WsClient) -> \
-        Union[rpc.project.CopyProjectResponse, hlp.RPC_RETURN_TYPES]:
+async def copy_project_cb(req: rpc.project.CopyProjectRequest, ui: WsClient) -> None:
 
     unique_name(req.args.target_name, (await project_names()))
 
@@ -852,8 +824,7 @@ async def copy_project_cb(req: rpc.project.CopyProjectRequest, ui: WsClient) -> 
     return None
 
 
-async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptionRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateProjectDescriptionResponse, hlp.RPC_RETURN_TYPES]:
+async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptionRequest, ui: WsClient) -> None:
 
     async with managed_project(req.args.project_id) as project:
 
@@ -865,8 +836,7 @@ async def update_project_description_cb(req: rpc.project.UpdateProjectDescriptio
     return None
 
 
-async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequest, ui: WsClient) -> \
-        Union[rpc.project.UpdateProjectHasLogicResponse, hlp.RPC_RETURN_TYPES]:
+async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequest, ui: WsClient) -> None:
 
     async with managed_project(req.args.project_id) as project:
 
@@ -888,8 +858,7 @@ async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequ
 
 
 @project_needed
-async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJointsRequest, ui: WsClient) -> \
-        Union[rpc.project.RenameActionPointJointsResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJointsRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -908,7 +877,7 @@ async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJoints
 
 @project_needed
 async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointOrientationRequest, ui: WsClient) -> \
-        Union[rpc.project.RenameActionPointOrientationResponse, hlp.RPC_RETURN_TYPES]:
+        None:
 
     assert glob.PROJECT
 
@@ -926,8 +895,7 @@ async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointO
 
 
 @project_needed
-async def rename_action_cb(req: rpc.project.RenameActionRequest, ui: WsClient) -> \
-        Union[rpc.project.RenameActionResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_action_cb(req: rpc.project.RenameActionRequest, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
