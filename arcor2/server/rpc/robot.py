@@ -1,11 +1,10 @@
 import asyncio
 import time
-from typing import Union, Dict, Callable, Awaitable
+from typing import Dict, Callable, Awaitable
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import rpc, events
-from arcor2 import helpers as hlp
 from arcor2.exceptions import Arcor2Exception
 
 from arcor2.server import globals as glob, objects_services_actions as osa, robot
@@ -90,21 +89,21 @@ async def robot_eef_pose_event(robot_id: str) -> None:
 
 
 async def get_robot_meta_cb(req: rpc.robot.GetRobotMetaRequest, ui: WsClient) ->\
-        Union[rpc.robot.GetRobotMetaResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.robot.GetRobotMetaResponse:
 
     return rpc.robot.GetRobotMetaResponse(data=list(glob.ROBOT_META.values()))
 
 
 @scene_needed
 async def get_robot_joints_cb(req: rpc.robot.GetRobotJointsRequest, ui: WsClient) -> \
-        Union[rpc.robot.GetRobotJointsResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.robot.GetRobotJointsResponse:
 
     return rpc.robot.GetRobotJointsResponse(data=await robot.get_robot_joints(req.args.robot_id))
 
 
 @scene_needed
 async def get_end_effector_pose_cb(req: rpc.robot.GetEndEffectorPoseRequest, ui: WsClient) -> \
-        Union[rpc.robot.GetEndEffectorPoseResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.robot.GetEndEffectorPoseResponse:
 
     return rpc.robot.GetEndEffectorPoseResponse(
         data=await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id))
@@ -112,21 +111,21 @@ async def get_end_effector_pose_cb(req: rpc.robot.GetEndEffectorPoseRequest, ui:
 
 @scene_needed
 async def get_end_effectors_cb(req: rpc.robot.GetEndEffectorsRequest, ui: WsClient) -> \
-        Union[rpc.robot.GetEndEffectorsResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.robot.GetEndEffectorsResponse:
 
     return rpc.robot.GetEndEffectorsResponse(data=await robot.get_end_effectors(req.args.robot_id))
 
 
 @scene_needed
 async def get_grippers_cb(req: rpc.robot.GetGrippersRequest, ui: WsClient) -> \
-        Union[rpc.robot.GetGrippersResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.robot.GetGrippersResponse:
 
     return rpc.robot.GetGrippersResponse(data=await robot.get_grippers(req.args.robot_id))
 
 
 @scene_needed
 async def get_suctions_cb(req: rpc.robot.GetSuctionsRequest, ui: WsClient) -> \
-        Union[rpc.robot.GetSuctionsResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.robot.GetSuctionsResponse:
 
     return rpc.robot.GetSuctionsResponse(data=await robot.get_suctions(req.args.robot_id))
 
@@ -159,8 +158,7 @@ async def register(req: rpc.robot.RegisterForRobotEventRequest, ui: WsClient, ta
 
 
 @scene_needed
-async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventRequest, ui: WsClient) -> \
-        Union[rpc.robot.RegisterForRobotEventResponse, hlp.RPC_RETURN_TYPES]:
+async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventRequest, ui: WsClient) -> None:
 
     # check if robot exists
     await osa.get_robot_instance(req.args.robot_id)
@@ -169,6 +167,10 @@ async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventReques
         await register(req, ui, ROBOT_JOINTS_TASKS, glob.ROBOT_JOINTS_REGISTERED_UIS,
                        robot_joints_event)
     elif req.args.what == rpc.robot.RegisterEnum.EEF_POSE:
+
+        if not (await robot.get_end_effectors(req.args.robot_id)):
+            raise Arcor2Exception("Robot does not have any end effector.")
+
         await register(req, ui, EEF_POSE_TASKS, glob.ROBOT_EEF_REGISTERED_UIS,
                        robot_eef_pose_event)
     else:

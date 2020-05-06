@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, Set
+from typing import Union, Set, Optional
 import asyncio
 import functools
 from contextlib import asynccontextmanager
@@ -15,6 +15,7 @@ from arcor2.data import rpc, events
 from arcor2.data import common, object_type
 from arcor2.object_types import Generic
 from arcor2.services import Service
+from arcor2.exceptions import Arcor2Exception
 
 from arcor2.server.robot import get_end_effector_pose
 from arcor2.server.decorators import scene_needed, no_project, no_scene
@@ -55,8 +56,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False):
 
 
 @no_scene
-async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) ->\
-        Union[rpc.scene.NewSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
     """
     Creates and opens a new scene on the server. Fails if any scene is open or if scene id/name already exists.
     :param req:
@@ -64,13 +64,13 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) ->\
     """
 
     if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
-        return False, "Can't create scene while package runs."
+        raise Arcor2Exception("Can't create scene while package runs.")
 
     assert glob.SCENE is None
 
     for scene_id in (await storage.get_scenes()).items:
         if req.args.name == scene_id.name:
-            return False, "Name already used."
+            raise Arcor2Exception("Name already used.")
 
     if req.dry_run:
         return None
@@ -82,8 +82,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) ->\
 
 @scene_needed
 @no_project
-async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) ->\
-        Union[rpc.scene.CloseSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> None:
     """
     Closes scene on the server.
     :param req:
@@ -93,7 +92,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) ->\
     assert glob.SCENE
 
     if not req.args.force and glob.SCENE.has_changes():
-        return False, "Scene has unsaved changes."
+        raise Arcor2Exception("Scene has unsaved changes.")
 
     if req.dry_run:
         return None
@@ -106,8 +105,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) ->\
 
 @scene_needed
 @no_project
-async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) ->\
-        Union[rpc.scene.SaveSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
     await storage.update_scene(glob.SCENE)
@@ -120,18 +118,16 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) ->\
 
 
 @no_project
-async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) ->\
-        Union[rpc.scene.OpenSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> None:
 
     if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
-        return False, "Can't open scene while package runs."
+        raise Arcor2Exception("Can't open scene while package runs.")
 
     await open_scene(req.args.id)
     return None
 
 
-async def list_scenes_cb(req: rpc.scene.ListScenesRequest, ui: WsClient) -> \
-        Union[rpc.scene.ListScenesResponse, hlp.RPC_RETURN_TYPES]:
+async def list_scenes_cb(req: rpc.scene.ListScenesRequest, ui: WsClient) -> rpc.scene.ListScenesResponse:
 
     scenes = await storage.get_scenes()
     return rpc.scene.ListScenesResponse(data=scenes.items)
@@ -139,8 +135,7 @@ async def list_scenes_cb(req: rpc.scene.ListScenesRequest, ui: WsClient) -> \
 
 @scene_needed
 @no_project
-async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.AddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
 
@@ -158,8 +153,7 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest, ui: WsC
 
 @scene_needed
 @no_project
-async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.AutoAddObjectToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest, ui: WsClient) -> None:
     assert glob.SCENE
 
     obj = req.args
@@ -174,8 +168,7 @@ async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest
 
 @scene_needed
 @no_project
-async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest, ui: WsClient) ->\
-        Union[rpc.scene.AddServiceToSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
 
@@ -193,7 +186,7 @@ async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest, ui: W
 
 @scene_needed
 async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, ui: WsClient) -> \
-        Union[rpc.scene.SceneObjectUsageResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.scene.SceneObjectUsageResponse:
     """
     Works for both services and objects.
     :param req:
@@ -204,7 +197,7 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, 
 
     if not (any(obj.id == req.args.id for obj in glob.SCENE.objects) or
             any(srv.type == req.args.id for srv in glob.SCENE.services)):
-        return False, "Unknown ID."
+        raise Arcor2Exception("Unknown ID.")
 
     resp = rpc.scene.SceneObjectUsageResponse()
 
@@ -217,7 +210,7 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, 
 # TODO move to objects
 @scene_needed
 async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: WsClient) -> \
-        Union[rpc.objects.ActionParamValuesResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.objects.ActionParamValuesResponse:
 
     inst: Union[None, Service, Generic] = None
 
@@ -227,7 +220,7 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: 
     elif req.args.id in glob.SERVICES_INSTANCES:
         inst = glob.SERVICES_INSTANCES[req.args.id]
     else:
-        return False, "Unknown ID."
+        raise Arcor2Exception("Unknown ID.")
 
     parent_params = {}
 
@@ -237,10 +230,10 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: 
     try:
         method_name, required_parent_params = inst.DYNAMIC_PARAMS[req.args.param_id]
     except KeyError:
-        return False, "Unknown parameter or values not constrained."
+        raise Arcor2Exception("Unknown parameter or values not constrained.")
 
     if parent_params.keys() != required_parent_params:
-        return False, "Not all required parent params were given."
+        raise Arcor2Exception("Not all required parent params were given.")
 
     # TODO validate method parameters vs parent_params (check types)?
 
@@ -251,7 +244,7 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: 
     except AttributeError:
         await glob.logger.error(f"Unable to get values for parameter {req.args.param_id}, "
                                 f"object/service {inst.id} has no method named {method_name}.")
-        return False, "System error."
+        raise Arcor2Exception("System error.")
 
     # TODO update hlp.run_in_executor to support kwargs
     resp.data = await asyncio.get_event_loop().run_in_executor(None, functools.partial(method, **parent_params))
@@ -260,13 +253,12 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: 
 
 @scene_needed
 @no_project
-async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.RemoveFromSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
 
     if not req.args.force and {proj.name async for proj in projects_using_object(glob.SCENE.id, req.args.id)}:
-        return False, "Can't remove object/service that is used in project(s)."
+        raise Arcor2Exception("Can't remove object/service that is used in project(s).")
 
     if req.dry_run:
         return None
@@ -287,7 +279,8 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClie
         # first check if some object is not using it
         for obj in glob.SCENE.objects:
             if req.args.id in glob.OBJECT_TYPES[obj.type].needs_services:
-                return False, f"Object {obj.id} ({obj.type}) relies on the service to be removed: {req.args.id}."
+                raise Arcor2Exception(f"Object {obj.id} ({obj.type}) "
+                                      f"relies on the service to be removed: {req.args.id}.")
 
         srv = glob.SCENE.service(req.args.id)
         glob.SCENE.services = [srv for srv in glob.SCENE.services if srv.type != req.args.id]
@@ -295,7 +288,7 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClie
         asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.REMOVE, data=srv)))
 
     else:
-        return False, "Unknown id."
+        raise Arcor2Exception("Unknown id.")
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
@@ -305,7 +298,7 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClie
 @scene_needed
 @no_project
 async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsingRobotRequest, ui: WsClient) -> \
-        Union[rpc.objects.UpdateObjectPoseUsingRobotResponse, hlp.RPC_RETURN_TYPES]:
+        None:
     """
     Updates object's pose using a pose of the robot's end effector.
     :param req:
@@ -315,20 +308,20 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     assert glob.SCENE
 
     if req.args.id == req.args.robot.robot_id:
-        return False, "Robot cannot update its own pose."
+        raise Arcor2Exception("Robot cannot update its own pose.")
 
     scene_object = glob.SCENE.object(req.args.id)
 
     if glob.OBJECT_TYPES[scene_object.type].needs_services:
-        return False, "Can't manipulate object created by service."
+        raise Arcor2Exception("Can't manipulate object created by service.")
 
     obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
 
     if obj_inst.collision_model:
         if isinstance(obj_inst.collision_model, object_type.Mesh) and req.args.pivot != rpc.objects.PivotEnum.MIDDLE:
-            return False, "Only middle pivot point is supported for objects with mesh collision model."
+            raise Arcor2Exception("Only middle pivot point is supported for objects with mesh collision model.")
     elif req.args.pivot != rpc.objects.PivotEnum.MIDDLE:
-        return False, "Only middle pivot point is supported for objects without collision model."
+        raise Arcor2Exception("Only middle pivot point is supported for objects without collision model.")
 
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
@@ -368,15 +361,14 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
 @scene_needed
 @no_project
-async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest, ui: WsClient) -> \
-        Union[rpc.scene.UpdateObjectPoseResponse, hlp.RPC_RETURN_TYPES]:
+async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
 
     obj = glob.SCENE.object(req.args.object_id)
 
     if glob.OBJECT_TYPES[obj.type].needs_services:
-        return False, "Can't manipulate object created by service."
+        raise Arcor2Exception("Can't manipulate object created by service.")
 
     obj.pose = req.args.pose
 
@@ -389,8 +381,7 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest, ui: WsCl
 
 @scene_needed
 @no_project
-async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> \
-        Union[rpc.scene.RenameObjectResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
 
@@ -398,7 +389,7 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> 
 
     for obj_name in glob.SCENE.object_names():
         if obj_name == req.args.new_name:
-            return False, f"Object name already exists."
+            raise Arcor2Exception(f"Object name already exists.")
 
     if req.dry_run:
         return None
@@ -410,8 +401,7 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> 
     return None
 
 
-async def rename_scene_cb(req: rpc.scene.RenameSceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.RenameSceneResponse, hlp.RPC_RETURN_TYPES]:
+async def rename_scene_cb(req: rpc.scene.RenameSceneRequest, ui: WsClient) -> None:
 
     # TODO unique_name(req.args.new_name, (await scene_names()))
 
@@ -424,7 +414,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest, ui: WsClient) -> \
 
 @no_scene
 async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.DeleteSceneResponse, hlp.RPC_RETURN_TYPES]:
+        Optional[rpc.scene.DeleteSceneResponse]:
 
     assoc_projects = await associated_projects(req.args.id)
 
@@ -445,15 +435,14 @@ async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest, ui: WsClient) -> \
 
 
 async def projects_with_scene_cb(req: rpc.scene.ProjectsWithSceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.ProjectsWithSceneResponse, hlp.RPC_RETURN_TYPES]:
+        rpc.scene.ProjectsWithSceneResponse:
 
     resp = rpc.scene.ProjectsWithSceneResponse()
     resp.data = await associated_projects(req.args.id)
     return resp
 
 
-async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionRequest, ui: WsClient) -> \
-        Union[rpc.scene.UpdateSceneDescriptionResponse, hlp.RPC_RETURN_TYPES]:
+async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionRequest, ui: WsClient) -> None:
 
     async with managed_scene(req.args.scene_id) as scene:
         scene.desc = req.args.new_description
@@ -464,8 +453,7 @@ async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionReque
 
 
 @scene_needed
-async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurationRequest, ui: WsClient) -> \
-        Union[rpc.scene.UpdateServiceConfigurationResponse, hlp.RPC_RETURN_TYPES]:
+async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurationRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
 
@@ -474,7 +462,8 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
     # first check if some object is not using it
     for obj in glob.SCENE.objects:
         if req.args.type in glob.OBJECT_TYPES[obj.type].needs_services:
-            return False, f"Object {obj.name} ({obj.type}) relies on the service to be removed: {req.args.type}."
+            raise Arcor2Exception(f"Object {obj.name} ({obj.type}) relies "
+                                  f"on the service to be removed: {req.args.type}.")
 
     if req.dry_run:
         return None
@@ -490,8 +479,7 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
     return None
 
 
-async def copy_scene_cb(req: rpc.scene.CopySceneRequest, ui: WsClient) -> \
-        Union[rpc.scene.CopySceneResponse, hlp.RPC_RETURN_TYPES]:
+async def copy_scene_cb(req: rpc.scene.CopySceneRequest, ui: WsClient) -> None:
 
     # TODO check if target_name is unique
     async with managed_scene(req.args.source_id, make_copy=True) as scene:
