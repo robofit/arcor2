@@ -25,7 +25,7 @@ from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.nodes.execution import PORT as MANAGER_PORT
 from arcor2.settings import PROJECT_PATH
 
-PORT = 5010
+PORT = 5009
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
 
 # Create an APISpec
