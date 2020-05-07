@@ -22,7 +22,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2
 from arcor2.exceptions import Arcor2Exception
-from arcor2.data import rpc
+from arcor2.data import rpc, compile_json_schemas
 from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene, PackageInfo
 from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
     SceneCollisionsEvent
@@ -368,6 +368,8 @@ def main() -> None:
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
+
+    compile_json_schemas()
 
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT)

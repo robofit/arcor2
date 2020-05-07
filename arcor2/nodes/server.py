@@ -20,7 +20,7 @@ import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
-from arcor2.data import events, common
+from arcor2.data import events, common, compile_json_schemas
 from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -214,6 +214,8 @@ def main():
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
+
+    compile_json_schemas()
 
     loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
                                            _initialize_server()))
