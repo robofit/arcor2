@@ -23,7 +23,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 import arcor2
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data import rpc
-from arcor2.data.common import PackageState, PackageStateEnum, Project
+from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene, PackageInfo
 from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
     SceneCollisionsEvent
 from arcor2.data.helpers import EVENT_MAPPING
@@ -143,12 +143,29 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     except FileNotFoundError:
         raise Arcor2Exception("Not an execution package.")
 
+    with open(os.path.join(package_path, "data", "project.json")) as project_file:
+        try:
+            project = Project.from_json(project_file.read())
+        except ValidationError as e:
+            raise Arcor2Exception(f"Failed to parse project.json file.") from e
+
+    with open(os.path.join(package_path, "data", "scene.json")) as scene_file:
+        try:
+            scene = Scene.from_json(scene_file.read())
+        except ValidationError as e:
+            raise Arcor2Exception(f"Failed to parse scene.json file.") from e
+
+    PACKAGE_INFO.data = PackageInfo(req.args.id, scene, project)
+
     await logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(script_path, stdin=asyncio.subprocess.PIPE,
                                                    stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
+
+    asyncio.ensure_future(send_to_clients(PACKAGE_INFO))
+
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 

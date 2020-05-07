@@ -68,6 +68,8 @@ async def handle_manager_incoming_messages(manager_client):
                     glob.CURRENT_ACTION = evt.data
                 elif isinstance(evt, events.SceneCollisionsEvent):
                     glob.SCENE_COLLISIONS = evt.data
+                elif isinstance(evt, events.ProjectExceptionEvent):
+                    pass
                 else:
                     await glob.logger.warn(f"Unhandled type of event from Execution: {evt.event}")
 

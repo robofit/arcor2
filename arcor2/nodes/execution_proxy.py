@@ -8,6 +8,9 @@ import os
 import shutil
 import tempfile
 import uuid
+from queue import Queue
+from typing import Dict, TYPE_CHECKING, Optional
+from threading import Thread
 
 import websocket  # type: ignore
 from apispec import APISpec  # type: ignore
@@ -17,12 +20,12 @@ from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
 import arcor2
-from arcor2.data import rpc
-from arcor2.data.helpers import RPC_MAPPING
+from arcor2.data import rpc, events, common
+from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.nodes.execution import PORT as MANAGER_PORT
 from arcor2.settings import PROJECT_PATH
 
-PORT = 5009
+PORT = 5010
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
 
 # Create an APISpec
@@ -35,38 +38,57 @@ spec = APISpec(
 
 app = Flask(__name__)
 
+ws: Optional[websocket.WebSocket] = None
 
-# TODO find out why long-lasting connection is not possible (it is getting disconnected after few minutes)
-class WebsocketContextManager:
+if TYPE_CHECKING:
+    ReqQueue = Queue[rpc.common.Request]  # this is only processed by mypy
+    RespQueue = Queue[rpc.common.Response]
+else:
+    ReqQueue = Queue  # this is not seen by mypy but will be executed at runtime.
+    RespQueue = Queue
 
-    def __init__(self):
-        self.ws = None
 
-    def __enter__(self):
-        self.ws = websocket.create_connection(f"ws://0.0.0.0:{MANAGER_PORT}")
-        return self.ws
+rpc_request_queue: ReqQueue = ReqQueue()
+rpc_responses: Dict[int, RespQueue] = {}
 
-    def __exit__(self, ex_type, ex_value, traceback):
-        self.ws.close()
-        if ex_type:
-            raise ex_type(ex_value)
+package_info: Optional[common.PackageInfo] = None
+
+
+def ws_thread():
+
+    global package_info
+    assert ws
+
+    while True:
+
+        data = json.loads(ws.recv())
+
+        if "event" in data:
+
+            evt = EVENT_MAPPING[data["event"]].from_dict(data)
+
+            if isinstance(evt, events.PackageInfoEvent):
+                package_info = evt.data
+            elif isinstance(evt, events.PackageStateEvent):
+
+                if evt.data.state == common.PackageStateEnum.STOPPED:
+                    package_info = None
+
+        elif "response" in data:
+            resp = RPC_MAPPING[data["response"]][1].from_dict(data)
+            rpc_responses[resp.id].put(resp)
 
 
 def call_rpc(req: rpc.common.Request) -> rpc.common.Response:
 
-    with WebsocketContextManager() as ws:
+    assert req.id not in rpc_responses
+    assert ws
 
-        ws.send(req.to_json())
-
-        while True:
-
-            resp_dict = json.loads(ws.recv())
-            if "response" not in resp_dict:  # ignore everything except rpc responses
-                continue
-
-            resp = RPC_MAPPING[resp_dict["response"]][1].from_dict(resp_dict)
-            assert req.id == resp.id
-            return resp
+    rpc_responses[req.id] = RespQueue(maxsize=1)
+    ws.send(req.to_json())
+    resp = rpc_responses[req.id].get()
+    del rpc_responses[req.id]
+    return resp
 
 
 def get_id() -> int:
@@ -372,11 +394,8 @@ def packages_active():
                     description: No project running
             """
 
-    resp = call_rpc(rpc.execution.PackageStateRequest(id=get_id()))
-    assert isinstance(resp, rpc.execution.PackageStateResponse)
-
-    if resp.data.id:
-        return resp.data.id, 200
+    if package_info:
+        return package_info.package_id, 200
     else:
         return "No project running.", 404
 
@@ -407,6 +426,12 @@ def main():
     if args.swagger:
         print(spec.to_yaml())
         return
+
+    global ws
+    ws = websocket.create_connection(f"ws://0.0.0.0:{MANAGER_PORT}", enable_multithread=True)
+
+    thread = Thread(target=ws_thread, daemon=True)
+    thread.start()
 
     SWAGGER_URL = "/swagger"
 
