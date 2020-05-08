@@ -147,8 +147,6 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
 
-    asyncio.ensure_future(send_to_clients(PACKAGE_INFO_EVENT))
-
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
