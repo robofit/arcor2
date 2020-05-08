@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import common, object_type
+from arcor2.data import common, execution
 
 
 def wo_suffix(name: str) -> str:
@@ -44,6 +44,19 @@ Project / scene
 
 
 @dataclass
+class OpenSceneData(JsonSchemaMixin):
+
+    scene: common.Scene
+
+
+@dataclass
+class OpenScene(Event):
+
+    data: Optional[OpenSceneData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class SceneChanged(Event):
 
     data: Optional[common.Scene] = None
@@ -57,6 +70,12 @@ class SceneSaved(Event):
 
 
 @dataclass
+class SceneClosed(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ProjectChanged(Event):
 
     data: Optional[common.Project] = None
@@ -64,7 +83,27 @@ class ProjectChanged(Event):
 
 
 @dataclass
+class OpenProjectData(JsonSchemaMixin):
+
+    scene: common.Scene
+    project: common.Project
+
+
+@dataclass
+class OpenProject(Event):
+
+    data: Optional[OpenProjectData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ProjectSaved(Event):
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ProjectClosed(Event):
 
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
@@ -158,7 +197,7 @@ class PackageStateEvent(Event):
 @dataclass
 class PackageInfoEvent(Event):
 
-    data: Optional[common.PackageInfo] = None
+    data: Optional[execution.PackageInfo] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -216,22 +255,6 @@ Objects
 class ObjectTypesChangedEvent(Event):
 
     data: List[str] = field(default_factory=list)  # changed object types
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class SceneCollisionsData(JsonSchemaMixin):
-
-    boxes: List[object_type.Box] = field(default_factory=list)
-    spheres: List[object_type.Sphere] = field(default_factory=list)
-    cylinders: List[object_type.Cylinder] = field(default_factory=list)
-    meshes: List[object_type.Mesh] = field(default_factory=list)
-
-
-@dataclass
-class SceneCollisionsEvent(Event):
-
-    data: SceneCollisionsData = field(default_factory=SceneCollisionsData)
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
