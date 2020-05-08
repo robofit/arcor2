@@ -504,6 +504,12 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> 
     # TODO validate using project_problems?
     await open_project(req.args.id)
 
+    assert glob.SCENE
+    assert glob.PROJECT
+
+    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
+                                                                                               glob.PROJECT))))
+
     return None
 
 
@@ -546,7 +552,11 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
 
     glob.PROJECT = common.Project(common.uid(), req.args.name, req.args.scene_id, desc=req.args.desc,
                                   has_logic=req.args.has_logic)
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.ADD, data=glob.PROJECT)))
+
+    assert glob.SCENE
+
+    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
+                                                                                               glob.PROJECT))))
     return None
 
 
@@ -563,10 +573,8 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -
         return None
 
     glob.PROJECT = None
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.UPDATE)))
-
     await clear_scene()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE)))
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
 
     return None
 

@@ -239,5 +239,3 @@ async def open_scene(scene_id: str) -> None:
 
     assert {srv.type for srv in glob.SCENE.services} == glob.SERVICES_INSTANCES.keys()
     assert {obj.id for obj in glob.SCENE.objects} == glob.SCENE_OBJECT_INSTANCES.keys()
-
-    asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE)))

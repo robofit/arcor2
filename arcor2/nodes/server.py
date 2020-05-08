@@ -112,11 +112,15 @@ async def register(websocket: WsClient) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    tasks: List[Awaitable] = [
-        notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT)),
-        notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE)),
-        websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
-    ]
+    tasks: List[Awaitable] = []
+
+    if glob.PROJECT:
+        assert glob.SCENE
+        tasks.append(notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT))))
+    elif glob.SCENE:
+        tasks.append(notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
+
+    tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
 
     if glob.PACKAGE_INFO:
         tasks.append(websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json()))
