@@ -20,7 +20,7 @@ from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
 import arcor2
-from arcor2.data import rpc, events, common
+from arcor2.data import rpc, events, common, execution
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.nodes.execution import PORT as MANAGER_PORT
 from arcor2.settings import PROJECT_PATH
@@ -51,7 +51,7 @@ else:
 rpc_request_queue: ReqQueue = ReqQueue()
 rpc_responses: Dict[int, RespQueue] = {}
 
-package_info: Optional[common.PackageInfo] = None
+package_info: Optional[execution.PackageInfo] = None
 
 
 def ws_thread():

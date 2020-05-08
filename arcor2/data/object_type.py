@@ -188,3 +188,12 @@ class MeshFocusAction(JsonSchemaMixin):
     def __post_init__(self) -> None:
 
         assert len(self.mesh_focus_points) == len(self.robot_space_points)
+
+
+@dataclass
+class CollisionModels(JsonSchemaMixin):
+
+    boxes: List[Box] = field(default_factory=list)
+    spheres: List[Sphere] = field(default_factory=list)
+    cylinders: List[Cylinder] = field(default_factory=list)
+    meshes: List[Mesh] = field(default_factory=list)

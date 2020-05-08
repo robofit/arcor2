@@ -500,11 +500,3 @@ class BroadcastInfo(JsonSchemaMixin):
 
     host: str
     port: int
-
-
-@dataclass
-class PackageInfo(JsonSchemaMixin):
-
-    package_id: str
-    scene: Scene
-    project: Project

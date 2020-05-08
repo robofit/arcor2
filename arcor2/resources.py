@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from os import path
+import os
 from typing import Dict, Union, TypeVar, List, Optional, Any, Type
 import importlib
 import json
@@ -11,8 +11,9 @@ from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
 
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.data.common import Project, Scene, CurrentAction, Pose, Orientation
+from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import ObjectModel, Models, Box, Sphere, Cylinder, Mesh
-from arcor2.data.events import CurrentActionEvent, SceneCollisionsEvent
+from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
 from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
 from arcor2.object_types import Generic
@@ -69,7 +70,9 @@ class IntResources:
         if self.robot_service:
             self.robot_service.clear_collisions()
 
-        coll_event = SceneCollisionsEvent()
+        package_info_event = PackageInfoEvent()
+        # TODO read package id from package.json
+        package_info_event.data = PackageInfo(os.path.basename(os.getcwd()), self.scene, self.project)
 
         for scene_obj in self.scene.objects:
 
@@ -113,15 +116,15 @@ class IntResources:
                     continue
 
                 if isinstance(model, Box):
-                    coll_event.data.boxes.append(model)
+                    package_info_event.data.collision_models.boxes.append(model)
                 elif isinstance(model, Sphere):
-                    coll_event.data.spheres.append(model)
+                    package_info_event.data.collision_models.spheres.append(model)
                 elif isinstance(model, Cylinder):
-                    coll_event.data.cylinders.append(model)
+                    package_info_event.data.collision_models.cylinders.append(model)
                 elif isinstance(model, Mesh):
-                    coll_event.data.meshes.append(model)
+                    package_info_event.data.collision_models.meshes.append(model)
 
-            print_event(coll_event)
+        print_event(package_info_event)
 
         self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
@@ -199,7 +202,7 @@ class ResourcesBase(IntResources):
 
         try:
 
-            with open(path.join("data", file_name + ".json")) as scene_file:
+            with open(os.path.join("data", file_name + ".json")) as scene_file:
 
                 data_dict = json.loads(scene_file.read())
                 data_dict = convert_keys(data_dict, camel_case_to_snake_case)
