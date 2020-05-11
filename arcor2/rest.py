@@ -245,9 +245,10 @@ def get_list(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None
     return ret
 
 
-def get_list_primitive(url: str, desired_type: Type[S]) -> List[S]:
+def get_list_primitive(url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None,
+                       params: ParamsDict = None) -> List[S]:
 
-    data = get_data(url)
+    data = get_data(url, body, params)
 
     ret: List[S] = []
 
