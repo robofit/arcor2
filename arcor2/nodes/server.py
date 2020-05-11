@@ -20,7 +20,7 @@ import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import nodes
-from arcor2.data import events, common
+from arcor2.data import events, common, compile_json_schemas
 from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -33,7 +33,7 @@ from arcor2.server import execution as exe, notifications as notif, rpc as srpc
 action_mod.HANDLE_ACTIONS = False
 
 
-async def handle_manager_incoming_messages(manager_client):
+async def handle_manager_incoming_messages(manager_client) -> None:
 
     try:
 
@@ -41,9 +41,10 @@ async def handle_manager_incoming_messages(manager_client):
 
             msg = json.loads(message)
 
-            if "event" in msg and glob.INTERFACES:
+            if "event" in msg:
 
-                await asyncio.wait([intf.send(message) for intf in glob.INTERFACES])
+                if glob.INTERFACES:
+                    await asyncio.wait([intf.send(message) for intf in glob.INTERFACES])
 
                 try:
                     evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
@@ -59,15 +60,12 @@ async def handle_manager_incoming_messages(manager_client):
                     if evt.data.state == common.PackageStateEnum.STOPPED:
                         glob.CURRENT_ACTION = None
                         glob.ACTION_STATE = None
-                        glob.SCENE_COLLISIONS = None
                         glob.PACKAGE_INFO = None
 
                 elif isinstance(evt, events.ActionStateEvent):
                     glob.ACTION_STATE = evt.data
                 elif isinstance(evt, events.CurrentActionEvent):
                     glob.CURRENT_ACTION = evt.data
-                elif isinstance(evt, events.SceneCollisionsEvent):
-                    glob.SCENE_COLLISIONS = evt.data
                 elif isinstance(evt, events.ProjectExceptionEvent):
                     pass
                 else:
@@ -130,8 +128,6 @@ async def register(websocket: WsClient) -> None:
         tasks.append(websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json()))
     if glob.CURRENT_ACTION:
         tasks.append(websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json()))
-    if glob.SCENE_COLLISIONS:
-        tasks.append(websocket.send(events.SceneCollisionsEvent(data=glob.SCENE_COLLISIONS).to_json()))
 
     await asyncio.gather(*tasks)
 
@@ -214,6 +210,8 @@ def main():
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
+
+    compile_json_schemas()
 
     loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
                                            _initialize_server()))

@@ -1,5 +1,6 @@
 import inspect
-import sys
+import pkgutil
+import importlib
 
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 
@@ -10,14 +11,24 @@ class DataException(Arcor2Exception):
     pass
 
 
-# force compilation of json schema (otherwise it might cause troubles later when executed in parallel)
-for module_name, module in inspect.getmembers(sys.modules[__name__], inspect.ismodule):
-    for _, obj in inspect.getmembers(module, inspect.isclass):
+def compile_json_schemas():
+    """
+    Force compilation of json schema (otherwise it might cause troubles later when executed in parallel)
+    :return:
+    """
 
-        if not issubclass(obj, JsonSchemaMixin) or obj is JsonSchemaMixin:
-            continue
+    from arcor2 import data
 
-        try:
-            obj.from_dict({})
-        except ValidationError:
-            pass
+    for _, module_name, _ in pkgutil.iter_modules(data.__path__):  # type: ignore
+
+        module = importlib.import_module(f"{data.__name__}.{module_name}")
+
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+
+            if not issubclass(obj, JsonSchemaMixin) or obj is JsonSchemaMixin:
+                continue
+
+            try:
+                obj.from_dict({})
+            except ValidationError:
+                pass

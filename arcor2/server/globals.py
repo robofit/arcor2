@@ -11,9 +11,9 @@ from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
 from arcor2 import helpers as hlp
-from arcor2.data.common import Scene, Project, PackageState, PackageInfo, ActionState, CurrentAction
+from arcor2.data.common import Scene, Project, PackageState, ActionState, CurrentAction
+from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict
-from arcor2.data import events
 from arcor2.data.services import ServiceTypeMetaDict
 from arcor2.data.robot import RobotMeta
 from arcor2.object_types import Generic
@@ -51,7 +51,6 @@ PACKAGE_STATE = PackageState()
 PACKAGE_INFO: Optional[PackageInfo] = None
 ACTION_STATE: Optional[ActionState] = None
 CURRENT_ACTION: Optional[CurrentAction] = None
-SCENE_COLLISIONS: Optional[events.SceneCollisionsData] = None
 
 RegisteredUiDict = DefaultDict[str, Set[WsClient]]
 

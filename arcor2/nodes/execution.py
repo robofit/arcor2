@@ -22,10 +22,9 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2
 from arcor2.exceptions import Arcor2Exception
-from arcor2.data import rpc
-from arcor2.data.common import PackageState, PackageStateEnum, Project, Scene, PackageInfo
-from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent,\
-    SceneCollisionsEvent
+from arcor2.data import rpc, compile_json_schemas
+from arcor2.data.common import PackageState, PackageStateEnum, Project
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, server
 from arcor2.settings import PROJECT_PATH
@@ -38,10 +37,9 @@ logger = Logger.with_default_handlers(name='manager', formatter=aiologger_format
 
 PROCESS: Union[asyncio.subprocess.Process, None] = None
 PROJECT_EVENT: PackageStateEvent = PackageStateEvent()
-PACKAGE_INFO: PackageInfoEvent = PackageInfoEvent()
+PACKAGE_INFO_EVENT: Optional[PackageInfoEvent] = None
 ACTION_EVENT: Optional[ActionStateEvent] = None
 ACTION_ARGS_EVENT: Optional[CurrentActionEvent] = None
-SCENE_COLLISION_EVENT: Optional[SceneCollisionsEvent] = None
 TASK = None
 
 CLIENTS: Set = set()
@@ -66,7 +64,7 @@ async def read_proc_stdout() -> None:
     global PROJECT_EVENT
     global ACTION_EVENT
     global ACTION_ARGS_EVENT
-    global SCENE_COLLISION_EVENT
+    global PACKAGE_INFO_EVENT
 
     logger.info("Reading script stdout...")
 
@@ -107,15 +105,14 @@ async def read_proc_stdout() -> None:
             ACTION_EVENT = evt
         elif isinstance(evt, CurrentActionEvent):
             ACTION_ARGS_EVENT = evt
-        elif isinstance(evt, SceneCollisionsEvent):
-            SCENE_COLLISION_EVENT = evt
+        elif isinstance(evt, PackageInfoEvent):
+            PACKAGE_INFO_EVENT = evt
 
         await send_to_clients(evt)
 
     ACTION_EVENT = None
     ACTION_ARGS_EVENT = None
-    PACKAGE_INFO.data = None
-    SCENE_COLLISION_EVENT = None
+    PACKAGE_INFO_EVENT = None
 
     await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED)))
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
@@ -143,20 +140,6 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     except FileNotFoundError:
         raise Arcor2Exception("Not an execution package.")
 
-    with open(os.path.join(package_path, "data", "project.json")) as project_file:
-        try:
-            project = Project.from_json(project_file.read())
-        except ValidationError as e:
-            raise Arcor2Exception(f"Failed to parse project.json file.") from e
-
-    with open(os.path.join(package_path, "data", "scene.json")) as scene_file:
-        try:
-            scene = Scene.from_json(scene_file.read())
-        except ValidationError as e:
-            raise Arcor2Exception(f"Failed to parse scene.json file.") from e
-
-    PACKAGE_INFO.data = PackageInfo(req.args.id, scene, project)
-
     await logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(script_path, stdin=asyncio.subprocess.PIPE,
                                                    stdout=asyncio.subprocess.PIPE,
@@ -164,14 +147,12 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
 
-    asyncio.ensure_future(send_to_clients(PACKAGE_INFO))
-
     TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
 async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -> None:
 
-    global SCENE_COLLISION_EVENT
+    global PACKAGE_INFO_EVENT
 
     if not process_running():
         raise Arcor2Exception("Project not running.")
@@ -183,8 +164,7 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -
     PROCESS.terminate()
     await logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
-    PACKAGE_INFO.data = None
-    SCENE_COLLISION_EVENT = None
+    PACKAGE_INFO_EVENT = None
 
 
 async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient) -> None:
@@ -299,7 +279,7 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient)
 
 async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) -> None:
 
-    if PACKAGE_INFO.data and PACKAGE_INFO.data.package_id == req.args.id:
+    if PACKAGE_INFO_EVENT and PACKAGE_INFO_EVENT.data and PACKAGE_INFO_EVENT.data.package_id == req.args.id:
         raise Arcor2Exception("Package is being executed.")
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
@@ -324,10 +304,10 @@ async def register(websocket: WsClient) -> None:
     await logger.info("Registering new client")
     CLIENTS.add(websocket)
 
-    tasks: List[Awaitable] = [websocket.send(PROJECT_EVENT.to_json()), websocket.send(PACKAGE_INFO.to_json())]
+    tasks: List[Awaitable] = [websocket.send(PROJECT_EVENT.to_json())]
 
-    if SCENE_COLLISION_EVENT:
-        tasks.append(websocket.send(SCENE_COLLISION_EVENT.to_json()))
+    if PACKAGE_INFO_EVENT:
+        tasks.append(websocket.send(PACKAGE_INFO_EVENT.to_json()))
 
     await asyncio.gather(*tasks)
 
@@ -368,6 +348,8 @@ def main() -> None:
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
+
+    compile_json_schemas()
 
     bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT)
