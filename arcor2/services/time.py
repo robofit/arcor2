@@ -47,5 +47,14 @@ class TimeService(Service):
         if dif > 0:
             time.sleep(dif)
 
+    @action
+    def time_ns(self) -> int:
+        """
+        Returns nanoseconds since Unix Epoch.
+        :return:
+        """
+        return time.time_ns()
+
     sleep.__action__ = ActionMetadata(blocking=True)  # type: ignore
     rate.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    time_ns.__action__ = ActionMetadata(blocking=True)  # type: ignore
