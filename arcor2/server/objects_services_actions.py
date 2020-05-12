@@ -218,7 +218,7 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
     except Arcor2Exception as e:
         await glob.logger.error(e)
         evt.data.error = e.message
-    except TypeError as e:
+    except (AttributeError, TypeError) as e:
         await glob.logger.error(e)
         evt.data.error = str(e)
     else:
