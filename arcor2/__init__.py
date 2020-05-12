@@ -5,6 +5,9 @@ import pkgutil
 # key: name of parameter, value: name of method to call (to get set of strings), set of parent parameters
 DynamicParamDict = Dict[str, Tuple[str, Set[str]]]
 
+# key: action, value: cancel method
+CancelDict = Dict[str, str]
+
 warnings.filterwarnings(
     action='ignore',
     category=UserWarning,

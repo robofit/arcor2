@@ -244,6 +244,15 @@ class ActionResultEvent(Event):
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
+@dataclass
+class ActionCancelledEvent(Event):
+    """
+    Used to notify that the action execution was cancelled.
+    """
+
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
 """
 ------------------------------------------------------------------------------------------------------------------------
 Objects

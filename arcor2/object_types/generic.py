@@ -1,7 +1,7 @@
 import abc
 from typing import Dict, Optional
 
-from arcor2 import DynamicParamDict
+from arcor2 import DynamicParamDict, CancelDict
 from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
 from arcor2.action import action
 from arcor2.data.object_type import Models
@@ -19,6 +19,7 @@ class Generic(metaclass=abc.ABCMeta):
     """
 
     DYNAMIC_PARAMS: DynamicParamDict = {}
+    CANCEL_MAPPING: CancelDict = {}
 
     def __init__(self, obj_id: str, name: str, pose: Pose, collision_model: Optional[Models] = None) -> None:
 

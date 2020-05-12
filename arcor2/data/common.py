@@ -132,6 +132,7 @@ class ActionMetadata(JsonSchemaMixin):
     blocking: bool = False
     composite: bool = False
     blackbox: bool = False
+    cancellable: bool = field(init=False, default=False)
 
 
 @dataclass
