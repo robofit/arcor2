@@ -229,5 +229,10 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
                 # temporal workaround for unsupported types
                 evt.data.result = str(action_result)
 
+    if glob.RUNNING_ACTION is None:
+        # action was cancelled, do not send any event
+        return
+
     await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None
+    glob.RUNNING_ACTION_PARAMS = None

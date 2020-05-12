@@ -130,6 +130,20 @@ class ExecuteActionResponse(Response):
 
     response: str = field(default=ExecuteActionRequest.request, init=False)
 
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class CancelActionRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class CancelActionResponse(Response):
+
+    response: str = field(default=CancelActionRequest.request, init=False)
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 

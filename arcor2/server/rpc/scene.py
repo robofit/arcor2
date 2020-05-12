@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Union, Set, Optional
+from typing import Set, Optional
 import asyncio
 import functools
 from contextlib import asynccontextmanager
@@ -13,8 +13,6 @@ from websockets.server import WebSocketServerProtocol as WsClient
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
 from arcor2.data import rpc, events
 from arcor2.data import common, object_type
-from arcor2.object_types import Generic
-from arcor2.services import Service
 from arcor2.exceptions import Arcor2Exception
 
 from arcor2.server.robot import get_end_effector_pose
@@ -22,7 +20,7 @@ from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
 from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene
+    clear_scene, get_instance
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
     projects_using_object, associated_projects
 
@@ -214,15 +212,7 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, 
 async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: WsClient) -> \
         rpc.objects.ActionParamValuesResponse:
 
-    inst: Union[None, Service, Generic] = None
-
-    # TODO method to get object/service based on ID
-    if req.args.id in glob.SCENE_OBJECT_INSTANCES:
-        inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
-    elif req.args.id in glob.SERVICES_INSTANCES:
-        inst = glob.SERVICES_INSTANCES[req.args.id]
-    else:
-        raise Arcor2Exception("Unknown ID.")
+    inst = get_instance(req.args.id)
 
     parent_params = {}
 
