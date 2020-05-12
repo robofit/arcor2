@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Dict, Set, Union, Optional, DefaultDict
+from typing import Dict, Set, Union, Optional, DefaultDict, Any
 import os
 from collections import defaultdict
 
@@ -46,6 +46,7 @@ SERVICES_INSTANCES: Dict[str, Service] = {}
 ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / services
 
 RUNNING_ACTION: Optional[str] = None  # ID of an action that is being executed during project editing
+RUNNING_ACTION_PARAMS: Optional[Dict[str, Any]] = None
 
 PACKAGE_STATE = PackageState()
 PACKAGE_INFO: Optional[PackageInfo] = None

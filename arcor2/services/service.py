@@ -1,6 +1,6 @@
 import abc
 from typing import FrozenSet
-from arcor2 import DynamicParamDict
+from arcor2 import DynamicParamDict, CancelDict
 from arcor2.docstring import parse_docstring
 
 
@@ -10,6 +10,7 @@ class Service(metaclass=abc.ABCMeta):
     """
 
     DYNAMIC_PARAMS: DynamicParamDict = {}
+    CANCEL_MAPPING: CancelDict = {}
 
     def __init__(self, configuration_id: str) -> None:
         self.configuration_id = configuration_id

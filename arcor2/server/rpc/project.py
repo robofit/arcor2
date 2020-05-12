@@ -3,17 +3,16 @@
 
 
 import asyncio
-from typing import Union, Dict, Any, Optional, Set
+from typing import Dict, Any, Set
 import copy
 from contextlib import asynccontextmanager
+import inspect
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import object_types_utils as otu, helpers as hlp
 from arcor2.data import rpc, events, common, object_type
 from arcor2 import aio_persistent_storage as storage
-from arcor2.object_types import Generic
-from arcor2.services import Service
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
@@ -23,7 +22,7 @@ from arcor2.server.decorators import scene_needed, project_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.project import project_problems, open_project, project_names
-from arcor2.server.scene import open_scene, clear_scene
+from arcor2.server.scene import open_scene, clear_scene, get_instance
 
 
 def find_object_action(action: common.Action) -> object_type.ObjectAction:
@@ -80,6 +79,51 @@ def unique_name(name: str, existing_names: Set[str]) -> None:
 
 @scene_needed
 @project_needed
+async def cancel_action_cb(req: rpc.project.CancelActionRequest, ui: WsClient) -> None:
+
+    assert glob.PROJECT
+
+    if not glob.RUNNING_ACTION:
+        raise Arcor2Exception("No action is running.")
+
+    action = glob.PROJECT.action(glob.RUNNING_ACTION)
+    obj_id, action_name = action.parse_type()
+    obj = get_instance(obj_id)
+
+    for act in glob.ACTIONS[obj.__class__.__name__]:
+        if act.name != action_name:
+            continue
+
+        if not act.meta.cancellable:
+            raise Arcor2Exception("Action is not cancellable.")
+
+    try:
+        action_method = getattr(obj, action_name)
+        cancel_method = getattr(obj, obj.CANCEL_MAPPING[action_method.__name__])
+    except AttributeError as e:
+        raise Arcor2Exception("Internal error.") from e
+
+    cancel_params: Dict[str, Any] = {}
+
+    cancel_sig = inspect.signature(cancel_method)
+
+    assert glob.RUNNING_ACTION_PARAMS is not None
+
+    for param_name, param in cancel_sig.parameters.items():
+        try:
+            cancel_params[param_name] = glob.RUNNING_ACTION_PARAMS[param_name]
+        except KeyError as e:
+            raise Arcor2Exception("Cancel method parameters should be subset of action parameters.") from e
+
+    await hlp.run_in_executor(cancel_method, *cancel_params.values())
+
+    asyncio.ensure_future(notif.broadcast_event(events.ActionCancelledEvent()))
+    glob.RUNNING_ACTION = None
+    glob.RUNNING_ACTION_PARAMS = None
+
+
+@scene_needed
+@project_needed
 async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
@@ -102,19 +146,13 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
 
     obj_id, action_name = action.parse_type()
 
-    obj: Optional[Union[Generic, Service]] = None
-
-    if obj_id in glob.SCENE_OBJECT_INSTANCES:
-        obj = glob.SCENE_OBJECT_INSTANCES[obj_id]
-    elif obj_id in glob.SERVICES_INSTANCES:
-        obj = glob.SERVICES_INSTANCES[obj_id]
-    else:
-        raise Arcor2Exception("Internal error: project not in sync with scene.")
+    obj = get_instance(obj_id)
 
     if not hasattr(obj, action_name):
         raise Arcor2Exception("Internal error: object does not have the requested method.")
 
     glob.RUNNING_ACTION = action.id
+    glob.RUNNING_ACTION_PARAMS = params
 
     await glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
 

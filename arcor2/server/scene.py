@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, List, get_type_hints, Set, AsyncIterator
+from typing import Optional, List, get_type_hints, Set, AsyncIterator, Union
 
 from arcor2.data.common import SceneService, SceneObject, Scene
 from arcor2.data import events
@@ -239,3 +239,13 @@ async def open_scene(scene_id: str) -> None:
 
     assert {srv.type for srv in glob.SCENE.services} == glob.SERVICES_INSTANCES.keys()
     assert {obj.id for obj in glob.SCENE.objects} == glob.SCENE_OBJECT_INSTANCES.keys()
+
+
+def get_instance(obj_id: str) -> Union[Generic, Service]:
+
+    if obj_id in glob.SCENE_OBJECT_INSTANCES:
+        return glob.SCENE_OBJECT_INSTANCES[obj_id]
+    elif obj_id in glob.SERVICES_INSTANCES:
+        return glob.SERVICES_INSTANCES[obj_id]
+    else:
+        raise Arcor2Exception("Unknown object/service ID.")
