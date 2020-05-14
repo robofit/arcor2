@@ -437,7 +437,7 @@ def main():
 
     swaggerui_blueprint = get_swaggerui_blueprint(
         SWAGGER_URL,  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
-        f"./api/swagger.json"
+        "./api/swagger.json"
     )
 
     # Register blueprint at URL
