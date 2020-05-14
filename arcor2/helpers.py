@@ -340,6 +340,6 @@ def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> T
         raise TypeDefException(f"Source does not contain class named '{type_name}'.")
 
     if not issubclass(cls_def, output_type):
-        raise TypeDefException(f"Class is not of expected type.")
+        raise TypeDefException("Class is not of expected type.")
 
     return cls_def

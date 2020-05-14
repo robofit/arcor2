@@ -158,7 +158,7 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
         data = ObjectAction(name=method_name, meta=meta)
 
-        if method_def in type_def.CANCEL_MAPPING:
+        if method_name in type_def.CANCEL_MAPPING:
             meta.cancellable = True
 
         doc = parse_docstring(method_def.__doc__)
