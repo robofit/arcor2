@@ -18,6 +18,10 @@ class IntegerParameterExtra(JsonSchemaMixin):
     maximum: Any
 
 
+class AssertNotFound(ParameterPluginException):
+    pass
+
+
 def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tuple[Any, Any]:
 
     # Assert(test=Compare(left=Num(n=0), ops=[LtE(), LtE()], comparators=[Name(id='speed', ctx=Load()), Num(n=100)]))
@@ -46,17 +50,19 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
         except AttributeError:
             continue
 
-    return None, None
+    raise AssertNotFound()
 
 
 def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, action_method: Callable,
-                action_node: ast.FunctionDef) -> \
-        None:
+                action_node: ast.FunctionDef) -> None:
 
-    minimum, maximum = get_assert_minimum_maximum(find_asserts(action_node), param_meta.name)
+    try:
+        minimum, maximum = get_assert_minimum_maximum(find_asserts(action_node), param_meta.name)
+    except AssertNotFound:
+        return
 
     for var in minimum, maximum:
-        if var is not None and not isinstance(minimum, cls.type()):
+        if not isinstance(var, cls.type()):
             raise ParameterPluginException("Parameter bounds has incorrect type.")
 
     param_meta.extra = IntegerParameterExtra(minimum, maximum).to_json()
