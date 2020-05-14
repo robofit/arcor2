@@ -381,7 +381,7 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> 
 
     for obj_name in glob.SCENE.object_names():
         if obj_name == req.args.new_name:
-            raise Arcor2Exception(f"Object name already exists.")
+            raise Arcor2Exception("Object name already exists.")
 
     if not hlp.is_valid_identifier(req.args.new_name):
         raise Arcor2Exception("Object name invalid (should be snake_case).")

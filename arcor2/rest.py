@@ -97,7 +97,7 @@ def _send(url: str, op: Callable, data: OptionalData = None,
         resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'},
                   params=params)
     except requests.exceptions.RequestException as e:
-        raise RestException(f"Catastrophic system error.", str(e)) from e
+        raise RestException("Catastrophic system error.", str(e)) from e
 
     handle_response(resp)
 
@@ -162,7 +162,7 @@ def delete(url: str):
     try:
         resp = SESSION.delete(url, timeout=TIMEOUT)
     except requests.exceptions.RequestException as e:
-        raise RestException(f"Catastrophic system error.", str(e)) from e
+        raise RestException("Catastrophic system error.", str(e)) from e
 
     handle_response(resp)
 
@@ -192,7 +192,7 @@ def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Para
     try:
         resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params, allow_redirects=True)
     except requests.exceptions.RequestException as e:
-        raise RestException(f"Catastrophic system error.", str(e)) from e
+        raise RestException("Catastrophic system error.", str(e)) from e
 
     handle_response(resp)
 
