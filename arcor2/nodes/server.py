@@ -9,6 +9,8 @@ import json
 import sys
 from typing import get_type_hints, List, Awaitable
 import inspect
+import os
+import shutil
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
@@ -27,7 +29,7 @@ from arcor2.parameter_plugins import PARAM_PLUGINS
 
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc
+from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -212,6 +214,10 @@ def main():
     loop.set_debug(enabled=args.asyncio_debug)
 
     compile_json_schemas()
+
+    if os.path.exists(settings.URDF_PATH):
+        shutil.rmtree(settings.URDF_PATH)
+    os.makedirs(settings.URDF_PATH)
 
     loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
                                            _initialize_server()))
