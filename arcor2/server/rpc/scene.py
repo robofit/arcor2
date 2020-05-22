@@ -382,7 +382,7 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest) -> \
 
     for obj_name in glob.SCENE.object_names():
         if obj_name == req.args.new_name:
-            return False, f"Object name already exists."
+            return False, "Object name already exists."
 
     target_obj.name = req.args.new_name
 
