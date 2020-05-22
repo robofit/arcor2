@@ -46,7 +46,8 @@ setup(
         'flask_swagger_ui',
         'websocket-client',
         'pyyaml',  # dependency of apispec, for some reason not installed automatically...
-        'Pillow'
+        'Pillow',
+        'flask-cors'
     ],
     extras_require={
         'test': [

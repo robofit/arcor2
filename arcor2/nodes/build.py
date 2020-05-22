@@ -13,6 +13,7 @@ import horast
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, send_file
+from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import arcor2
@@ -42,6 +43,7 @@ spec = APISpec(
 )
 
 app = Flask(__name__)
+CORS(app)
 
 
 def _publish(project_id: str):
