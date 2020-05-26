@@ -344,6 +344,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
     scene_object.pose.orientation.set_from_quaternion(
         new_pose.orientation.as_quaternion()*quaternion.quaternion(0, 1, 0, 0))
+    obj_inst.pose = scene_object.pose
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
@@ -363,6 +364,7 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest, ui: WsCl
         raise Arcor2Exception("Can't manipulate object created by service.")
 
     obj.pose = req.args.pose
+    glob.SCENE_OBJECT_INSTANCES[req.args.object_id].pose = req.args.pose
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))

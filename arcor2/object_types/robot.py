@@ -1,5 +1,5 @@
 import abc
-from typing import FrozenSet, List
+from typing import FrozenSet, List, Optional
 
 from arcor2.object_types.generic import Generic
 from arcor2.data.common import Pose, Joint
@@ -9,6 +9,8 @@ class Robot(Generic, metaclass=abc.ABCMeta):
     """
     Abstract class representing robot and its basic capabilities (motion)
     """
+
+    urdf_package_path: Optional[str] = None
 
     @abc.abstractmethod
     def get_end_effectors_ids(self) -> FrozenSet[str]:
