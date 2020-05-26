@@ -16,6 +16,7 @@ import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
+from aiorun import run  # type: ignore
 
 import arcor2
 import arcor2.helpers as hlp
@@ -190,6 +191,14 @@ for k, v in EXE_RPC_DICT.items():
 EVENT_DICT: hlp.EVENT_DICT_TYPE = {}
 
 
+async def aio_main() -> None:
+
+    await asyncio.gather(
+        exe.project_manager_client(handle_manager_incoming_messages),
+        _initialize_server()
+    )
+
+
 def main():
 
     assert sys.version_info >= (3, 8)
@@ -220,8 +229,7 @@ def main():
         shutil.rmtree(settings.URDF_PATH)
     os.makedirs(settings.URDF_PATH)
 
-    loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
-                                           _initialize_server()))
+    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
 
 if __name__ == "__main__":
