@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -12,3 +13,10 @@ class PackageInfo(JsonSchemaMixin):
     scene: common.Scene
     project: common.Project
     collision_models: object_type.CollisionModels = field(default_factory=object_type.CollisionModels)
+
+
+@dataclass
+class PackageMeta(JsonSchemaMixin):
+
+    name: str
+    built: datetime

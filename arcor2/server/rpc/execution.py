@@ -31,14 +31,14 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient)
 
         path = os.path.join(tmpdirname, "publish.zip")
 
-        await hlp.run_in_executor(rest.download, f"{glob.BUILDER_URL}/project/{req.args.project_id}/publish", path)
+        await hlp.run_in_executor(rest.download, f"{glob.BUILDER_URL}/project/{req.args.project_id}/publish", path,
+                                  None, {"package_name": req.args.package_name})
 
         with open(path, "rb") as zip_file:
             b64_bytes = base64.b64encode(zip_file.read())
             b64_str = b64_bytes.decode()
 
     # send data to execution service
-    # TODO package_name (instead of ID)
     exe_req = rpc.execution.UploadPackageRequest(uuid.uuid4().int,
                                                  args=rpc.execution.UploadPackageArgs(package_id, b64_str))
     exe_resp = await manager_request(exe_req)
