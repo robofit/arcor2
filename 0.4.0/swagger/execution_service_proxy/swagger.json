@@ -1,0 +1,274 @@
+{
+   "paths": {
+      "/packages/{package_id}": {
+         "put": {
+            "description": "Upload/update execution package.",
+            "parameters": [
+               {
+                  "in": "path",
+                  "name": "package_id",
+                  "schema": {
+                     "type": "string"
+                  },
+                  "required": true,
+                  "description": "unique ID"
+               }
+            ],
+            "requestBody": {
+               "content": {
+                  "multipart/form-data": {
+                     "schema": {
+                        "type": "object",
+                        "properties": {
+                           "file": {
+                              "type": "string",
+                              "format": "binary"
+                           }
+                        }
+                     }
+                  }
+               }
+            },
+            "responses": {
+               "200": {
+                  "description": "Ok"
+               },
+               "501": {
+                  "description": "Contains array of errors.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         },
+         "get": {
+            "description": "Get zip file with execution package.",
+            "parameters": [
+               {
+                  "in": "path",
+                  "name": "package_id",
+                  "schema": {
+                     "type": "string"
+                  },
+                  "required": true,
+                  "description": "unique ID"
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "Ok",
+                  "content": {
+                     "application/zip": {
+                        "schema": {
+                           "type": "string",
+                           "format": "binary",
+                           "example": "The archive of execution package (.zip)"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "Package ID was not found."
+               }
+            }
+         },
+         "delete": {
+            "description": "Delete package.",
+            "parameters": [
+               {
+                  "in": "path",
+                  "name": "package_id",
+                  "schema": {
+                     "type": "string"
+                  },
+                  "required": true,
+                  "description": "unique ID"
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "Ok"
+               },
+               "501": {
+                  "description": "Contains array of errors.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/packages": {
+         "get": {
+            "description": "Summary.",
+            "responses": {
+               "200": {
+                  "description": "Ok",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "object",
+                              "properties": {
+                                 "id": {
+                                    "type": "string"
+                                 },
+                                 "date_time": {
+                                    "type": "string",
+                                    "format": "date-time"
+                                 }
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/packages/{package_id}/start": {
+         "put": {
+            "description": "Start execution of the execution package.",
+            "parameters": [
+               {
+                  "in": "path",
+                  "name": "package_id",
+                  "schema": {
+                     "type": "string"
+                  },
+                  "required": true,
+                  "description": "unique ID"
+               }
+            ],
+            "responses": {
+               "200": {
+                  "description": "Ok"
+               },
+               "501": {
+                  "description": "Contains array of errors.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/packages/stop": {
+         "put": {
+            "description": "Stops execution of the given package.",
+            "responses": {
+               "200": {
+                  "description": "Ok"
+               },
+               "501": {
+                  "description": "Contains array of errors.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/packages/pause": {
+         "put": {
+            "description": "Pause execution of the given package.",
+            "responses": {
+               "200": {
+                  "description": "Ok"
+               },
+               "501": {
+                  "description": "Contains array of errors.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/packages/resume": {
+         "put": {
+            "description": "Resumes execution of the given package.",
+            "responses": {
+               "200": {
+                  "description": "Ok"
+               },
+               "501": {
+                  "description": "Contains array of errors.",
+                  "content": {
+                     "application/json": {
+                        "schema": {
+                           "type": "array",
+                           "items": {
+                              "type": "string"
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      },
+      "/packages/active": {
+         "get": {
+            "description": "Get id of the running package.",
+            "responses": {
+               "200": {
+                  "description": "Ok",
+                  "content": {
+                     "text/plain": {
+                        "schema": {
+                           "type": "string",
+                           "example": "demo1"
+                        }
+                     }
+                  }
+               },
+               "404": {
+                  "description": "No project running"
+               }
+            }
+         }
+      }
+   },
+   "info": {
+      "title": "ARCOR2 Execution Service Proxy",
+      "version": "0.4.0"
+   },
+   "openapi": "3.0.2"
+}
