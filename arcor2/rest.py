@@ -17,6 +17,8 @@ class RestException(Arcor2Exception):
 
 TIMEOUT = (1.0, 20.0)  # connect, read
 
+HEADERS = {'accept': 'application/json', 'content-type': 'application/json'}
+
 T = TypeVar('T', bound=JsonSchemaMixin)
 S = TypeVar('S', str, int, float, bool)
 
@@ -94,7 +96,7 @@ def _send(url: str, op: Callable, data: OptionalData = None,
         params = {}
 
     try:
-        resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers={'Content-Type': 'application/json'},
+        resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers=HEADERS,
                   params=params)
     except requests.exceptions.RequestException as e:
         raise RestException("Catastrophic system error.", str(e)) from e
@@ -160,7 +162,7 @@ def put_returning_list(url: str, data: OptionalData = None,
 def delete(url: str):
 
     try:
-        resp = SESSION.delete(url, timeout=TIMEOUT)
+        resp = SESSION.delete(url, timeout=TIMEOUT, headers=HEADERS)
     except requests.exceptions.RequestException as e:
         raise RestException("Catastrophic system error.", str(e)) from e
 
@@ -190,7 +192,8 @@ def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Para
         params = {}
 
     try:
-        resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params, allow_redirects=True)
+        resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params, allow_redirects=True,
+                           headers=HEADERS)
     except requests.exceptions.RequestException as e:
         raise RestException("Catastrophic system error.", str(e)) from e
 

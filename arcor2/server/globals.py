@@ -19,13 +19,14 @@ from arcor2.data.robot import RobotMeta
 from arcor2.object_types import Generic
 from arcor2.services import Service
 from arcor2.parameter_plugins.base import TypesDict
-from arcor2 import nodes
+from arcor2.nodes.execution import PORT as EXE_PORT
+from arcor2.nodes.build import PORT as BUILD_PORT
 
 logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
 VERBOSE: bool = False
 
-MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{nodes.execution.PORT}")
-BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{nodes.build.PORT}")
+MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{EXE_PORT}")
+BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{BUILD_PORT}")
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 

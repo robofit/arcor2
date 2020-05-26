@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -17,3 +18,4 @@ class RobotMeta(JsonSchemaMixin):
 
     type: str
     features: RobotFeatures = field(default_factory=RobotFeatures)
+    urdf_package_filename: Optional[str] = None

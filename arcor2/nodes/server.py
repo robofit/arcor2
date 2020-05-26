@@ -9,17 +9,20 @@ import json
 import sys
 from typing import get_type_hints, List, Awaitable
 import inspect
+import os
+import shutil
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
+from aiorun import run  # type: ignore
 
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
-from arcor2 import nodes
+from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
 from arcor2.data import events, common, compile_json_schemas
 from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
@@ -27,7 +30,7 @@ from arcor2.parameter_plugins import PARAM_PLUGINS
 
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc
+from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -88,7 +91,8 @@ async def _initialize_server() -> None:
         try:
             await storage.get_projects()
             break
-        except storage.PersistentStorageException:
+        except storage.PersistentStorageException as e:
+            print(e.message)
             await asyncio.sleep(1)
 
     # this has to be done sequentially as objects might depend on services so (all) services has to be known first
@@ -175,7 +179,7 @@ for _, rpc_module in inspect.getmembers(srpc, inspect.ismodule):
         RPC_DICT[ttype] = rpc_cb
 
 # add Project Manager RPC API
-for k, v in nodes.execution.RPC_DICT.items():
+for k, v in EXE_RPC_DICT.items():
 
     if v.__name__.startswith("_"):
         continue
@@ -185,6 +189,14 @@ for k, v in nodes.execution.RPC_DICT.items():
 
 # events from clients
 EVENT_DICT: hlp.EVENT_DICT_TYPE = {}
+
+
+async def aio_main() -> None:
+
+    await asyncio.gather(
+        exe.project_manager_client(handle_manager_incoming_messages),
+        _initialize_server()
+    )
 
 
 def main():
@@ -213,8 +225,11 @@ def main():
 
     compile_json_schemas()
 
-    loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
-                                           _initialize_server()))
+    if os.path.exists(settings.URDF_PATH):
+        shutil.rmtree(settings.URDF_PATH)
+    os.makedirs(settings.URDF_PATH)
+
+    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
 
 if __name__ == "__main__":
