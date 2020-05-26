@@ -1,4 +1,5 @@
 from typing import List, Union, Type, Optional, Set
+import os
 
 from arcor2.data.common import Pose, Joint
 from arcor2.data.robot import RobotMeta
@@ -115,4 +116,8 @@ async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> 
 
     meta = RobotMeta(robot_type.__name__)
     meta.features.focus = hasattr(robot_type, "focus")  # TODO more sophisticated test? (attr(s) and return value?)
+
+    if issubclass(robot_type, Robot) and robot_type.urdf_package_path:
+        meta.urdf_package_filename = os.path.split(robot_type.urdf_package_path)[1]
+
     glob.ROBOT_META[robot_type.__name__] = meta
