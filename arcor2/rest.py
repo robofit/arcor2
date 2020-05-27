@@ -73,7 +73,7 @@ def handle_response(resp: requests.Response) -> None:
 
         try:
             raise RestException(resp_body["message"], str(e)) from e
-        except KeyError:
+        except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
             raise RestException(str(resp_body), str(e)) from e
 
 
