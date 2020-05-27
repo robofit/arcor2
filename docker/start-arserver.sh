@@ -1,5 +1,4 @@
 #!/bin/bash  
-
-cd /root/arcor2/arcor2/user_objects || exit
-python upload.py
+cd /root/data/
+python3 -m http.server 8888 &
 arcor2_server
