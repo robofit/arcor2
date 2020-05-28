@@ -47,7 +47,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
             if "event" in msg:
 
                 if glob.INTERFACES:
-                    await asyncio.wait([intf.send(message) for intf in glob.INTERFACES])
+                    await asyncio.wait([hlp.send_json_to_client(intf, message) for intf in glob.INTERFACES])
 
                 try:
                     evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
