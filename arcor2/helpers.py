@@ -115,6 +115,14 @@ def snake_case_to_camel_case(snake_str: str) -> str:
     return re.sub(r"(?:^|_)(.)", lambda m: m.group(1).upper(), snake_str)
 
 
+async def send_json_to_client(client: websockets.WebSocketServerProtocol, data: str) -> None:
+
+    try:
+        await client.send(data)
+    except websockets.exceptions.ConnectionClosed:
+        pass
+
+
 async def server(client: Any,
                  path: str,
                  logger: Any,
@@ -130,9 +138,10 @@ async def server(client: Any,
     req_last_ts: Dict[str, deque] = {}
     ignored_reqs: Set[str] = set()
 
-    await register(client)
-
     try:
+
+        await register(client)
+
         async for message in client:
 
             try:

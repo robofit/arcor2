@@ -15,6 +15,7 @@ import zipfile
 from typing import Optional, Set, Union, Awaitable, List
 from datetime import datetime, timezone
 
+from aiorun import run  # type: ignore
 import websockets
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
@@ -354,6 +355,13 @@ RPC_DICT: RPC_DICT_TYPE = {
 }
 
 
+async def aio_main() -> None:
+
+    await websockets.serve(
+        functools.partial(server, logger=logger, register=register, unregister=unregister, rpc_dict=RPC_DICT),
+        '0.0.0.0', PORT)
+
+
 def main() -> None:
 
     assert sys.version_info >= (3, 8)
@@ -377,11 +385,7 @@ def main() -> None:
 
     compile_json_schemas()
 
-    bound_handler = functools.partial(server, logger=logger, register=register, unregister=unregister,
-                                      rpc_dict=RPC_DICT)
-    loop.run_until_complete(
-        websockets.serve(bound_handler, '0.0.0.0', PORT))
-    loop.run_forever()
+    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
 
 if __name__ == "__main__":
