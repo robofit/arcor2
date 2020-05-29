@@ -6,6 +6,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import rpc, events
 from arcor2.exceptions import Arcor2Exception
+from arcor2 import helpers as hlp
 
 from arcor2.server import globals as glob, objects_services_actions as osa, robot
 from arcor2.server.decorators import scene_needed
@@ -36,7 +37,8 @@ async def robot_joints_event(robot_id: str) -> None:
             break
 
         evt_json = evt.to_json()
-        await asyncio.gather(*[ui.send(evt_json) for ui in glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]])
+        await asyncio.gather(*[hlp.send_json_to_client(ui, evt_json)
+                               for ui in glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]])
 
         end = time.monotonic()
         await asyncio.sleep(EVENT_PERIOD-(end-start))
@@ -75,7 +77,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
             break
 
         evt_json = evt.to_json()
-        await asyncio.gather(*[ui.send(evt_json) for ui in glob.ROBOT_EEF_REGISTERED_UIS[robot_id]])
+        await asyncio.gather(*[hlp.send_json_to_client(ui, evt_json) for ui in glob.ROBOT_EEF_REGISTERED_UIS[robot_id]])
 
         end = time.monotonic()
         await asyncio.sleep(EVENT_PERIOD-(end-start))
