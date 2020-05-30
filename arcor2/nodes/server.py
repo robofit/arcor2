@@ -7,33 +7,36 @@ import asyncio
 import functools
 import json
 import sys
-import uuid
-from typing import Union, cast, get_type_hints
+from typing import get_type_hints, List, Awaitable
 import inspect
+import os
+import shutil
 
 import websockets
+from websockets.server import WebSocketServerProtocol as WsClient
 from aiologger.levels import LogLevel  # type: ignore
+from dataclasses_jsonschema import ValidationError
+from aiorun import run  # type: ignore
 
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
-from arcor2 import nodes
-from arcor2.data import events
+from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
+from arcor2.data import events, common, compile_json_schemas
 from arcor2.data import rpc
-from arcor2.data.helpers import RPC_MAPPING
+from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
 
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc
-from arcor2.server.project import open_project
+from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
 
 
-async def handle_manager_incoming_messages(manager_client):
+async def handle_manager_incoming_messages(manager_client) -> None:
 
     try:
 
@@ -41,8 +44,36 @@ async def handle_manager_incoming_messages(manager_client):
 
             msg = json.loads(message)
 
-            if "event" in msg and glob.INTERFACES:
-                await asyncio.wait([intf.send(message) for intf in glob.INTERFACES])
+            if "event" in msg:
+
+                if glob.INTERFACES:
+                    await asyncio.wait([hlp.send_json_to_client(intf, message) for intf in glob.INTERFACES])
+
+                try:
+                    evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
+                except ValidationError as e:
+                    await glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
+                    continue
+
+                if isinstance(evt, events.PackageInfoEvent):
+                    glob.PACKAGE_INFO = evt.data
+                elif isinstance(evt, events.PackageStateEvent):
+                    glob.PACKAGE_STATE = evt.data
+
+                    if evt.data.state == common.PackageStateEnum.STOPPED:
+                        glob.CURRENT_ACTION = None
+                        glob.ACTION_STATE = None
+                        glob.PACKAGE_INFO = None
+
+                elif isinstance(evt, events.ActionStateEvent):
+                    glob.ACTION_STATE = evt.data
+                elif isinstance(evt, events.CurrentActionEvent):
+                    glob.CURRENT_ACTION = evt.data
+                elif isinstance(evt, events.ProjectExceptionEvent):
+                    pass
+                else:
+                    await glob.logger.warn(f"Unhandled type of event from Execution: {evt.event}")
+
             elif "response" in msg:
 
                 # TODO handle potential errors
@@ -60,14 +91,14 @@ async def _initialize_server() -> None:
         try:
             await storage.get_projects()
             break
-        except storage.PersistentStorageException:
+        except storage.PersistentStorageException as e:
+            print(e.message)
             await asyncio.sleep(1)
 
     # this has to be done sequentially as objects might depend on services so (all) services has to be known first
     await osa.get_service_types()
     await osa.get_object_types()
-
-    await asyncio.wait([osa.get_object_actions(), _check_manager()])
+    await osa.get_object_actions()
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=glob.VERBOSE)
@@ -76,51 +107,48 @@ async def _initialize_server() -> None:
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
-async def _check_manager() -> None:
-    """
-    Loads project if it is loaded on manager (e.g. in a case when execution unit runs script and server is started).
-    :return:
-    """
-
-    # TODO avoid cast
-    resp = cast(rpc.execution.ProjectStateResponse,
-                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
-
-    if resp.data.id is not None and (glob.PROJECT is None or glob.PROJECT.id != resp.data.id):
-        await open_project(resp.data.id)
-
-
-async def list_meshes_cb(req: rpc.storage.ListMeshesRequest) -> Union[rpc.storage.ListMeshesResponse,
-                                                                      hlp.RPC_RETURN_TYPES]:
+async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) -> rpc.storage.ListMeshesResponse:
     return rpc.storage.ListMeshesResponse(data=await storage.get_meshes())
 
 
-async def register(websocket) -> None:
+async def register(websocket: WsClient) -> None:
 
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    await notif.event(websocket, events.SceneChanged(events.EventType.UPDATE, data=glob.SCENE))
-    await notif.event(websocket, events.ProjectChanged(events.EventType.UPDATE, data=glob.PROJECT))
+    tasks: List[Awaitable] = []
 
-    # TODO avoid cast
-    resp = cast(rpc.execution.ProjectStateResponse,
-                await exe.manager_request(rpc.execution.ProjectStateRequest(id=uuid.uuid4().int)))  # type: ignore
+    if glob.PROJECT:
+        assert glob.SCENE
+        tasks.append(notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT))))
+    elif glob.SCENE:
+        tasks.append(notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
 
-    await asyncio.wait([websocket.send(events.ProjectStateEvent(data=resp.data.project).to_json())])
-    if resp.data.action:
-        await asyncio.wait([websocket.send(events.ActionStateEvent(data=resp.data.action).to_json())])
-    if resp.data.action_args:
-        await asyncio.wait([websocket.send(events.CurrentActionEvent(data=resp.data.action_args).to_json())])
+    tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
+
+    if glob.PACKAGE_INFO:
+        tasks.append(websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json()))
+    if glob.ACTION_STATE:
+        tasks.append(websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json()))
+    if glob.CURRENT_ACTION:
+        tasks.append(websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json()))
+
+    await asyncio.gather(*tasks)
 
 
-async def unregister(websocket) -> None:
+async def unregister(websocket: WsClient) -> None:
     await glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
 
+    for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
+    for registered_uis in glob.ROBOT_EEF_REGISTERED_UIS.values():
+        if websocket in registered_uis:
+            registered_uis.remove(websocket)
 
-async def system_info_cb(req: rpc.common.SystemInfoRequest) -> Union[rpc.common.SystemInfoResponse,
-                                                                     hlp.RPC_RETURN_TYPES]:
+
+async def system_info_cb(req: rpc.common.SystemInfoRequest, ui: WsClient) -> rpc.common.SystemInfoResponse:
 
     resp = rpc.common.SystemInfoResponse()
     resp.data.version = arcor2.version()
@@ -151,7 +179,7 @@ for _, rpc_module in inspect.getmembers(srpc, inspect.ismodule):
         RPC_DICT[ttype] = rpc_cb
 
 # add Project Manager RPC API
-for k, v in nodes.execution.RPC_DICT.items():
+for k, v in EXE_RPC_DICT.items():
 
     if v.__name__.startswith("_"):
         continue
@@ -161,6 +189,14 @@ for k, v in nodes.execution.RPC_DICT.items():
 
 # events from clients
 EVENT_DICT: hlp.EVENT_DICT_TYPE = {}
+
+
+async def aio_main() -> None:
+
+    await asyncio.gather(
+        exe.project_manager_client(handle_manager_incoming_messages),
+        _initialize_server()
+    )
 
 
 def main():
@@ -187,8 +223,13 @@ def main():
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
 
-    loop.run_until_complete(asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages),
-                                           _initialize_server()))
+    compile_json_schemas()
+
+    if os.path.exists(settings.URDF_PATH):
+        shutil.rmtree(settings.URDF_PATH)
+    os.makedirs(settings.URDF_PATH)
+
+    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
 
 if __name__ == "__main__":

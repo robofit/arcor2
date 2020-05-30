@@ -47,6 +47,7 @@ setup(
         'websocket-client',
         'pyyaml',  # dependency of apispec, for some reason not installed automatically...
         'Pillow',
+        'aiorun',
         'flask-cors'
     ],
     extras_require={

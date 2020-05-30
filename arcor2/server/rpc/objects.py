@@ -3,7 +3,9 @@
 
 
 import asyncio
-from typing import Union, List, Dict
+from typing import List, Dict
+
+from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.source.object_types import new_object_type_source
 from arcor2 import object_types_utils as otu, helpers as hlp
@@ -40,36 +42,32 @@ def clean_up_after_focus(obj_id: str) -> None:
 
 @scene_needed
 @no_project
-async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest) -> Union[rpc.objects.FocusObjectStartResponse,
-                                                                                   hlp.RPC_RETURN_TYPES]:
+async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: WsClient) -> None:
 
     obj_id = req.args.object_id
 
     if obj_id in FOCUS_OBJECT_ROBOT:
-        return False, "Focusing already started."
+        raise Arcor2Exception("Focusing already started.")
 
     if obj_id not in glob.SCENE_OBJECT_INSTANCES:
-        return False, "Unknown object."
+        raise Arcor2Exception("Unknown object.")
 
-    try:
-        inst = await osa.get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
-    except Arcor2Exception as e:
-        return False, e.message
+    inst = await osa.get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if not glob.ROBOT_META[inst.__class__.__name__].features.focus:
-        return False, "Robot/service does not support focusing."
+        raise Arcor2Exception("Robot/service does not support focusing.")
 
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
 
     if not obj_type.object_model or obj_type.object_model.type != Model3dType.MESH:
-        return False, "Only available for objects with mesh model."
+        raise Arcor2Exception("Only available for objects with mesh model.")
 
     assert obj_type.object_model.mesh
 
     focus_points = obj_type.object_model.mesh.focus_points
 
     if not focus_points:
-        return False, "focusPoints not defined for the mesh."
+        raise Arcor2Exception("focusPoints not defined for the mesh.")
 
     FOCUS_OBJECT_ROBOT[req.args.object_id] = req.args.robot
     FOCUS_OBJECT[obj_id] = {}
@@ -78,14 +76,13 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest) -> Uni
 
 
 @no_project
-async def focus_object_cb(req: rpc.objects.FocusObjectRequest) -> Union[rpc.objects.FocusObjectResponse,
-                                                                        hlp.RPC_RETURN_TYPES]:
+async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> rpc.objects.FocusObjectResponse:
 
     obj_id = req.args.object_id
     pt_idx = req.args.point_idx
 
     if obj_id not in glob.SCENE_OBJECT_INSTANCES:
-        return False, "Unknown object_id."
+        raise Arcor2Exception("Unknown object_id.")
 
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
 
@@ -96,7 +93,7 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest) -> Union[rpc.obje
     assert focus_points
 
     if pt_idx < 0 or pt_idx > len(focus_points)-1:
-        return False, "Index out of range."
+        raise Arcor2Exception("Index out of range.")
 
     if obj_id not in FOCUS_OBJECT:
         await glob.logger.info(f'Start of focusing for {obj_id}.')
@@ -113,13 +110,12 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest) -> Union[rpc.obje
 
 @scene_needed
 @no_project
-async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union[rpc.objects.FocusObjectDoneResponse,
-                                                                                 hlp.RPC_RETURN_TYPES]:
+async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsClient) -> None:
 
     obj_id = req.args.id
 
     if obj_id not in FOCUS_OBJECT:
-        return False, "focusObjectStart/focusObject has to be called first."
+        raise Arcor2Exception("focusObjectStart/focusObject has to be called first.")
 
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
 
@@ -130,7 +126,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union
     assert focus_points
 
     if len(FOCUS_OBJECT[obj_id]) < len(focus_points):
-        return False, "Not all points were done."
+        raise Arcor2Exception("Not all points were done.")
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
     robot_inst = await osa.get_robot_instance(robot_id)
@@ -156,7 +152,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union
         obj.pose = await hlp.run_in_executor(robot_inst.focus, mfa)  # type: ignore
     except Arcor2Exception as e:
         await glob.logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
-        return False, "Focusing failed."
+        raise Arcor2Exception("Focusing failed.") from e
 
     await glob.logger.info(f"Done focusing for {obj_id}.")
 
@@ -167,19 +163,22 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest) -> Union
     return None
 
 
-async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc.objects.NewObjectTypeResponse,
-                                                                             hlp.RPC_RETURN_TYPES]:
+async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient) -> None:
 
     meta = req.args
 
     if meta.type in glob.OBJECT_TYPES:
-        return False, "Object type already exists."
+        raise Arcor2Exception("Object type already exists.")
 
     if meta.base not in glob.OBJECT_TYPES:
-        return False, f"Unknown base object type '{meta.base}', known types are: {', '.join(glob.OBJECT_TYPES.keys())}."
+        raise Arcor2Exception(f"Unknown base object type '{meta.base}', "
+                              f"known types are: {', '.join(glob.OBJECT_TYPES.keys())}.")
 
     if not hlp.is_valid_type(meta.type):
-        return False, "Object type invalid (should be CamelCase)."
+        raise Arcor2Exception("Object type invalid (should be CamelCase).")
+
+    if req.dry_run:
+        return None
 
     obj = meta.to_object_type()
     obj.source = new_object_type_source(glob.OBJECT_TYPES[meta.base], meta)
@@ -196,7 +195,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
             meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
         except storage.PersistentStorageException as e:
             await glob.logger.error(e)
-            return False, f"Mesh ID {meta.object_model.mesh.id} does not exist."
+            raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
 
     await storage.update_object_type(obj)
 
@@ -209,14 +208,14 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest) -> Union[rpc
     return None
 
 
-async def get_object_actions_cb(req: rpc.objects.GetActionsRequest) -> Union[rpc.objects.GetActionsResponse,
-                                                                             hlp.RPC_RETURN_TYPES]:
+async def get_object_actions_cb(req: rpc.objects.GetActionsRequest, ui: WsClient) -> rpc.objects.GetActionsResponse:
 
     try:
         return rpc.objects.GetActionsResponse(data=glob.ACTIONS[req.args.type])
     except KeyError:
-        return False, f"Unknown object type: '{req.args.type}'."
+        raise Arcor2Exception(f"Unknown object type: '{req.args.type}'.")
 
 
-async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest) -> rpc.objects.GetObjectTypesResponse:
+async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest, ui: WsClient) ->\
+        rpc.objects.GetObjectTypesResponse:
     return rpc.objects.GetObjectTypesResponse(data=list(glob.OBJECT_TYPES.values()))

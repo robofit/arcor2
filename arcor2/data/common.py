@@ -132,6 +132,7 @@ class ActionMetadata(JsonSchemaMixin):
     blocking: bool = False
     composite: bool = False
     blackbox: bool = False
+    cancellable: bool = field(init=False, default=False)
 
 
 @dataclass
@@ -461,7 +462,7 @@ class IdDescList(JsonSchemaMixin):
     items: List[IdDesc] = field(default_factory=list)
 
 
-class ProjectStateEnum(Enum):
+class PackageStateEnum(Enum):
 
     RUNNING: str = "running"
     STOPPED: str = "stopped"
@@ -483,9 +484,9 @@ class ActionState(JsonSchemaMixin):
 
 
 @dataclass
-class ProjectState(JsonSchemaMixin):
+class PackageState(JsonSchemaMixin):
 
-    state: ProjectStateEnum = ProjectStateEnum.STOPPED
+    state: PackageStateEnum = PackageStateEnum.STOPPED
 
 
 @dataclass

@@ -1,7 +1,7 @@
 import traceback
 import time
 import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Union, Any, Awaitable, TypeVar
+from typing import Optional, Dict, Callable, Tuple, Type, Any, Awaitable, TypeVar, Set
 from types import ModuleType
 import json
 import asyncio
@@ -9,11 +9,13 @@ import importlib
 import re
 import keyword
 import logging
+from collections import deque
 
 from dataclasses_jsonschema import ValidationError
 
 import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
+from aiologger.levels import LogLevel  # type: ignore
 
 from arcor2.data.rpc.common import Request
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
@@ -21,8 +23,6 @@ from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data.common import Pose, Position, Orientation
 
-
-RPC_RETURN_TYPES = Union[None, Tuple[bool, str]]
 
 # TODO what's wrong with following type?
 # RPC_DICT_TYPE = Dict[Type[Request], Callable[[Request], Coroutine[Any, Any, Union[Response, RPC_RETURN_TYPES]]]]
@@ -115,6 +115,14 @@ def snake_case_to_camel_case(snake_str: str) -> str:
     return re.sub(r"(?:^|_)(.)", lambda m: m.group(1).upper(), snake_str)
 
 
+async def send_json_to_client(client: websockets.WebSocketServerProtocol, data: str) -> None:
+
+    try:
+        await client.send(data)
+    except websockets.exceptions.ConnectionClosed:
+        pass
+
+
 async def server(client: Any,
                  path: str,
                  logger: Any,
@@ -127,8 +135,13 @@ async def server(client: Any,
     if event_dict is None:
         event_dict = {}
 
-    await register(client)
+    req_last_ts: Dict[str, deque] = {}
+    ignored_reqs: Set[str] = set()
+
     try:
+
+        await register(client)
+
         async for message in client:
 
             try:
@@ -161,10 +174,10 @@ async def server(client: Any,
                     continue
 
                 try:
-                    resp = await rpc_dict[req_cls](req)
+                    resp = await rpc_dict[req_cls](req, client)
                 except Arcor2Exception as e:
                     await logger.debug(e, exc_info=True)
-                    resp = False, str(e)
+                    resp = False, e.message
 
                 if resp is None:  # default response
                     resp = resp_cls()
@@ -176,7 +189,35 @@ async def server(client: Any,
                 resp.id = req.id
 
                 await asyncio.wait([client.send(resp.to_json())])
-                await logger.debug(f"RPC request: {req}, result: {resp}")
+
+                if logger.level == LogLevel.DEBUG:
+
+                    # Silencing of repetitive log messages
+                    # ...maybe this could be done better and in a more general way using logging.Filter?
+
+                    now = time.monotonic()
+                    if req.request not in req_last_ts:
+                        req_last_ts[req.request] = deque()
+
+                    while req_last_ts[req.request]:
+                        if req_last_ts[req.request][0] < now - 5.0:
+                            req_last_ts[req.request].popleft()
+                        else:
+                            break
+
+                    req_last_ts[req.request].append(now)
+                    req_per_sec = len(req_last_ts[req.request])/5.0
+
+                    if req_per_sec > 2:
+                        if req.request not in ignored_reqs:
+                            ignored_reqs.add(req.request)
+                            await logger.debug(f"Request of type {req.request} will be silenced.")
+                    elif req_per_sec < 1:
+                        if req.request in ignored_reqs:
+                            ignored_reqs.remove(req.request)
+
+                    if req.request not in ignored_reqs:
+                        asyncio.ensure_future(logger.debug(f"RPC request: {req}, result: {resp}"))
 
             elif "event" in data:  # ...event from UI
 

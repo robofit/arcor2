@@ -6,7 +6,7 @@ import horast
 
 import arcor2
 from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ActionParameterMeta, \
-    ObjectAction, ObjectActions
+    ObjectAction, ObjectActions, ActionMetadata
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
 from arcor2.services import Service
@@ -154,9 +154,12 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
         if hasattr(base_cls_def, method_name) and getattr(base_cls_def, method_name) == method_def:
             continue
 
-        meta = method_def.__action__
+        meta: ActionMetadata = method_def.__action__
 
         data = ObjectAction(name=method_name, meta=meta)
+
+        if method_name in type_def.CANCEL_MAPPING:
+            meta.cancellable = True
 
         doc = parse_docstring(method_def.__doc__)
         doc_short = doc["short_description"]

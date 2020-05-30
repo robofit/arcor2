@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Callable, Any, Union, Dict, Optional
+from typing import Callable, Any, Union, Dict, Optional, Type
 import asyncio
+import shutil
 
 from arcor2 import service_types_utils as stu, object_types_utils as otu
 from arcor2.data.object_type import ObjectModel, ObjectTypeMeta, ObjectTypeMetaDict, ObjectActionsDict
@@ -16,7 +17,7 @@ from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 import arcor2.helpers as hlp
 from arcor2.data import events
 
-from arcor2.server import globals as glob
+from arcor2.server import globals as glob, settings
 from arcor2.server.robot import get_robot_meta
 from arcor2.server import notifications as notif
 
@@ -88,6 +89,14 @@ async def get_service_types() -> None:
     glob.SERVICE_TYPES = service_types
 
 
+def handle_robot_urdf(robot: Type[Robot]) -> None:
+
+    if not robot.urdf_package_path:
+        return
+
+    shutil.copy(robot.urdf_package_path, settings.URDF_PATH)
+
+
 async def get_object_types() -> None:
 
     object_types: ObjectTypeMetaDict = otu.built_in_types_meta()
@@ -128,6 +137,7 @@ async def get_object_types() -> None:
 
         if issubclass(type_def, Robot):
             asyncio.ensure_future(get_robot_meta(type_def))
+            asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, type_def))
 
     # if description is missing, try to get it from ancestor(s)
     for obj_type, obj_meta in object_types.items():
@@ -218,7 +228,7 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
     except Arcor2Exception as e:
         await glob.logger.error(e)
         evt.data.error = e.message
-    except TypeError as e:
+    except (AttributeError, TypeError) as e:
         await glob.logger.error(e)
         evt.data.error = str(e)
     else:
@@ -229,5 +239,10 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
                 # temporal workaround for unsupported types
                 evt.data.result = str(action_result)
 
+    if glob.RUNNING_ACTION is None:
+        # action was cancelled, do not send any event
+        return
+
     await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None
+    glob.RUNNING_ACTION_PARAMS = None
