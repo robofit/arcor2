@@ -13,6 +13,7 @@ import sys
 import tempfile
 import zipfile
 from typing import Optional, Set, Union, Awaitable, List
+from datetime import datetime, timezone
 
 from aiorun import run  # type: ignore
 import websockets
@@ -25,6 +26,7 @@ import arcor2
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data import rpc, compile_json_schemas
 from arcor2.data.common import PackageState, PackageStateEnum, Project
+from arcor2.data.execution import PackageMeta
 from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, server
@@ -247,6 +249,18 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClie
     return None
 
 
+async def read_package_meta(package_id: str) -> PackageMeta:
+
+    target_path = os.path.join(PROJECT_PATH, package_id, "package.json")
+
+    try:
+        with open(target_path) as pkg_file:
+            return PackageMeta.from_json(pkg_file.read())
+    except (IOError, ValidationError) as e:
+        asyncio.ensure_future(logger.error(f"Failed to read package.json of {package_id}: {e}"))
+        return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
+
+
 async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient) ->\
         rpc.execution.ListPackagesResponse:
 
@@ -270,8 +284,8 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient)
 
         assert project.modified
 
-        # TODO read package id/name from package.json
-        resp.data.append(rpc.execution.PackageSummary(package_dir, "PackageName", project.id, project.modified))
+        resp.data.append(rpc.execution.PackageSummary(package_dir, project.id, project.modified,
+                                                      await read_package_meta(package_dir)))
 
         # TODO report manual changes (check last modification of files)?
 
@@ -291,6 +305,17 @@ async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClien
         raise Arcor2Exception("Not found.")
 
     return None
+
+
+async def rename_package_cb(req: rpc.execution.RenamePackageRequest, ui: WsClient) -> None:
+
+    target_path = os.path.join(PROJECT_PATH, req.args.package_id, "package.json")
+
+    pm = await read_package_meta(req.args.package_id)
+    pm.name = req.args.new_name
+
+    with open(target_path, "w") as pkg_file:
+        pkg_file.write(pm.to_json())
 
 
 async def send_to_clients(event: Event) -> None:
@@ -325,7 +350,8 @@ RPC_DICT: RPC_DICT_TYPE = {
     rpc.execution.PackageStateRequest: package_state_cb,
     rpc.execution.UploadPackageRequest: _upload_package_cb,
     rpc.execution.ListPackagesRequest: list_packages_cb,
-    rpc.execution.DeletePackageRequest: delete_package_cb
+    rpc.execution.DeletePackageRequest: delete_package_cb,
+    rpc.execution.RenamePackageRequest: rename_package_cb
 }
 
 

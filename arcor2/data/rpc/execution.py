@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import PackageState, ActionState, CurrentAction
+from arcor2.data.execution import PackageMeta
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
 
@@ -45,7 +46,7 @@ class BuildProjectResponse(Response):
 @dataclass
 class UploadPackageArgs(JsonSchemaMixin):
 
-    id: str = field(metadata=dict(description="Id of the execution package (so far == ID of the project)."))
+    id: str = field(metadata=dict(description="Id of the execution package."))
     data: str = field(metadata=dict(description="Base64 encoded content of the zip file."))
 
 
@@ -82,11 +83,11 @@ class ModifiedFile(JsonSchemaMixin):
 class PackageSummary(JsonSchemaMixin):
 
     id: str
-    name: str
     project_id: str
     modified: datetime = field(metadata=dict(
         description="Last modification of the project embedded in the execution package."))
     # modified_files: List[ModifiedFile] = field(default_factory=list)
+    package_meta: PackageMeta = field(metadata=dict(description="Content of 'package.json'."))
 
 
 @dataclass
@@ -109,6 +110,28 @@ class DeletePackageRequest(Request):
 class DeletePackageResponse(Response):
 
     response: str = field(default=DeletePackageRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RenamePackageArgs(JsonSchemaMixin):
+
+    package_id: str
+    new_name: str
+
+
+@dataclass
+class RenamePackageRequest(Request):
+
+    args: RenamePackageArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RenamePackageResponse(Response):
+
+    response: str = field(default=RenamePackageRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 

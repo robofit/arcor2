@@ -8,23 +8,25 @@ import os
 import shutil
 import tempfile
 from typing import Set
+from datetime import datetime, timezone
 
 import horast
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
-from flask import Flask, send_file
+from flask import Flask, send_file, request
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import arcor2
 from arcor2 import persistent_storage as ps
 from arcor2.data.object_type import ObjectModel
+from arcor2.data.execution import PackageMeta
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
 
-PORT = 5007
+PORT = 5008
 SERVICE_NAME = "ARCOR2 Build Service"
 
 logger = logging.getLogger("build")
@@ -44,7 +46,7 @@ spec = APISpec(
 app = Flask(__name__)
 
 
-def _publish(project_id: str):
+def _publish(project_id: str, package_name: str):
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
@@ -137,6 +139,9 @@ def _publish(project_id: str):
             with open(os.path.join(project_dir, 'action_points.py'), "w") as aps:
                 aps.write(global_action_points_class(project))
 
+            with open(os.path.join(project_dir, 'package.json'), "w") as pkg:
+                pkg.write(PackageMeta(package_name, datetime.now(tz=timezone.utc)).to_json())
+
         except SourceException as e:
             logger.exception("Failed to generate script.")
             return str(e), 501
@@ -159,6 +164,13 @@ def project_publish(project_id: str):
                     type: string
                   required: true
                   description: unique ID
+                - in: query
+                  name: PackageName
+                  schema:
+                    type: string
+                    default: Package
+                  required: false
+                  description: Package name
               responses:
                 200:
                   description: Ok
@@ -174,7 +186,7 @@ def project_publish(project_id: str):
                     description: Project invalid.
             """
 
-    return _publish(project_id)
+    return _publish(project_id, request.args.get('PackageName', default="N/A"))
 
 
 @app.route("/project/<string:project_id>/script", methods=['PUT'])
