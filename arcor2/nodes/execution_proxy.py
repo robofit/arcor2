@@ -16,6 +16,7 @@ import websocket  # type: ignore
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, jsonify, request, send_file
+from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
@@ -37,6 +38,7 @@ spec = APISpec(
 )
 
 app = Flask(__name__)
+CORS(app)
 
 ws: Optional[websocket.WebSocket] = None
 
