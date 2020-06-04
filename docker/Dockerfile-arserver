@@ -3,4 +3,6 @@ FROM arcor2/arcor2_base:$version
 
 RUN ln -s /root/arcor2/docker/start-arserver.sh /start.sh
 
+RUN mkdir -p /root/data 
+
 expose 6789
