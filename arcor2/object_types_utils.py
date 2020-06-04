@@ -181,7 +181,7 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
                             param_type = v
                             break
                     else:
-                        if name == "return" and ttype == type(None):  # noqa: E721
+                        if name == "return":  # noqa: E721
                             # ...just ignore NoneType for returns
                             continue
 
