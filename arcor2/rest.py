@@ -84,7 +84,10 @@ def _send(url: str, op: Callable, data: OptionalData = None,
         if isinstance(data, list):
             d = []
             for dd in data:
-                d.append(convert_keys(dd.to_dict(), snake_case_to_camel_case))
+                if (isinstance(dd, str)):
+                    d.append(convert_keys(dd, snake_case_to_camel_case))
+                else:
+                    d.append(convert_keys(dd.to_dict(), snake_case_to_camel_case))
         else:
             d = convert_keys(data.to_dict(), snake_case_to_camel_case)  # type: ignore
     else:
