@@ -34,7 +34,6 @@ setup(
         'static_typing',
         'websockets',
         'aiologger',
-        'aiofiles',
         'dataclasses-jsonschema[fast-validation]',
         'apispec',
         'apispec_webframeworks',
@@ -42,7 +41,6 @@ setup(
         'requests',
         'cython',  # dependency of numpy, for some reason not installed automatically...
         'numpy-quaternion',
-        'fastcache',
         'flask_swagger_ui',
         'websocket-client',
         'pyyaml',  # dependency of apispec, for some reason not installed automatically...
