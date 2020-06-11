@@ -27,7 +27,7 @@ from arcor2.source import SourceException
 from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
 
-PORT = 5008
+PORT = int(os.getenv("ARCOR2_BUILD_PORT", 5008))
 SERVICE_NAME = "ARCOR2 Build Service"
 
 logger = logging.getLogger("build")
