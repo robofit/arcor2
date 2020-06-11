@@ -23,6 +23,10 @@ async def scenes() -> AsyncIterator[Scene]:
         yield await storage.get_scene(scene_id.id)
 
 
+async def scene_names() -> Set[str]:
+    return {scene.name for scene in (await storage.get_scenes()).items}
+
+
 async def add_service_to_scene(srv: SceneService, dry_run: bool = False) -> None:
 
     if srv.type not in glob.SERVICE_TYPES:
