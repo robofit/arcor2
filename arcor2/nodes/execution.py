@@ -245,7 +245,12 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClie
         shutil.copytree(tmpdirname, target_path)
 
     script_path = os.path.join(target_path, MAIN_SCRIPT_NAME)
-    make_executable(script_path)
+
+    try:
+        make_executable(script_path)
+    except FileNotFoundError:
+        raise Arcor2Exception("Package does not contain 'script.py' file.")
+
     return None
 
 

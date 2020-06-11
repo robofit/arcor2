@@ -14,6 +14,7 @@ import horast
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, send_file, request
+from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import arcor2
@@ -26,7 +27,7 @@ from arcor2.source import SourceException
 from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
 
-PORT = 5008
+PORT = int(os.getenv("ARCOR2_BUILD_PORT", 5008))
 SERVICE_NAME = "ARCOR2 Build Service"
 
 logger = logging.getLogger("build")
@@ -44,6 +45,7 @@ spec = APISpec(
 )
 
 app = Flask(__name__)
+CORS(app)
 
 
 def _publish(project_id: str, package_name: str):

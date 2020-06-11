@@ -16,6 +16,7 @@ import websocket  # type: ignore
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, jsonify, request, send_file
+from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
@@ -25,7 +26,8 @@ from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.nodes.execution import PORT as MANAGER_PORT
 from arcor2.settings import PROJECT_PATH
 
-PORT = 5009
+
+PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
 
 # Create an APISpec
@@ -37,6 +39,7 @@ spec = APISpec(
 )
 
 app = Flask(__name__)
+CORS(app)
 
 ws: Optional[websocket.WebSocket] = None
 
