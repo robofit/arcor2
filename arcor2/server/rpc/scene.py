@@ -20,9 +20,10 @@ from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
 from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene, get_instance
+    clear_scene, get_instance, scene_names
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
     projects_using_object, associated_projects
+from arcor2.server.helpers import unique_name
 
 
 OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
@@ -400,7 +401,10 @@ async def rename_object_cb(req: rpc.scene.RenameObjectRequest, ui: WsClient) -> 
 
 async def rename_scene_cb(req: rpc.scene.RenameSceneRequest, ui: WsClient) -> None:
 
-    # TODO unique_name(req.args.new_name, (await scene_names()))
+    unique_name(req.args.new_name, (await scene_names()))
+
+    if req.dry_run:
+        return None
 
     async with managed_scene(req.args.id) as scene:
         scene.name = req.args.new_name
