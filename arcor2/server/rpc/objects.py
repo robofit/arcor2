@@ -9,7 +9,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.source.object_types import new_object_type_source
 from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data.common import Position, Pose
+from arcor2.data.common import Position, Pose, Scene
 from arcor2.data.object_type import Model3dType, MeshFocusAction
 from arcor2.data import rpc, events
 from arcor2 import aio_persistent_storage as storage
@@ -21,6 +21,7 @@ from arcor2.server.decorators import scene_needed, no_project
 from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
 from arcor2.server.robot import get_end_effector_pose
 from arcor2.server.project import scene_object_pose_updated
+from arcor2.server.scene import scenes
 
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
@@ -204,7 +205,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
                                                  hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, glob.ACTIONS, glob.OBJECT_TYPES)
 
-    asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(data=[meta.type])))
+    asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(events.EventType.ADD, data=[meta.type])))
     return None
 
 
@@ -219,3 +220,47 @@ async def get_object_actions_cb(req: rpc.objects.GetActionsRequest, ui: WsClient
 async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest, ui: WsClient) ->\
         rpc.objects.GetObjectTypesResponse:
     return rpc.objects.GetObjectTypesResponse(data=list(glob.OBJECT_TYPES.values()))
+
+
+def check_scene_for_object_type(scene: Scene, object_type: str) -> None:
+
+    for obj in scene.objects:
+        if obj.type == object_type:
+            raise Arcor2Exception(f"Object type used in scene '{scene.name}'.")
+
+
+async def delete_object_type_cb(req: rpc.objects.DeleteObjectTypeRequest, ui: WsClient) -> None:
+
+    try:
+        obj_type = glob.OBJECT_TYPES[req.args.id]
+    except KeyError:
+        raise Arcor2Exception("Unknown object type.")
+
+    if obj_type.built_in:
+        raise Arcor2Exception("Can't delete built-in type.")
+
+    for meta in glob.OBJECT_TYPES.values():
+        if meta.base == req.args.id:
+            raise Arcor2Exception(f"Object type is base of '{meta.type}'.")
+
+    async for scene in scenes():
+        check_scene_for_object_type(scene, req.args.id)
+
+    if glob.SCENE:
+        check_scene_for_object_type(glob.SCENE, req.args.id)
+
+    if req.dry_run:
+        return
+
+    await storage.delete_object_type(req.args.id)
+
+    # do not care so much if delete_model fails
+    if obj_type.object_model:
+        try:
+            await storage.delete_model(obj_type.object_model.model().id)
+        except storage.PersistentStorageException as e:
+            asyncio.ensure_future(glob.logger.error(e.message))
+
+    del glob.OBJECT_TYPES[req.args.id]
+    asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(events.EventType.REMOVE,
+                                                                               data=[obj_type.type])))

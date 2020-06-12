@@ -22,6 +22,10 @@ async def put_model(model: Models) -> None:
     await run_in_executor(persistent_storage.put_model, model)
 
 
+async def delete_model(model_id: str) -> None:
+    await run_in_executor(persistent_storage.delete_model, model_id)
+
+
 async def get_projects() -> IdDescList:
     return await run_in_executor(persistent_storage.get_projects)
 
@@ -72,6 +76,10 @@ async def update_project_sources(project_sources: ProjectSources) -> None:
 
 async def update_object_type(object_type: ObjectType) -> None:
     await run_in_executor(persistent_storage.update_object_type, object_type)
+
+
+async def delete_object_type(object_type_id: str) -> None:
+    await run_in_executor(persistent_storage.delete_object_type, object_type_id)
 
 
 async def update_service_type(service_type: ServiceType) -> None:
