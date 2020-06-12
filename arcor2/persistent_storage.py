@@ -36,6 +36,11 @@ def put_model(model: Models) -> None:
 
 
 @rest.handle_exceptions(PersistentStorageException)
+def delete_model(model_id: str) -> None:
+    rest.delete(f"{URL}/models/{model_id}")
+
+
+@rest.handle_exceptions(PersistentStorageException)
 def get_projects() -> IdDescList:
     return rest.get(f"{URL}/projects", IdDescList)
 
@@ -106,6 +111,12 @@ def update_object_type(object_type: ObjectType) -> None:
 
     assert object_type.id
     rest.put(f"{URL}/object_type", object_type)
+
+
+@rest.handle_exceptions(PersistentStorageException)
+def delete_object_type(object_type_id: str) -> None:
+
+    rest.delete(f"{URL}/object_type/{object_type_id}")
 
 
 @rest.handle_exceptions(PersistentStorageException)

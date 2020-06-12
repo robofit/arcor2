@@ -47,6 +47,22 @@ class GetObjectTypesResponse(Response):
     data: List[ObjectTypeMeta] = field(default_factory=list)
     response: str = field(default=GetObjectTypesRequest.request, init=False)
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class DeleteObjectTypeRequest(Request):
+
+    args: IdArgs
+    dry_run: bool = False
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class DeleteObjectTypeResponse(Response):
+
+    response: str = field(default=DeleteObjectTypeRequest.request, init=False)
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
