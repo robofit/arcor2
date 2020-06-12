@@ -12,11 +12,35 @@ if TYPE_CHECKING:
     from arcor2.services import Service  # NOQA
 
 
-def read_stdin(timeout: float = 0.0) -> Union[str, None]:
+try:
+    # Windows solution
+    import msvcrt
+    import time
 
-    if select.select([sys.stdin], [], [], timeout)[0]:
-        return sys.stdin.readline().strip()
-    return None
+    def read_stdin(timeout: float = 0.0) -> Union[str, None]:
+
+        time_to_end = time.monotonic() + timeout
+
+        while True:
+
+            x = msvcrt.kbhit()  # type: ignore
+            if x:
+                return msvcrt.getch().decode()  # type: ignore
+
+            if not timeout or time.monotonic() > time_to_end:
+                return None
+
+            time.sleep(timeout/100.0)
+
+
+except ImportError:
+
+    # Linux solution
+    def read_stdin(timeout: float = 0.0) -> Union[str, None]:
+
+        if select.select([sys.stdin], [], [], timeout)[0]:
+            return sys.stdin.readline().strip()
+        return None
 
 
 def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], where: ActionStateEnum) -> None:
