@@ -20,7 +20,7 @@ from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.robot import collision
 from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene, get_instance, scene_names
+    clear_scene, get_instance, scene_names, scenes
 from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
     projects_using_object, associated_projects
 from arcor2.server.helpers import unique_name
@@ -130,8 +130,12 @@ async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> None:
 
 async def list_scenes_cb(req: rpc.scene.ListScenesRequest, ui: WsClient) -> rpc.scene.ListScenesResponse:
 
-    scenes = await storage.get_scenes()
-    return rpc.scene.ListScenesResponse(data=scenes.items)
+    resp = rpc.scene.ListScenesResponse()
+
+    async for scene in scenes():
+        resp.data.append(rpc.scene.ListScenesResponseData(scene.id, scene.name, scene.desc, scene.modified))
+
+    return resp
 
 
 @scene_needed
