@@ -157,9 +157,10 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
         rpc.project.ListProjectsResponseData:
 
     project = await storage.get_project(project_id)
+    assert project.modified is not None
 
     pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc, name=project.name,
-                                              scene_id=project.scene_id)
+                                              scene_id=project.scene_id, modified=project.modified)
 
     try:
         async with scenes_lock:
@@ -175,6 +176,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
     if not pd.valid:
         return pd
 
+    # TODO for projects without logic, check if there is script uploaded in the project service /or call Build/publish
     try:
         program_src(project, scenes[project.scene_id], otu.built_in_types_names())
         pd.executable = True
