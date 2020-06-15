@@ -22,6 +22,7 @@ from arcor2.action import print_event
 from arcor2.rest import convert_keys
 from arcor2.helpers import camel_case_to_snake_case, make_pose_abs, make_orientation_abs, print_exception
 import arcor2.object_types_utils as otu
+from arcor2 import settings
 
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
@@ -163,6 +164,10 @@ class IntResources:
                     self.robot_service.remove_collision(obj)
             except Arcor2Exception as e:
                 print_exception(e)
+
+        if settings.CLEANUP_SERVICES:
+            for srv in self.services.values():
+                srv.cleanup()
 
         return True
 
