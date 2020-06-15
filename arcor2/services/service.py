@@ -26,3 +26,10 @@ class Service(metaclass=abc.ABCMeta):
     @staticmethod
     def get_configuration_ids() -> FrozenSet[str]:
         return frozenset()
+
+    def cleanup(self) -> None:
+        """
+        This method is called when a scene is closed or when script ends.
+        :return:
+        """
+        pass
