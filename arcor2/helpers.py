@@ -297,7 +297,7 @@ def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     """
 
     p = Pose()
-    p.position = make_position_rel(parent.position, child.position).rotated(parent.orientation)
+    p.position = make_position_rel(parent.position, child.position).rotated(parent.orientation, True)
     p.orientation = make_orientation_rel(parent.orientation, child.orientation)
     return p
 
