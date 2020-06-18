@@ -162,3 +162,28 @@ class RegisterForRobotEventResponse(Response):
 
     data: Set[str] = field(default_factory=set)
     response: str = field(default=RegisterForRobotEventRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class MoveToPoseArgs(JsonSchemaMixin):
+
+    robot_id: str
+    end_effector_id: str
+    speed: float
+    target_pose: Pose
+
+
+@dataclass
+class MoveToPoseRequest(Request):
+
+    args: MoveToPoseArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class MoveToPoseResponse(Response):
+
+    data: Set[str] = field(default_factory=set)
+    response: str = field(default=MoveToPoseRequest.request, init=False)
