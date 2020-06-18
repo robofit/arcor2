@@ -169,6 +169,9 @@ class IntResources:
             for srv in self.services.values():
                 srv.cleanup()
 
+        for obj in self.objects.values():
+            obj.cleanup()
+
         return True
 
     def print_info(self, action_id: str, args: Dict[str, Any]) -> None:

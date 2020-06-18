@@ -224,6 +224,8 @@ async def clear_scene() -> None:
     if settings.CLEANUP_SERVICES:
         await asyncio.gather(*[hlp.run_in_executor(srv.cleanup) for srv in glob.SERVICES_INSTANCES.values()])
 
+    await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
+
     glob.SERVICES_INSTANCES.clear()
 
     glob.SCENE = None
