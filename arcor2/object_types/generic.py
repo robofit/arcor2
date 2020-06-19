@@ -40,6 +40,13 @@ class Generic(metaclass=abc.ABCMeta):
     def __repr__(self) -> str:
         return str(self.__dict__)
 
+    def cleanup(self) -> None:
+        """
+        This method is called when a scene is closed or when script ends.
+        :return:
+        """
+        pass
+
     # TODO allow to store any value?
     @action
     def set_int(self, key: str, value: int) -> None:

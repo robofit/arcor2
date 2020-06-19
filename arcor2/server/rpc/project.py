@@ -3,7 +3,7 @@
 
 
 import asyncio
-from typing import Dict, Any, Set
+from typing import Dict, Any
 import copy
 from contextlib import asynccontextmanager
 import inspect
@@ -23,6 +23,7 @@ from arcor2.server import objects_services_actions as osa, notifications as noti
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.project import project_problems, open_project, project_names
 from arcor2.server.scene import open_scene, clear_scene, get_instance
+from arcor2.server.helpers import unique_name
 
 
 def find_object_action(action: common.Action) -> object_type.ObjectAction:
@@ -66,15 +67,6 @@ async def managed_project(project_id: str, make_copy: bool = False):
     finally:
         if save_back:
             asyncio.ensure_future(storage.update_project(project))
-
-
-def unique_name(name: str, existing_names: Set[str]) -> None:
-
-    if not name:
-        raise Arcor2Exception("Name has to be set.")
-
-    if name in existing_names:
-        raise Arcor2Exception("Name already exists.")
 
 
 @scene_needed
@@ -165,9 +157,10 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
         rpc.project.ListProjectsResponseData:
 
     project = await storage.get_project(project_id)
+    assert project.modified is not None
 
     pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc, name=project.name,
-                                              scene_id=project.scene_id)
+                                              scene_id=project.scene_id, modified=project.modified)
 
     try:
         async with scenes_lock:
@@ -183,6 +176,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
     if not pd.valid:
         return pd
 
+    # TODO for projects without logic, check if there is script uploaded in the project service /or call Build/publish
     try:
         program_src(project, scenes[project.scene_id], otu.built_in_types_names())
         pd.executable = True

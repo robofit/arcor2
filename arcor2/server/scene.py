@@ -7,7 +7,7 @@ from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
 from arcor2.services import Service, RobotService
 from arcor2.object_types import Generic
-from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu
+from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu, settings
 
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.server.robot import collision
@@ -21,6 +21,10 @@ async def scenes() -> AsyncIterator[Scene]:
 
     for scene_id in (await storage.get_scenes()).items:
         yield await storage.get_scene(scene_id.id)
+
+
+async def scene_names() -> Set[str]:
+    return {scene.name for scene in (await storage.get_scenes()).items}
 
 
 async def add_service_to_scene(srv: SceneService, dry_run: bool = False) -> None:
@@ -216,7 +220,13 @@ async def clear_scene() -> None:
         for obj_inst in glob.SCENE_OBJECT_INSTANCES.values():
             await collision(obj_inst, rs, remove=True)
     glob.SCENE_OBJECT_INSTANCES.clear()
-    glob.SERVICES_INSTANCES.clear()  # TODO call destroy
+
+    if settings.CLEANUP_SERVICES:
+        await asyncio.gather(*[hlp.run_in_executor(srv.cleanup) for srv in glob.SERVICES_INSTANCES.values()])
+
+    await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
+
+    glob.SERVICES_INSTANCES.clear()
 
     glob.SCENE = None
 

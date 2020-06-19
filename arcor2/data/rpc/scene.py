@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Set
+from typing import List, Set, Optional
+from datetime import datetime
 
 from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -151,9 +152,15 @@ class ListScenesRequest(Request):
 
 
 @dataclass
+class ListScenesResponseData(IdDesc):
+
+    modified: Optional[datetime] = None
+
+
+@dataclass
 class ListScenesResponse(Response):
 
-    data: List[IdDesc] = field(default_factory=list)
+    data: List[ListScenesResponseData] = field(default_factory=list)
     response: str = field(default=ListScenesRequest.request, init=False)
 
 
