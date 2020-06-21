@@ -307,3 +307,82 @@ class RobotEefEvent(Event):
 
     data: Optional[RobotEefData] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class MoveEventType(common.StrEnum):
+    START: str = "start"
+    END: str = "end"
+    FAILED: str = "failed"
+
+
+@dataclass
+class RobotMoveToData(JsonSchemaMixin):
+
+    move_event_type: MoveEventType
+    robot_id: str
+
+
+@dataclass
+class RobotMoveToPoseData(RobotMoveToData):
+
+    end_effector_id: str
+    target_pose: common.Pose
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToPoseEvent(Event):
+
+    data: Optional[RobotMoveToPoseData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RobotMoveToJointsData(RobotMoveToData):
+
+    target_joints: List[common.Joint]
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToJointsEvent(Event):
+
+    data: Optional[RobotMoveToJointsData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RobotMoveToActionPointOrientationData(RobotMoveToData):
+
+    end_effector_id: str
+    orientation_id: str
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToActionPointOrientationEvent(Event):
+
+    data: Optional[RobotMoveToActionPointOrientationData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RobotMoveToActionPointJointsData(RobotMoveToData):
+
+    joints_id: str
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToActionPointJointsEvent(Event):
+
+    data: Optional[RobotMoveToActionPointJointsData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821

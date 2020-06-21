@@ -4,12 +4,12 @@ from typing import Dict, Callable, Awaitable
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2.data import rpc, events
+from arcor2.data import rpc, events, common
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import helpers as hlp
 
 from arcor2.server import globals as glob, objects_services_actions as osa, robot
-from arcor2.server.decorators import scene_needed
+from arcor2.server.decorators import scene_needed, project_needed
 
 TaskDict = Dict[str, asyncio.Task]
 
@@ -179,3 +179,75 @@ async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventReques
         raise Arcor2Exception(f"Option '{req.args.what.value}' not implemented.")
 
     return None
+
+
+@scene_needed
+async def move_to_pose_cb(req: rpc.robot.MoveToPoseRequest, ui: WsClient) -> None:
+
+    # TODO check RobotMeta if the robot supports this
+
+    if (req.args.position is None) != (req.args.orientation is None):
+
+        target_pose = await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id)
+
+        if req.args.position:
+            target_pose.position = req.args.position
+        elif req.args.orientation:
+            target_pose.orientation = req.args.orientation
+
+    elif req.args.position is not None and req.args.orientation is not None:
+        target_pose = common.Pose(req.args.position, req.args.orientation)
+    else:
+        raise Arcor2Exception("Position or orientation should be given.")
+
+    await robot.check_robot_before_move(req.args.robot_id)
+
+    # TODO check if the target pose is reachable (dry_run)
+    asyncio.ensure_future(robot.move_to_pose(req.args.robot_id, req.args.end_effector_id, target_pose, req.args.speed))
+
+
+@scene_needed
+async def move_to_joints_cb(req: rpc.robot.MoveToJointsRequest, ui: WsClient) -> None:
+    await robot.check_robot_before_move(req.args.robot_id)
+    asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, req.args.joints, req.args.speed))
+
+
+@scene_needed
+async def stop_robot_cb(req: rpc.robot.StopRobotRequest, ui: WsClient) -> None:
+
+    # TODO check RobotMeta if the robot supports this
+    await robot.stop(req.args.robot_id)
+
+
+@scene_needed
+@project_needed
+async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: WsClient) -> None:
+
+    await robot.check_robot_before_move(req.args.robot_id)
+
+    assert glob.PROJECT
+
+    # TODO check RobotMeta if the robot supports this
+
+    if (req.args.orientation_id is None) == (req.args.joints_id is None):
+        raise Arcor2Exception("Set orientation or joints. Not both.")
+
+    if req.args.orientation_id:
+
+        if req.args.end_effector_id is None:
+            raise Arcor2Exception("eef id has to be set.")
+
+        ap, _ = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
+        pose = ap.pose(req.args.orientation_id)
+
+        # TODO check if the target pose is reachable (dry_run)
+        asyncio.ensure_future(robot.move_to_ap_orientation(
+            req.args.robot_id, req.args.end_effector_id, pose, req.args.speed, req.args.orientation_id))
+
+    elif req.args.joints_id:
+
+        joints = glob.PROJECT.joints(req.args.joints_id)
+
+        # TODO check if the joints are within limits and reachable (dry_run)
+        asyncio.ensure_future(robot.move_to_ap_joints(
+            req.args.robot_id, joints, req.args.speed, req.args.joints_id))
