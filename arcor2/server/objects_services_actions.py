@@ -33,7 +33,10 @@ def find_robot_service() -> Union[None, RobotService]:
 
 def get_obj_type_name(object_id: str) -> str:
 
-    return glob.SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
+    try:
+        return glob.SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
+    except KeyError:
+        raise Arcor2Exception("Unknown object id.")
 
 
 def valid_object_types() -> ObjectTypeMetaDict:
@@ -84,7 +87,7 @@ async def get_service_types() -> None:
         glob.TYPE_DEF_DICT[srv_id.id] = type_def
 
         if issubclass(type_def, RobotService):
-            asyncio.ensure_future(get_robot_meta(type_def))
+            asyncio.ensure_future(get_robot_meta(type_def, srv_type.source))
 
     glob.SERVICE_TYPES = service_types
 
@@ -136,7 +139,7 @@ async def get_object_types() -> None:
             object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
         if issubclass(type_def, Robot):
-            asyncio.ensure_future(get_robot_meta(type_def))
+            asyncio.ensure_future(get_robot_meta(type_def, obj.source))
             asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, type_def))
 
     # if description is missing, try to get it from ancestor(s)
