@@ -8,6 +8,9 @@ from dataclasses_jsonschema import JsonSchemaMixin
 class RobotFeatures(JsonSchemaMixin):
 
     focus: bool = False
+    move_to_pose: bool = False
+    move_to_joints: bool = False
+    stop: bool = False
 
 
 @dataclass
