@@ -11,7 +11,7 @@ from horast import parse, unparse
 from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef, \
     NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str, \
     ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem, Subscript, \
-    Index, Assert, AST, stmt
+    Index, Assert, AST, stmt, Raise
 
 from arcor2.data.common import Project, ActionPoint
 from arcor2.source import SourceException, SCRIPT_HEADER
@@ -657,3 +657,52 @@ def derived_resources_class(project: Project) -> str:
 
 def dump(tree: Module) -> str:
     return typed_astunparse.dump(tree)
+
+
+def find_raises(tree: FunctionDef) -> List[Raise]:
+    class FindRaises(NodeVisitor):
+
+        def __init__(self) -> None:
+            self.raises: List[Raise] = []
+
+        def visit_Raise(self, node: Raise) -> None:
+            self.raises.append(node)
+
+    ff = FindRaises()
+    ff.visit(tree)
+
+    return ff.raises
+
+
+def function_implemented(tree: AST, func_name: str) -> bool:
+    """
+    Body of unimplemented function (e.g. object/service feature) contains only 'raise NotImplementedError()'
+    :param tree:
+    :return:
+    """
+
+    try:
+        func_def = find_function(func_name, tree)
+    except SourceException:
+        return False
+
+    raises = find_raises(func_def)
+
+    if len(raises) != 1:
+        return True
+
+    exc = raises[0].exc
+
+    if isinstance(exc, Call):
+        # raise NotImplementedError("something")
+
+        assert isinstance(exc.func, Name)
+
+        if exc.func.id == NotImplementedError.__name__:
+            return False
+
+    if isinstance(exc, Name) and exc.id == NotImplementedError.__name__:
+        # raise NotImplementedError
+        return False
+
+    return True

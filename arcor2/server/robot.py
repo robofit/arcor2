@@ -1,11 +1,16 @@
 from typing import List, Union, Type, Optional, Set
 import os
+import inspect
+
+from horast import parse
+from typed_ast.ast3 import AST
 
 from arcor2.data import common, robot, events
 from arcor2.exceptions import Arcor2Exception
 import arcor2.helpers as hlp
 from arcor2.object_types import Robot, Generic
 from arcor2.services import RobotService
+from arcor2.source.utils import function_implemented
 
 from arcor2.server import objects_services_actions as osa, globals as glob, notifications as notif
 
@@ -14,6 +19,7 @@ class RobotPoseException(Arcor2Exception):
     pass
 
 
+# TODO how to prevent execution of robot (move) action and e.g. moveToAp?
 move_in_progress: Set[str] = set()  # set of robot IDs that are moving right now
 
 
@@ -114,10 +120,33 @@ async def get_robot_joints(robot_id: str) -> List[common.Joint]:
         return await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
 
 
-async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]]) -> None:
+def feature(tree: AST, robot_type: Union[Type[Robot], Type[RobotService]], func_name: str) -> bool:
+
+    if not function_implemented(tree, func_name):  # TODO what if the function is implemented in predecessor?
+        return False
+
+    sign = inspect.signature(getattr(robot_type, func_name))
+
+    if issubclass(robot_type, Robot):
+        return inspect.signature(getattr(Robot, func_name)) == sign
+    elif issubclass(robot_type, RobotService):
+        return inspect.signature(getattr(RobotService, func_name)) == sign
+    else:
+        raise Arcor2Exception("Unknown robot type.")
+
+
+async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]], source: str) -> None:
+
+    # TODO use inspect.getsource(robot_type) instead of source parameters
+    #  once we will get rid of type_def_from_source / temp. module
 
     meta = robot.RobotMeta(robot_type.__name__)
     meta.features.focus = hasattr(robot_type, "focus")  # TODO more sophisticated test? (attr(s) and return value?)
+
+    tree = parse(source)
+    meta.features.move_to_pose = feature(tree, robot_type, Robot.move_to_pose.__name__)
+    meta.features.move_to_joints = feature(tree, robot_type, Robot.move_to_joints.__name__)
+    meta.features.stop = feature(tree, robot_type, Robot.stop.__name__)
 
     if issubclass(robot_type, Robot) and robot_type.urdf_package_path:
         meta.urdf_package_filename = os.path.split(robot_type.urdf_package_path)[1]
@@ -267,7 +296,8 @@ async def move_to_ap_joints(robot_id: str, joints: List[common.Joint], speed: fl
     except Arcor2Exception as e:
 
         await notif.broadcast_event(events.RobotMoveToActionPointJointsEvent(
-            data=events.RobotMoveToActionPointJointsData(events.MoveEventType.FAILED, robot_id, joints_id, message=str(e))))
+            data=events.RobotMoveToActionPointJointsData(events.MoveEventType.FAILED, robot_id, joints_id,
+                                                         message=str(e))))
 
         return
 

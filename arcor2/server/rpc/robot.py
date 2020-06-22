@@ -7,6 +7,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 from arcor2.data import rpc, events, common
 from arcor2.exceptions import Arcor2Exception
 from arcor2 import helpers as hlp
+from arcor2.object_types import Robot
 
 from arcor2.server import globals as glob, objects_services_actions as osa, robot
 from arcor2.server.decorators import scene_needed, project_needed
@@ -181,10 +182,16 @@ async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventReques
     return None
 
 
+async def check_feature(robot_id: str, feature_name: str) -> None:
+
+    if not getattr(glob.ROBOT_META[(await osa.get_robot_instance(robot_id)).__class__.__name__].features, feature_name):
+        raise Arcor2Exception(f"Robot does not support '{feature_name}' feature.")
+
+
 @scene_needed
 async def move_to_pose_cb(req: rpc.robot.MoveToPoseRequest, ui: WsClient) -> None:
 
-    # TODO check RobotMeta if the robot supports this
+    await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
 
     if (req.args.position is None) != (req.args.orientation is None):
 
@@ -208,6 +215,8 @@ async def move_to_pose_cb(req: rpc.robot.MoveToPoseRequest, ui: WsClient) -> Non
 
 @scene_needed
 async def move_to_joints_cb(req: rpc.robot.MoveToJointsRequest, ui: WsClient) -> None:
+
+    await check_feature(req.args.robot_id, Robot.move_to_joints.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
     asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, req.args.joints, req.args.speed))
 
@@ -215,7 +224,7 @@ async def move_to_joints_cb(req: rpc.robot.MoveToJointsRequest, ui: WsClient) ->
 @scene_needed
 async def stop_robot_cb(req: rpc.robot.StopRobotRequest, ui: WsClient) -> None:
 
-    # TODO check RobotMeta if the robot supports this
+    await check_feature(req.args.robot_id, Robot.stop.__name__)
     await robot.stop(req.args.robot_id)
 
 
@@ -234,6 +243,8 @@ async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: W
 
     if req.args.orientation_id:
 
+        await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
+
         if req.args.end_effector_id is None:
             raise Arcor2Exception("eef id has to be set.")
 
@@ -246,8 +257,10 @@ async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: W
 
     elif req.args.joints_id:
 
+        await check_feature(req.args.robot_id, Robot.move_to_joints.__name__)
+
         joints = glob.PROJECT.joints(req.args.joints_id)
 
         # TODO check if the joints are within limits and reachable (dry_run)
         asyncio.ensure_future(robot.move_to_ap_joints(
-            req.args.robot_id, joints, req.args.speed, req.args.joints_id))
+            req.args.robot_id, joints.joints, req.args.speed, req.args.joints_id))

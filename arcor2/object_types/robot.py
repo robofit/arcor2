@@ -2,7 +2,7 @@ import abc
 from typing import FrozenSet, List, Optional
 
 from arcor2.object_types.generic import Generic
-from arcor2.data.common import Pose, Joint, Joint
+from arcor2.data.common import Pose, Joint
 
 
 class Robot(Generic, metaclass=abc.ABCMeta):
@@ -32,10 +32,10 @@ class Robot(Generic, metaclass=abc.ABCMeta):
     def suctions(self) -> FrozenSet[str]:
         return frozenset()
 
-    def move_to_pose(self, end_effector: str, target_pose: Pose, speed: float) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
         """
         Move given robot's end effector to the selected pose.
-        :param end_effector:
+        :param end_effector_id:
         :param target_pose:
         :param speed:
         :return:

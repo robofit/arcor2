@@ -2,7 +2,7 @@ import abc
 from typing import List, FrozenSet
 
 from arcor2.services import Service
-from arcor2.data.common import Pose, Joint, Joint
+from arcor2.data.common import Pose, Joint
 from arcor2.data.object_type import MeshFocusAction
 from arcor2.object_types import Generic
 
