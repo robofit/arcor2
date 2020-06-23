@@ -205,7 +205,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
                                                  hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
     otu.add_ancestor_actions(meta.type, glob.ACTIONS, glob.OBJECT_TYPES)
 
-    asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(events.EventType.ADD, data=[meta.type])))
+    asyncio.ensure_future(notif.broadcast_event(events.ChangedObjectTypesEvent(events.EventType.ADD, data=[meta])))
     return None
 
 
@@ -262,5 +262,5 @@ async def delete_object_type_cb(req: rpc.objects.DeleteObjectTypeRequest, ui: Ws
             asyncio.ensure_future(glob.logger.error(e.message))
 
     del glob.OBJECT_TYPES[req.args.id]
-    asyncio.ensure_future(notif.broadcast_event(events.ObjectTypesChangedEvent(events.EventType.REMOVE,
-                                                                               data=[obj_type.type])))
+    asyncio.ensure_future(notif.broadcast_event(
+        events.ChangedObjectTypesEvent(events.EventType.REMOVE, data=[obj_type])))
