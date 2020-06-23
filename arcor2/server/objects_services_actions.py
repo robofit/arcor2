@@ -195,8 +195,6 @@ async def get_object_actions() -> None:  # TODO do it in parallel
 
     glob.ACTIONS = object_actions_dict
 
-    await notif.broadcast_event(events.ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
-
 
 async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Union[Robot, RobotService]:
 

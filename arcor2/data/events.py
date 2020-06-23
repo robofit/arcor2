@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import common, execution
+from arcor2.data import common, execution, object_type
 
 
 def wo_suffix(name: str) -> str:
@@ -261,9 +261,9 @@ Objects
 
 
 @dataclass
-class ObjectTypesChangedEvent(Event):
+class ChangedObjectTypesEvent(Event):
 
-    data: List[str] = field(default_factory=list)  # changed object types
+    data: List[object_type.ObjectTypeMeta] = field(default_factory=list)  # changed object types
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
