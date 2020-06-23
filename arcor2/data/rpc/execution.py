@@ -137,9 +137,14 @@ class RenamePackageResponse(Response):
 
 
 @dataclass
+class RunPackageArgs(IdArgs):
+    cleanup_after_run: bool = True
+
+
+@dataclass
 class RunPackageRequest(Request):
 
-    args: IdArgs
+    args: RunPackageArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -215,3 +220,17 @@ class ResumePackageRequest(Request):
 class ResumePackageResponse(Response):
 
     response: str = field(default=ResumePackageRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class TemporaryPackageRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class TemporaryPackageResponse(Response):
+
+    response: str = field(default=TemporaryPackageRequest.request, init=False)

@@ -212,7 +212,7 @@ async def auto_add_object_to_scene(obj_type_name: str, dry_run: bool = False) ->
     return None
 
 
-async def clear_scene() -> None:
+async def clear_scene(do_cleanup: bool = True) -> None:
 
     await glob.logger.info("Clearing the scene.")
     rs = osa.find_robot_service()
@@ -221,7 +221,7 @@ async def clear_scene() -> None:
             await collision(obj_inst, rs, remove=True)
     glob.SCENE_OBJECT_INSTANCES.clear()
 
-    if settings.CLEANUP_SERVICES:
+    if settings.CLEANUP_SERVICES and do_cleanup:
         await asyncio.gather(*[hlp.run_in_executor(srv.cleanup) for srv in glob.SERVICES_INSTANCES.values()])
 
     await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
