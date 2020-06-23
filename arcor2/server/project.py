@@ -1,13 +1,22 @@
+import asyncio
 from typing import Set, AsyncIterator, List, Dict
 
 from arcor2.data.common import ActionIOEnum, Project, Scene
+from arcor2.data import events
 import arcor2.aio_persistent_storage as storage
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.exceptions import Arcor2Exception
 
-from arcor2.server import globals as glob
+from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.scene import open_scene, clear_scene
+
+
+async def close_project(do_cleanup: bool = True) -> None:
+
+    glob.PROJECT = None
+    await clear_scene(do_cleanup)
+    asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
 
 
 async def project_names() -> Set[str]:
