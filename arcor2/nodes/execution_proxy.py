@@ -290,7 +290,7 @@ def package_start(package_id: str):
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.RunPackageRequest(id=get_id(), args=rpc.common.IdArgs(id=package_id)))
+    resp = call_rpc(rpc.execution.RunPackageRequest(id=get_id(), args=rpc.execution.RunPackageArgs(id=package_id)))
 
     if resp.result:
         return "ok", 200

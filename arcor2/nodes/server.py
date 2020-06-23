@@ -30,7 +30,7 @@ from arcor2.parameter_plugins import PARAM_PLUGINS
 
 import arcor2.server.globals as glob
 import arcor2.server.objects_services_actions as osa
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings
+from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings, events as server_events
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -47,7 +47,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
             if "event" in msg:
 
                 if glob.INTERFACES:
-                    await asyncio.wait([hlp.send_json_to_client(intf, message) for intf in glob.INTERFACES])
+                    await asyncio.gather(*[hlp.send_json_to_client(intf, message) for intf in glob.INTERFACES])
 
                 try:
                     evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
@@ -61,9 +61,14 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     glob.PACKAGE_STATE = evt.data
 
                     if evt.data.state == common.PackageStateEnum.STOPPED:
+                        server_events.package_stopped.set()
+                        server_events.package_started.clear()
                         glob.CURRENT_ACTION = None
                         glob.ACTION_STATE = None
                         glob.PACKAGE_INFO = None
+                    else:
+                        server_events.package_stopped.clear()
+                        server_events.package_started.set()
 
                 elif isinstance(evt, events.ActionStateEvent):
                     glob.ACTION_STATE = evt.data
