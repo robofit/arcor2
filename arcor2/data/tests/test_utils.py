@@ -1,5 +1,7 @@
 from openapi_spec_validator import validate_spec  # type: ignore
+
 import yaml
+
 from arcor2.data import utils
 
 

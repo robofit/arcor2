@@ -1,9 +1,9 @@
 import abc
 from typing import Dict, Optional
 
-from arcor2 import DynamicParamDict, CancelDict
-from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
+from arcor2 import CancelDict, DynamicParamDict
 from arcor2.action import action
+from arcor2.data.common import ActionMetadata, ActionPoint, Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception

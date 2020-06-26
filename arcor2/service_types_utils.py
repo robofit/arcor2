@@ -1,9 +1,11 @@
-from typing import Type, Iterator, Tuple
+import importlib
 import inspect
+import pkgutil
+from typing import Iterator, Tuple, Type
 
-from arcor2.services import Service
-import arcor2.services
-from arcor2.data.services import ServiceTypeMetaDict, ServiceTypeMeta
+from arcor2 import services
+from arcor2.data.services import ServiceTypeMeta, ServiceTypeMetaDict
+from arcor2.services.service import Service
 
 
 def meta_from_def(type_def: Type[Service], built_in: bool = False) -> ServiceTypeMeta:
@@ -19,12 +21,17 @@ def built_in_services() -> Iterator[Tuple[str, Type[Service]]]:
     Yields class name and class definition tuple
     """
 
-    for cls in inspect.getmembers(arcor2.services, inspect.isclass):
-        # ignore abstract services
-        if not issubclass(cls[1], Service) or inspect.isabstract(cls[1]) or cls[1] == Service:
-            continue
+    for module_info in pkgutil.iter_modules(services.__path__):  # type: ignore  # mypy issue #1422
 
-        yield cls[0], cls[1]
+        module = importlib.import_module(f"arcor2.services.{module_info.name}")
+
+        for cls_name, cls in inspect.getmembers(module, inspect.isclass):
+
+            # ignore abstract services
+            if not issubclass(cls, Service) or inspect.isabstract(cls) or cls == Service:
+                continue
+
+            yield cls_name, cls
 
 
 def get_built_in_service(name: str) -> Type[Service]:

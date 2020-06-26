@@ -1,18 +1,19 @@
 from typing import Union
+
+from typed_ast.ast3 import AnnAssign, Assign, ClassDef, ImportFrom, Index, Load, Module, Name, Pass, Store, Str, \
+    Subscript, alias
+
 from typing_extensions import Literal
 
-from typed_ast.ast3 import Assign, Name, ClassDef, Str, Module, \
-    ImportFrom, alias, Pass, AnnAssign, Store, Load, Subscript, Index
-
-from arcor2.data.object_type import ObjectTypeMeta
-from arcor2.helpers import camel_case_to_snake_case
-from arcor2.source import SourceException
-from arcor2.source.utils import get_name, tree_to_str, find_function, get_name_attr
-from arcor2.object_types_utils import built_in_types_names, meta_from_def, object_actions
 import arcor2.helpers as hlp
 import arcor2.object_types
+from arcor2.data.object_type import ObjectTypeMeta
+from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types import Generic
+from arcor2.object_types_utils import built_in_types_names, meta_from_def, object_actions
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
+from arcor2.source import SourceException
+from arcor2.source.utils import find_function, get_name, get_name_attr, tree_to_str
 
 
 def check_object_type(object_type_source: str, type_name: str) -> None:

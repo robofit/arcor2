@@ -1,8 +1,8 @@
 import abc
 from typing import FrozenSet, List, Optional
 
+from arcor2.data.common import Joint, Pose
 from arcor2.object_types.generic import Generic
-from arcor2.data.common import Pose, Joint
 
 
 class Robot(Generic, metaclass=abc.ABCMeta):

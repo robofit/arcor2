@@ -2,8 +2,8 @@ import base64
 import io
 import json
 
-from PIL.Image import Image  # type: ignore
 import PIL.Image  # type: ignore
+from PIL.Image import Image  # type: ignore
 
 from arcor2.data.common import Project, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict

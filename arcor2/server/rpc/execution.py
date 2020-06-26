@@ -1,11 +1,11 @@
 import asyncio
+
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import rpc
 from arcor2.exceptions import Arcor2Exception
-
+from arcor2.server import decorators, globals as glob
 from arcor2.server.execution import build_and_upload_package, run_temp_package
-from arcor2.server import globals as glob, decorators
 
 
 async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient) -> rpc.execution.BuildProjectResponse:

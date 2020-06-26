@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import List, Any, Iterator, Optional, Tuple, Set, Union
-import uuid
+from typing import Any, Iterator, List, Optional, Set, Tuple, Union
+
+from dataclasses_jsonschema import JsonSchemaMixin
 
 import quaternion  # type: ignore
-from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception
 

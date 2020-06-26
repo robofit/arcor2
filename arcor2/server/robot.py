@@ -1,18 +1,18 @@
-from typing import List, Union, Type, Optional, Set
-import os
 import inspect
+import os
+from typing import List, Optional, Set, Type, Union
 
 from horast import parse
+
 from typed_ast.ast3 import AST
 
-from arcor2.data import common, robot, events
-from arcor2.exceptions import Arcor2Exception
 import arcor2.helpers as hlp
-from arcor2.object_types import Robot, Generic
-from arcor2.services import RobotService
+from arcor2.data import common, events, robot
+from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types import Generic, Robot
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.services.robot_service import RobotService
 from arcor2.source.utils import function_implemented
-
-from arcor2.server import objects_services_actions as osa, globals as glob, notifications as notif
 
 
 class RobotPoseException(Arcor2Exception):

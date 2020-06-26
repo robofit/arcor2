@@ -1,7 +1,9 @@
-from arcor2.source.utils import function_implemented
-from horast import parse
 import inspect
 import sys
+
+from horast import parse
+
+from arcor2.source.utils import function_implemented
 
 module_tree = parse(inspect.getsource(sys.modules[__name__]))
 

@@ -5,33 +5,35 @@
 import argparse
 import asyncio
 import functools
-import json
-import sys
-from typing import get_type_hints
 import inspect
+import json
 import os
 import shutil
+import sys
 import uuid
+from typing import get_type_hints
+
+from aiologger.levels import LogLevel  # type: ignore
+
+from aiorun import run  # type: ignore
+
+from dataclasses_jsonschema import ValidationError
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
-from aiologger.levels import LogLevel  # type: ignore
-from dataclasses_jsonschema import ValidationError
-from aiorun import run  # type: ignore
 
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
-from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
-from arcor2.data import events, common, compile_json_schemas
+from arcor2.data import common, compile_json_schemas, events
 from arcor2.data import rpc
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
-from arcor2.parameter_plugins import PARAM_PLUGINS
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
 from arcor2.exceptions import Arcor2Exception
-
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings, events as server_events,\
-    globals as glob, objects_services_actions as osa
+from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
+from arcor2.parameter_plugins import PARAM_PLUGINS
+from arcor2.server import events as server_events, execution as exe, globals as glob, notifications as notif, \
+    objects_services_actions as osa, rpc as srpc, settings
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False

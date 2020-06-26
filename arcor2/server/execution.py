@@ -1,19 +1,17 @@
 import asyncio
-from typing import TYPE_CHECKING, Dict, Optional
-import uuid
-import tempfile
-import os
 import base64
+import os
+import tempfile
+import uuid
+from typing import Dict, Optional, TYPE_CHECKING
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2.data import rpc, common, events
 from arcor2 import helpers as hlp, rest
+from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
-
-from arcor2.server import globals as glob, project, events as server_events, notifications as notif
-
+from arcor2.server import events as server_events, globals as glob, notifications as notif, project
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[rpc.common.Request]

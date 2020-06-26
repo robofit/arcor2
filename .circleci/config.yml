@@ -44,7 +44,7 @@ jobs:
             sudo apt-get install build-essential
             pip install --upgrade pip setuptools
             pip install -e .[test]
-            pip install pytest flake8 mypy
+            pip install pytest flake8 mypy flake8-import-order flake8-tidy-imports
 
       - save_cache:
           paths:

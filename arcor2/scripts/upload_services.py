@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from arcor2.services.upload import upload_cls
 import arcor2.service_types_utils as stu
+from arcor2.services.upload import upload_cls
 
 
 def main():

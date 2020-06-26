@@ -9,23 +9,28 @@ import shutil
 import tempfile
 import uuid
 from queue import Queue
-from typing import Dict, TYPE_CHECKING, Optional
 from threading import Thread
+from typing import Dict, Optional, TYPE_CHECKING
+
+from apispec import APISpec  # type: ignore
+
+from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+
+from flask import Flask, jsonify, request, send_file
+
+from flask_cors import CORS  # type: ignore
+
+from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import websocket  # type: ignore
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
-from flask import Flask, jsonify, request, send_file
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+
 from werkzeug.utils import secure_filename
 
 import arcor2
-from arcor2.data import rpc, events, common, execution
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
+from arcor2.data import common, events, execution, rpc
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
 from arcor2.nodes.execution import PORT as MANAGER_PORT
 from arcor2.settings import PROJECT_PATH
-
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"

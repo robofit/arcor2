@@ -1,16 +1,16 @@
 import asyncio
-from typing import Optional, List, get_type_hints, Set, AsyncIterator, Union
+from typing import AsyncIterator, List, Optional, Set, Union, get_type_hints
 
-from arcor2.data.common import SceneService, SceneObject, Scene
+from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu, settings
 from arcor2.data import events
+from arcor2.data.common import Scene, SceneObject, SceneService
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.services import Service, RobotService
 from arcor2.object_types import Generic
-from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu, settings
-
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.server.robot import collision
+from arcor2.services.robot_service import RobotService
+from arcor2.services.service import Service
 
 
 def instances_names() -> Set[str]:

@@ -1,5 +1,5 @@
-from typing import Set, Optional, Dict
 from dataclasses import dataclass, field
+from typing import Dict, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 

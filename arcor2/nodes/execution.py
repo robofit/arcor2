@@ -12,25 +12,27 @@ import shutil
 import sys
 import tempfile
 import zipfile
-from typing import Optional, Set, Union, Awaitable, List
+from typing import Awaitable, List, Optional, Set, Union
 
-from aiorun import run  # type: ignore
-import websockets
 from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
+
+from aiorun import run  # type: ignore
+
 from dataclasses_jsonschema import ValidationError
+
+import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2
-from arcor2.exceptions import Arcor2Exception
-from arcor2.data import rpc, compile_json_schemas
+from arcor2.data import compile_json_schemas, rpc
 from arcor2.data.common import PackageState, PackageStateEnum, Project
-from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageStateEvent, PackageInfoEvent
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageInfoEvent, PackageStateEvent
 from arcor2.data.helpers import EVENT_MAPPING
-from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, server, read_package_meta
-from arcor2.settings import PROJECT_PATH, CLEANUP_SERVICES_NAME
+from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, read_package_meta, server
+from arcor2.settings import CLEANUP_SERVICES_NAME, PROJECT_PATH
 from arcor2.source.utils import make_executable
-
 
 PORT = 6790
 

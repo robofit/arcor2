@@ -1,8 +1,8 @@
-from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
-from arcor2.data.object_type import ObjectType, Models, Model3dType, Mesh, MeshList
+from arcor2 import persistent_storage
+from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
+from arcor2.data.object_type import Mesh, MeshList, Model3dType, Models, ObjectType
 from arcor2.data.services import ServiceType
 from arcor2.helpers import run_in_executor
-from arcor2 import persistent_storage
 from arcor2.persistent_storage import PersistentStorageException  # noqa
 
 

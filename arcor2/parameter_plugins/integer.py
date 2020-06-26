@@ -1,13 +1,14 @@
-from typing import Callable, List, Tuple, Any, Type
 from dataclasses import dataclass
+from typing import Any, Callable, List, Tuple, Type
 
-from typed_ast import ast3 as ast
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from typed_ast import ast3 as ast
+
 from arcor2.data.common import Project, Scene
+from arcor2.data.object_type import ActionParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
-from arcor2.data.object_type import ActionParameterMeta
 from arcor2.source.utils import find_asserts
 
 

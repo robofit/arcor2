@@ -1,11 +1,13 @@
-import json
-import requests
-from typing import Type, TypeVar, Dict, Callable, List, Union, Any, Optional, Sequence
-import io
 import functools
+import io
+import json
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union
 
-from dataclasses_jsonschema import ValidationError, JsonSchemaMixin
 from PIL import Image, UnidentifiedImageError  # type: ignore
+
+from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
+
+import requests
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case

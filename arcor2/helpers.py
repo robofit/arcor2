@@ -1,31 +1,33 @@
-import traceback
-import time
-import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Any, Awaitable, TypeVar, Set
-from types import ModuleType
-import json
 import asyncio
 import importlib
-import re
+import json
 import keyword
 import logging
-from collections import deque
 import os
+import re
+import sys
+import time
+import traceback
+from collections import deque
 from datetime import datetime, timezone
-import semver  # type: ignore
+from types import ModuleType
+from typing import Any, Awaitable, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
-from dataclasses_jsonschema import ValidationError
-
-import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
-from arcor2.data.rpc.common import Request
+from dataclasses_jsonschema import ValidationError
+
+import semver  # type: ignore
+
+import websockets
+
+from arcor2.data.common import Orientation, Pose, Position
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
-from arcor2.exceptions import Arcor2Exception
-from arcor2.data.common import Pose, Position, Orientation
 from arcor2.data.execution import PackageMeta
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
+from arcor2.data.rpc.common import Request
+from arcor2.exceptions import Arcor2Exception
 from arcor2.settings import PROJECT_PATH
 
 

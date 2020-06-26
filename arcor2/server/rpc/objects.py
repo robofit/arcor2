@@ -3,26 +3,24 @@
 
 
 import asyncio
-from typing import List, Dict
+from typing import Dict, List
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2.source.object_types import new_object_type_source
-from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data.common import Position, Pose, Scene
-from arcor2.data.object_type import Model3dType, MeshFocusAction
-from arcor2.data import rpc, events
 from arcor2 import aio_persistent_storage as storage
-from arcor2.object_types import Generic
+from arcor2 import helpers as hlp, object_types_utils as otu
+from arcor2.data import events, rpc
+from arcor2.data.common import Pose, Position, Scene
+from arcor2.data.object_type import MeshFocusAction, Model3dType
 from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types import Generic
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-
-from arcor2.server.decorators import scene_needed, no_project
-from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
-from arcor2.server.robot import get_end_effector_pose
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
+from arcor2.server.robot import get_end_effector_pose
 from arcor2.server.scene import scenes
-
+from arcor2.source.object_types import new_object_type_source
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
 FOCUS_OBJECT_ROBOT: Dict[str, rpc.common.RobotArg] = {}  # key: object_id

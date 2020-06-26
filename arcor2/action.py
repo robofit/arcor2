@@ -1,15 +1,16 @@
 import select
 import sys
-from typing import Union, Callable, Any, TYPE_CHECKING, no_type_check
-from arcor2.data.events import Event, PackageStateEvent, ActionStateEvent
-from arcor2.data.common import PackageStateEnum, ActionStateEnum, ActionState, PackageState
 from functools import wraps
+from typing import Any, Callable, TYPE_CHECKING, Union, no_type_check
+
+from arcor2.data.common import ActionState, ActionStateEnum, PackageState, PackageStateEnum
+from arcor2.data.events import ActionStateEvent, Event, PackageStateEvent
 
 HANDLE_ACTIONS = True
 
 if TYPE_CHECKING:
     from arcor2.object_types import Generic  # NOQA
-    from arcor2.services import Service  # NOQA
+    from arcor2.services.service import Service  # NOQA
 
 
 try:

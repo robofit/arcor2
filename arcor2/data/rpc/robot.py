@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Set, Optional
 from dataclasses import dataclass, field
+from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import robot, common
+from arcor2.data import common, robot
 from arcor2.data.rpc.common import Request, Response, wo_suffix
 
 

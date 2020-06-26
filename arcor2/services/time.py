@@ -1,9 +1,9 @@
-from typing import FrozenSet, Optional
 import time
+from typing import FrozenSet, Optional
 
-from arcor2.services import Service
-from arcor2.data.common import ActionMetadata
 from arcor2.action import action
+from arcor2.data.common import ActionMetadata
+from arcor2.services.service import Service
 
 
 class TimeService(Service):

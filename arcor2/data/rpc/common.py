@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
-from typing import Optional, List, Tuple, Set
 import re
+from dataclasses import dataclass, field
 from enum import Enum
+from typing import List, Optional, Set, Tuple
 
 from dataclasses_jsonschema import JsonSchemaMixin
 

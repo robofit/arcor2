@@ -1,10 +1,10 @@
-from typing import List
 import json
+from typing import List
 
-from arcor2.data.common import Project, Pose, Scene
+from arcor2 import helpers as hlp
+from arcor2.data.common import Pose, Project, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
-from arcor2 import helpers as hlp
 
 
 class PosePlugin(ParameterPlugin):

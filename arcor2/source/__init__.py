@@ -1,4 +1,5 @@
 import static_typing as st
+
 import typed_ast.ast3
 
 from arcor2.exceptions import Arcor2Exception
