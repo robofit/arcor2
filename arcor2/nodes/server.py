@@ -7,7 +7,7 @@ import asyncio
 import functools
 import json
 import sys
-from typing import get_type_hints, List, Awaitable
+from typing import get_type_hints
 import inspect
 import os
 import shutil
@@ -61,11 +61,20 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     glob.PACKAGE_STATE = evt.data
 
                     if evt.data.state == common.PackageStateEnum.STOPPED:
+
+                        if glob.PACKAGE_INFO and not glob.TEMPORARY_PACKAGE:
+                            # after package is finished, show list of packages
+                            glob.MAIN_SCREEN = \
+                                events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.PackagesList,
+                                                          glob.PACKAGE_INFO.package_id)
+                            await notif.broadcast_event(events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+
                         server_events.package_stopped.set()
                         server_events.package_started.clear()
                         glob.CURRENT_ACTION = None
                         glob.ACTION_STATE = None
                         glob.PACKAGE_INFO = None
+
                     else:
                         server_events.package_stopped.clear()
                         server_events.package_started.set()
@@ -121,24 +130,20 @@ async def register(websocket: WsClient) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    tasks: List[Awaitable] = []
-
     if glob.PROJECT:
         assert glob.SCENE
-        tasks.append(notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT))))
+        await notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT)))
     elif glob.SCENE:
-        tasks.append(notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
+        await notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE)))
+    elif glob.PACKAGE_INFO:
+        await websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
 
-    tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
-
-    if glob.PACKAGE_INFO:
-        tasks.append(websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json()))
-    if glob.ACTION_STATE:
-        tasks.append(websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json()))
-    if glob.CURRENT_ACTION:
-        tasks.append(websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json()))
-
-    await asyncio.gather(*tasks)
+        if glob.ACTION_STATE:
+            await websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json())
+        if glob.CURRENT_ACTION:
+            await websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json())
+    else:
+        await notif.event(websocket, events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
 
 
 async def unregister(websocket: WsClient) -> None:

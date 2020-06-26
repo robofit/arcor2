@@ -79,6 +79,13 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
     return None
 
 
+async def notify_scene_closed(scene_id: str) -> None:
+
+    await notif.broadcast_event(events.SceneClosed())
+    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList, scene_id)
+    await notif.broadcast_event(events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+
+
 @scene_needed
 @no_project
 async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> None:
@@ -96,10 +103,11 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> None
     if req.dry_run:
         return None
 
+    scene_id = glob.SCENE.id
+
     await clear_scene()
     OBJECTS_WITH_UPDATED_POSE.clear()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneClosed()))
-    return None
+    asyncio.ensure_future(notify_scene_closed(scene_id))
 
 
 @scene_needed

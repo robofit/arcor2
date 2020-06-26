@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Dict, Set, Union, Optional, DefaultDict, Any
+from typing import Dict, Set, Optional, DefaultDict, Any
 import os
 from collections import defaultdict
 
@@ -12,6 +12,7 @@ from aiologger.levels import LogLevel  # type: ignore
 
 from arcor2 import helpers as hlp
 from arcor2.data.common import Scene, Project, PackageState, ActionState, CurrentAction
+from arcor2.data import events
 from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict
 from arcor2.data.services import ServiceTypeMetaDict
@@ -30,8 +31,10 @@ BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{BUILD_PORT}")
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 
-SCENE: Union[Scene, None] = None
-PROJECT: Union[Project, None] = None
+SCENE: Optional[Scene] = None
+PROJECT: Optional[Project] = None
+MAIN_SCREEN: Optional[events.ShowMainScreenData] = \
+    events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList)
 
 INTERFACES: Set[WsClient] = set()
 
@@ -53,6 +56,7 @@ PACKAGE_STATE = PackageState()
 PACKAGE_INFO: Optional[PackageInfo] = None
 ACTION_STATE: Optional[ActionState] = None
 CURRENT_ACTION: Optional[CurrentAction] = None
+TEMPORARY_PACKAGE: bool = False
 
 RegisteredUiDict = DefaultDict[str, Set[WsClient]]
 

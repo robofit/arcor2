@@ -30,6 +30,7 @@ async def run_temp_package(package_id: str) -> None:
 
     assert glob.PROJECT
     project_id = glob.PROJECT.id
+    glob.TEMPORARY_PACKAGE = True
 
     await project.close_project(do_cleanup=False)
 
@@ -43,6 +44,8 @@ async def run_temp_package(package_id: str) -> None:
         await server_events.package_started.wait()
         await server_events.package_stopped.wait()
         await glob.logger.info("Temporary package stopped, let's remove it and reopen project.")
+
+    glob.TEMPORARY_PACKAGE = False
 
     await manager_request(rpc.execution.DeletePackageRequest(uuid.uuid4().int, args=rpc.execution.IdArgs(package_id)))
 

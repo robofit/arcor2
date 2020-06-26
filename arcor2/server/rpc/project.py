@@ -592,6 +592,13 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
     return None
 
 
+async def notify_project_closed(project_id: str) -> None:
+
+    await notif.broadcast_event(events.ProjectClosed())
+    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ProjectsList, project_id)
+    await notif.broadcast_event(events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+
+
 @scene_needed
 @project_needed
 async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -> None:
@@ -604,9 +611,11 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -
     if req.dry_run:
         return None
 
+    project_id = glob.PROJECT.id
+
     glob.PROJECT = None
     await clear_scene()
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
+    asyncio.ensure_future(notify_project_closed(project_id))
 
     return None
 
