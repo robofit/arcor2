@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
-from datetime import datetime
-
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import List, Optional
+
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, Position, ActionParameter, ActionIO, Orientation
-from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, RobotArg
+from arcor2.data.common import ActionIO, ActionParameter, IdDesc, Orientation, Position
+from arcor2.data.rpc.common import IdArgs, Request, Response, RobotArg, wo_suffix
 
 
 @dataclass

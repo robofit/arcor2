@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Set, Optional
 import asyncio
+import copy
 import functools
 from contextlib import asynccontextmanager
-import copy
+from typing import Optional, Set
 
 import quaternion  # type: ignore
+
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
-from arcor2.data import rpc, events
 from arcor2.data import common, object_type
+from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
-
-from arcor2.server.robot import get_end_effector_pose
-from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
-from arcor2.server.robot import collision
-from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene, get_instance, scene_names, scenes
-from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
-    projects_using_object, associated_projects
+from arcor2.server.decorators import no_project, no_scene, scene_needed
 from arcor2.server.helpers import unique_name
-
+from arcor2.server.project import associated_projects, projects_using_object, remove_object_references_from_projects, \
+    scene_object_pose_updated
+from arcor2.server.robot import collision
+from arcor2.server.robot import get_end_effector_pose
+from arcor2.server.scene import add_object_to_scene, add_service_to_scene, auto_add_object_to_scene, clear_scene, \
+    get_instance, open_scene, scene_names, scenes
 
 OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 

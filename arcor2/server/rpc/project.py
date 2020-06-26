@@ -3,27 +3,26 @@
 
 
 import asyncio
-from typing import Dict, Any
 import copy
-from contextlib import asynccontextmanager
 import inspect
+from contextlib import asynccontextmanager
+from typing import Any, Dict
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data import rpc, events, common, object_type
 from arcor2 import aio_persistent_storage as storage
+from arcor2 import helpers as hlp, object_types_utils as otu
+from arcor2.data import common, events, object_type, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
-from arcor2.source.logic import program_src, SourceException
-
-from arcor2.server.decorators import scene_needed, project_needed, no_project
-from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
-from arcor2.server.robot import get_end_effector_pose, get_robot_joints
-from arcor2.server.project import project_problems, open_project, project_names
-from arcor2.server.scene import open_scene, clear_scene, get_instance
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server.decorators import no_project, project_needed, scene_needed
 from arcor2.server.helpers import unique_name
+from arcor2.server.project import open_project, project_names, project_problems
+from arcor2.server.robot import get_end_effector_pose, get_robot_joints
+from arcor2.server.scene import clear_scene, get_instance, open_scene
+from arcor2.source.logic import SourceException, program_src
 
 
 def find_object_action(action: common.Action) -> object_type.ObjectAction:

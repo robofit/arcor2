@@ -1,10 +1,10 @@
 import abc
-from typing import List, FrozenSet
+from typing import FrozenSet, List
 
-from arcor2.services import Service
-from arcor2.data.common import Pose, Joint
+from arcor2.data.common import Joint, Pose
 from arcor2.data.object_type import MeshFocusAction
 from arcor2.object_types import Generic
+from arcor2.services.service import Service
 
 
 class RobotService(Service, metaclass=abc.ABCMeta):

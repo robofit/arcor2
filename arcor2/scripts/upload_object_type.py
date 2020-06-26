@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from arcor2.object_types.upload import upload, UploadException
+
+from arcor2.object_types.upload import UploadException, upload
 
 
 def main() -> None:

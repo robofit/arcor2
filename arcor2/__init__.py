@@ -1,6 +1,6 @@
-from typing import Dict, Set, Tuple
-import warnings
 import pkgutil
+import warnings
+from typing import Dict, Set, Tuple
 
 # key: name of parameter, value: name of method to call (to get set of strings), set of parent parameters
 DynamicParamDict = Dict[str, Tuple[str, Set[str]]]

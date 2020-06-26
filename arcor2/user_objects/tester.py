@@ -1,9 +1,9 @@
-from typing import List
 import time
+from typing import List
 
-from arcor2.object_types import Generic
 from arcor2.action import action
 from arcor2.data.common import ActionMetadata
+from arcor2.object_types import Generic
 
 
 class Tester(Generic):

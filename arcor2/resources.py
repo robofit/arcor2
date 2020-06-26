@@ -2,30 +2,30 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-from typing import Dict, Union, TypeVar, List, Optional, Any, Type
 import importlib
 import json
+import os
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
-from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
+from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, CurrentAction, Pose, Orientation
-from arcor2.data.execution import PackageInfo
-from arcor2.data.object_type import ObjectModel, Models, Box, Sphere, Cylinder, Mesh
-from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
-from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
-from arcor2.object_types import Generic
-from arcor2.services import Service, RobotService
-from arcor2.action import print_event
-from arcor2.rest import convert_keys
-from arcor2 import helpers as hlp
 import arcor2.object_types_utils as otu
+from arcor2 import helpers as hlp
 from arcor2 import settings
-
+from arcor2.action import print_event
+from arcor2.data.common import CurrentAction, Orientation, Pose, Project, Scene
+from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
+from arcor2.data.execution import PackageInfo
+from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
+from arcor2.exceptions import Arcor2Exception, ResourcesException
+from arcor2.object_types import Generic
+from arcor2.object_types_utils import built_in_types_names
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
+from arcor2.rest import convert_keys
+from arcor2.services.robot_service import RobotService
+from arcor2.services.service import Service
 
 
 # TODO for bound methods - check whether provided action point belongs to the object

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
-from datetime import datetime
-
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import List, Optional
+
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import PackageState, ActionState, CurrentAction
+from arcor2.data.common import ActionState, CurrentAction, PackageState
 from arcor2.data.execution import PackageMeta
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 

@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import subprocess
-import os
 import json
+import logging
+import os
+import subprocess
 import time
 import uuid
-import logging
 
 import pytest  # type: ignore
+
 import websocket  # type: ignore
 
-from arcor2.data import rpc, events, object_type
+from arcor2.data import events, object_type, rpc
 from arcor2.object_types import Generic, Robot
 
 # TODO helper function for RPC

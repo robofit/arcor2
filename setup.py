@@ -46,7 +46,8 @@ setup(
         'pyyaml',  # dependency of apispec, for some reason not installed automatically...
         'Pillow',
         'aiorun',
-        'flask-cors'
+        'flask-cors',
+        'semver'
     ],
     extras_require={
         'test': [

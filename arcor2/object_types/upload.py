@@ -1,13 +1,13 @@
 import inspect
 from typing import Optional
 
-from arcor2.source.object_types import check_object_type
-from arcor2.source import SourceException
-from arcor2.helpers import import_cls, ImportClsException
-from arcor2.exceptions import Arcor2Exception
 from arcor2 import persistent_storage as storage
-from arcor2.data.object_type import ObjectType, Models
+from arcor2.data.object_type import Models, ObjectType
+from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import ImportClsException, import_cls
 from arcor2.object_types import Generic
+from arcor2.source import SourceException
+from arcor2.source.object_types import check_object_type
 
 
 class UploadException(Arcor2Exception):

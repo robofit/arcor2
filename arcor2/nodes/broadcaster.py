@@ -1,9 +1,9 @@
-import socket
 import asyncio
-from typing import Union, Text, Tuple
+import socket
+from typing import Text, Tuple, Union
 
-from arcor2.server.globals import PORT
 from arcor2.data.common import BroadcastInfo
+from arcor2.server.globals import PORT
 
 BROADCAST_PORT: int = 6006
 

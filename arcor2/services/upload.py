@@ -1,13 +1,13 @@
 import inspect
 from typing import Type
 
-from arcor2.source.services import check_service_type
-from arcor2.source import SourceException
-from arcor2.helpers import import_cls, ImportClsException
-from arcor2.exceptions import Arcor2Exception
 from arcor2 import persistent_storage as storage
 from arcor2.data.services import ServiceType
-from arcor2.services import Service
+from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import ImportClsException, import_cls
+from arcor2.services.service import Service
+from arcor2.source import SourceException
+from arcor2.source.services import check_service_type
 
 
 class UploadException(Arcor2Exception):

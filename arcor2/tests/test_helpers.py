@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import datetime
 import copy
-import quaternion  # type: ignore
+import datetime
 
 import pytest  # type: ignore
+
+import quaternion  # type: ignore
 
 from arcor2 import helpers as hlp
 from arcor2.data.common import Orientation, Pose, Position

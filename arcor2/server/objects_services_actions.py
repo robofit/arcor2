@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Callable, Any, Union, Dict, Optional, Type
 import asyncio
 import shutil
+from typing import Any, Callable, Dict, Optional, Type, Union
 
-from arcor2 import service_types_utils as stu, object_types_utils as otu
-from arcor2.data.object_type import ObjectModel, ObjectTypeMeta, ObjectTypeMetaDict, ObjectActionsDict
-from arcor2.data.services import ServiceTypeMeta, ServiceTypeMetaDict
-from arcor2 import aio_persistent_storage as storage
-from arcor2.object_types import Robot
-from arcor2.exceptions import Arcor2Exception
-from arcor2.services import RobotService, Service
-from arcor2.object_types import Generic
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 import arcor2.helpers as hlp
+from arcor2 import aio_persistent_storage as storage
+from arcor2 import object_types_utils as otu, service_types_utils as stu
 from arcor2.data import events
-
+from arcor2.data.object_type import ObjectActionsDict, ObjectModel, ObjectTypeMeta, ObjectTypeMetaDict
+from arcor2.data.services import ServiceTypeMeta, ServiceTypeMetaDict
+from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types import Generic
+from arcor2.object_types import Robot
+from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server import globals as glob, settings
-from arcor2.server.robot import get_robot_meta
 from arcor2.server import notifications as notif
+from arcor2.server.robot import get_robot_meta
+from arcor2.services.robot_service import RobotService
+from arcor2.services.service import Service
 
 
-def find_robot_service() -> Union[None, RobotService]:
+def find_robot_service() -> Optional[RobotService]:
 
     for srv in glob.SERVICES_INSTANCES.values():
         if isinstance(srv, RobotService):

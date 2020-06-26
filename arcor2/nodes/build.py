@@ -7,20 +7,25 @@ import logging
 import os
 import shutil
 import tempfile
-from typing import Set
 from datetime import datetime, timezone
+from typing import Set
+
+from apispec import APISpec  # type: ignore
+
+from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+
+from flask import Flask, request, send_file
+
+from flask_cors import CORS  # type: ignore
+
+from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import horast
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
-from flask import Flask, send_file, request
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import arcor2
 from arcor2 import persistent_storage as ps
-from arcor2.data.object_type import ObjectModel
 from arcor2.data.execution import PackageMeta
+from arcor2.data.object_type import ObjectModel
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
 from arcor2.object_types_utils import built_in_types_names
 from arcor2.source import SourceException

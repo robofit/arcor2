@@ -1,30 +1,33 @@
-import traceback
-import time
-import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Any, Awaitable, TypeVar, Set
-from types import ModuleType
-import json
 import asyncio
 import importlib
-import re
+import json
 import keyword
 import logging
-from collections import deque
 import os
+import re
+import sys
+import time
+import traceback
+from collections import deque
 from datetime import datetime, timezone
+from types import ModuleType
+from typing import Any, Awaitable, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
-from dataclasses_jsonschema import ValidationError
-
-import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
-from arcor2.data.rpc.common import Request
+from dataclasses_jsonschema import ValidationError
+
+import semver  # type: ignore
+
+import websockets
+
+from arcor2.data.common import Orientation, Pose, Position
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
-from arcor2.exceptions import Arcor2Exception
-from arcor2.data.common import Pose, Position, Orientation
 from arcor2.data.execution import PackageMeta
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
+from arcor2.data.rpc.common import Request
+from arcor2.exceptions import Arcor2Exception
 from arcor2.settings import PROJECT_PATH
 
 
@@ -367,3 +370,22 @@ def read_package_meta(package_id: str) -> PackageMeta:
             return PackageMeta.from_json(pkg_file.read())
     except (IOError, ValidationError):
         return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
+
+
+def check_compatibility(my_version: str, their_version: str) -> None:
+
+    try:
+        mv = semver.VersionInfo.parse(my_version)
+        tv = semver.VersionInfo.parse(their_version)
+    except ValueError as e:
+        raise Arcor2Exception from e
+
+    if mv.major != tv.major:
+        raise Arcor2Exception("Different major varsion.")
+
+    if mv.major == 0:
+        if mv.minor != tv.minor:
+            raise Arcor2Exception(f"Our version {my_version} is not compatible with {their_version}.")
+    else:
+        if mv.minor > tv.minor:
+            raise Arcor2Exception(f"Our version {my_version} is outdated for {their_version}.")

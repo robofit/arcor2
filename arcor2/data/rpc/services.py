@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from dataclasses import dataclass, field
 from typing import List
 
-from dataclasses import dataclass, field
-
-from arcor2.data.services import ServiceTypeMeta
 from arcor2.data.rpc.common import Request, Response, wo_suffix
+from arcor2.data.services import ServiceTypeMeta
 
 
 @dataclass

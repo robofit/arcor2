@@ -1,21 +1,23 @@
 import importlib
 import os
-import stat
-from typing import List, Optional, Dict, Any, Union, Type
 import re
+import stat
+from typing import Any, Dict, List, Optional, Type, Union
 
 import autopep8  # type: ignore
-import typed_astunparse
+
 from horast import parse, unparse
 
-from typed_ast.ast3 import Module, Assign, Name, Store, Load, Attribute, FunctionDef, \
-    NameConstant, Pass, arguments, If, Compare, Eq, Expr, Call, alias, keyword, ClassDef, arg, Return, While, Str, \
-    ImportFrom, NodeVisitor, NodeTransformer, fix_missing_locations, Try, ExceptHandler, With, withitem, Subscript, \
-    Index, Assert, AST, stmt, Raise
+from typed_ast.ast3 import AST, Assert, Assign, Attribute, Call, ClassDef, Compare, Eq, ExceptHandler, Expr, \
+    FunctionDef, If, ImportFrom, Index, Load, Module, Name, NameConstant, NodeTransformer, NodeVisitor, Pass, Raise, \
+    Return, Store, Str, Subscript, Try, While, With, alias, arg, arguments, fix_missing_locations, keyword, stmt, \
+    withitem
 
-from arcor2.data.common import Project, ActionPoint
-from arcor2.source import SourceException, SCRIPT_HEADER
+import typed_astunparse
+
 import arcor2.data.common
+from arcor2.data.common import ActionPoint, Project
+from arcor2.source import SCRIPT_HEADER, SourceException
 
 
 def main_loop_body(tree: Module) -> List[Any]:

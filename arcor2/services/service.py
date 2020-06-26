@@ -1,6 +1,7 @@
 import abc
 from typing import FrozenSet
-from arcor2 import DynamicParamDict, CancelDict
+
+from arcor2 import CancelDict, DynamicParamDict
 from arcor2.docstring import parse_docstring
 
 

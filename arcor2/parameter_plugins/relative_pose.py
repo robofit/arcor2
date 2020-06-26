@@ -1,7 +1,6 @@
 from dataclasses_jsonschema import ValidationError
 
-
-from arcor2.data.common import Project, Pose, Scene
+from arcor2.data.common import Pose, Project, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 
 

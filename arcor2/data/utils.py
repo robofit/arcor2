@@ -2,7 +2,9 @@ import inspect
 
 from apispec import APISpec  # type: ignore
 from apispec.exceptions import DuplicateComponentNameError  # type: ignore
+
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+
 from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 

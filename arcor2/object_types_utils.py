@@ -1,19 +1,19 @@
 import copy
 import inspect
-from typing import Dict, Iterator, Tuple, Type, Set, get_type_hints, Union
+from typing import Dict, Iterator, Set, Tuple, Type, Union, get_type_hints
 
 import horast
 
 import arcor2
-from arcor2.data.object_type import ObjectTypeMetaDict, ObjectActionsDict, ObjectTypeMeta, ActionParameterMeta, \
-    ObjectAction, ObjectActions, ActionMetadata
+from arcor2.data.object_type import ActionMetadata, ActionParameterMeta, ObjectAction, ObjectActions,\
+    ObjectActionsDict, ObjectTypeMeta, ObjectTypeMetaDict
+from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import Generic
-from arcor2.services import Service
-from arcor2.docstring import parse_docstring
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
-from arcor2.source.utils import find_function
 from arcor2.service_types_utils import built_in_services
+from arcor2.services.service import Service
+from arcor2.source.utils import find_function
 
 SERVICES_METHOD_NAME = "from_services"
 

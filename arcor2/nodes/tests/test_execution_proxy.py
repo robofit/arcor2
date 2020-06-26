@@ -1,6 +1,8 @@
-from openapi_spec_validator import validate_spec  # type: ignore
-import yaml
 from subprocess import check_output
+
+from openapi_spec_validator import validate_spec  # type: ignore
+
+import yaml
 
 
 def test_execution_proxy_openapi():
