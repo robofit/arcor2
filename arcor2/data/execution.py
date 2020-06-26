@@ -10,6 +10,7 @@ from arcor2.data import common, object_type
 class PackageInfo(JsonSchemaMixin):
 
     package_id: str
+    package_name: str
     scene: common.Scene
     project: common.Project
     collision_models: object_type.CollisionModels = field(default_factory=object_type.CollisionModels)

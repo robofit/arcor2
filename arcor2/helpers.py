@@ -10,6 +10,8 @@ import re
 import keyword
 import logging
 from collections import deque
+import os
+from datetime import datetime, timezone
 
 from dataclasses_jsonschema import ValidationError
 
@@ -22,6 +24,8 @@ from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEve
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.data.common import Pose, Position, Orientation
+from arcor2.data.execution import PackageMeta
+from arcor2.settings import PROJECT_PATH
 
 
 # TODO what's wrong with following type?
@@ -352,3 +356,14 @@ def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> T
         raise TypeDefException("Class is not of expected type.")
 
     return cls_def
+
+
+def read_package_meta(package_id: str) -> PackageMeta:
+
+    target_path = os.path.join(PROJECT_PATH, package_id, "package.json")
+
+    try:
+        with open(target_path) as pkg_file:
+            return PackageMeta.from_json(pkg_file.read())
+    except (IOError, ValidationError):
+        return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
