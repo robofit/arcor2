@@ -82,3 +82,24 @@ class SystemInfoResponse(Response):
 
     data: SystemInfoData = field(default_factory=SystemInfoData)
     response: str = field(default=SystemInfoRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class VersionRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class VersionData(JsonSchemaMixin):
+
+    version: str = ""
+
+
+@dataclass
+class VersionResponse(Response):
+
+    data: VersionData = field(default_factory=VersionData)
+    response: str = field(default=VersionRequest.request, init=False)

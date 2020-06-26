@@ -12,6 +12,7 @@ import logging
 from collections import deque
 import os
 from datetime import datetime, timezone
+import semver  # type: ignore
 
 from dataclasses_jsonschema import ValidationError
 
@@ -367,3 +368,22 @@ def read_package_meta(package_id: str) -> PackageMeta:
             return PackageMeta.from_json(pkg_file.read())
     except (IOError, ValidationError):
         return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
+
+
+def check_compatibility(my_version: str, their_version: str) -> None:
+
+    try:
+        mv = semver.VersionInfo.parse(my_version)
+        tv = semver.VersionInfo.parse(their_version)
+    except ValueError as e:
+        raise Arcor2Exception from e
+
+    if mv.major != tv.major:
+        raise Arcor2Exception("Different major varsion.")
+
+    if mv.major == 0:
+        if mv.minor != tv.minor:
+            raise Arcor2Exception(f"Our version {my_version} is not compatible with {their_version}.")
+    else:
+        if mv.minor > tv.minor:
+            raise Arcor2Exception(f"Our version {my_version} is outdated for {their_version}.")

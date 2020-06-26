@@ -314,6 +314,10 @@ async def rename_package_cb(req: rpc.execution.RenamePackageRequest, ui: WsClien
         pkg_file.write(pm.to_json())
 
 
+async def _version_cb(req: rpc.common.VersionRequest, ui: WsClient) -> rpc.common.VersionResponse:
+    return rpc.common.VersionResponse(data=rpc.common.VersionData(arcor2.api_version()))
+
+
 async def send_to_clients(event: Event) -> None:
 
     if CLIENTS:
@@ -347,7 +351,8 @@ RPC_DICT: RPC_DICT_TYPE = {
     rpc.execution.UploadPackageRequest: _upload_package_cb,
     rpc.execution.ListPackagesRequest: list_packages_cb,
     rpc.execution.DeletePackageRequest: delete_package_cb,
-    rpc.execution.RenamePackageRequest: rename_package_cb
+    rpc.execution.RenamePackageRequest: rename_package_cb,
+    rpc.common.VersionRequest: _version_cb
 }
 
 

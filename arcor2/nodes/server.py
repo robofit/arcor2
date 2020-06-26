@@ -11,6 +11,7 @@ from typing import get_type_hints
 import inspect
 import os
 import shutil
+import uuid
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
@@ -27,10 +28,10 @@ from arcor2.data import events, common, compile_json_schemas
 from arcor2.data import rpc
 from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
 from arcor2.parameter_plugins import PARAM_PLUGINS
+from arcor2.exceptions import Arcor2Exception
 
-import arcor2.server.globals as glob
-import arcor2.server.objects_services_actions as osa
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings, events as server_events
+from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings, events as server_events,\
+    globals as glob, objects_services_actions as osa
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -100,6 +101,18 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
 
 async def _initialize_server() -> None:
+
+    exe_version = await exe.manager_request(rpc.common.VersionRequest(uuid.uuid4().int))
+    assert isinstance(exe_version, rpc.common.VersionResponse)
+
+    """
+    Following check is especially useful when running server/execution in Docker containers.
+    Then it might easily happen that one tries to use different versions together.
+    """
+    try:
+        hlp.check_compatibility(arcor2.api_version(), exe_version.data.version)
+    except Arcor2Exception as e:
+        raise Arcor2Exception("ARServer/Execution API_VERSION mismatch.") from e
 
     while True:  # wait until Project service becomes available
         try:
