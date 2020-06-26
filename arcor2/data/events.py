@@ -36,6 +36,26 @@ class Event(JsonSchemaMixin):
     parent_id: Optional[str] = None
 
 
+@dataclass
+class ShowMainScreenData(JsonSchemaMixin):
+
+    class WhatEnum(common.StrEnum):
+
+        ScenesList: str = "ScenesList"
+        ProjectsList: str = "ProjectsList"
+        PackagesList: str = "PackagesList"
+
+    what: WhatEnum
+    highlight: Optional[str] = None
+
+
+@dataclass
+class ShowMainScreenEvent(Event):
+
+    data: Optional[ShowMainScreenData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
 """
 ------------------------------------------------------------------------------------------------------------------------
 Project / scene
