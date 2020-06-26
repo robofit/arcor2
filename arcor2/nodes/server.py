@@ -136,7 +136,10 @@ async def register(websocket: WsClient) -> None:
     elif glob.SCENE:
         await notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE)))
     elif glob.PACKAGE_INFO:
+
+        # this can't be done in parallel - ui expects this order of events
         await websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
+        await websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json())
 
         if glob.ACTION_STATE:
             await websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json())
