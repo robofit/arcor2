@@ -247,6 +247,7 @@ class UpdateActionPointParentRequestArgs(JsonSchemaMixin):
 class UpdateActionPointParentRequest(Request):
 
     args: UpdateActionPointParentRequestArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

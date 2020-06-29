@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 from arcor2 import CancelDict, DynamicParamDict
 from arcor2.action import action
-from arcor2.data.common import ActionMetadata, ActionPoint, Pose, SceneObject
+from arcor2.data.common import ActionMetadata, Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
@@ -27,7 +27,6 @@ class Generic(metaclass=abc.ABCMeta):
         self.name = name
         self.pose = pose
         self.collision_model = collision_model
-        self.action_points: Dict[str, ActionPoint] = {}
         self._int_dict: Dict[str, int] = {}
 
     @classmethod

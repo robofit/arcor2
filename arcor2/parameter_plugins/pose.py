@@ -1,7 +1,8 @@
+import copy
 import json
 from typing import List
 
-from arcor2 import helpers as hlp
+from arcor2 import transformations as tr
 from arcor2.data.common import Pose, Project, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
@@ -31,14 +32,12 @@ class PosePlugin(ParameterPlugin):
         param = action.parameter(parameter_id)
         ori_id: str = cls.param_value(param)
 
-        ap, ori = project.ap_and_orientation(ori_id)
+        ap, _ = project.ap_and_orientation(ori_id)
 
-        if not ap.parent:
-            return Pose(ap.position, ori.orientation)
+        copy_of_ap = copy.deepcopy(ap)
+        tr.make_relative_ap_global(scene, project, copy_of_ap)
 
-        obj = scene.object(ap.parent)
-        p = hlp.make_pose_abs(obj.pose, Pose(ap.position, ori.orientation))
-        return p
+        return Pose(copy_of_ap.position, ap.orientation(ori_id).orientation)
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
@@ -88,10 +87,11 @@ class PoseListPlugin(ListParameterPlugin):
         parameter = action.parameter(parameter_id)
         ret: List[Pose] = []
 
-        obj = scene.object(ap.parent)
+        copy_of_ap = copy.deepcopy(ap)
+        tr.make_relative_ap_global(scene, project, copy_of_ap)
 
         for orientation_id in cls.param_value_list(parameter):
-            ret.append(hlp.make_pose_abs(obj.pose, Pose(ap.position, ap.orientation(orientation_id).orientation)))
+            ret.append(Pose(ap.position, ap.orientation(orientation_id).orientation))
 
         return ret
 

@@ -11,10 +11,10 @@ from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
 import arcor2.object_types_utils as otu
-from arcor2 import helpers as hlp
+from arcor2 import helpers as hlp, transformations as tr
 from arcor2 import settings
 from arcor2.action import print_event
-from arcor2.data.common import CurrentAction, Orientation, Pose, Project, Scene
+from arcor2.data.common import CurrentAction, Project, Scene
 from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
 from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
@@ -139,18 +139,8 @@ class IntResources:
 
         # make all poses absolute
         for aps in self.project.action_points_with_parent:
-
-            assert aps.parent
-
-            obj_inst = self.objects[aps.parent]
-
-            # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
-            obj_inst.action_points[aps.id] = aps
-            aps.position = hlp.make_pose_abs(obj_inst.pose, Pose(aps.position, Orientation())).position
-            for ori in aps.orientations:
-                ori.orientation = hlp.make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
-
-            aps.parent = None
+            # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
+            tr.make_relative_ap_global(self.scene, self.project, aps)
 
     def __enter__(self):
         return self
