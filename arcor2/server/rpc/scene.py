@@ -81,8 +81,9 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
 async def notify_scene_closed(scene_id: str) -> None:
 
     await notif.broadcast_event(events.SceneClosed())
-    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList, scene_id)
-    await notif.broadcast_event(events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList)
+    await notif.broadcast_event(events.ShowMainScreenEvent(
+        data=events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList, scene_id)))
 
 
 @scene_needed

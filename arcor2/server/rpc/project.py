@@ -594,8 +594,9 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
 async def notify_project_closed(project_id: str) -> None:
 
     await notif.broadcast_event(events.ProjectClosed())
-    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ProjectsList, project_id)
-    await notif.broadcast_event(events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ProjectsList)
+    await notif.broadcast_event(events.ShowMainScreenEvent(
+        data=events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ProjectsList, project_id)))
 
 
 @scene_needed
