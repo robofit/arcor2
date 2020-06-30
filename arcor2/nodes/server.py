@@ -68,9 +68,10 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                         if glob.PACKAGE_INFO and not glob.TEMPORARY_PACKAGE:
                             # after package is finished, show list of packages
                             glob.MAIN_SCREEN = \
-                                events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.PackagesList,
-                                                          glob.PACKAGE_INFO.package_id)
-                            await notif.broadcast_event(events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+                                events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.PackagesList)
+                            await notif.broadcast_event(events.ShowMainScreenEvent(
+                                data=events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.PackagesList,
+                                                               glob.PACKAGE_INFO.package_id)))
 
                         server_events.package_stopped.set()
                         server_events.package_started.clear()
