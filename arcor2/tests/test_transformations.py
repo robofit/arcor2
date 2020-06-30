@@ -2,10 +2,14 @@
 
 import copy
 
+import pytest  # type: ignore
+
 import quaternion  # type: ignore
 
-from arcor2.data.common import Orientation, Pose, Position
-from arcor2.transformations import make_orientation_abs, make_orientation_rel, make_pose_abs, make_pose_rel
+from arcor2.data.common import Orientation, Pose, Position, Project, ProjectActionPoint, Scene, SceneObject
+from arcor2.exceptions import Arcor2Exception
+from arcor2.transformations import make_global_ap_relative, make_orientation_abs, make_orientation_rel, make_pose_abs,\
+    make_pose_rel, make_relative_ap_global
 
 
 def test_make_pose_rel():
@@ -100,3 +104,30 @@ def test_make_orientation_rel_and_then_again_abs_2():
 
     rel_obj = make_orientation_rel(parent, obj)
     assert obj == make_orientation_abs(parent, rel_obj)
+
+
+def test_make_relative_ap_global_and_relative_again():
+
+    scene = Scene("s1", "s1")
+    scene.objects.append(SceneObject("so1", "so1", "WhatEver", Pose(Position(3, 0, 0), Orientation())))
+
+    project = Project("p1", "p1", "s1")
+    project.action_points.append(ProjectActionPoint("ap1", "ap1", Position(-1, 0, 0), parent="so1"))
+    project.action_points.append(ProjectActionPoint("ap2", "ap2", Position(-1, 0, 0), parent="ap1"))
+    ap3 = ProjectActionPoint("ap3", "ap3", Position(-1, 0, 0), parent="ap2")
+    project.action_points.append(ap3)
+
+    make_relative_ap_global(scene, project, ap3)
+
+    assert ap3.parent is None
+    assert ap3.position.x == .0
+
+    make_global_ap_relative(scene, project, ap3, "ap2")
+
+    assert ap3.parent == "ap2"
+    assert ap3.position.x == -1
+
+    ap3.parent = "something_unknown"
+
+    with pytest.raises(Arcor2Exception):
+        make_relative_ap_global(scene, project, ap3)

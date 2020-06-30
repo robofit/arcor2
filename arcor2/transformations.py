@@ -1,4 +1,5 @@
 from arcor2.data.common import Orientation, Pose, Position, Project, ProjectActionPoint, Scene
+from arcor2.exceptions import Arcor2Exception
 
 
 def make_position_rel(parent: Position, child: Position) -> Position:
@@ -62,14 +63,23 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
 
 
 def make_relative_ap_global(scene: Scene, project: Project, ap: ProjectActionPoint) -> None:
+    """
+    Transforms (in place) relative AP into a global one.
+    :param scene:
+    :param project:
+    :param ap:
+    :return:
+    """
 
     if not ap.parent:
         return
 
     if ap.parent in scene.object_ids:
         old_parent_pose = scene.object(ap.parent).pose
-    else:
+    elif ap.parent in project.action_points_ids:
         old_parent_pose = Pose(project.action_point(ap.parent).position, Orientation())
+    else:
+        raise Arcor2Exception("AP has unknown parent_id.")
 
     ap.position = make_pose_abs(old_parent_pose, Pose(ap.position, Orientation())).position
     for ori in ap.orientations:
@@ -85,10 +95,20 @@ def make_relative_ap_global(scene: Scene, project: Project, ap: ProjectActionPoi
 
 
 def make_global_ap_relative(scene: Scene, project: Project, ap: ProjectActionPoint, parent_id: str) -> None:
+    """
+    Transforms (in place) global AP into a relative one with given parent (can be object or another AP).
+    :param scene:
+    :param project:
+    :param ap:
+    :param parent_id:
+    :return:
+    """
+
+    assert project.scene_id == scene.id
 
     if parent_id in scene.object_ids:
         new_parent_pose = scene.object(parent_id).pose
-    else:
+    elif parent_id in project.action_points_ids:
 
         parent_ap = project.action_point(parent_id)
 
@@ -97,16 +117,29 @@ def make_global_ap_relative(scene: Scene, project: Project, ap: ProjectActionPoi
 
         new_parent_pose = Pose(parent_ap.position, Orientation())
 
+    else:
+        raise Arcor2Exception("Unknown parent_id.")
+
     ap.position = make_pose_rel(new_parent_pose, Pose(ap.position, Orientation())).position
     for ori in ap.orientations:
         ori.orientation = make_orientation_rel(new_parent_pose.orientation, ori.orientation)
 
+    ap.parent = parent_id
+
 
 def make_pose_rel_to_parent(scene: Scene, project: Project, pose: Pose, parent_id: str) -> Pose:
+    """
+    Transforms global Pose into Pose that is relative to a given parent (can be object or AP).
+    :param scene:
+    :param project:
+    :param pose:
+    :param parent_id:
+    :return:
+    """
 
     if parent_id in scene.object_ids:
         parent_pose = scene.object(parent_id).pose
-    else:
+    elif parent_id in project.action_points_ids:
 
         parent_ap = project.action_point(parent_id)
 
@@ -114,5 +147,8 @@ def make_pose_rel_to_parent(scene: Scene, project: Project, pose: Pose, parent_i
             pose = make_pose_rel_to_parent(scene, project, pose, parent_ap.parent)
 
         parent_pose = Pose(parent_ap.position, Orientation())
+
+    else:
+        raise Arcor2Exception("Unknown parent_id.")
 
     return make_pose_rel(parent_pose, pose)
