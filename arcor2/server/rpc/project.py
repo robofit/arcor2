@@ -6,12 +6,12 @@ import asyncio
 import copy
 import inspect
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import aio_persistent_storage as storage
-from arcor2 import helpers as hlp, object_types_utils as otu
+from arcor2 import helpers as hlp, object_types_utils as otu, transformations as tr
 from arcor2.data import common, events, object_type, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -302,33 +302,25 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
     if req.args.new_parent_id == ap.parent:
         return None
 
+    check_ap_parent(req.args.new_parent_id)
+
+    if req.dry_run:
+        return
+
     if not ap.parent and req.args.new_parent_id:
         # AP position and all orientations will become relative to the parent
-        new_parent = glob.SCENE.object(req.args.new_parent_id)
-        ap.position = hlp.make_pose_rel(new_parent.pose, common.Pose(ap.position, common.Orientation())).position
-        for ori in ap.orientations:
-            ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
+        tr.make_global_ap_relative(glob.SCENE, glob.PROJECT, ap, req.args.new_parent_id)
 
     elif ap.parent and not req.args.new_parent_id:
         # AP position and all orientations will become absolute
-        old_parent = glob.SCENE.object(ap.parent)
-        ap.position = hlp.make_pose_abs(old_parent.pose, common.Pose(ap.position, common.Orientation())).position
-        for ori in ap.orientations:
-            ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
+        tr.make_relative_ap_global(glob.SCENE, glob.PROJECT, ap)
     else:
 
-        assert ap.parent is not None
+        assert ap.parent
 
         # AP position and all orientations will become relative to another parent
-        old_parent = glob.SCENE.object(ap.parent)
-        new_parent = glob.SCENE.object(req.args.new_parent_id)
-
-        abs_ap_pose = hlp.make_pose_abs(old_parent.pose, common.Pose(ap.position, common.Orientation()))
-        ap.position = hlp.make_pose_rel(new_parent.pose, abs_ap_pose).position
-
-        for ori in ap.orientations:
-            ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
-            ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
+        tr.make_relative_ap_global(glob.SCENE, glob.PROJECT, ap)
+        tr.make_global_ap_relative(glob.SCENE, glob.PROJECT, ap, req.args.new_parent_id)
 
     ap.parent = req.args.new_parent_id
     glob.PROJECT.update_modified()
@@ -372,9 +364,7 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
-
-        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
-        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
+        new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     ap.invalidate_joints()
     for joints in ap.robot_joints:
@@ -458,8 +448,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
-        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
-        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
+        new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     orientation = common.NamedOrientation(common.uid(), req.args.name, new_pose.orientation)
     ap.orientations.append(orientation)
@@ -486,9 +475,7 @@ async def update_action_point_orientation_using_robot_cb(
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
-
-        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
-        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
+        new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     ori = glob.PROJECT.orientation(req.args.orientation_id)
     ori.orientation = new_pose.orientation
@@ -620,13 +607,27 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -
     return None
 
 
+def check_ap_parent(parent: Optional[str]) -> None:
+
+    assert glob.SCENE
+    assert glob.PROJECT
+
+    if not parent:
+        return
+
+    if parent not in glob.SCENE.object_ids | glob.PROJECT.action_points_ids:
+        raise Arcor2Exception("AP has invalid parent ID (not an object or another AP).")
+
+
 @scene_needed
 @project_needed
 async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClient) -> None:
 
+    assert glob.SCENE
     assert glob.PROJECT
 
     unique_name(req.args.name, glob.PROJECT.action_points_names)
+    check_ap_parent(req.args.parent)
 
     if not hlp.is_valid_identifier(req.args.name):
         raise Arcor2Exception("Name has to be valid Python identifier.")
@@ -649,6 +650,10 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
     assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.id)
+
+    for proj_ap in glob.PROJECT.action_points:
+        if proj_ap.parent == ap.id:
+            raise Arcor2Exception(f"Can't remove parent of '{proj_ap.name}' AP.")
 
     for act in glob.PROJECT.actions():
         for param in act.parameters:

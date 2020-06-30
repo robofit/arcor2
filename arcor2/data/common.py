@@ -253,6 +253,10 @@ class Scene(JsonSchemaMixin):
         for obj in self.objects:
             yield obj.name
 
+    @property
+    def object_ids(self) -> Set[str]:
+        return {obj.id for obj in self.objects}
+
     def object(self, object_id: str) -> SceneObject:
 
         for obj in self.objects:
@@ -384,6 +388,10 @@ class Project(JsonSchemaMixin):
     @property
     def action_points_names(self) -> Set[str]:
         return {ap.name for ap in self.action_points}
+
+    @property
+    def action_points_ids(self) -> Set[str]:
+        return {ap.id for ap in self.action_points}
 
     def ap_and_joints(self, joints_id: str) -> Tuple[ProjectActionPoint, ProjectRobotJoints]:
 
