@@ -179,6 +179,15 @@ async def check_robot_before_move(robot_id: str) -> None:
     if robot_id in move_in_progress:
         raise Arcor2Exception("Robot is moving.")
 
+    if glob.RUNNING_ACTION:
+
+        assert glob.PROJECT
+        action = glob.PROJECT.action(glob.RUNNING_ACTION)
+        obj_id_str, _ = action.parse_type()
+
+        if robot_id == obj_id_str:
+            raise Arcor2Exception("Robot is executing action.")
+
 
 async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float) -> None:
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)

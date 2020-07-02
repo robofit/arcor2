@@ -191,6 +191,7 @@ async def check_feature(robot_id: str, feature_name: str) -> None:
 async def move_to_pose_cb(req: rpc.robot.MoveToPoseRequest, ui: WsClient) -> None:
 
     await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
+    await robot.check_robot_before_move(req.args.robot_id)
 
     if (req.args.position is None) != (req.args.orientation is None):
 
@@ -205,8 +206,6 @@ async def move_to_pose_cb(req: rpc.robot.MoveToPoseRequest, ui: WsClient) -> Non
         target_pose = common.Pose(req.args.position, req.args.orientation)
     else:
         raise Arcor2Exception("Position or orientation should be given.")
-
-    await robot.check_robot_before_move(req.args.robot_id)
 
     # TODO check if the target pose is reachable (dry_run)
     asyncio.ensure_future(robot.move_to_pose(req.args.robot_id, req.args.end_effector_id, target_pose, req.args.speed))
