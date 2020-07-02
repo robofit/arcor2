@@ -3,12 +3,10 @@
 
 import asyncio
 import shutil
-from typing import Any, Callable, Dict, Optional, Type, Union
+from typing import Optional, Type, Union
 
-import arcor2.helpers as hlp
-from arcor2 import aio_persistent_storage as storage
+from arcor2 import aio_persistent_storage as storage, helpers as hlp
 from arcor2 import object_types_utils as otu, service_types_utils as stu
-from arcor2.data import events
 from arcor2.data.object_type import ObjectActionsDict, ObjectModel, ObjectTypeMeta, ObjectTypeMetaDict
 from arcor2.data.services import ServiceTypeMeta, ServiceTypeMetaDict
 from arcor2.exceptions import Arcor2Exception
@@ -16,7 +14,6 @@ from arcor2.object_types import Generic
 from arcor2.object_types import Robot
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server import globals as glob, settings
-from arcor2.server import notifications as notif
 from arcor2.server.robot import get_robot_meta
 from arcor2.services.robot_service import RobotService
 from arcor2.services.service import Service
@@ -213,37 +210,3 @@ async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = Non
                                                                                 robot_id):
             raise Arcor2Exception("Unknown end effector ID.")
         return robot_srv_inst
-
-
-async def execute_action(action_method: Callable, params: Dict[str, Any]) -> None:
-
-    assert glob.RUNNING_ACTION
-
-    await notif.broadcast_event(events.ActionExecutionEvent(data=events.ActionExecutionData(glob.RUNNING_ACTION)))
-
-    evt = events.ActionResultEvent()
-    evt.data.action_id = glob.RUNNING_ACTION
-
-    try:
-        action_result = await hlp.run_in_executor(action_method, *params.values())
-    except Arcor2Exception as e:
-        await glob.logger.error(e)
-        evt.data.error = e.message
-    except (AttributeError, TypeError) as e:
-        await glob.logger.error(e)
-        evt.data.error = str(e)
-    else:
-        if action_result is not None:
-            try:
-                evt.data.result = TYPE_TO_PLUGIN[type(action_result)].value_to_json(action_result)
-            except KeyError:
-                # temporal workaround for unsupported types
-                evt.data.result = str(action_result)
-
-    if glob.RUNNING_ACTION is None:
-        # action was cancelled, do not send any event
-        return
-
-    await notif.broadcast_event(evt)
-    glob.RUNNING_ACTION = None
-    glob.RUNNING_ACTION_PARAMS = None
