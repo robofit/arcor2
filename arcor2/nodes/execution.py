@@ -124,13 +124,19 @@ async def read_proc_stdout(package_id: str) -> None:
     ACTION_ARGS_EVENT = None
     PACKAGE_INFO_EVENT = None
 
-    if PROCESS.returncode > 0 and printed_out:
+    if PROCESS.returncode:
 
-        # TODO remember this (until another package is started) and send it to new clients?
-        await send_to_clients(ProjectExceptionEvent(data=ProjectExceptionEventData(printed_out[-1].strip())))
+        if printed_out:
 
-        with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
-            tb_file.write("".join(printed_out))
+            # TODO remember this (until another package is started) and send it to new clients?
+            await send_to_clients(ProjectExceptionEvent(data=ProjectExceptionEventData(printed_out[-1].strip())))
+
+            with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
+                tb_file.write("".join(printed_out))
+
+        else:
+            await logger.warn(
+                f"Process ended with non-zero return code ({PROCESS.returncode}), but didn't printed out anything.")
 
     await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED, package_id)))
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
