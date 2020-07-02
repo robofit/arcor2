@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionIO, ActionParameter, IdDesc, Orientation, Position
+from arcor2.data.common import ActionParameter, Flow, IdDesc, Orientation, Position, ProjectLogicIf
 from arcor2.data.rpc.common import IdArgs, Request, Response, RobotArg, wo_suffix
 
 
@@ -425,6 +425,7 @@ class AddActionRequestArgs(JsonSchemaMixin):
     name: str
     type: str
     parameters: List[ActionParameter] = field(default_factory=list)
+    flows: List[Flow] = field(default_factory=list)
 
 
 @dataclass
@@ -448,7 +449,8 @@ class AddActionResponse(Response):
 class UpdateActionRequestArgs(JsonSchemaMixin):
 
     action_id: str
-    parameters: List[ActionParameter] = field(default_factory=list)
+    parameters: Optional[List[ActionParameter]] = None
+    flows: Optional[List[Flow]] = None
 
 
 @dataclass
@@ -485,24 +487,71 @@ class RemoveActionResponse(Response):
 
 
 @dataclass
-class UpdateActionLogicArgs(JsonSchemaMixin):
+class AddLogicItemArgs(JsonSchemaMixin):
 
-    action_id: str
-    inputs: List[ActionIO] = field(default_factory=list)
-    outputs: List[ActionIO] = field(default_factory=list)
+    start: str
+    end: str
+    condition: Optional[ProjectLogicIf] = None
 
 
 @dataclass
-class UpdateActionLogicRequest(Request):
+class AddLogicItemRequest(Request):
 
-    args: UpdateActionLogicArgs
+    args: AddLogicItemArgs
+    dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class UpdateActionLogicResponse(Response):
+class AddLogicItemResponse(Response):
 
-    response: str = field(default=UpdateActionLogicRequest.request, init=False)
+    response: str = field(default=AddLogicItemRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateLogicItemArgs(JsonSchemaMixin):
+
+    logic_item_id: str
+    start: str
+    end: str
+    condition: Optional[ProjectLogicIf] = None
+
+
+@dataclass
+class UpdateLogicItemRequest(Request):
+
+    args: UpdateLogicItemArgs
+    dry_run: bool = False
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateLogicItemResponse(Response):
+
+    response: str = field(default=UpdateLogicItemRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RemoveLogicItemArgs(JsonSchemaMixin):
+
+    logic_item_id: str
+
+
+@dataclass
+class RemoveLogicItemRequest(Request):
+
+    args: RemoveLogicItemArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RemoveLogicItemResponse(Response):
+
+    response: str = field(default=RemoveLogicItemRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -720,3 +769,74 @@ class RenameActionRequest(Request):
 class RenameActionResponse(Response):
 
     response: str = field(default=RenameActionRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class AddConstantRequestArgs(JsonSchemaMixin):
+
+    name: str
+    type: str
+    value: str
+
+
+@dataclass
+class AddConstantRequest(Request):
+
+    args: AddConstantRequestArgs
+    dry_run: bool = False
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class AddConstantResponse(Response):
+
+    response: str = field(default=AddConstantRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateConstantRequestArgs(JsonSchemaMixin):
+
+    constant_id: str
+    name: Optional[str] = None
+    value: Optional[str] = None
+
+
+@dataclass
+class UpdateConstantRequest(Request):
+
+    args: UpdateConstantRequestArgs
+    dry_run: bool = False
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateConstantResponse(Response):
+
+    response: str = field(default=UpdateConstantRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RemoveConstantRequestArgs(JsonSchemaMixin):
+
+    constant_id: str
+
+
+@dataclass
+class RemoveConstantRequest(Request):
+
+    args: RemoveConstantRequestArgs
+    dry_run: bool = False
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class RemoveConstantResponse(Response):
+
+    response: str = field(default=RemoveConstantRequest.request, init=False)

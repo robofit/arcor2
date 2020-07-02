@@ -29,7 +29,7 @@ async def temporary_package_cb(req: rpc.execution.TemporaryPackageRequest, ui: W
 
     assert glob.PROJECT
 
-    if glob.PROJECT.has_changes():
+    if glob.PROJECT.has_changes:
         raise Arcor2Exception("Project has unsaved changes.")
 
     package_id = await build_and_upload_package(glob.PROJECT.id,

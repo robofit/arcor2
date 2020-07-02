@@ -46,6 +46,9 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def param_value(cls, param: ActionParameter) -> str:
 
+        # TODO support for link, constant (will need access to project)
+        assert param.value is not None
+
         try:
             ret = json.loads(param.value)
         except ValueError:

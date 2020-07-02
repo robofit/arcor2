@@ -48,6 +48,7 @@ setup(
         'Pillow',
         'aiorun',
         'flask-cors',
+        'typing_inspect',
         'semver'
     ],
     extras_require={
