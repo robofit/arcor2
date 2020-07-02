@@ -519,7 +519,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
 
 async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't open project while package runs.")
 
     # TODO validate using project_problems?
@@ -548,7 +548,7 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> 
 @no_project
 async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't create project while package runs.")
 
     unique_name(req.args.name, (await project_names()))
