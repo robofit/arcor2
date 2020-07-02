@@ -1,9 +1,16 @@
 import pkgutil
 import warnings
-from typing import Dict, Set, Tuple
+from typing import Dict, NamedTuple, Set
+
+
+class DynamicParamTuple(NamedTuple):
+
+    method_name: str
+    parent_parameters: Set[str]
+
 
 # key: name of parameter, value: name of method to call (to get set of strings), set of parent parameters
-DynamicParamDict = Dict[str, Tuple[str, Set[str]]]
+DynamicParamDict = Dict[str, DynamicParamTuple]
 
 # key: action, value: cancel method
 CancelDict = Dict[str, str]

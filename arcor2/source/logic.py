@@ -1,14 +1,11 @@
-from typing import Set, Union
+from typing import Dict, NamedTuple, Optional, Set
 
-from horast import parse
-
-from typed_ast.ast3 import Attribute, Call, Expr, Module, Pass
+from typed_ast.ast3 import Module, Pass
 
 import arcor2.object_types
-from arcor2.data.common import Action, ActionIO, ActionIOEnum, Project, Scene
+from arcor2.data.common import Action, LogicItem, Project, Scene
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
-from arcor2.project_utils import ProjectException, get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
 from arcor2.source.object_types import object_instance_from_res
@@ -40,87 +37,62 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_
     return SCRIPT_HEADER + tree_to_str(tree)
 
 
-def get_logic_from_source(source_code: str, project: Project) -> None:
+ActionCache = Dict[str, Action]
+LogicCache = Dict[str, LogicItem]
 
-    tree = parse(source_code)
 
-    assert isinstance(tree, Module)
+class ProjectException(Arcor2Exception):
+    pass
 
-    try:
-        actions_cache, _, _ = get_actions_cache(project)
-    except ProjectException as e:
-        raise SourceException(e)
-    # objects_cache = get_objects_cache(project, id_to_var=True)
 
-    found_actions: Set[str] = set()
+class ActionCacheTuple(NamedTuple):
 
-    loop = main_loop_body(tree)
+    actions: ActionCache
+    logic: LogicCache
 
-    last_action: Union[None, Action] = None
+    first_logic_item: LogicItem
+    last_logic_item: LogicItem
 
-    for node_idx, node in enumerate(loop):
+    @classmethod
+    def from_project(self, project: Project) -> "ActionCacheTuple":
 
-        # simple checks for expected 'syntax' of action calls (e.g. 'robot.move_to(**res.MoveToBoxIN)')
-        if not isinstance(node, Expr) or not isinstance(node.value, Call) or not isinstance(node.value.func, Attribute):
-            raise SourceException("Unexpected content.")
+        actions_cache: ActionCache = {}
+        logic_cache: LogicCache = {}
+        first_logic_item: Optional[LogicItem] = None
+        last_logic_item: Optional[LogicItem] = None
 
-        try:
-            val = node.value
-            obj_id = val.func.value.id  # type: ignore
-            method = val.func.attr  # type: ignore
-        except (AttributeError, IndexError) as e:
-            print(e)
-            raise SourceException("Script has unexpected content.")
+        for aps in project.action_points:
+            for act in aps.actions:
+                actions_cache[act.id] = act
 
-        """
-        Support for both:
-            robot.move_to(res.MoveToBoxIN)  # args
-        ...as well as
-            robot.move_to(**res.MoveToBoxIN)  # kwargs
-        """
-        if len(val.args) == 1 and not val.keywords:
-            action_id = val.args[0].attr  # type: ignore
-        elif len(val.keywords) == 1 and not val.args:
-            action_id = val.keywords[0].value.attr  # type: ignore
-        else:
-            raise SourceException("Unexpected argument(s) to the action.")
+        valid_endpoints = (LogicItem.START, LogicItem.END) | actions_cache.keys()
 
-        if action_id in found_actions:
-            raise SourceException(f"Duplicate action: {action_id}.")
-        found_actions.add(action_id)
+        for logic_item in project.logic:
 
-        # TODO test if object instance exists
-        # raise GenerateSourceException(f"Unknown object id {obj_id}.")
+            if logic_item.start not in valid_endpoints:
+                raise Arcor2Exception(f"Logic item '{logic_item.id}' has invalid start.")
 
-        try:
-            action = actions_cache[action_id]
-        except KeyError:
-            raise SourceException(f"Unknown action {action_id}.")
+            if logic_item.end not in valid_endpoints:
+                raise Arcor2Exception(f"Logic item '{logic_item.id}' has invalid end.")
 
-        at_obj, at_method = action.type.split("/")
-        at_obj = camel_case_to_snake_case(at_obj)  # convert obj id into script variable name
+            if logic_item.start == logic_item.START:
+                if first_logic_item:
+                    raise Arcor2Exception("Duplicate start.")
+                first_logic_item = logic_item
+            elif logic_item.end == logic_item.END:
+                if last_logic_item:
+                    raise Arcor2Exception("Duplicate end.")
+                last_logic_item = logic_item
 
-        if at_obj != obj_id or at_method != method:
-            raise SourceException(f"Action type {action.type} does not correspond to source, where it is"
-                                  f" {obj_id}/{method}.")
+            logic_cache[logic_item.id] = logic_item
 
-        action.inputs.clear()
-        action.outputs.clear()
+        if not first_logic_item or first_logic_item.id not in logic_cache:
+            raise ProjectException("Unknown start.")
 
-        if node_idx == 0:
-            action.inputs.append(ActionIO(ActionIOEnum.FIRST.value))
-        else:
-            assert last_action is not None
-            action.inputs.append(ActionIO(last_action.id))
+        if not last_logic_item or last_logic_item.id not in logic_cache:
+            raise ProjectException("Unknown end.")
 
-        if node_idx > 0:
-            assert last_action is not None
-            actions_cache[last_action.id].outputs.append(ActionIO(action.id))
-
-        if node_idx == len(loop)-1:
-            action.outputs.append(ActionIO(ActionIOEnum.LAST.value))
-
-        last_action = action
+        return ActionCacheTuple(actions_cache, logic_cache, first_logic_item, last_logic_item)
 
 
 def add_logic_to_loop(tree: Module, scene: Scene, project: Project) -> None:
@@ -128,21 +100,25 @@ def add_logic_to_loop(tree: Module, scene: Scene, project: Project) -> None:
     loop = main_loop_body(tree)
 
     try:
-        actions_cache, first_action_id, last_action_id = get_actions_cache(project)
-    except ProjectException as e:
-        raise SourceException(e)
+        cache = ActionCacheTuple.from_project(project)
+    except Arcor2Exception as e:
+        raise SourceException(e) from e
 
-    if first_action_id is None:
-        raise SourceException("'start' action not found.")
-
-    if last_action_id is None:
-        raise SourceException("'end' action not found.")
-
-    next_action_id = first_action_id
+    next_logic_item = cache.first_logic_item
 
     while True:
 
-        act = actions_cache[next_action_id]
+        if next_logic_item.end != next_logic_item.END:
+            act = cache.actions[next_logic_item.end]
+        else:
+            break
+
+        for logic_item in cache.logic.values():
+            if logic_item.start == act.id:
+                next_logic_item = logic_item
+                break
+        else:
+            raise Arcor2Exception("Next logic item not found.")
 
         if len(loop) == 1 and isinstance(loop[0], Pass):
             # pass is not necessary now
@@ -157,8 +133,3 @@ def add_logic_to_loop(tree: Module, scene: Scene, project: Project) -> None:
             pass
 
         append_method_call(loop, fix_object_name(ac_obj), ac_type, [get_name_attr("res", clean(act.name))], [])
-
-        if act.id == last_action_id:
-            break
-
-        next_action_id = act.outputs[0].default

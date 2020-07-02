@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Tuple, Union
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -35,10 +35,25 @@ class IntEnum(int, Enum):
         return set(map(lambda c: c.value, cls))  # type: ignore
 
 
-class ActionIOEnum(StrEnum):
+class FlowTypes(StrEnum):
 
-    FIRST: str = "start"
-    LAST: str = "end"
+    DEFAULT: str = "default"
+
+
+class LinkToActionOutput(NamedTuple):
+    action_id: str
+    flow_name: FlowTypes
+    output_index: int
+
+
+def parse_link(val: str) -> LinkToActionOutput:
+
+    action_id, flow_name, output_idx_str = val.split("/")
+
+    try:
+        return LinkToActionOutput(action_id, FlowTypes(flow_name), int(output_idx_str))
+    except ValueError as e:
+        raise Arcor2Exception("Invalid link value.") from e
 
 
 class DataClassEncoder(JSONEncoder):
@@ -298,34 +313,58 @@ class ActionParameterException(Arcor2Exception):
 
 
 @dataclass
-class ActionParameter(IdValue):
+class ActionParameter(JsonSchemaMixin):
 
+    class TypeEnum(StrEnum):
+
+        CONSTANT: str = "constant"
+        LINK: str = "link"
+
+    id: str
     type: str
+    value: str
+
+    def parse_link(self) -> LinkToActionOutput:
+        assert self.type == ActionParameter.TypeEnum.LINK
+        return parse_link(self.value)
+
+    def is_value(self):
+        return self.type not in ActionParameter.TypeEnum.set()
 
 
 @dataclass
-class ActionIO(JsonSchemaMixin):
+class Flow(JsonSchemaMixin):
 
-    default: str
+    type: FlowTypes = FlowTypes.DEFAULT
+    outputs: List[str] = field(default_factory=list)  # can't be set as it is unordered
+
+    def __post_init__(self):
+
+        if len(self.outputs) > len(set(self.outputs)):
+            raise Arcor2Exception("Outputs have to be unique.")
 
 
 @dataclass
 class Action(JsonSchemaMixin):
 
+    class ParsedType(NamedTuple):
+
+        obj_id: str
+        action_type: str
+
     id: str
     name: str
     type: str
     parameters: List[ActionParameter] = field(default_factory=list)
-    inputs: List[ActionIO] = field(default_factory=list)
-    outputs: List[ActionIO] = field(default_factory=list)
+    flows: List[Flow] = field(default_factory=list)
 
-    def parse_type(self) -> Tuple[str, str]:
+    def parse_type(self) -> ParsedType:
 
         try:
             obj_id_str, action = self.type.split("/")
         except ValueError:
             raise Arcor2Exception(f"Action: {self.id} has invalid type: {self.type}.")
-        return obj_id_str, action
+        return Action.ParsedType(obj_id_str, action)
 
     def parameter(self, parameter_id) -> ActionParameter:
 
@@ -335,8 +374,16 @@ class Action(JsonSchemaMixin):
 
         raise Arcor2Exception("Param not found")
 
+    @property
     def bare(self) -> "Action":
         return Action(self.id, self.name, self.type)
+
+    def flow(self, flow_type: FlowTypes = FlowTypes.DEFAULT):
+
+        for flow in self.flows:
+            if flow.type == flow_type:
+                return flow
+        raise Arcor2Exception(f"Flow '{flow_type.value}' not found.")
 
 
 @dataclass
@@ -344,8 +391,85 @@ class ProjectActionPoint(ActionPoint):
 
     actions: List[Action] = field(default_factory=list)
 
+    def action_ids(self) -> Set[str]:
+        return {action.id for action in self.actions}
+
     def bare(self) -> "ProjectActionPoint":
         return ProjectActionPoint(self.id, self.name, self.position, self.parent)
+
+
+@dataclass
+class ProjectLogicIf(JsonSchemaMixin):
+
+    what: str
+    value: str
+
+    def parse_what(self) -> LinkToActionOutput:
+        return parse_link(self.what)
+
+
+@dataclass
+class LogicItem(JsonSchemaMixin):
+
+    class ParsedStart(NamedTuple):
+
+        start_action_id: str
+        start_flow: str
+
+    START: ClassVar[str] = "START"
+    END: ClassVar[str] = "END"
+
+    id: str
+    start: str
+    end: str
+    condition: Optional[ProjectLogicIf] = None
+
+    def parse_start(self) -> ParsedStart:
+
+        try:
+            start_action_id, start_flow = self.start.split("/")
+        except ValueError:
+            return LogicItem.ParsedStart(self.start, FlowTypes.DEFAULT)
+
+        return LogicItem.ParsedStart(start_action_id, start_flow)
+
+
+@dataclass
+class ProjectConstant(JsonSchemaMixin):
+
+    id: str
+    name: str
+    type: str
+    value: str
+
+
+@dataclass
+class FunctionReturns(JsonSchemaMixin):
+
+    type: str
+    link: str
+
+
+@dataclass
+class ProjectFunction(JsonSchemaMixin):
+
+    id: str
+    name: str
+    actions: List[Action] = field(default_factory=list)
+    logic: List[LogicItem] = field(default_factory=list)
+    parameters: List[ActionParameter] = field(default_factory=list)
+    returns: List[FunctionReturns] = field(default_factory=list)
+
+    def action_ids(self) -> Set[str]:
+        return {act.id for act in self.actions}
+
+    def action(self, action_id: str) -> Action:
+
+        for ac in self.actions:
+            if ac.id == action_id:
+                return ac
+        else:
+            raise Arcor2Exception("Action not found")
 
 
 @dataclass
@@ -354,18 +478,23 @@ class Project(JsonSchemaMixin):
     id: str
     name: str
     scene_id: str
-    action_points: List[ProjectActionPoint] = field(default_factory=list)
     desc: str = field(default_factory=str)
     has_logic: bool = True
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
+    action_points: List[ProjectActionPoint] = field(default_factory=list)
+    constants: List[ProjectConstant] = field(default_factory=list)
+    functions: List[ProjectFunction] = field(default_factory=list)
+    logic: List[LogicItem] = field(default_factory=list)
 
+    @property
     def bare(self) -> "Project":
         return Project(self.id, self.name, self.scene_id, desc=self.desc, has_logic=self.has_logic)
 
     def update_modified(self):
         self.int_modified = datetime.now(tz=timezone.utc)
 
+    @property
     def has_changes(self) -> bool:
 
         if self.int_modified is None:
@@ -433,14 +562,15 @@ class Project(JsonSchemaMixin):
         else:
             raise Arcor2Exception("Action not found")
 
+    @property
     def actions(self) -> List[Action]:
         return [act for ap in self.action_points for act in ap.actions]
 
     def action_ids(self) -> Set[str]:
-        return {action.id for action in self.actions()}
+        return {action.id for action in self.actions}
 
     def action_user_names(self) -> Set[str]:
-        return {action.name for action in self.actions()}
+        return {action.name for action in self.actions}
 
     def action_point(self, action_point_id: str) -> ProjectActionPoint:
 
@@ -449,6 +579,21 @@ class Project(JsonSchemaMixin):
                 return ap
         else:
             raise Arcor2Exception("Action point not found")
+
+    def logic_item(self, logic_item_id: str) -> LogicItem:
+
+        for logic_item in self.logic:
+            if logic_item.id == logic_item_id:
+                return logic_item
+        else:
+            raise Arcor2Exception("LogicItem not found.")
+
+    def constant(self, constant_id: str) -> ProjectConstant:
+
+        for const in self.constants:
+            if const.id == constant_id:
+                return const
+        raise Arcor2Exception("Constant not found.")
 
 
 @dataclass

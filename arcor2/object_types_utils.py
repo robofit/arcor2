@@ -4,6 +4,8 @@ from typing import Dict, Iterator, Set, Tuple, Type, Union, get_type_hints
 
 import horast
 
+import typing_inspect  # type: ignore
+
 import arcor2
 from arcor2.data.object_type import ActionMetadata, ActionParameterMeta, ObjectAction, ObjectActions,\
     ObjectActionsDict, ObjectTypeMeta, ObjectTypeMetaDict
@@ -136,6 +138,19 @@ class IgnoreActionException(Arcor2Exception):
     pass
 
 
+def resolve_param(plugins: Dict[Type, Type[ParameterPlugin]], name: str, ttype) -> Type[ParameterPlugin]:
+
+    try:
+        return plugins[ttype]
+    except KeyError:
+        for k, v in plugins.items():
+            if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
+                return v
+
+    # ignore action with unknown parameter type
+    raise IgnoreActionException(f"Parameter {name} has unknown type {ttype}.")
+
+
 def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[Type[Generic], Type[Service]],
                    source: str) -> ObjectActions:
 
@@ -171,34 +186,36 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
         method_tree = find_function(method_name, tree)
 
         try:
+
             for name, ttype in get_type_hints(method_def).items():
 
-                try:
-                    param_type = plugins[ttype]
-                except KeyError:
-                    for k, v in plugins.items():
-                        if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
-                            param_type = v
-                            break
-                    else:
-                        if name == "return":  # noqa: E721
-                            # ...just ignore NoneType for returns
-                            continue
-
-                        # ignore action with unknown parameter type
-                        raise IgnoreActionException(f"Parameter {name} of action {method_name}"
-                                                    f" has unknown type {ttype}.")
-
                 if name == "return":
-                    data.returns = param_type.type_name()
+
+                    # ...just ignore NoneType for returns
+                    if ttype == type(None):  # noqa: E721
+                        continue
+
+                    if typing_inspect.is_tuple_type(ttype):
+                        for arg in typing_inspect.get_args(ttype):
+                            resolved_param = resolve_param(plugins, name, arg)
+                            if resolved_param is None:
+                                raise IgnoreActionException("None in return tuple is not supported.")
+                            data.returns.append(resolved_param.type_name())
+                    else:
+                        # TODO resolving needed for e.g. enums - add possible values to action metadata somewhere?
+                        data.returns = [resolve_param(plugins, name, ttype).type_name()]
+
                     continue
+
+                param_type = resolve_param(plugins, name, ttype)
+
+                assert param_type is not None
 
                 args = ActionParameterMeta(name=name, type=param_type.type_name())
                 try:
                     param_type.meta(args, method_def, method_tree)
                 except ParameterPluginException as e:
-                    # TODO log exception
-                    raise IgnoreActionException(e)
+                    raise IgnoreActionException(e) from e
 
                 if name in type_def.DYNAMIC_PARAMS:
                     args.dynamic_value = True
@@ -219,7 +236,7 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Union[T
 
         except IgnoreActionException as e:
             data.disabled = True
-            data.problem = str(e)
+            data.problem = e.message
             # TODO log exception
 
         ret.append(data)
