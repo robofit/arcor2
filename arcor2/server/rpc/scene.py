@@ -61,7 +61,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
     :return:
     """
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't create scene while package runs.")
 
     assert glob.SCENE is None
@@ -127,7 +127,7 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> None:
 @no_project
 async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't open scene while package runs.")
 
     await open_scene(req.args.id)
