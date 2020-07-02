@@ -476,6 +476,7 @@ class PackageStateEnum(Enum):
     RUNNING: str = "running"
     STOPPED: str = "stopped"
     PAUSED: str = "paused"
+    UNDEFINED: str = "undefined"
 
 
 class ActionStateEnum(Enum):
@@ -495,7 +496,8 @@ class ActionState(JsonSchemaMixin):
 @dataclass
 class PackageState(JsonSchemaMixin):
 
-    state: PackageStateEnum = PackageStateEnum.STOPPED
+    state: PackageStateEnum = PackageStateEnum.UNDEFINED
+    package_id: Optional[str] = None
 
 
 @dataclass

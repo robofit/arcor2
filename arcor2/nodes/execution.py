@@ -11,6 +11,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import zipfile
 from typing import Awaitable, List, Optional, Set, Union
 
@@ -27,7 +28,8 @@ from websockets.server import WebSocketServerProtocol as WsClient
 import arcor2
 from arcor2.data import compile_json_schemas, rpc
 from arcor2.data.common import PackageState, PackageStateEnum, Project
-from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageInfoEvent, PackageStateEvent
+from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, PackageInfoEvent, PackageStateEvent,\
+    ProjectExceptionEvent, ProjectExceptionEventData
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, read_package_meta, server
@@ -62,7 +64,7 @@ async def project_state(event: PackageStateEvent):
     await send_to_clients(event)
 
 
-async def read_proc_stdout() -> None:
+async def read_proc_stdout(package_id: str) -> None:
 
     global PROJECT_EVENT
     global ACTION_EVENT
@@ -74,21 +76,25 @@ async def read_proc_stdout() -> None:
     assert PROCESS is not None
     assert PROCESS.stdout is not None
 
-    await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.RUNNING)))
+    await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.RUNNING, package_id)))
+
+    printed_out: List[str] = []
 
     while process_running():
         try:
             stdout = await PROCESS.stdout.readuntil()
         except asyncio.exceptions.IncompleteReadError:
+            print("break")
             break
 
-        stripped = stdout.decode("utf-8").strip()
+        decoded = stdout.decode("utf-8")
+        stripped = decoded.strip()
 
         try:
             data = json.loads(stripped)
-        except json.decoder.JSONDecodeError as e:
-            await logger.error(f"Script printed out: {stripped}")
-            await logger.debug(e)
+        except json.decoder.JSONDecodeError:
+            printed_out.append(decoded)
+            await logger.error(decoded.strip())
             continue
 
         if not isinstance(data, dict) or "event" not in data:
@@ -102,6 +108,7 @@ async def read_proc_stdout() -> None:
             continue
 
         if isinstance(evt, PackageStateEvent):
+            evt.data.package_id = package_id
             await project_state(evt)
             continue
         elif isinstance(evt, ActionStateEvent):
@@ -117,7 +124,15 @@ async def read_proc_stdout() -> None:
     ACTION_ARGS_EVENT = None
     PACKAGE_INFO_EVENT = None
 
-    await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED)))
+    if PROCESS.returncode > 0 and printed_out:
+
+        # TODO remember this (until another package is started) and send it to new clients?
+        await send_to_clients(ProjectExceptionEvent(data=ProjectExceptionEventData(printed_out[-1].strip())))
+
+        with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
+            tb_file.write("".join(printed_out))
+
+    await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED, package_id)))
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
 
 
@@ -155,7 +170,7 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
 
-    TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
+    TASK = asyncio.ensure_future(read_proc_stdout(req.args.id))  # run task in background
 
 
 async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -> None:
