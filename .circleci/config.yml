@@ -41,10 +41,16 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             sudo apt-get update
-            sudo apt-get install build-essential
+            sudo apt-get install build-essential git
             pip install --upgrade pip setuptools
             pip install -e .[test]
             pip install pytest flake8 mypy flake8-import-order flake8-tidy-imports
+            cd ..
+            git clone https://github.com/ZdenekM/dataclasses-jsonschema
+            cd dataclasses-jsonschema
+            git checkout issue-126
+            pip install -e .
+
 
       - save_cache:
           paths:
