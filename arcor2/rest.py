@@ -24,7 +24,7 @@ HEADERS = {'accept': 'application/json', 'content-type': 'application/json'}
 T = TypeVar('T', bound=JsonSchemaMixin)
 S = TypeVar('S', str, int, float, bool)
 
-OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin]]]
+OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin], Sequence[S]]]
 ParamsDict = Optional[Dict[str, Any]]
 
 SESSION = requests.session()

@@ -16,7 +16,7 @@ from arcor2.data import common, events, object_type, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
-from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa, robot
 from arcor2.server.decorators import no_project, project_needed, scene_needed
 from arcor2.server.helpers import unique_name
 from arcor2.server.project import open_project, project_names, project_problems
@@ -125,6 +125,11 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
 
     action = glob.PROJECT.action(req.args.action_id)
 
+    obj_id, action_name = action.parse_type()
+
+    if obj_id in robot.move_in_progress:
+        raise Arcor2Exception("Robot is moving.")
+
     params: Dict[str, Any] = {}
 
     for param in action.parameters:
@@ -134,8 +139,6 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
         except ParameterPluginException as e:
             await glob.logger.error(e)
             raise Arcor2Exception(f"Failed to get value for parameter {param.id}.")
-
-    obj_id, action_name = action.parse_type()
 
     obj = get_instance(obj_id)
 
