@@ -13,6 +13,7 @@ import sys
 import tempfile
 import time
 import zipfile
+from datetime import datetime, timezone
 from typing import Awaitable, List, Optional, Set, Union
 
 from aiologger import Logger  # type: ignore
@@ -32,7 +33,7 @@ from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, Pack
     ProjectExceptionEvent, ProjectExceptionEventData
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, read_package_meta, server
+from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, read_package_meta, server, write_package_meta
 from arcor2.settings import CLEANUP_SERVICES_NAME, PROJECT_PATH
 from arcor2.source.utils import make_executable
 
@@ -175,6 +176,10 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
                                                    env=env)
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
+
+    meta = read_package_meta(req.args.id)
+    meta.executed = datetime.now(tz=timezone.utc)
+    write_package_meta(req.args.id, meta)
 
     TASK = asyncio.ensure_future(read_proc_stdout(req.args.id))  # run task in background
 

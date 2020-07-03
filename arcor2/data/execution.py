@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -21,3 +22,4 @@ class PackageMeta(JsonSchemaMixin):
 
     name: str
     built: datetime
+    executed: Optional[datetime] = None
