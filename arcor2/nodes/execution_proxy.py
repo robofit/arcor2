@@ -247,7 +247,6 @@ def get_package(packageId: str):  # noqa
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 
 
-# TODO use DataClassPlugin / PackageSummary model
 @app.route("/packages", methods=['GET'])
 def get_packages():
     """Gets summary for all stored execution packages.
@@ -275,7 +274,7 @@ def get_packages():
         sp.name = pck.package_meta.name
         sp.created = pck.package_meta.built
         sp.projectId = pck.project_id
-        # TODO sp.executed
+        sp.executed = pck.package_meta.executed
         ret.append(sp.to_dict())
 
     return jsonify(ret), 200

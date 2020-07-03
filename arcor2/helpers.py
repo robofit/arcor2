@@ -300,15 +300,24 @@ def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> T
     return cls_def
 
 
+def get_package_meta_path(package_id: str) -> str:
+
+    return os.path.join(PROJECT_PATH, package_id, "package.json")
+
+
 def read_package_meta(package_id: str) -> PackageMeta:
 
-    target_path = os.path.join(PROJECT_PATH, package_id, "package.json")
-
     try:
-        with open(target_path) as pkg_file:
+        with open(get_package_meta_path(package_id)) as pkg_file:
             return PackageMeta.from_json(pkg_file.read())
     except (IOError, ValidationError):
         return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
+
+
+def write_package_meta(package_id: str, meta: PackageMeta) -> None:
+
+    with open(get_package_meta_path(package_id), "w") as pkg_file:
+        pkg_file.write(meta.to_json())
 
 
 def check_compatibility(my_version: str, their_version: str) -> None:
