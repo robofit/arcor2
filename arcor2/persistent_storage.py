@@ -27,7 +27,7 @@ def get_meshes() -> MeshList:
 
 @rest.handle_exceptions(PersistentStorageException)
 def get_model(model_id: str, model_type: Model3dType) -> Models:
-    return rest.get(f"{URL}/models/{model_id}/{model_type.value}", MODEL_MAPPING[model_type])
+    return rest.get(f"{URL}/models/{model_id}/{model_type.value.lower()}", MODEL_MAPPING[model_type])
 
 
 @rest.handle_exceptions(PersistentStorageException)
