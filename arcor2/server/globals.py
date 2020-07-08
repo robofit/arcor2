@@ -12,8 +12,9 @@ from aiologger.levels import LogLevel  # type: ignore
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
+from arcor2.cached import UpdateableCachedProject
 from arcor2.data import events
-from arcor2.data.common import ActionState, CurrentAction, PackageState, Project, Scene
+from arcor2.data.common import ActionState, CurrentAction, PackageState, Scene
 from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict
 from arcor2.data.robot import RobotMeta
@@ -33,7 +34,7 @@ BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{BUILD_PORT}")
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 
 SCENE: Optional[Scene] = None
-PROJECT: Optional[Project] = None
+PROJECT: Optional[UpdateableCachedProject] = None
 MAIN_SCREEN: Optional[events.ShowMainScreenData] = \
     events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList)
 

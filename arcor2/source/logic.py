@@ -3,7 +3,8 @@ from typing import Set
 from typed_ast.ast3 import Module, Pass
 
 import arcor2.object_types
-from arcor2.data.common import Project, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import Scene
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.logic import ActionCacheTuple
@@ -14,7 +15,7 @@ from arcor2.source.utils import add_import, append_method_call, clean, empty_scr
     main_loop_body, tree_to_str
 
 
-def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:
+def program_src(project: CachedProject, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:
 
     tree = empty_script_tree(add_main_loop=add_logic)
 
@@ -38,7 +39,7 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_
     return SCRIPT_HEADER + tree_to_str(tree)
 
 
-def add_logic_to_loop(tree: Module, scene: Scene, project: Project) -> None:
+def add_logic_to_loop(tree: Module, scene: Scene, project: CachedProject) -> None:
 
     loop = main_loop_body(tree)
 

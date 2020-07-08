@@ -1,6 +1,7 @@
 from dataclasses_jsonschema import ValidationError
 
-from arcor2.data.common import Pose, Project, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import Pose, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 
 
@@ -15,7 +16,7 @@ class RelativePosePlugin(ParameterPlugin):
         return RelativePose
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) ->\
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) ->\
             RelativePose:
 
         param = project.action(action_id).parameter(parameter_id)

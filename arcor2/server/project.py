@@ -2,6 +2,7 @@ import asyncio
 from typing import AsyncIterator, Dict, List, Set, Union
 
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
+from arcor2.cached import CachedProject, UpdateableCachedProject
 from arcor2.data import common, events, object_type
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -17,7 +18,7 @@ async def close_project(do_cleanup: bool = True) -> None:
     asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
 
 
-def check_action_params(scene: common.Scene, project: common.Project, action: common.Action,
+def check_action_params(scene: common.Scene, project: CachedProject, action: common.Action,
                         object_action: object_type.ObjectAction) -> None:
 
     _, action_type = action.parse_type()
@@ -63,7 +64,7 @@ def check_action_params(scene: common.Scene, project: common.Project, action: co
                 raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has invalid value. {str(e)}")
 
 
-def check_flows(parent: Union[common.Project, common.ProjectFunction],
+def check_flows(parent: Union[CachedProject, common.ProjectFunction],
                 action: common.Action, action_meta: object_type.ObjectAction) -> None:
     """
     Raises exception if there is something wrong with flow(s).
@@ -191,10 +192,7 @@ async def projects(scene_id: str) -> AsyncIterator[common.Project]:
 
 def _project_using_object_as_parent(project: common.Project, obj_id: str) -> bool:
 
-    for ap in project.action_points_with_parent:
-
-        assert ap.parent
-
+    for ap in project.action_points:
         if ap.parent == obj_id:
             return True
 
@@ -240,7 +238,7 @@ async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterat
             yield project
 
 
-def project_problems(scene: common.Scene, project: common.Project) -> List[str]:
+def project_problems(scene: common.Scene, project: CachedProject) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
     scene_services: Set[str] = {srv.type for srv in scene.services}
@@ -300,7 +298,7 @@ def project_problems(scene: common.Scene, project: common.Project) -> List[str]:
 
 async def open_project(project_id: str) -> None:
 
-    project = await storage.get_project(project_id)
+    project = UpdateableCachedProject(await storage.get_project(project_id))
 
     if glob.SCENE:
         if glob.SCENE.id != project.scene_id:

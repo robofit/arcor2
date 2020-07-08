@@ -1,6 +1,7 @@
 import json
 
-from arcor2.data.common import Project, ProjectRobotJoints, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import ProjectRobotJoints, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 from arcor2.services.robot_service import RobotService
 
@@ -16,7 +17,7 @@ class JointsPlugin(ParameterPlugin):
         return "joints"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> \
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) -> \
             ProjectRobotJoints:
 
         ap, action = project.action_point_and_action(action_id)
@@ -36,14 +37,19 @@ class JointsPlugin(ParameterPlugin):
                 raise ParameterPluginException(f"Parameter {param.id} of action {action.id} depends on"
                                                f" 'robot_id' parameter, which could not be found.")
 
-        return ap.joints_for_robot(robot_id, joints_id)
+        joints = project.joints(joints_id)
+
+        if joints.robot_id != robot_id:
+            raise ParameterPluginException("Joints are for different robot.")
+
+        return joints
 
     @classmethod
     def value_to_json(cls, value: ProjectRobotJoints) -> str:
         return value.to_json()
 
     @classmethod
-    def uses_robot_joints(cls, project: Project, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+    def uses_robot_joints(cls, project: CachedProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
 
         param = project.action(action_id).parameter(parameter_id)
         value_id = cls.param_value(param)

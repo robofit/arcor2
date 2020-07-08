@@ -14,6 +14,7 @@ import arcor2.object_types_utils as otu
 from arcor2 import helpers as hlp, transformations as tr
 from arcor2 import settings
 from arcor2.action import print_event
+from arcor2.cached import CachedProject
 from arcor2.data.common import CurrentAction, Project, Scene
 from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
 from arcor2.data.execution import PackageInfo
@@ -37,7 +38,7 @@ class IntResources:
 
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
-        self.project = project
+        self.project = CachedProject(project)
         self.scene = scene
 
         if self.project.scene_id != self.scene.id:
@@ -75,7 +76,7 @@ class IntResources:
         package_id = os.path.basename(os.getcwd())
         package_meta = hlp.read_package_meta(package_id)
         package_info_event = PackageInfoEvent()
-        package_info_event.data = PackageInfo(package_id, package_meta.name, self.scene, self.project)
+        package_info_event.data = PackageInfo(package_id, package_meta.name, self.scene, project)
 
         for scene_obj in self.scene.objects:
 

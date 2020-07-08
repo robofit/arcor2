@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Tuple, Union
+from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Union
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -178,41 +178,11 @@ class ActionPoint(JsonSchemaMixin):
     orientations: List[NamedOrientation] = field(default_factory=list)
     robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
 
-    def pose(self, orientation_id: str = "default") -> Pose:
-
-        for ori in self.orientations:
-            if ori.id == orientation_id:
-                return Pose(self.position, ori.orientation)
-        raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
-
-    def orientation(self, orientation_id: str) -> NamedOrientation:
-
-        for ori in self.orientations:
-            if ori.id == orientation_id:
-                return ori
-        raise Arcor2Exception(f"Action point {self.id} does not contain orientation {orientation_id}.")
-
-    def joints(self, joints_id: str) -> ProjectRobotJoints:
-
-        for joints in self.robot_joints:
-            if joints.id == joints_id:
-                return joints
-        raise Arcor2Exception(f"Action point {self.id} does not contain robot joints {joints_id}.")
-
     def orientation_names(self) -> Set[str]:
         return {ori.name for ori in self.orientations}
 
     def joints_names(self) -> Set[str]:
         return {joints.name for joints in self.robot_joints}
-
-    def joints_for_robot(self, robot_id: str, joints_id: str) -> ProjectRobotJoints:
-
-        joints = self.joints(joints_id)
-
-        if joints.robot_id != robot_id:
-            raise Arcor2Exception("Joints for a different robot.")
-
-        return joints
 
     def invalidate_joints(self):
 
@@ -486,114 +456,6 @@ class Project(JsonSchemaMixin):
     constants: List[ProjectConstant] = field(default_factory=list)
     functions: List[ProjectFunction] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
-
-    @property
-    def bare(self) -> "Project":
-        return Project(self.id, self.name, self.scene_id, desc=self.desc, has_logic=self.has_logic)
-
-    def update_modified(self):
-        self.int_modified = datetime.now(tz=timezone.utc)
-
-    @property
-    def has_changes(self) -> bool:
-
-        if self.int_modified is None:
-            return False
-
-        if self.modified is None:
-            return True
-
-        return self.int_modified > self.modified
-
-    @property
-    def action_points_with_parent(self) -> List[ProjectActionPoint]:
-        """
-        Get action points which are relative to something (parent is set).
-        :return:
-        """
-
-        return [ap for ap in self.action_points if ap.parent]
-
-    @property
-    def action_points_names(self) -> Set[str]:
-        return {ap.name for ap in self.action_points}
-
-    @property
-    def action_points_ids(self) -> Set[str]:
-        return {ap.id for ap in self.action_points}
-
-    def ap_and_joints(self, joints_id: str) -> Tuple[ProjectActionPoint, ProjectRobotJoints]:
-
-        for ap in self.action_points:
-            for joints in ap.robot_joints:
-                if joints.id == joints_id:
-                    return ap, joints
-        raise Arcor2Exception("Unknown joints.")
-
-    def joints(self, joints_id: str) -> ProjectRobotJoints:
-        return self.ap_and_joints(joints_id)[1]
-
-    def ap_and_orientation(self, orientation_id: str) -> Tuple[ProjectActionPoint, NamedOrientation]:
-
-        for ap in self.action_points:
-            for ori in ap.orientations:
-                if ori.id == orientation_id:
-                    return ap, ori
-        raise Arcor2Exception("Unknown orientation.")
-
-    def orientation(self, orientation_id: str) -> NamedOrientation:
-        return self.ap_and_orientation(orientation_id)[1]
-
-    def action(self, action_id: str) -> Action:
-
-        for ap in self.action_points:
-            for ac in ap.actions:
-                if ac.id == action_id:
-                    return ac
-        else:
-            raise Arcor2Exception("Action not found")
-
-    def action_point_and_action(self, action_id: str) -> Tuple[ProjectActionPoint, Action]:
-
-        for ap in self.action_points:
-            for ac in ap.actions:
-                if ac.id == action_id:
-                    return ap, ac
-        else:
-            raise Arcor2Exception("Action not found")
-
-    @property
-    def actions(self) -> List[Action]:
-        return [act for ap in self.action_points for act in ap.actions]
-
-    def action_ids(self) -> Set[str]:
-        return {action.id for action in self.actions}
-
-    def action_user_names(self) -> Set[str]:
-        return {action.name for action in self.actions}
-
-    def action_point(self, action_point_id: str) -> ProjectActionPoint:
-
-        for ap in self.action_points:
-            if ap.id == action_point_id:
-                return ap
-        else:
-            raise Arcor2Exception("Action point not found")
-
-    def logic_item(self, logic_item_id: str) -> LogicItem:
-
-        for logic_item in self.logic:
-            if logic_item.id == logic_item_id:
-                return logic_item
-        else:
-            raise Arcor2Exception("LogicItem not found.")
-
-    def constant(self, constant_id: str) -> ProjectConstant:
-
-        for const in self.constants:
-            if const.id == constant_id:
-                return const
-        raise Arcor2Exception("Constant not found.")
 
 
 @dataclass
