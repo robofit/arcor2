@@ -1,11 +1,12 @@
-from typing import Dict, NamedTuple, Optional, Set
+from typing import Set
 
 from typed_ast.ast3 import Module, Pass
 
 import arcor2.object_types
-from arcor2.data.common import Action, LogicItem, Project, Scene
+from arcor2.data.common import Project, Scene
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
+from arcor2.logic import ActionCacheTuple
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
 from arcor2.source.object_types import object_instance_from_res
@@ -37,72 +38,17 @@ def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_
     return SCRIPT_HEADER + tree_to_str(tree)
 
 
-ActionCache = Dict[str, Action]
-LogicCache = Dict[str, LogicItem]
-
-
-class ProjectException(Arcor2Exception):
-    pass
-
-
-class ActionCacheTuple(NamedTuple):
-
-    actions: ActionCache
-    logic: LogicCache
-
-    first_logic_item: LogicItem
-    last_logic_item: LogicItem
-
-    @classmethod
-    def from_project(self, project: Project) -> "ActionCacheTuple":
-
-        actions_cache: ActionCache = {}
-        logic_cache: LogicCache = {}
-        first_logic_item: Optional[LogicItem] = None
-        last_logic_item: Optional[LogicItem] = None
-
-        for aps in project.action_points:
-            for act in aps.actions:
-                actions_cache[act.id] = act
-
-        valid_endpoints = (LogicItem.START, LogicItem.END) | actions_cache.keys()
-
-        for logic_item in project.logic:
-
-            if logic_item.start not in valid_endpoints:
-                raise Arcor2Exception(f"Logic item '{logic_item.id}' has invalid start.")
-
-            if logic_item.end not in valid_endpoints:
-                raise Arcor2Exception(f"Logic item '{logic_item.id}' has invalid end.")
-
-            if logic_item.start == logic_item.START:
-                if first_logic_item:
-                    raise Arcor2Exception("Duplicate start.")
-                first_logic_item = logic_item
-            elif logic_item.end == logic_item.END:
-                if last_logic_item:
-                    raise Arcor2Exception("Duplicate end.")
-                last_logic_item = logic_item
-
-            logic_cache[logic_item.id] = logic_item
-
-        if not first_logic_item or first_logic_item.id not in logic_cache:
-            raise ProjectException("Unknown start.")
-
-        if not last_logic_item or last_logic_item.id not in logic_cache:
-            raise ProjectException("Unknown end.")
-
-        return ActionCacheTuple(actions_cache, logic_cache, first_logic_item, last_logic_item)
-
-
 def add_logic_to_loop(tree: Module, scene: Scene, project: Project) -> None:
 
     loop = main_loop_body(tree)
 
     try:
-        cache = ActionCacheTuple.from_project(project)
+        cache = ActionCacheTuple.from_logic_container(project)
     except Arcor2Exception as e:
         raise SourceException(e) from e
+
+    if not cache.first_logic_item:
+        raise SourceException("Can't process unfinished logic.")
 
     next_logic_item = cache.first_logic_item
 
