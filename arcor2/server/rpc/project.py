@@ -13,6 +13,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import aio_persistent_storage as storage
 from arcor2 import helpers as hlp, object_types_utils as otu, transformations as tr
+from arcor2.cached import CachedProjectException, UpdateableCachedProject
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
@@ -52,7 +53,7 @@ async def managed_project(project_id: str, make_copy: bool = False):
             project = glob.PROJECT
     else:
         save_back = True
-        project = await storage.get_project(project_id)
+        project = UpdateableCachedProject(await storage.get_project(project_id))
 
     if make_copy:
         project.id = common.uid()
@@ -61,7 +62,7 @@ async def managed_project(project_id: str, make_copy: bool = False):
         yield project
     finally:
         if save_back:
-            asyncio.ensure_future(storage.update_project(project))
+            asyncio.ensure_future(storage.update_project(project.project))
 
 
 @scene_needed
@@ -210,10 +211,17 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
         rpc.project.ListProjectsResponseData:
 
     project = await storage.get_project(project_id)
+
     assert project.modified is not None
 
     pd = rpc.project.ListProjectsResponseData(id=project.id, desc=project.desc, name=project.name,
                                               scene_id=project.scene_id, modified=project.modified)
+
+    try:
+        cached_project = UpdateableCachedProject(project)
+    except CachedProjectException as e:
+        pd.problems.append(str(e))
+        return pd
 
     try:
         async with scenes_lock:
@@ -223,7 +231,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
         pd.problems.append("Scene does not exist.")
         return pd
 
-    pd.problems = project_problems(scenes[project.scene_id], project)
+    pd.problems = project_problems(scenes[project.scene_id], cached_project)
     pd.valid = not pd.problems
 
     if not pd.valid:
@@ -231,7 +239,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
 
     # TODO for projects without logic, check if there is script uploaded in the project service /or call Build/publish
     try:
-        program_src(project, scenes[project.scene_id], otu.built_in_types_names())
+        program_src(cached_project, scenes[project.scene_id], otu.built_in_types_names())
         pd.executable = True
     except SourceException as e:
         pd.problems.append(e.message)
@@ -268,8 +276,7 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
     new_joints = await get_robot_joints(req.args.robot_id)
 
     prj = common.ProjectRobotJoints(common.uid(), req.args.name, req.args.robot_id, new_joints, True)
-    ap.robot_joints.append(prj)
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_joints(ap.id, prj)
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.ADD, ap.id, data=prj)))
     return None
 
@@ -302,15 +309,12 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 
     assert glob.SCENE and glob.PROJECT
 
-    ap, joints = glob.PROJECT.ap_and_joints(req.args.joints_id)
-
     for act in glob.PROJECT.actions:
         for param in act.parameters:
             if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, req.args.joints_id):
                 raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.id}).")
 
-    joints_to_be_removed = ap.joints(req.args.joints_id)
-    ap.robot_joints = [joints for joints in ap.robot_joints if joints.id != req.args.joints_id]
+    joints_to_be_removed = glob.PROJECT.remove_joints(req.args.joints_id)
 
     glob.PROJECT.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.REMOVE,
@@ -453,9 +457,7 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
         return None
 
     orientation = common.NamedOrientation(common.uid(), req.args.name, req.args.orientation)
-    ap.orientations.append(orientation)
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_orientation(ap.id, orientation)
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.ADD, ap.id,
                                                                           data=orientation)))
     return None
@@ -505,9 +507,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
         new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     orientation = common.NamedOrientation(common.uid(), req.args.name, new_pose.orientation)
-    ap.orientations.append(orientation)
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_orientation(ap.id, orientation)
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.ADD, ap.id,
                                                                           data=orientation)))
     return None
@@ -561,9 +561,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     if req.dry_run:
         return None
 
-    ap.orientations = [ori for ori in ap.orientations if ori.id != req.args.orientation_id]
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.remove_orientation(req.args.orientation_id)
     asyncio.ensure_future(notif.broadcast_event(events.OrientationChanged(events.EventType.REMOVE, data=orientation)))
     return None
 
@@ -580,7 +578,7 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> 
     assert glob.PROJECT
 
     asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
-                                                                                               glob.PROJECT))))
+                                                                                               glob.PROJECT.project))))
 
     return None
 
@@ -590,7 +588,8 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> 
 async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> None:
 
     assert glob.SCENE and glob.PROJECT
-    await storage.update_project(glob.PROJECT)
+    await storage.update_project(glob.PROJECT.project)
+    # TODO get modified from response
     glob.PROJECT.modified = (await storage.get_project(glob.PROJECT.id)).modified
     asyncio.ensure_future(notif.broadcast_event(events.ProjectSaved()))
     return None
@@ -623,13 +622,14 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
         await open_scene(req.args.scene_id)
 
     PREV_RESULTS.clear()
-    glob.PROJECT = common.Project(common.uid(), req.args.name, req.args.scene_id, desc=req.args.desc,
-                                  has_logic=req.args.has_logic)
+    glob.PROJECT = UpdateableCachedProject(
+        common.Project(common.uid(), req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
+    )
 
     assert glob.SCENE
 
     asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
-                                                                                               glob.PROJECT))))
+                                                                                               glob.PROJECT.project))))
     return None
 
 
@@ -653,7 +653,7 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -
     if req.dry_run:
         return None
 
-    project_id = glob.PROJECT.id
+    project_id = glob.PROJECT.project.id
 
     glob.PROJECT = None
     await clear_scene()
@@ -691,10 +691,7 @@ async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClie
     if req.dry_run:
         return None
 
-    ap = common.ProjectActionPoint(common.uid(), req.args.name, req.args.position, req.args.parent)
-    glob.PROJECT.action_points.append(ap)
-
-    glob.PROJECT.update_modified()
+    ap = glob.PROJECT.upsert_action_point(common.uid(), req.args.name, req.args.position, req.args.parent)
     asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.ADD, data=ap)))
     return None
 
@@ -707,7 +704,7 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
 
     ap = glob.PROJECT.action_point(req.args.id)
 
-    for proj_ap in glob.PROJECT.action_points:
+    for proj_ap in glob.PROJECT.action_points_with_parent:
         if proj_ap.parent == ap.id:
             raise Arcor2Exception(f"Can't remove parent of '{proj_ap.name}' AP.")
 
@@ -748,8 +745,7 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
     if req.dry_run:
         return None
 
-    glob.PROJECT.action_points = [acp for acp in glob.PROJECT.action_points if acp.id != req.args.id]
-    glob.PROJECT.update_modified()
+    glob.PROJECT.remove_action_point(req.args.id)
     asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.REMOVE, data=ap.bare())))
     return None
 
@@ -773,8 +769,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> None
     action_meta = find_object_action(glob.SCENE, new_action)
 
     updated_project = copy.deepcopy(glob.PROJECT)
-    updated_ap = updated_project.action_point(req.args.action_point_id)
-    updated_ap.actions.append(new_action)
+    updated_project.upsert_action(req.args.action_point_id, new_action)
 
     check_flows(updated_project, new_action, action_meta)
     check_action_params(glob.SCENE, updated_project, new_action, action_meta)
@@ -782,9 +777,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> None
     if req.dry_run:
         return None
 
-    ap.actions.append(new_action)
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_action(ap.id, new_action)
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.ADD, ap.id, data=new_action)))
     return None
 
@@ -815,8 +808,8 @@ async def update_action_cb(req: rpc.project.UpdateActionRequest, ui: WsClient) -
 
     orig_action = glob.PROJECT.action(req.args.action_id)
     orig_action.parameters = updated_action.parameters
-
     glob.PROJECT.update_modified()
+
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE,
                                                                      data=updated_action)))
     return None
@@ -827,13 +820,12 @@ def check_action_usage(action: common.Action) -> None:
     assert glob.PROJECT
 
     # check parameters
-    for ap in glob.PROJECT.action_points:
-        for act in ap.actions:
-            for param in act.parameters:
-                if param.type == common.ActionParameter.TypeEnum.LINK:
-                    link = param.parse_link()
-                    if action.id == link.action_id:
-                        raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.id}.")
+    for act in glob.PROJECT.actions:
+        for param in act.parameters:
+            if param.type == common.ActionParameter.TypeEnum.LINK:
+                link = param.parse_link()
+                if action.id == link.action_id:
+                    raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.id}.")
 
     # check logic
     for log in glob.PROJECT.logic:
@@ -861,10 +853,9 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -
     if req.dry_run:
         return None
 
-    ap.actions = [act for act in ap.actions if act.id != req.args.id]
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.remove_action(req.args.id)
     remove_prev_result(action.id)
+
     asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.REMOVE, data=action.bare)))
     return None
 
@@ -949,15 +940,13 @@ async def add_logic_item_cb(req: rpc.project.AddLogicItemRequest, ui: WsClient) 
 
     if logic_item.start != logic_item.START:
         updated_project = copy.deepcopy(glob.PROJECT)
-        updated_project.logic.append(logic_item)
+        updated_project.upsert_logic_item(logic_item)
         check_for_loops(updated_project, logic_item.parse_start().start_action_id)
 
     if req.dry_run:
         return
 
-    glob.PROJECT.logic.append(logic_item)
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_logic_item(logic_item)
     asyncio.ensure_future(notif.broadcast_event(events.LogicItemChanged(events.EventType.ADD, data=logic_item)))
     return None
 
@@ -984,14 +973,9 @@ async def update_logic_item_cb(req: rpc.project.UpdateLogicItemRequest, ui: WsCl
     if req.dry_run:
         return
 
-    logic_item = glob.PROJECT.logic_item(req.args.logic_item_id)
-
-    logic_item.start = req.args.start
-    logic_item.end = req.args.end
-    logic_item.condition = req.args.condition
-
-    glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.LogicItemChanged(events.EventType.UPDATE, data=logic_item)))
+    glob.PROJECT.upsert_logic_item(updated_logic_item)
+    asyncio.ensure_future(notif.broadcast_event(events.LogicItemChanged(events.EventType.UPDATE,
+                                                                        data=updated_logic_item)))
     return None
 
 
@@ -1005,9 +989,7 @@ async def remove_logic_item_cb(req: rpc.project.RemoveLogicItemRequest, ui: WsCl
     logic_item = glob.PROJECT.logic_item(req.args.logic_item_id)
 
     # TODO is it necessary to check something here?
-    glob.PROJECT.logic = [log for log in glob.PROJECT.logic if log.id != req.args.logic_item_id]
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.remove_logic_item(req.args.logic_item_id)
     asyncio.ensure_future(notif.broadcast_event(events.LogicItemChanged(events.EventType.REMOVE, data=logic_item)))
     return None
 
@@ -1043,9 +1025,7 @@ async def add_constant_cb(req: rpc.project.AddConstantRequest, ui: WsClient) -> 
     if req.dry_run:
         return
 
-    glob.PROJECT.constants.append(const)
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_constant(const)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectConstantChanged(events.EventType.ADD, data=const)))
     return None
 
@@ -1071,10 +1051,7 @@ async def update_constant_cb(req: rpc.project.UpdateConstantRequest, ui: WsClien
     if req.dry_run:
         return
 
-    const.name = updated_constant.name
-    const.value = updated_constant.value
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.upsert_constant(updated_constant)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectConstantChanged(events.EventType.UPDATE, data=const)))
     return None
 
@@ -1098,9 +1075,7 @@ async def remove_constant_cb(req: rpc.project.RemoveConstantRequest, ui: WsClien
     if req.dry_run:
         return
 
-    glob.PROJECT.constants = [con for con in glob.PROJECT.constants if con.id != req.args.constant_id]
-
-    glob.PROJECT.update_modified()
+    glob.PROJECT.remove_constant(const.id)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectConstantChanged(events.EventType.REMOVE, data=const)))
     return None
 
@@ -1108,7 +1083,7 @@ async def remove_constant_cb(req: rpc.project.RemoveConstantRequest, ui: WsClien
 @no_project
 async def delete_project_cb(req: rpc.project.DeleteProjectRequest, ui: WsClient) -> None:
 
-    project = await storage.get_project(req.args.id)
+    project = UpdateableCachedProject(await storage.get_project(req.args.id))
     await storage.delete_project(req.args.id)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectChanged(events.EventType.REMOVE,
                                                                       data=project.bare)))

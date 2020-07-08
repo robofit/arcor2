@@ -4,7 +4,8 @@ from typing import Any, Callable, Dict, Type, Union
 
 from typed_ast import ast3 as ast
 
-from arcor2.data.common import ActionParameter, Project, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import ActionParameter, Scene
 from arcor2.data.object_type import ActionParameterMeta
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
@@ -62,7 +63,8 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
     # TODO not instances but type_defs
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Any:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+            -> Any:
 
         param = project.action(action_id).parameter(parameter_id)
         try:
@@ -71,7 +73,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
             raise ParameterPluginException(f"Value of {action_id}/{parameter_id} is not a valid JSON.", e)
 
     @classmethod
-    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str,
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str,
                         parameter_id: str) -> Any:
 
         return cls.value(type_defs, scene, project, action_id, parameter_id)
@@ -81,9 +83,9 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         return json.dumps(value)
 
     @classmethod
-    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+    def uses_orientation(cls, project: CachedProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
         return False
 
     @classmethod
-    def uses_robot_joints(cls, project: Project, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+    def uses_robot_joints(cls, project: CachedProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
         return False
