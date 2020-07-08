@@ -1,9 +1,10 @@
 from typing import Dict, List, NamedTuple, Optional, Set, Union
 
-from arcor2.data.common import Action, LogicItem, Project, ProjectFunction
+from arcor2.cached import CachedProject
+from arcor2.data.common import Action, LogicItem, ProjectFunction
 from arcor2.exceptions import Arcor2Exception
 
-LogicContainer = Union[Project, ProjectFunction]
+LogicContainer = Union[CachedProject, ProjectFunction]
 ActionCache = Dict[str, Action]
 LogicCache = Dict[str, LogicItem]
 ActionIo = Dict[str, List[LogicItem]]
@@ -11,7 +12,7 @@ ActionIo = Dict[str, List[LogicItem]]
 # TODO def validate_logic() -> to be called before saving project / building the package
 
 
-class ActionCacheTuple(NamedTuple):
+class ActionCacheTuple(NamedTuple):  # TODO this will be probably obsolete once there will be CachedProjectFunction?
 
     actions: ActionCache
     logic: LogicCache
@@ -33,19 +34,14 @@ class ActionCacheTuple(NamedTuple):
         action_inputs: ActionIo = {}
         action_outputs: ActionIo = {}
 
-        if hasattr(container, "action_points"):
-            for aps in container.action_points:  # type: ignore
-                for act in aps.actions:
-                    actions_cache[act.id] = act
-        else:
-            for act in container.actions:
-                actions_cache[act.id] = act
+        for act in container.actions:
+            actions_cache[act.id] = act
 
         for act in actions_cache.values():
             action_inputs[act.id] = []
             action_outputs[act.id] = []
 
-        valid_endpoints = (LogicItem.START, LogicItem.END) | actions_cache.keys()
+        valid_endpoints = {LogicItem.START, LogicItem.END} | actions_cache.keys()
 
         for logic_item in container.logic:
 

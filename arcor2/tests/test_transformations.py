@@ -6,6 +6,7 @@ import pytest  # type: ignore
 
 import quaternion  # type: ignore
 
+from arcor2.cached import CachedProject
 from arcor2.data.common import Orientation, Pose, Position, Project, ProjectActionPoint, Scene, SceneObject
 from arcor2.exceptions import Arcor2Exception
 from arcor2.transformations import make_global_ap_relative, make_orientation_abs, make_orientation_rel, make_pose_abs,\
@@ -117,12 +118,14 @@ def test_make_relative_ap_global_and_relative_again():
     ap3 = ProjectActionPoint("ap3", "ap3", Position(-1, 0, 0), parent="ap2")
     project.action_points.append(ap3)
 
-    make_relative_ap_global(scene, project, ap3)
+    cached_project = CachedProject(project)
+
+    make_relative_ap_global(scene, cached_project, ap3)
 
     assert ap3.parent is None
     assert ap3.position.x == .0
 
-    make_global_ap_relative(scene, project, ap3, "ap2")
+    make_global_ap_relative(scene, cached_project, ap3, "ap2")
 
     assert ap3.parent == "ap2"
     assert ap3.position.x == -1
@@ -130,4 +133,4 @@ def test_make_relative_ap_global_and_relative_again():
     ap3.parent = "something_unknown"
 
     with pytest.raises(Arcor2Exception):
-        make_relative_ap_global(scene, project, ap3)
+        make_relative_ap_global(scene, cached_project, ap3)

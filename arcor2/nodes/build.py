@@ -8,7 +8,7 @@ import os
 import shutil
 import tempfile
 from datetime import datetime, timezone
-from typing import Set
+from typing import Set, Tuple
 
 from apispec import APISpec  # type: ignore
 
@@ -24,6 +24,7 @@ import horast
 
 import arcor2
 from arcor2 import persistent_storage as ps
+from arcor2.cached import CachedProject
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
@@ -53,12 +54,13 @@ app = Flask(__name__)
 CORS(app)
 
 
-def _publish(project_id: str, package_name: str):
+def _publish(project_id: str, package_name: str) -> Tuple[str, int]:
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
         try:
             project = ps.get_project(project_id)
+            cached_project = CachedProject(project)
             scene = ps.get_scene(project.scene_id)
 
             project_dir = os.path.join(tmpdirname, "arcor2_project")
@@ -116,7 +118,7 @@ def _publish(project_id: str, package_name: str):
             with open(os.path.join(project_dir, 'script.py'), "w") as script_file:
 
                 if project.has_logic:
-                    script_file.write(program_src(project, scene, built_in_types_names(), True))
+                    script_file.write(program_src(cached_project, scene, built_in_types_names(), True))
                 else:
                     try:
                         script = ps.get_project_sources(project.id).script
@@ -135,7 +137,7 @@ def _publish(project_id: str, package_name: str):
                         logger.info("Script not found on project service, creating one from scratch.")
 
                         # write script without the main loop
-                        script_file.write(program_src(project, scene, built_in_types_names(), False))
+                        script_file.write(program_src(cached_project, scene, built_in_types_names(), False))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
                 res.write(derived_resources_class(project))

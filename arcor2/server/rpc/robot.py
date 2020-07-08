@@ -246,8 +246,7 @@ async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: W
         if req.args.end_effector_id is None:
             raise Arcor2Exception("eef id has to be set.")
 
-        ap, _ = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
-        pose = ap.pose(req.args.orientation_id)
+        pose = glob.PROJECT.pose(req.args.orientation_id)
 
         # TODO check if the target pose is reachable (dry_run)
         asyncio.ensure_future(robot.move_to_ap_orientation(

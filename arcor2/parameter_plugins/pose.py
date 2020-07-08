@@ -3,7 +3,8 @@ import json
 from typing import List
 
 from arcor2 import transformations as tr
-from arcor2.data.common import Pose, Project, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import Pose, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 
@@ -15,7 +16,8 @@ class PosePlugin(ParameterPlugin):
         return Pose
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Pose:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+            -> Pose:
 
         action = project.action(action_id)
         param = action.parameter(parameter_id)
@@ -25,7 +27,7 @@ class PosePlugin(ParameterPlugin):
         return Pose(ap.position, ori.orientation)
 
     @classmethod
-    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str,
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str,
                         parameter_id: str) -> Pose:
 
         action = project.action(action_id)
@@ -37,14 +39,14 @@ class PosePlugin(ParameterPlugin):
         copy_of_ap = copy.deepcopy(ap)
         tr.make_relative_ap_global(scene, project, copy_of_ap)
 
-        return Pose(copy_of_ap.position, ap.orientation(ori_id).orientation)
+        return Pose(copy_of_ap.position, project.orientation(ori_id).orientation)
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
         return value.to_json()
 
     @classmethod
-    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+    def uses_orientation(cls, project: CachedProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
 
         action = project.action(action_id)
         param = action.parameter(parameter_id)
@@ -62,7 +64,7 @@ class PoseListPlugin(ListParameterPlugin):
         return get_type_name(PosePlugin)
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
             -> List[Pose]:
 
         ret: List[Pose] = []
@@ -71,13 +73,13 @@ class PoseListPlugin(ListParameterPlugin):
         parameter = action.parameter(parameter_id)
 
         for orientation_id in cls.param_value_list(parameter):
-            ret.append(Pose(ap.position, ap.orientation(orientation_id).orientation))
+            ret.append(Pose(ap.position, project.orientation(orientation_id).orientation))
 
         return ret
 
     @classmethod
-    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) \
-            -> List[Pose]:
+    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str,
+                        parameter_id: str) -> List[Pose]:
 
         ap, action = project.action_point_and_action(action_id)
 
@@ -91,7 +93,7 @@ class PoseListPlugin(ListParameterPlugin):
         tr.make_relative_ap_global(scene, project, copy_of_ap)
 
         for orientation_id in cls.param_value_list(parameter):
-            ret.append(Pose(ap.position, ap.orientation(orientation_id).orientation))
+            ret.append(Pose(ap.position, project.orientation(orientation_id).orientation))
 
         return ret
 
@@ -100,7 +102,7 @@ class PoseListPlugin(ListParameterPlugin):
         return json.dumps([v.to_json() for v in value])
 
     @classmethod
-    def uses_orientation(cls, project: Project, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+    def uses_orientation(cls, project: CachedProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
 
         action = project.action(action_id)
         param = action.parameter(parameter_id)
