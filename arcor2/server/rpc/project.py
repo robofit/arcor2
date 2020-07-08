@@ -7,7 +7,7 @@ import collections.abc as collections_abc
 import copy
 import inspect
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -15,6 +15,7 @@ from arcor2 import aio_persistent_storage as storage
 from arcor2 import helpers as hlp, object_types_utils as otu, transformations as tr
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
+from arcor2.logic import LogicContainer, check_for_loops
 from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.server import globals as glob, notifications as notif, robot
@@ -868,7 +869,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -
     return None
 
 
-def check_logic_item(parent: Union[common.Project, common.ProjectFunction], logic_item: common.LogicItem):
+def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem):
     """
     Checks if newly added/updated ProjectLogicItem is ok.
     :param parent:
@@ -909,7 +910,7 @@ def check_logic_item(parent: Union[common.Project, common.ProjectFunction], logi
         obj_act = find_object_action(glob.SCENE, action)
 
         try:
-            return_type = obj_act.returns[flow]
+            obj_act.returns[flow]  # TODO do something with return type
         except IndexError as e:
             raise Arcor2Exception("Flow index invalid.") from e
 
@@ -935,8 +936,6 @@ def check_logic_item(parent: Union[common.Project, common.ProjectFunction], logi
             if logic_item.start == existing_item.start:
                 raise Arcor2Exception("Junctions can't have the same start and end.")
 
-    # TODO check for loops
-
 
 @scene_needed
 @project_needed
@@ -947,6 +946,11 @@ async def add_logic_item_cb(req: rpc.project.AddLogicItemRequest, ui: WsClient) 
 
     logic_item = common.LogicItem(common.uid(), req.args.start, req.args.end, req.args.condition)
     check_logic_item(glob.PROJECT, logic_item)
+
+    if logic_item.start != logic_item.START:
+        updated_project = copy.deepcopy(glob.PROJECT)
+        updated_project.logic.append(logic_item)
+        check_for_loops(updated_project, logic_item.parse_start().start_action_id)
 
     if req.dry_run:
         return
@@ -965,18 +969,22 @@ async def update_logic_item_cb(req: rpc.project.UpdateLogicItemRequest, ui: WsCl
     assert glob.PROJECT
     assert glob.SCENE
 
-    logic_item = glob.PROJECT.logic_item(req.args.logic_item_id)
-
-    updated_logic_item = copy.deepcopy(logic_item)
+    updated_project = copy.deepcopy(glob.PROJECT)
+    updated_logic_item = updated_project.logic_item(req.args.logic_item_id)
 
     updated_logic_item.start = req.args.start
     updated_logic_item.end = req.args.end
     updated_logic_item.condition = req.args.condition
 
-    check_logic_item(glob.PROJECT, updated_logic_item)
+    check_logic_item(updated_project, updated_logic_item)
+
+    if updated_logic_item.start != updated_logic_item.START:
+        check_for_loops(updated_project, updated_logic_item.parse_start().start_action_id)
 
     if req.dry_run:
         return
+
+    logic_item = glob.PROJECT.logic_item(req.args.logic_item_id)
 
     logic_item.start = req.args.start
     logic_item.end = req.args.end
