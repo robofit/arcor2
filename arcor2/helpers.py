@@ -253,7 +253,7 @@ async def server(client: Any,
         await unregister(client)
 
 
-def format_stacktrace():
+def format_stacktrace() -> str:
     parts = ["Traceback (most recent call last):\n"]
     parts.extend(traceback.format_stack(limit=25)[:-2])
     parts.extend(traceback.format_exception(*sys.exc_info())[1:])
@@ -274,7 +274,10 @@ def print_exception(e: Exception) -> None:
         tb_file.write(format_stacktrace())
 
 
-async def run_in_executor(func, *args):
+S = TypeVar('S')
+
+
+async def run_in_executor(func: Callable[..., S], *args) -> S:
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 

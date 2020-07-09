@@ -58,7 +58,7 @@ def process_running() -> bool:
     return PROCESS is not None and PROCESS.returncode is None
 
 
-async def project_state(event: PackageStateEvent):
+async def project_state(event: PackageStateEvent) -> None:
 
     global PROJECT_EVENT
     PROJECT_EVENT = event

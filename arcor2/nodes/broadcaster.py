@@ -49,12 +49,12 @@ class BroadcastProtocol(asyncio.DatagramProtocol):
     def datagram_received(self, data: Union[bytes, Text], addr: Address):
         pass
 
-    def broadcast(self):
+    def broadcast(self) -> None:
         self.transport.sendto(BroadcastInfo(socket.gethostname(), PORT).to_json().encode(), self.target)
         self.loop.call_later(1, self.broadcast)
 
 
-def main():
+def main() -> None:
 
     loop = asyncio.get_event_loop()
 

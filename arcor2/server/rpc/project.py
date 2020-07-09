@@ -7,7 +7,7 @@ import collections.abc as collections_abc
 import copy
 import inspect
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -41,7 +41,7 @@ def remove_prev_result(action_id: str) -> None:
 
 
 @asynccontextmanager
-async def managed_project(project_id: str, make_copy: bool = False):
+async def managed_project(project_id: str, make_copy: bool = False) -> AsyncGenerator[UpdateableCachedProject, None]:
 
     save_back = False
 
@@ -860,7 +860,7 @@ async def remove_action_cb(req: rpc.project.RemoveActionRequest, ui: WsClient) -
     return None
 
 
-def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem):
+def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> None:
     """
     Checks if newly added/updated ProjectLogicItem is ok.
     :param parent:
@@ -894,22 +894,19 @@ def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem):
             raise Arcor2Exception("Logic item has unknown end.")
 
     if logic_item.condition is not None:
-        what = logic_item.condition.parse_what()
-        action = parent.action(what.action_id)
-        flow = action.flow(what.flow_name)
+        # what = logic_item.condition.parse_what()
+        # action = parent.action(what.action_id)
+        # flow = action.flow(what.flow_name)
+        # obj_act = find_object_action(glob.SCENE, action)
 
-        obj_act = find_object_action(glob.SCENE, action)
-
-        try:
-            obj_act.returns[flow]  # TODO do something with return type
-        except IndexError as e:
-            raise Arcor2Exception("Flow index invalid.") from e
-
+        # TODO check if flow is valid
         # TODO check condition value / type
+
+        pass
 
     for existing_item in parent.logic:
 
-        if existing_item.id == logic_item:  # item is updated
+        if existing_item.id == logic_item.id:  # item is updated
             continue
 
         if logic_item.start == logic_item.START and existing_item.start == logic_item.START:
@@ -1140,14 +1137,13 @@ async def update_project_has_logic_cb(req: rpc.project.UpdateProjectHasLogicRequ
     async with managed_project(req.args.project_id) as project:
 
         if project.has_logic and not req.args.new_has_logic:
+            project.clear_logic()
 
-            for act in project.actions():
-                act.inputs.clear()
-                act.outputs.clear()
-
-                if glob.PROJECT and glob.PROJECT.id == req.args.project_id:
-                    asyncio.ensure_future(notif.broadcast_event(events.ActionChanged(events.EventType.UPDATE,
-                                                                                     data=act)))
+            """
+            TODO
+            if glob.PROJECT and glob.PROJECT.id == req.args.project_id:
+            ...send remove event for each logic item?
+            """
 
         project.has_logic = req.args.new_has_logic
         project.update_modified()

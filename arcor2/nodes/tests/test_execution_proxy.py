@@ -5,5 +5,5 @@ from openapi_spec_validator import validate_spec  # type: ignore
 import yaml
 
 
-def test_execution_proxy_openapi():
+def test_execution_proxy_openapi() -> None:
     validate_spec(yaml.full_load(check_output(["arcor2_execution_proxy", "--swagger"])))

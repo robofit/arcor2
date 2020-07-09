@@ -24,7 +24,7 @@ def project() -> UpdateableCachedProject:
     return UpdateableCachedProject(project)
 
 
-def test_project_wo_loop(scene: Scene, project: UpdateableCachedProject):
+def test_project_wo_loop(scene: Scene, project: UpdateableCachedProject) -> None:
 
     project.upsert_logic_item(LogicItem("l1", LogicItem.START, "ac1"))
     project.upsert_logic_item(LogicItem("l2", "ac1", "ac2"))
@@ -33,7 +33,7 @@ def test_project_wo_loop(scene: Scene, project: UpdateableCachedProject):
     check_for_loops(project)
 
 
-def test_project_with_loop(scene: Scene, project: UpdateableCachedProject):
+def test_project_with_loop(scene: Scene, project: UpdateableCachedProject) -> None:
 
     project.upsert_logic_item(LogicItem("l1", LogicItem.START, "ac1"))
     project.upsert_logic_item(LogicItem("l2", "ac1", "ac2"))
@@ -44,7 +44,7 @@ def test_project_with_loop(scene: Scene, project: UpdateableCachedProject):
         check_for_loops(project)
 
 
-def test_project_with_loop_2(scene: Scene, project: UpdateableCachedProject):
+def test_project_with_loop_2(scene: Scene, project: UpdateableCachedProject) -> None:
 
     project.upsert_logic_item(LogicItem("l1", "ac1", "ac2"))
     project.upsert_logic_item(LogicItem("l2", "ac2", "ac1"))
@@ -53,13 +53,13 @@ def test_project_with_loop_2(scene: Scene, project: UpdateableCachedProject):
         check_for_loops(project)
 
 
-def test_project_unfinished_logic_wo_loop(scene: Scene, project: UpdateableCachedProject):
+def test_project_unfinished_logic_wo_loop(scene: Scene, project: UpdateableCachedProject) -> None:
 
     project.upsert_logic_item(LogicItem("l1", "ac1", "ac2"))
     check_for_loops(project, "ac1")
 
 
-def test_project_unfinished_logic_with_loop(scene: Scene, project: UpdateableCachedProject):
+def test_project_unfinished_logic_with_loop(scene: Scene, project: UpdateableCachedProject) -> None:
 
     project.upsert_logic_item(LogicItem("l1", "ac1", "ac2"))
     project.upsert_logic_item(LogicItem("l2", "ac2", "ac1"))
