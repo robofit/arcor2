@@ -6,7 +6,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, Tuple
 
 from apispec import APISpec  # type: ignore
 
@@ -56,7 +56,7 @@ SPHERES: Dict[str, object_type.Sphere] = {}
 
 
 @app.route("/project", methods=['PUT'])
-def put_project():
+def put_project() -> Tuple[str, int]:
     """Add or update project.
         ---
         put:
@@ -80,7 +80,7 @@ def put_project():
 
 
 @app.route("/project/<string:id>", methods=['GET'])
-def get_project(id: str):
+def get_project(id: str) -> Tuple[str, int]:
     """Add or update project.
         ---
         get:
@@ -110,7 +110,7 @@ def get_project(id: str):
 
 
 @app.route("/project/<string:id>", methods=['DELETE'])
-def delete_project(id: str):
+def delete_project(id: str) -> Tuple[str, int]:
     """Deletes project.
         ---
         delete:
@@ -138,7 +138,7 @@ def delete_project(id: str):
 
 
 @app.route("/projects", methods=['GET'])
-def get_projects():
+def get_projects() -> Tuple[str, int]:
     """Add or update project.
         ---
         get:
@@ -163,7 +163,7 @@ def get_projects():
 
 
 @app.route("/scene", methods=['PUT'])
-def put_scene():
+def put_scene() -> Tuple[str, int]:
     """Add or update scene.
         ---
         put:
@@ -187,7 +187,7 @@ def put_scene():
 
 
 @app.route("/scene/<string:id>", methods=['GET'])
-def get_scene(id: str):
+def get_scene(id: str) -> Tuple[str, int]:
     """Add or update scene.
         ---
         get:
@@ -217,7 +217,7 @@ def get_scene(id: str):
 
 
 @app.route("/scene/<string:id>", methods=['DELETE'])
-def delete_scene(id: str):
+def delete_scene(id: str) -> Tuple[str, int]:
     """Deletes scene.
         ---
         delete:
@@ -245,7 +245,7 @@ def delete_scene(id: str):
 
 
 @app.route("/scenes", methods=['GET'])
-def get_scenes():
+def get_scenes() -> Tuple[str, int]:
     """Add or update scene.
         ---
         get:
@@ -270,7 +270,7 @@ def get_scenes():
 
 
 @app.route("/object_type", methods=['PUT'])
-def put_object_type():
+def put_object_type() -> Tuple[str, int]:
     """Add or update object type.
         ---
         put:
@@ -293,7 +293,7 @@ def put_object_type():
 
 
 @app.route("/object_types/<string:id>", methods=['GET'])
-def get_object_type(id: str):
+def get_object_type(id: str) -> Tuple[str, int]:
     """Add or update object_type.
         ---
         get:
@@ -323,7 +323,7 @@ def get_object_type(id: str):
 
 
 @app.route("/object_type/<string:id>", methods=['DELETE'])
-def delete_object_type(id: str):
+def delete_object_type(id: str) -> Tuple[str, int]:
     """Deletes object type.
         ---
         delete:
@@ -351,7 +351,7 @@ def delete_object_type(id: str):
 
 
 @app.route("/object_types", methods=['GET'])
-def get_object_types():
+def get_object_types() -> Tuple[str, int]:
     """Add or update ObjectType.
         ---
         get:
@@ -376,7 +376,7 @@ def get_object_types():
 
 
 @app.route("/service_type", methods=['PUT'])
-def put_service_type():
+def put_service_type() -> Tuple[str, int]:
     """Add or update service type.
         ---
         put:
@@ -399,7 +399,7 @@ def put_service_type():
 
 
 @app.route("/service_type/<string:id>", methods=['GET'])
-def get_service_type(id: str):
+def get_service_type(id: str) -> Tuple[str, int]:
     """Add or update ServiceType.
         ---
         get:
@@ -429,7 +429,7 @@ def get_service_type(id: str):
 
 
 @app.route("/service_type/<string:id>", methods=['DELETE'])
-def delete_service_type(id: str):
+def delete_service_type(id: str) -> Tuple[str, int]:
     """Deletes service type.
         ---
         delete:
@@ -457,7 +457,7 @@ def delete_service_type(id: str):
 
 
 @app.route("/service_types", methods=['GET'])
-def get_service_types():
+def get_service_types() -> Tuple[str, int]:
     """Add or update ServiceType.
         ---
         get:
@@ -482,7 +482,7 @@ def get_service_types():
 
 
 @app.route("/models/box", methods=['PUT'])
-def put_box():
+def put_box() -> Tuple[str, int]:
     """Add or update box.
         ---
         put:
@@ -505,7 +505,7 @@ def put_box():
 
 
 @app.route("/models/<string:id>/box", methods=['GET'])
-def get_box(id: str):
+def get_box(id: str) -> Tuple[str, int]:
     """Add or update box.
         ---
         get:
@@ -535,7 +535,7 @@ def get_box(id: str):
 
 
 @app.route("/models/box", methods=['PUT'])
-def put_cylinder():
+def put_cylinder() -> Tuple[str, int]:
     """Add or update box.
         ---
         put:
@@ -558,7 +558,7 @@ def put_cylinder():
 
 
 @app.route("/models/<string:id>/cylinder", methods=['GET'])
-def get_cylinder(id: str):
+def get_cylinder(id: str) -> Tuple[str, int]:
     """Add or update box.
         ---
         get:
@@ -588,7 +588,7 @@ def get_cylinder(id: str):
 
 
 @app.route("/models/sphere", methods=['PUT'])
-def put_sphere():
+def put_sphere() -> Tuple[str, int]:
     """Add or update sphere.
         ---
         put:
@@ -611,7 +611,7 @@ def put_sphere():
 
 
 @app.route("/models/<string:id>/sphere", methods=['GET'])
-def get_sphere(id: str):
+def get_sphere(id: str) -> Tuple[str, int]:
     """Add or update sphere.
         ---
         get:
@@ -641,7 +641,7 @@ def get_sphere(id: str):
 
 
 @app.route("/models/<string:id>", methods=['DELETE'])
-def delete_model(id: str):
+def delete_model(id: str) -> Tuple[str, int]:
     """Deletes model.
         ---
         delete:
@@ -720,7 +720,7 @@ with app.test_request_context():
     spec.path(view=delete_model)
 
 
-def main():
+def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument('-s', '--swagger', action="store_true", default=False)

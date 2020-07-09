@@ -11,7 +11,7 @@ class Tester(Generic):
     A generic tester
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(Tester, self).__init__(*args, **kwargs)
         self._cancel: bool = False
         self._param1: str = ""

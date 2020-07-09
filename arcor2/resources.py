@@ -141,10 +141,10 @@ class IntResources:
             # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
             tr.make_relative_ap_global(self.scene, self.project, aps)
 
-    def __enter__(self):
+    def __enter__(self) -> "IntResources":
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback):
+    def __exit__(self, ex_type, ex_value, traceback) -> bool:
 
         if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
             hlp.print_exception(ex_type(ex_value))

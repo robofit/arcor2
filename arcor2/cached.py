@@ -248,7 +248,7 @@ class CachedProject:
 
 class UpdateableCachedProject(CachedProject):
 
-    def update_modified(self):
+    def update_modified(self) -> None:
         self._int_modified = datetime.now(tz=timezone.utc)
 
     @property
@@ -274,7 +274,7 @@ class UpdateableCachedProject(CachedProject):
             self._actions.parent[action.id] = ap
         self.update_modified()
 
-    def remove_action(self, action_id) -> Action:
+    def remove_action(self, action_id: str) -> Action:
 
         try:
             action = self._actions.data.pop(action_id)
@@ -296,7 +296,7 @@ class UpdateableCachedProject(CachedProject):
             self._orientations.parent[orientation.id] = ap
         self.update_modified()
 
-    def remove_orientation(self, orientation_id) -> NamedOrientation:
+    def remove_orientation(self, orientation_id: str) -> NamedOrientation:
 
         try:
             ori = self._orientations.data.pop(orientation_id)
@@ -318,7 +318,7 @@ class UpdateableCachedProject(CachedProject):
             self._joints.parent[joints.id] = ap
         self.update_modified()
 
-    def remove_joints(self, joints_id) -> ProjectRobotJoints:
+    def remove_joints(self, joints_id: str) -> ProjectRobotJoints:
 
         try:
             joints = self._joints.data.pop(joints_id)
@@ -369,6 +369,11 @@ class UpdateableCachedProject(CachedProject):
             raise CachedProjectException("Logic item not found.") from e
         self.update_modified()
         return logic_item
+
+    def clear_logic(self) -> None:
+
+        self._logic_items.clear()
+        self.update_modified()
 
     def upsert_constant(self, const: ProjectConstant) -> None:
         self._constants[const.id] = const

@@ -11,7 +11,7 @@ class DataException(Arcor2Exception):
     pass
 
 
-def compile_json_schemas():
+def compile_json_schemas() -> None:
     """
     Force compilation of json schema (otherwise it might cause troubles later when executed in parallel)
     :return:

@@ -7,7 +7,7 @@ import pytest  # type: ignore
 from arcor2 import helpers as hlp
 
 
-def test_import_cls_valid():
+def test_import_cls_valid() -> None:
 
     mod, cls = hlp.import_cls("datetime/timedelta")
 
@@ -15,14 +15,14 @@ def test_import_cls_valid():
     assert cls == datetime.timedelta
 
 
-def test_import_cls_non_existing():
+def test_import_cls_non_existing() -> None:
 
     with pytest.raises(hlp.ImportClsException):
 
         mod, cls = hlp.import_cls("nonsense/NonSense")
 
 
-def test_import_cls_invalid():
+def test_import_cls_invalid() -> None:
 
     with pytest.raises(hlp.ImportClsException):
 
@@ -35,7 +35,7 @@ def test_import_cls_invalid():
      ("camel_case_str", "camel_case_str"),
      ("Camel", "camel")
 ])
-def test_camel_case_to_snake_case(input, output):
+def test_camel_case_to_snake_case(input, output) -> None:
     assert hlp.camel_case_to_snake_case(input) == output
 
 
@@ -45,7 +45,7 @@ def test_camel_case_to_snake_case(input, output):
     ("snake", "Snake"),
     ("abc", "Abc")
 ])
-def test_snake_case_to_camel_case(input, output):
+def test_snake_case_to_camel_case(input, output) -> None:
     assert hlp.snake_case_to_camel_case(input) == output
 
 
@@ -60,7 +60,7 @@ def test_snake_case_to_camel_case(input, output):
     pytest.param("def", marks=pytest.mark.xfail),
     pytest.param("class", marks=pytest.mark.xfail)
 ])
-def test_is_valid_identifier(val):
+def test_is_valid_identifier(val) -> None:
     assert hlp.is_valid_identifier(val)
 
 
@@ -72,5 +72,5 @@ def test_is_valid_identifier(val):
     pytest.param("invalid?type", marks=pytest.mark.xfail),
     pytest.param("abc", marks=pytest.mark.xfail)
 ])
-def test_is_valid_type(val):
+def test_is_valid_type(val) -> None:
     assert hlp.is_valid_type(val)

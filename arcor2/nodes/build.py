@@ -161,7 +161,7 @@ def _publish(project_id: str, package_name: str) -> Tuple[str, int]:
 
 
 @app.route("/project/<string:project_id>/publish", methods=['GET'])
-def project_publish(project_id: str):
+def project_publish(project_id: str) -> Tuple[str, int]:
     """Publish project
             ---
             get:
@@ -226,7 +226,7 @@ def project_script(project_id: str):
 
 
 @app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger():
+def get_swagger() -> str:
     return json.dumps(spec.to_dict())
 
 
@@ -235,7 +235,7 @@ with app.test_request_context():
     spec.path(view=project_script)
 
 
-def main():
+def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument('-s', '--swagger', action="store_true", default=False)
