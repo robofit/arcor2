@@ -19,7 +19,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def clear_collisions(self):
+    def clear_collisions(self) -> None:
         pass
 
     @abc.abstractmethod

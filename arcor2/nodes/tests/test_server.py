@@ -19,7 +19,7 @@ from arcor2.object_types import Generic, Robot
 # TODO save project/scene
 # TODO run/pause/resume/stop project
 
-pytest_plugins = ["docker_compose"]
+# pytest_plugins = ["docker_compose"]
 
 LOGGER = logging.getLogger(__name__)
 

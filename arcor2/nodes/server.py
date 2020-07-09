@@ -230,7 +230,7 @@ async def aio_main() -> None:
     )
 
 
-def main():
+def main() -> None:
 
     assert sys.version_info >= (3, 8)
 

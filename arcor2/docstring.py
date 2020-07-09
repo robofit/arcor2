@@ -17,6 +17,7 @@
 
 import re
 import sys
+from typing import Dict
 
 PARAM_OR_RETURNS_REGEX = re.compile(":(?:param|returns)")
 RETURNS_REGEX = re.compile(":returns: (?P<doc>.*)", re.S)
@@ -24,7 +25,7 @@ PARAM_REGEX = re.compile(r":param (?P<name>[\*\w]+): (?P<doc>.*?)"
                          r"(?:(?=:param)|(?=:return)|(?=:raises)|\Z)", re.S)
 
 
-def trim(docstring):
+def trim(docstring: str) -> str:
     """trim function from PEP-257"""
     if not docstring:
         return ""
@@ -58,11 +59,11 @@ def trim(docstring):
     return "\n".join(trimmed)
 
 
-def reindent(string):
+def reindent(string: str) -> str:
     return "\n".join(line.strip() for line in string.strip().split("\n"))
 
 
-def parse_docstring(docstring):
+def parse_docstring(docstring: str) -> Dict:
     """Parse the docstring into its components.
     :returns: a dictionary of form
               {

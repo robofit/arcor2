@@ -385,7 +385,7 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
         make_executable(out_file)
 
 
-def clean(x):
+def clean(x: str) -> str:
     return re.sub('\W|^(?=\d)', '_', x)  # noqa
 
 

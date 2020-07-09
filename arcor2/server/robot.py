@@ -1,6 +1,6 @@
 import inspect
 import os
-from typing import List, Optional, Set, Type, Union
+from typing import FrozenSet, List, Optional, Set, Type, Union
 
 from horast import parse
 
@@ -49,7 +49,7 @@ async def collision(obj: Generic,
             await glob.logger.error(e)
 
 
-async def get_end_effectors(robot_id: str) -> Set[str]:
+async def get_end_effectors(robot_id: str) -> FrozenSet[str]:
     """
     :param robot_id:
     :return: IDs of existing end effectors.
@@ -63,7 +63,7 @@ async def get_end_effectors(robot_id: str) -> Set[str]:
         return await hlp.run_in_executor(robot_inst.get_end_effectors_ids, robot_id)
 
 
-async def get_grippers(robot_id: str) -> Set[str]:
+async def get_grippers(robot_id: str) -> FrozenSet[str]:
     """
     :param robot_id:
     :return: IDs of existing grippers.
@@ -77,7 +77,7 @@ async def get_grippers(robot_id: str) -> Set[str]:
         return await hlp.run_in_executor(robot_inst.grippers, robot_id)
 
 
-async def get_suctions(robot_id: str) -> Set[str]:
+async def get_suctions(robot_id: str) -> FrozenSet[str]:
     """
     :param robot_id:
     :return: IDs of existing suctions.

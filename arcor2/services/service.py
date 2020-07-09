@@ -22,6 +22,8 @@ class Service(metaclass=abc.ABCMeta):
 
     @classmethod
     def description(cls) -> str:
+        if not cls.__doc__:
+            return "No description available."
         return parse_docstring(cls.__doc__)["short_description"]
 
     @staticmethod

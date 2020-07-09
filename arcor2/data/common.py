@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Union
+from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Union, cast
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -118,12 +118,12 @@ class Orientation(IterableIndexable):
         self.z = nq.z
         self.w = nq.w
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
 
         if not isinstance(other, Orientation):
             return False
 
-        return quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.e-8)[0]
+        return cast(bool, quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.e-8)[0])
 
 
 @dataclass
@@ -184,7 +184,7 @@ class ActionPoint(JsonSchemaMixin):
     def joints_names(self) -> Set[str]:
         return {joints.name for joints in self.robot_joints}
 
-    def invalidate_joints(self):
+    def invalidate_joints(self) -> None:
 
         for joints in self.robot_joints:
             joints.is_valid = False
@@ -220,7 +220,7 @@ class Scene(JsonSchemaMixin):
     def bare(self) -> "Scene":
         return Scene(self.id, self.name, desc=self.desc)
 
-    def update_modified(self):
+    def update_modified(self) -> None:
         self.int_modified = datetime.now(tz=timezone.utc)
 
     def has_changes(self) -> bool:
@@ -298,7 +298,7 @@ class ActionParameter(JsonSchemaMixin):
         assert self.type == ActionParameter.TypeEnum.LINK
         return parse_link(self.value)
 
-    def is_value(self):
+    def is_value(self) -> bool:
         return self.type not in ActionParameter.TypeEnum.set()
 
 
@@ -308,7 +308,7 @@ class Flow(JsonSchemaMixin):
     type: FlowTypes = FlowTypes.DEFAULT
     outputs: List[str] = field(default_factory=list)  # can't be set as it is unordered
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
 
         if len(self.outputs) > len(set(self.outputs)):
             raise Arcor2Exception("Outputs have to be unique.")
@@ -336,7 +336,7 @@ class Action(JsonSchemaMixin):
             raise Arcor2Exception(f"Action: {self.id} has invalid type: {self.type}.")
         return Action.ParsedType(obj_id_str, action)
 
-    def parameter(self, parameter_id) -> ActionParameter:
+    def parameter(self, parameter_id: str) -> ActionParameter:
 
         for param in self.parameters:
             if parameter_id == param.id:
@@ -348,7 +348,7 @@ class Action(JsonSchemaMixin):
     def bare(self) -> "Action":
         return Action(self.id, self.name, self.type)
 
-    def flow(self, flow_type: FlowTypes = FlowTypes.DEFAULT):
+    def flow(self, flow_type: FlowTypes = FlowTypes.DEFAULT) -> Flow:
 
         for flow in self.flows:
             if flow.type == flow_type:

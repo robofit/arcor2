@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+from typing import FrozenSet, List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -85,7 +85,7 @@ class GetEndEffectorsRequest(Request):
 @dataclass
 class GetEndEffectorsResponse(Response):
 
-    data: Set[str] = field(default_factory=set)
+    data: FrozenSet[str] = field(default_factory=frozenset)
     response: str = field(default=GetEndEffectorsRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ class GetGrippersRequest(Request):
 @dataclass
 class GetGrippersResponse(Response):
 
-    data: Set[str] = field(default_factory=set)
+    data: FrozenSet[str] = field(default_factory=frozenset)
     response: str = field(default=GetGrippersRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ class GetSuctionsRequest(Request):
 @dataclass
 class GetSuctionsResponse(Response):
 
-    data: Set[str] = field(default_factory=set)
+    data: FrozenSet[str] = field(default_factory=frozenset)
     response: str = field(default=GetSuctionsRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
