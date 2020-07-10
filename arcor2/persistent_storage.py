@@ -16,7 +16,7 @@ class PersistentStorageException(Arcor2Exception):
 
 
 @rest.handle_exceptions(PersistentStorageException)
-def get_mesh(mesh_id) -> Mesh:
+def get_mesh(mesh_id: str) -> Mesh:
     return rest.get(f"{URL}/models/{mesh_id}/mesh", Mesh)
 
 

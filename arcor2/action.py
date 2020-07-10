@@ -1,7 +1,7 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, TYPE_CHECKING, Union, no_type_check
+from typing import Any, Callable, TYPE_CHECKING, TypeVar, Union, cast, no_type_check
 
 from arcor2.data.common import ActionState, ActionStateEnum, PackageState, PackageStateEnum
 from arcor2.data.events import ActionStateEvent, Event, PackageStateEvent
@@ -31,7 +31,7 @@ try:
             if not timeout or time.monotonic() > time_to_end:
                 return None
 
-            time.sleep(timeout/100.0)
+            time.sleep(timeout / 100.0)
 
 
 except ImportError:
@@ -74,9 +74,12 @@ def print_event(event: Event) -> None:
     sys.stdout.flush()
 
 
-@no_type_check
-def action(f):
+F = TypeVar('F', bound=Callable[..., Any])
 
+
+def action(f: F) -> F:
+
+    @no_type_check
     @wraps(f)
     def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
 
@@ -101,7 +104,7 @@ def action(f):
 
         return res
 
-    return wrapper
+    return cast(F, wrapper)
 
 
 action.inside_composite = None  # type: ignore

@@ -55,8 +55,9 @@ class IntResources:
 
             assert srv.type not in self.services, "Duplicate service {}!".format(srv.type)
 
-            module = importlib.import_module(ResourcesBase.SERVICES_MODULE + "." +
-                                             hlp.camel_case_to_snake_case(srv.type))
+            module = importlib.import_module(
+                ResourcesBase.SERVICES_MODULE + "." + hlp.camel_case_to_snake_case(srv.type)
+            )
             cls = getattr(module, srv.type)
             assert issubclass(cls, Service)
 
@@ -81,11 +82,13 @@ class IntResources:
         for scene_obj in self.scene.objects:
 
             if scene_obj.type in built_in:
-                module = importlib.import_module(arcor2.object_types.__name__ + "." +
-                                                 hlp.camel_case_to_snake_case(scene_obj.type))
+                module = importlib.import_module(
+                    arcor2.object_types.__name__ + "." + hlp.camel_case_to_snake_case(scene_obj.type)
+                )
             else:
-                module = importlib.import_module(ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." +
-                                                 hlp.camel_case_to_snake_case(scene_obj.type))
+                module = importlib.import_module(
+                    ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." + hlp.camel_case_to_snake_case(scene_obj.type)
+                )
 
             cls = getattr(module, scene_obj.type)
             self.type_defs[cls.__name__] = cls

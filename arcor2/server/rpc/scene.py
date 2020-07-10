@@ -5,7 +5,7 @@ import asyncio
 import copy
 import functools
 from contextlib import asynccontextmanager
-from typing import Optional, Set
+from typing import AsyncGenerator, Optional, Set
 
 import quaternion  # type: ignore
 
@@ -30,7 +30,7 @@ OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 
 
 @asynccontextmanager
-async def managed_scene(scene_id: str, make_copy: bool = False):
+async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerator[common.Scene, None]:
 
     save_back = False
 
@@ -209,8 +209,9 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, 
 
     assert glob.SCENE
 
-    if not (any(obj.id == req.args.id for obj in glob.SCENE.objects) or
-            any(srv.type == req.args.id for srv in glob.SCENE.services)):
+    if not (any(obj.id == req.args.id
+                for obj in glob.SCENE.objects) or any(srv.type == req.args.id
+                                                      for srv in glob.SCENE.services)):
         raise Arcor2Exception("Unknown ID.")
 
     resp = rpc.scene.SceneObjectUsageResponse()
@@ -357,7 +358,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     scene_object.pose.position.z = new_pose.position.z - position_delta.z
 
     scene_object.pose.orientation.set_from_quaternion(
-        new_pose.orientation.as_quaternion()*quaternion.quaternion(0, 1, 0, 0))
+        new_pose.orientation.as_quaternion() * quaternion.quaternion(0, 1, 0, 0))
     obj_inst.pose = scene_object.pose
 
     glob.SCENE.update_modified()

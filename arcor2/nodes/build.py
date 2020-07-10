@@ -95,7 +95,7 @@ def _publish(project_id: str, package_name: str) -> Tuple[str, int]:
                     obj_types_with_models.add(obj_type.id)
 
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
-                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})
+                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})  # type: ignore
 
                     with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
                             as model_file:
@@ -156,7 +156,7 @@ def _publish(project_id: str, package_name: str) -> Tuple[str, int]:
             return str(e), 501
 
         archive_path = os.path.join(tmpdirname, "arcor2_project")
-        shutil.make_archive(archive_path, 'zip',  project_dir)
+        shutil.make_archive(archive_path, 'zip', project_dir)
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 
 

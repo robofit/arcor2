@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 
 from arcor2.cached import CachedProject
 from arcor2.data.common import Scene
@@ -9,7 +9,7 @@ from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 class StringPlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return str
 
     @classmethod

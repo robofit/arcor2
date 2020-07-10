@@ -7,7 +7,8 @@ import horast
 import typing_inspect  # type: ignore
 
 import arcor2
-from arcor2.data.object_type import ActionMetadata, ActionParameterMeta, ObjectAction, ObjectActions,\
+from arcor2.data.common import ActionMetadata
+from arcor2.data.object_type import ActionParameterMeta, ObjectAction, ObjectActions,\
     ObjectActionsDict, ObjectTypeMeta, ObjectTypeMetaDict
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception

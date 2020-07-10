@@ -44,7 +44,7 @@ jobs:
             sudo apt-get install build-essential git
             pip install --upgrade pip setuptools
             pip install -e .[test]
-            pip install pytest flake8 mypy flake8-import-order flake8-tidy-imports
+            pip install pytest flake8 mypy flake8-import-order flake8-tidy-imports flake8-annotations-coverage flake8-pytest-style flake8-bugbear
             cd ..
             git clone https://github.com/ZdenekM/dataclasses-jsonschema
             cd dataclasses-jsonschema
