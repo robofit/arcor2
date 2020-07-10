@@ -1,7 +1,7 @@
 import functools
 import io
 import json
-from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 from PIL import Image, UnidentifiedImageError  # type: ignore
 
@@ -29,11 +29,14 @@ ParamsDict = Optional[Dict[str, Any]]
 
 SESSION = requests.session()
 
+F = TypeVar('F', bound=Callable[..., Any])
 
-def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None):
-    def _handle_exceptions(func):
+
+def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None) \
+        -> Callable[[F], F]:
+    def _handle_exceptions(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs) -> Any:
 
             try:
                 return func(*args, **kwargs)
@@ -43,7 +46,7 @@ def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, m
                 else:
                     raise exception_type(e.message) from e
 
-        return wrapper
+        return cast(F, wrapper)
     return _handle_exceptions
 
 
@@ -181,7 +184,7 @@ def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDic
 
     data = _get(url, body, params)
 
-    if isinstance(data, (list, dict)):
+    if not isinstance(data, (list, dict)):
         raise RestException("Invalid data, not list or dict.")
 
     return convert_keys(data, camel_case_to_snake_case)  # type: ignore # probably mypy bug?

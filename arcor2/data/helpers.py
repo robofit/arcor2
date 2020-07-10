@@ -11,8 +11,8 @@ RPC_MAPPING: Dict[str, Tuple[Type[Request], Type[Response]]] = {}
 _requests: Dict[str, Type[Request]] = {}
 _responses: Dict[str, Type[Response]] = {}
 
-for rpc_module_name, rpc_module in inspect.getmembers(rpc, inspect.ismodule):
-    for name, obj in inspect.getmembers(rpc_module, inspect.isclass):
+for _, rpc_module in inspect.getmembers(rpc, inspect.ismodule):
+    for _, obj in inspect.getmembers(rpc_module, inspect.isclass):
 
         if not inspect.isclass(obj):
             continue
@@ -31,7 +31,7 @@ for k, v in _requests.items():
 
 EVENT_MAPPING: Dict[str, Type[Event]] = {}
 
-for name, obj in inspect.getmembers(arcor2.data.events):
+for _, obj in inspect.getmembers(arcor2.data.events):
 
     if inspect.isclass(obj) and issubclass(obj, Event) and obj != Event:
         EVENT_MAPPING[obj.event] = obj

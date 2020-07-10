@@ -5,5 +5,5 @@ import yaml
 from arcor2.data import utils
 
 
-def test_swagger_models():
+def test_swagger_models() -> None:
     validate_spec(yaml.full_load(utils.generate_swagger()))

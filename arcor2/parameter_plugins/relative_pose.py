@@ -1,3 +1,5 @@
+from typing import Any
+
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.cached import CachedProject
@@ -12,7 +14,7 @@ class RelativePose(Pose):
 class RelativePosePlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return RelativePose
 
     @classmethod

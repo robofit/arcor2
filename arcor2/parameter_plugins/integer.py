@@ -73,7 +73,7 @@ def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, act
 class IntegerPlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return int
 
     @classmethod

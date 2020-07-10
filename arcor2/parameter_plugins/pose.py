@@ -1,6 +1,6 @@
 import copy
 import json
-from typing import List
+from typing import Any, List
 
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject
@@ -12,7 +12,7 @@ from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 class PosePlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return Pose
 
     @classmethod

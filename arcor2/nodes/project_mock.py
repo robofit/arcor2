@@ -6,7 +6,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union, cast
 
 from apispec import APISpec  # type: ignore
 
@@ -14,7 +14,7 @@ from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request
 
 from flask_cors import CORS  # type: ignore
 
@@ -45,6 +45,9 @@ def get_id() -> int:
     return uuid.uuid4().int
 
 
+RespT = Union[Response, Tuple[str, int]]
+
+
 SCENES: Dict[str, common.Scene] = {}
 PROJECTS: Dict[str, common.Project] = {}
 OBJECT_TYPES: Dict[str, object_type.ObjectType] = {}
@@ -56,7 +59,7 @@ SPHERES: Dict[str, object_type.Sphere] = {}
 
 
 @app.route("/project", methods=['PUT'])
-def put_project() -> Tuple[str, int]:
+def put_project() -> RespT:
     """Add or update project.
         ---
         put:
@@ -80,7 +83,7 @@ def put_project() -> Tuple[str, int]:
 
 
 @app.route("/project/<string:id>", methods=['GET'])
-def get_project(id: str) -> Tuple[str, int]:
+def get_project(id: str) -> RespT:
     """Add or update project.
         ---
         get:
@@ -104,13 +107,13 @@ def get_project(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(PROJECTS[id].to_dict())
+        return cast(Response, jsonify(PROJECTS[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/project/<string:id>", methods=['DELETE'])
-def delete_project(id: str) -> Tuple[str, int]:
+def delete_project(id: str) -> RespT:
     """Deletes project.
         ---
         delete:
@@ -138,7 +141,7 @@ def delete_project(id: str) -> Tuple[str, int]:
 
 
 @app.route("/projects", methods=['GET'])
-def get_projects() -> Tuple[str, int]:
+def get_projects() -> RespT:
     """Add or update project.
         ---
         get:
@@ -159,11 +162,11 @@ def get_projects() -> Tuple[str, int]:
     for proj in PROJECTS.values():
         ret.items.append(common.IdDesc(proj.id, proj.name, proj.desc))
 
-    return jsonify(ret.to_dict())
+    return cast(Response, jsonify(ret.to_dict()))
 
 
 @app.route("/scene", methods=['PUT'])
-def put_scene() -> Tuple[str, int]:
+def put_scene() -> RespT:
     """Add or update scene.
         ---
         put:
@@ -187,7 +190,7 @@ def put_scene() -> Tuple[str, int]:
 
 
 @app.route("/scene/<string:id>", methods=['GET'])
-def get_scene(id: str) -> Tuple[str, int]:
+def get_scene(id: str) -> RespT:
     """Add or update scene.
         ---
         get:
@@ -211,13 +214,13 @@ def get_scene(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(SCENES[id].to_dict())
+        return cast(Response, jsonify(SCENES[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/scene/<string:id>", methods=['DELETE'])
-def delete_scene(id: str) -> Tuple[str, int]:
+def delete_scene(id: str) -> RespT:
     """Deletes scene.
         ---
         delete:
@@ -245,7 +248,7 @@ def delete_scene(id: str) -> Tuple[str, int]:
 
 
 @app.route("/scenes", methods=['GET'])
-def get_scenes() -> Tuple[str, int]:
+def get_scenes() -> RespT:
     """Add or update scene.
         ---
         get:
@@ -266,11 +269,11 @@ def get_scenes() -> Tuple[str, int]:
     for scene in SCENES.values():
         ret.items.append(common.IdDesc(scene.id, scene.name, scene.desc))
 
-    return jsonify(ret.to_dict())
+    return cast(Response, jsonify(ret.to_dict()))
 
 
 @app.route("/object_type", methods=['PUT'])
-def put_object_type() -> Tuple[str, int]:
+def put_object_type() -> RespT:
     """Add or update object type.
         ---
         put:
@@ -293,7 +296,7 @@ def put_object_type() -> Tuple[str, int]:
 
 
 @app.route("/object_types/<string:id>", methods=['GET'])
-def get_object_type(id: str) -> Tuple[str, int]:
+def get_object_type(id: str) -> RespT:
     """Add or update object_type.
         ---
         get:
@@ -317,13 +320,13 @@ def get_object_type(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(OBJECT_TYPES[id].to_dict())
+        return cast(Response, jsonify(OBJECT_TYPES[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/object_type/<string:id>", methods=['DELETE'])
-def delete_object_type(id: str) -> Tuple[str, int]:
+def delete_object_type(id: str) -> RespT:
     """Deletes object type.
         ---
         delete:
@@ -351,7 +354,7 @@ def delete_object_type(id: str) -> Tuple[str, int]:
 
 
 @app.route("/object_types", methods=['GET'])
-def get_object_types() -> Tuple[str, int]:
+def get_object_types() -> RespT:
     """Add or update ObjectType.
         ---
         get:
@@ -372,11 +375,11 @@ def get_object_types() -> Tuple[str, int]:
     for obj_type in OBJECT_TYPES.values():
         ret.items.append(common.IdDesc(obj_type.id, "", obj_type.desc))
 
-    return jsonify(ret.to_dict())
+    return cast(Response, jsonify(ret.to_dict()))
 
 
 @app.route("/service_type", methods=['PUT'])
-def put_service_type() -> Tuple[str, int]:
+def put_service_type() -> RespT:
     """Add or update service type.
         ---
         put:
@@ -399,7 +402,7 @@ def put_service_type() -> Tuple[str, int]:
 
 
 @app.route("/service_type/<string:id>", methods=['GET'])
-def get_service_type(id: str) -> Tuple[str, int]:
+def get_service_type(id: str) -> RespT:
     """Add or update ServiceType.
         ---
         get:
@@ -423,13 +426,13 @@ def get_service_type(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(SERVICE_TYPES[id].to_dict())
+        return cast(Response, jsonify(SERVICE_TYPES[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/service_type/<string:id>", methods=['DELETE'])
-def delete_service_type(id: str) -> Tuple[str, int]:
+def delete_service_type(id: str) -> RespT:
     """Deletes service type.
         ---
         delete:
@@ -457,7 +460,7 @@ def delete_service_type(id: str) -> Tuple[str, int]:
 
 
 @app.route("/service_types", methods=['GET'])
-def get_service_types() -> Tuple[str, int]:
+def get_service_types() -> RespT:
     """Add or update ServiceType.
         ---
         get:
@@ -478,11 +481,11 @@ def get_service_types() -> Tuple[str, int]:
     for srv_type in SERVICE_TYPES.values():
         ret.items.append(common.IdDesc(srv_type.id, "", srv_type.desc))
 
-    return jsonify(ret.to_dict())
+    return cast(Response, jsonify(ret.to_dict()))
 
 
 @app.route("/models/box", methods=['PUT'])
-def put_box() -> Tuple[str, int]:
+def put_box() -> RespT:
     """Add or update box.
         ---
         put:
@@ -505,7 +508,7 @@ def put_box() -> Tuple[str, int]:
 
 
 @app.route("/models/<string:id>/box", methods=['GET'])
-def get_box(id: str) -> Tuple[str, int]:
+def get_box(id: str) -> RespT:
     """Add or update box.
         ---
         get:
@@ -529,13 +532,13 @@ def get_box(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(BOXES[id].to_dict())
+        return cast(Response, jsonify(BOXES[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/models/box", methods=['PUT'])
-def put_cylinder() -> Tuple[str, int]:
+def put_cylinder() -> RespT:
     """Add or update box.
         ---
         put:
@@ -558,7 +561,7 @@ def put_cylinder() -> Tuple[str, int]:
 
 
 @app.route("/models/<string:id>/cylinder", methods=['GET'])
-def get_cylinder(id: str) -> Tuple[str, int]:
+def get_cylinder(id: str) -> RespT:
     """Add or update box.
         ---
         get:
@@ -582,13 +585,13 @@ def get_cylinder(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(CYLINDERS[id].to_dict())
+        return cast(Response, jsonify(CYLINDERS[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/models/sphere", methods=['PUT'])
-def put_sphere() -> Tuple[str, int]:
+def put_sphere() -> RespT:
     """Add or update sphere.
         ---
         put:
@@ -611,7 +614,7 @@ def put_sphere() -> Tuple[str, int]:
 
 
 @app.route("/models/<string:id>/sphere", methods=['GET'])
-def get_sphere(id: str) -> Tuple[str, int]:
+def get_sphere(id: str) -> RespT:
     """Add or update sphere.
         ---
         get:
@@ -635,13 +638,13 @@ def get_sphere(id: str) -> Tuple[str, int]:
     """
 
     try:
-        return jsonify(SPHERES[id].to_dict())
+        return cast(Response, jsonify(SPHERES[id].to_dict()))
     except KeyError:
         return "Not found", 404
 
 
 @app.route("/models/<string:id>", methods=['DELETE'])
-def delete_model(id: str) -> Tuple[str, int]:
+def delete_model(id: str) -> RespT:
     """Deletes model.
         ---
         delete:
@@ -675,7 +678,7 @@ def delete_model(id: str) -> Tuple[str, int]:
 
 
 @app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger():
+def get_swagger() -> str:
     return json.dumps(spec.to_dict())
 
 

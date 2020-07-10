@@ -122,7 +122,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True, srv_o
 
         srv_args: List[Service] = []
 
-        for name, ttype in get_type_hints(cls.__init__).items():
+        for _, ttype in get_type_hints(cls.__init__).items():
 
             # service arguments should be listed first
             if not issubclass(ttype, Service):

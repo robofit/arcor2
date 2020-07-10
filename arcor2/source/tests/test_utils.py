@@ -27,7 +27,7 @@ def func_2() -> None:
 
 def func_3() -> None:
 
-    var = 1+2
+    var = 1 + 2
     raise NotImplementedError(f"{var}")
 
 

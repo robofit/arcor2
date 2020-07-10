@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+from typing import Any
 
 import PIL.Image  # type: ignore
 from PIL.Image import Image  # type: ignore
@@ -13,7 +14,7 @@ from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 class ImagePlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return Image
 
     @classmethod

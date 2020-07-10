@@ -3,7 +3,7 @@ from arcor2.data.common import Action, Flow, LogicItem, Position, Project, Proje
 from arcor2.source.logic import program_src
 
 
-def test_program_src():
+def test_program_src() -> None:
 
     scene = Scene("s1", "s1")
     project = Project("p1", "p1", "s1")

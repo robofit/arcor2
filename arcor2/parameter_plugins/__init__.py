@@ -15,7 +15,7 @@ for _, module_name, _ in pkgutil.iter_modules(parameter_plugins.__path__):  # ty
 
     module = importlib.import_module(f"arcor2.parameter_plugins.{module_name}")
 
-    for name, obj in inspect.getmembers(module):
+    for _, obj in inspect.getmembers(module):
         if not inspect.isclass(obj) or inspect.isabstract(obj) or not issubclass(obj, ParameterPlugin):
             continue
         PLUGINS.add(obj)
