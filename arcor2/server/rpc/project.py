@@ -26,7 +26,8 @@ from arcor2.server.project import check_action_params, check_flows, find_object_
     project_problems
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.scene import clear_scene, get_instance, open_scene
-from arcor2.source.logic import SourceException, program_src
+from arcor2.source import SourceException
+from arcor2.source.logic import program_src
 
 
 PREV_RESULTS: Dict[str, List[Any]] = {}
@@ -94,7 +95,7 @@ async def cancel_action_cb(req: rpc.project.CancelActionRequest, ui: WsClient) -
 
     assert glob.RUNNING_ACTION_PARAMS is not None
 
-    for param_name, param in cancel_sig.parameters.items():
+    for param_name in cancel_sig.parameters.keys():
         try:
             cancel_params[param_name] = glob.RUNNING_ACTION_PARAMS[param_name]
         except KeyError as e:
@@ -146,7 +147,8 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 @project_needed
 async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     if glob.RUNNING_ACTION:
         raise Arcor2Exception(f"Action {glob.RUNNING_ACTION} is being executed. "
@@ -264,7 +266,8 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -
 @project_needed
 async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
@@ -285,7 +288,8 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 @project_needed
 async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJointsRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     robot_joints = glob.PROJECT.joints(req.args.joints_id)
     new_joints = await get_robot_joints(req.args.robot_id)
@@ -307,7 +311,8 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
     :return:
     """
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
@@ -326,7 +331,8 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 @project_needed
 async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
@@ -353,7 +359,8 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: 
 @project_needed
 async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
@@ -396,7 +403,8 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
 @project_needed
 async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
@@ -416,7 +424,8 @@ async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPosi
 @project_needed
 async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointUsingRobotRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
@@ -447,7 +456,8 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
     :return:
     """
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
@@ -473,7 +483,8 @@ async def update_action_point_orientation_cb(req: rpc.project.UpdateActionPointO
     :return:
     """
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     orientation = glob.PROJECT.orientation(req.args.orientation_id)
     orientation.orientation = req.args.orientation
@@ -493,7 +504,8 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
     :return:
     """
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
     unique_name(req.args.name, ap.orientation_names())
@@ -523,7 +535,8 @@ async def update_action_point_orientation_using_robot_cb(
     :return:
     """
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
@@ -549,7 +562,8 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     :return:
     """
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
 
     ap, orientation = glob.PROJECT.ap_and_orientation(req.args.action_point_id)
 
@@ -587,7 +601,9 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> 
 @project_needed
 async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE and glob.PROJECT
+    assert glob.SCENE
+    assert glob.PROJECT
+
     await storage.update_project(glob.PROJECT.project)
     # TODO get modified from response
     glob.PROJECT.modified = (await storage.get_project(glob.PROJECT.id)).modified

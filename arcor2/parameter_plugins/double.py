@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Any, Callable, List
 
 from typed_ast import ast3 as ast
 
@@ -13,7 +13,7 @@ from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 class DoublePlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return float
 
     @classmethod

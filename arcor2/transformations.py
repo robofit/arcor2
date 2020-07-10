@@ -45,7 +45,7 @@ def make_position_abs(parent: Position, child: Position) -> Position:
 def make_orientation_abs(parent: Orientation, child: Orientation) -> Orientation:
 
     p = Orientation()
-    p.set_from_quaternion(child.as_quaternion()*parent.as_quaternion().conjugate().inverse())
+    p.set_from_quaternion(child.as_quaternion() * parent.as_quaternion().conjugate().inverse())
     return p
 
 

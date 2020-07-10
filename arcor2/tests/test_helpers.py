@@ -29,17 +29,17 @@ def test_import_cls_invalid() -> None:
         mod, cls = hlp.import_cls("Generic")
 
 
-@pytest.mark.parametrize('input,output', [
-     ("CamelCaseStr", "camel_case_str"),
-     ("camelCaseStr", "camel_case_str"),
-     ("camel_case_str", "camel_case_str"),
-     ("Camel", "camel")
+@pytest.mark.parametrize(('input', 'output'), [
+    ("CamelCaseStr", "camel_case_str"),
+    ("camelCaseStr", "camel_case_str"),
+    ("camel_case_str", "camel_case_str"),
+    ("Camel", "camel")
 ])
 def test_camel_case_to_snake_case(input, output) -> None:
     assert hlp.camel_case_to_snake_case(input) == output
 
 
-@pytest.mark.parametrize('input,output', [
+@pytest.mark.parametrize(('input', 'output'), [
     ("snake_case_str", "SnakeCaseStr"),
     ("SnakeCaseStr", "SnakeCaseStr"),
     ("snake", "Snake"),

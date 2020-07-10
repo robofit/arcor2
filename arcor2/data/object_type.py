@@ -113,7 +113,7 @@ class ObjectModel(JsonSchemaMixin):
 
         models_list = [self.box, self.cylinder, self.sphere, self.mesh]
 
-        if models_list.count(None) != len(models_list)-1:
+        if models_list.count(None) != len(models_list) - 1:
             raise DataException("No model specified!")
 
 

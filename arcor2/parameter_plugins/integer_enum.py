@@ -27,7 +27,7 @@ class IntegerEnumPlugin(ParameterPlugin):
     EXACT_TYPE = False
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return IntEnum
 
     @classmethod

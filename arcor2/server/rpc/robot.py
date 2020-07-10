@@ -41,7 +41,7 @@ async def robot_joints_event(robot_id: str) -> None:
                                for ui in glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]])
 
         end = time.monotonic()
-        await asyncio.sleep(EVENT_PERIOD-(end-start))
+        await asyncio.sleep(EVENT_PERIOD - (end - start))
 
     del ROBOT_JOINTS_TASKS[robot_id]
 
@@ -80,7 +80,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
         await asyncio.gather(*[hlp.send_json_to_client(ui, evt_json) for ui in glob.ROBOT_EEF_REGISTERED_UIS[robot_id]])
 
         end = time.monotonic()
-        await asyncio.sleep(EVENT_PERIOD-(end-start))
+        await asyncio.sleep(EVENT_PERIOD - (end - start))
 
     del EEF_POSE_TASKS[robot_id]
 

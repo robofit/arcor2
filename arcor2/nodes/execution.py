@@ -58,7 +58,7 @@ def process_running() -> bool:
     return PROCESS is not None and PROCESS.returncode is None
 
 
-async def project_state(event: PackageStateEvent) -> None:
+async def project_state(event: PackageStateEvent):
 
     global PROJECT_EVENT
     PROJECT_EVENT = event
@@ -222,7 +222,8 @@ async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClien
     if not process_running():
         raise Arcor2Exception("Project not running.")
 
-    assert PROCESS is not None and PROCESS.stdin is not None
+    assert PROCESS is not None
+    assert PROCESS.stdin is not None
 
     if PROJECT_EVENT.data.state != PackageStateEnum.PAUSED:
         raise Arcor2Exception("Cannot resume.")

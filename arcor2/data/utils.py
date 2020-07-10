@@ -29,7 +29,7 @@ def generate_swagger() -> str:
     for module in (arcor2.data.common, arcor2.data.object_type, rpc.common, rpc.execution, rpc.objects,
                    rpc.robot, rpc.scene, rpc.project, rpc.services,
                    rpc.storage, arcor2.data.events):
-        for name, obj in inspect.getmembers(module):
+        for _, obj in inspect.getmembers(module):
 
             if not inspect.isclass(obj) or not issubclass(obj, JsonSchemaMixin) or obj == JsonSchemaMixin:
                 continue

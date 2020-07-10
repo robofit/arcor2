@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from arcor2.cached import CachedProject
 from arcor2.data.common import ProjectRobotJoints, Scene
@@ -9,7 +10,7 @@ from arcor2.services.robot_service import RobotService
 class JointsPlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return ProjectRobotJoints
 
     @classmethod

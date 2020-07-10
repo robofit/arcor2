@@ -5,7 +5,7 @@ import arcor2.service_types_utils as stu
 from arcor2.services.upload import upload_cls
 
 
-def main():
+def main() -> None:
 
     for _, srv_def in stu.built_in_services():
         upload_cls(srv_def)
