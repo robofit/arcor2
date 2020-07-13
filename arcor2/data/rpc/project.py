@@ -44,7 +44,7 @@ class CloseProjectRequestArgs(JsonSchemaMixin):
 @dataclass
 class CloseProjectRequest(Request):
 
-    args: CloseProjectRequestArgs
+    args: CloseProjectRequestArgs = field(default_factory=CloseProjectRequestArgs)
     dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
