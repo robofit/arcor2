@@ -184,7 +184,9 @@ async def server(client: Any,
                     resp = await rpc_dict[req_cls](req, client)
                 except Arcor2Exception as e:
                     await logger.debug(e, exc_info=True)
-                    resp = False, e.message
+                    resp = resp_cls()
+                    resp.result = False
+                    resp.messages = [e.message]
 
                 if resp is None:  # default response
                     resp = resp_cls()
