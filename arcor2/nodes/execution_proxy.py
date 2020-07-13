@@ -156,6 +156,8 @@ def put_package(packageId: str):  # noqa
         ---
         put:
             description: Upload/update execution package.
+            tags:
+               - Packages
             parameters:
                 - in: path
                   name: packageId
@@ -168,9 +170,11 @@ def put_package(packageId: str):  # noqa
                     multipart/form-data:
                       schema:
                         type: object
+                        required:
+                            - executionPackage
                         properties:
                           # 'file' will be the field name in this multipart request
-                          file:
+                          executionPackage:
                             type: string
                             format: binary
             responses:
@@ -187,7 +191,7 @@ def put_package(packageId: str):  # noqa
 
     """
 
-    file = request.files['file']
+    file = request.files['executionPackage']
     file_name = secure_filename(file.filename)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -214,6 +218,8 @@ def get_package(packageId: str):  # noqa
                 ---
                 get:
                   description: Get zip file with execution package.
+                  tags:
+                    - Packages
                   parameters:
                     - in: path
                       name: packageId
@@ -253,6 +259,8 @@ def get_packages():
                 ---
                 get:
                   description: Summary.
+                  tags:
+                    - Packages
                   responses:
                     200:
                       description: Ok
@@ -286,6 +294,8 @@ def delete_package(packageId: str):  # noqa
             ---
             delete:
               description: Delete package.
+              tags:
+                - Packages
               parameters:
                 - in: path
                   name: packageId
@@ -320,6 +330,8 @@ def package_start(packageId: str):  # noqa
             ---
             put:
               description: Start execution of the execution package.
+              tags:
+                - Packages
               parameters:
                 - in: path
                   name: packageId
@@ -354,6 +366,8 @@ def packages_stop():
             ---
             put:
               description: Stops execution of the given package.
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
@@ -381,6 +395,8 @@ def packages_pause():
             ---
             put:
               description: Pause execution of the given package.
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
@@ -408,6 +424,8 @@ def packages_resume():
             ---
             put:
               description: Resumes execution of the given package.
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
@@ -435,6 +453,8 @@ def packages_executioninfo():
             ---
             get:
               description: /packages/executioninfo
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
