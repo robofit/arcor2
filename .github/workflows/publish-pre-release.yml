@@ -2,7 +2,8 @@ name: Publish Pre-releases
 
 on:
   push:
-    branches: [ devel ]
+    branches:
+      - 'robofit/devel'
 
 jobs:
   deploy:
