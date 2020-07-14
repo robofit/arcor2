@@ -111,21 +111,19 @@ class IntResources:
             if self.robot_service:
                 self.robot_service.add_collision(inst)
 
-        if self.robot_service:
+        for model in models.values():
 
-            for model in models.values():
+            if not model:
+                continue
 
-                if not model:
-                    continue
-
-                if isinstance(model, Box):
-                    package_info_event.data.collision_models.boxes.append(model)
-                elif isinstance(model, Sphere):
-                    package_info_event.data.collision_models.spheres.append(model)
-                elif isinstance(model, Cylinder):
-                    package_info_event.data.collision_models.cylinders.append(model)
-                elif isinstance(model, Mesh):
-                    package_info_event.data.collision_models.meshes.append(model)
+            if isinstance(model, Box):
+                package_info_event.data.collision_models.boxes.append(model)
+            elif isinstance(model, Sphere):
+                package_info_event.data.collision_models.spheres.append(model)
+            elif isinstance(model, Cylinder):
+                package_info_event.data.collision_models.cylinders.append(model)
+            elif isinstance(model, Mesh):
+                package_info_event.data.collision_models.meshes.append(model)
 
         print_event(package_info_event)
 
