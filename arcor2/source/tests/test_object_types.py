@@ -1,5 +1,5 @@
 from arcor2.data.object_type import ObjectTypeMeta
-from arcor2.source.object_types import new_object_type_source, check_object_type
+from arcor2.source.object_types import check_object_type, new_object_type_source
 
 
 def test_meta_to_source():

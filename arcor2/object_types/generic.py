@@ -1,9 +1,10 @@
 import abc
+import copy
 from typing import Dict, Optional
 
-from arcor2 import DynamicParamDict, CancelDict
-from arcor2.data.common import Pose, ActionPoint, ActionMetadata, SceneObject
+from arcor2 import CancelDict, DynamicParamDict
 from arcor2.action import action
+from arcor2.data.common import ActionMetadata, Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
@@ -26,8 +27,10 @@ class Generic(metaclass=abc.ABCMeta):
         self.id = obj_id
         self.name = name
         self.pose = pose
-        self.collision_model = collision_model
-        self.action_points: Dict[str, ActionPoint] = {}
+        self.collision_model = copy.deepcopy(collision_model)
+        if self.collision_model:
+            # originally, each model has id == object type (e.g. BigBox) but here we need to set it so something unique
+            self.collision_model.id = self.id
         self._int_dict: Dict[str, int] = {}
 
     @classmethod

@@ -1,18 +1,19 @@
 from typing import Set, Union
 
 from horast import parse
-from typed_ast.ast3 import Expr, Pass, Module, Call, Attribute
 
-from arcor2.data.common import Project, Scene, Action, ActionIO, ActionIOEnum
+from typed_ast.ast3 import Attribute, Call, Expr, Module, Pass
+
+import arcor2.object_types
+from arcor2.data.common import Action, ActionIO, ActionIOEnum, Project, Scene
+from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
-from arcor2.project_utils import get_actions_cache, ProjectException
+from arcor2.project_utils import ProjectException, get_actions_cache
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.object_types import fix_object_name
-from arcor2.source.utils import main_loop_body, empty_script_tree, add_import, \
-    append_method_call, tree_to_str, get_name_attr, clean
 from arcor2.source.object_types import object_instance_from_res
-import arcor2.object_types
-from arcor2.exceptions import Arcor2Exception
+from arcor2.source.utils import add_import, append_method_call, clean, empty_script_tree, get_name_attr,\
+    main_loop_body, tree_to_str
 
 
 def program_src(project: Project, scene: Scene, built_in_objects: Set[str], add_logic: bool = True) -> str:

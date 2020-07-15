@@ -1,10 +1,10 @@
 import os
 
-from arcor2.data.common import Project, Scene, ProjectSources, IdDescList
-from arcor2.data.object_type import ObjectType, Models, MODEL_MAPPING, Model3dType, Mesh, MeshList
+from arcor2 import rest
+from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
+from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, Model3dType, Models, ObjectType
 from arcor2.data.services import ServiceType
 from arcor2.exceptions import Arcor2Exception
-from arcor2 import rest
 
 URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://0.0.0.0:11000")
 
@@ -27,7 +27,7 @@ def get_meshes() -> MeshList:
 
 @rest.handle_exceptions(PersistentStorageException)
 def get_model(model_id: str, model_type: Model3dType) -> Models:
-    return rest.get(f"{URL}/models/{model_id}/{model_type.value}", MODEL_MAPPING[model_type])
+    return rest.get(f"{URL}/models/{model_id}/{model_type.value.lower()}", MODEL_MAPPING[model_type])
 
 
 @rest.handle_exceptions(PersistentStorageException)

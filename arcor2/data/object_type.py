@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List, Dict, Union, Set
+from typing import Dict, List, Optional, Set, Union
 
 from dataclasses_jsonschema import JsonSchemaMixin
 

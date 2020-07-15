@@ -1,6 +1,6 @@
+import importlib
 import inspect
 import pkgutil
-import importlib
 
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 

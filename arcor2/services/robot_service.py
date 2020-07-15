@@ -1,10 +1,10 @@
 import abc
-from typing import List, FrozenSet
+from typing import FrozenSet, List
 
-from arcor2.services import Service
-from arcor2.data.common import Pose, Joint
+from arcor2.data.common import Joint, Pose
 from arcor2.data.object_type import MeshFocusAction
 from arcor2.object_types import Generic
+from arcor2.services.service import Service
 
 
 class RobotService(Service, metaclass=abc.ABCMeta):
@@ -40,7 +40,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     def stop(self, robot_id: str) -> None:
-        pass
+        raise NotImplementedError("The robot can't be stopped.")
 
     @abc.abstractmethod
     def get_end_effectors_ids(self, robot_id: str) -> FrozenSet[str]:
@@ -50,9 +50,30 @@ class RobotService(Service, metaclass=abc.ABCMeta):
     def get_end_effector_pose(self, robot_id: str, end_effector_id: str) -> Pose:
         pass
 
-    @abc.abstractmethod
-    def move(self, robot_id: str, end_effector_id: str, pose: Pose):
-        pass
+    def move_to_pose(self, robot_id: str, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+        """
+        Move given robot's end effector to the selected pose.
+        :param robot_id:
+        :param end_effector_id:
+        :param target_pose:
+        :param speed:
+        :return:
+        """
+
+        assert .0 <= speed <= 1.
+        raise NotImplementedError("Service does not support moving robot's to pose.")
+
+    def move_to_joints(self, robot_id: str, target_joints: List[Joint], speed: float) -> None:
+        """
+        Sets target joint values.
+        :param robot_id:
+        :param target_joints:
+        :param speed:
+        :return:
+        """
+
+        assert .0 <= speed <= 1.
+        raise NotImplementedError("Service does not support moving robots to joints.")
 
     @abc.abstractmethod
     def focus(self, mfa: MeshFocusAction) -> Pose:

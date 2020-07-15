@@ -1,8 +1,8 @@
 import json
 
 from arcor2.data.common import Project, ProjectRobotJoints, Scene
-from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict, ParameterPluginException
-from arcor2.services import RobotService
+from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
+from arcor2.services.robot_service import RobotService
 
 
 class JointsPlugin(ParameterPlugin):

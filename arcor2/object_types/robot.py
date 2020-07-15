@@ -1,8 +1,8 @@
 import abc
 from typing import FrozenSet, List, Optional
 
+from arcor2.data.common import Joint, Pose
 from arcor2.object_types.generic import Generic
-from arcor2.data.common import Pose, Joint
 
 
 class Robot(Generic, metaclass=abc.ABCMeta):
@@ -31,3 +31,29 @@ class Robot(Generic, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def suctions(self) -> FrozenSet[str]:
         return frozenset()
+
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+        """
+        Move given robot's end effector to the selected pose.
+        :param end_effector_id:
+        :param target_pose:
+        :param speed:
+        :return:
+        """
+
+        assert .0 <= speed <= 1.
+        raise NotImplementedError("Robot does not support moving to pose.")
+
+    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+        """
+        Sets target joint values.
+        :param target_joints:
+        :param speed:
+        :return:
+        """
+
+        assert .0 <= speed <= 1.
+        raise NotImplementedError("Robot does not support moving to joints.")
+
+    def stop(self) -> None:
+        raise NotImplementedError("The robot can't be stopped.")

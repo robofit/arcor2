@@ -2,30 +2,30 @@
 # -*- coding: utf-8 -*-
 
 
-import os
-from typing import Dict, Union, TypeVar, List, Optional, Any, Type
 import importlib
 import json
+import os
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
-from dataclasses_jsonschema import JsonSchemaValidationError, JsonSchemaMixin
+from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-from arcor2.object_types_utils import built_in_types_names
-from arcor2.data.common import Project, Scene, CurrentAction, Pose, Orientation
-from arcor2.data.execution import PackageInfo
-from arcor2.data.object_type import ObjectModel, Models, Box, Sphere, Cylinder, Mesh
-from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
-from arcor2.exceptions import ResourcesException, Arcor2Exception
 import arcor2.object_types
-from arcor2.object_types import Generic
-from arcor2.services import Service, RobotService
-from arcor2.action import print_event
-from arcor2.rest import convert_keys
-from arcor2.helpers import camel_case_to_snake_case, make_pose_abs, make_orientation_abs, print_exception
 import arcor2.object_types_utils as otu
+from arcor2 import helpers as hlp, transformations as tr
 from arcor2 import settings
-
+from arcor2.action import print_event
+from arcor2.data.common import CurrentAction, Project, Scene
+from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
+from arcor2.data.execution import PackageInfo
+from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
+from arcor2.exceptions import Arcor2Exception, ResourcesException
+from arcor2.object_types import Generic
+from arcor2.object_types_utils import built_in_types_names
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
+from arcor2.rest import convert_keys
+from arcor2.services.robot_service import RobotService
+from arcor2.services.service import Service
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -54,7 +54,8 @@ class IntResources:
 
             assert srv.type not in self.services, "Duplicate service {}!".format(srv.type)
 
-            module = importlib.import_module(ResourcesBase.SERVICES_MODULE + "." + camel_case_to_snake_case(srv.type))
+            module = importlib.import_module(ResourcesBase.SERVICES_MODULE + "." +
+                                             hlp.camel_case_to_snake_case(srv.type))
             cls = getattr(module, srv.type)
             assert issubclass(cls, Service)
 
@@ -71,18 +72,19 @@ class IntResources:
         if self.robot_service:
             self.robot_service.clear_collisions()
 
+        package_id = os.path.basename(os.getcwd())
+        package_meta = hlp.read_package_meta(package_id)
         package_info_event = PackageInfoEvent()
-        # TODO read package id from package.json
-        package_info_event.data = PackageInfo(os.path.basename(os.getcwd()), self.scene, self.project)
+        package_info_event.data = PackageInfo(package_id, package_meta.name, self.scene, self.project)
 
         for scene_obj in self.scene.objects:
 
             if scene_obj.type in built_in:
                 module = importlib.import_module(arcor2.object_types.__name__ + "." +
-                                                 camel_case_to_snake_case(scene_obj.type))
+                                                 hlp.camel_case_to_snake_case(scene_obj.type))
             else:
                 module = importlib.import_module(ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." +
-                                                 camel_case_to_snake_case(scene_obj.type))
+                                                 hlp.camel_case_to_snake_case(scene_obj.type))
 
             cls = getattr(module, scene_obj.type)
             self.type_defs[cls.__name__] = cls
@@ -109,21 +111,19 @@ class IntResources:
             if self.robot_service:
                 self.robot_service.add_collision(inst)
 
-        if self.robot_service:
+        for model in models.values():
 
-            for model in models.values():
+            if not model:
+                continue
 
-                if not model:
-                    continue
-
-                if isinstance(model, Box):
-                    package_info_event.data.collision_models.boxes.append(model)
-                elif isinstance(model, Sphere):
-                    package_info_event.data.collision_models.spheres.append(model)
-                elif isinstance(model, Cylinder):
-                    package_info_event.data.collision_models.cylinders.append(model)
-                elif isinstance(model, Mesh):
-                    package_info_event.data.collision_models.meshes.append(model)
+            if isinstance(model, Box):
+                package_info_event.data.collision_models.boxes.append(model)
+            elif isinstance(model, Sphere):
+                package_info_event.data.collision_models.spheres.append(model)
+            elif isinstance(model, Cylinder):
+                package_info_event.data.collision_models.cylinders.append(model)
+            elif isinstance(model, Mesh):
+                package_info_event.data.collision_models.meshes.append(model)
 
         print_event(package_info_event)
 
@@ -137,18 +137,8 @@ class IntResources:
 
         # make all poses absolute
         for aps in self.project.action_points_with_parent:
-
-            assert aps.parent
-
-            obj_inst = self.objects[aps.parent]
-
-            # Action point pose is relative to its parent object pose in scene but is absolute during runtime.
-            obj_inst.action_points[aps.id] = aps
-            aps.position = make_pose_abs(obj_inst.pose, Pose(aps.position, Orientation())).position
-            for ori in aps.orientations:
-                ori.orientation = make_orientation_abs(obj_inst.pose.orientation, ori.orientation)
-
-            aps.parent = None
+            # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
+            tr.make_relative_ap_global(self.scene, self.project, aps)
 
     def __enter__(self):
         return self
@@ -156,14 +146,14 @@ class IntResources:
     def __exit__(self, ex_type, ex_value, traceback):
 
         if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
-            print_exception(ex_type(ex_value))
+            hlp.print_exception(ex_type(ex_value))
 
         if self.robot_service:
             try:
                 for obj in self.objects.values():
                     self.robot_service.remove_collision(obj)
             except Arcor2Exception as e:
-                print_exception(e)
+                hlp.print_exception(e)
 
         if settings.CLEANUP_SERVICES:
             for srv in self.services.values():
@@ -213,7 +203,7 @@ class ResourcesBase(IntResources):
             with open(os.path.join("data", file_name + ".json")) as scene_file:
 
                 data_dict = json.loads(scene_file.read())
-                data_dict = convert_keys(data_dict, camel_case_to_snake_case)
+                data_dict = convert_keys(data_dict, hlp.camel_case_to_snake_case)
 
                 return cls.from_dict(data_dict)
 
@@ -236,7 +226,7 @@ class ResourcesBase(IntResources):
                 continue
 
             try:
-                models[obj.type] = self.read_project_data(camel_case_to_snake_case(obj.type), ObjectModel).model()
+                models[obj.type] = self.read_project_data(hlp.camel_case_to_snake_case(obj.type), ObjectModel).model()
             except IOError:
                 models[obj.type] = None
 

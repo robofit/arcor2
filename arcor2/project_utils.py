@@ -1,6 +1,6 @@
-from typing import Tuple, Dict, Union
+from typing import Dict, Tuple, Union
 
-from arcor2.data.common import Project, Action, ActionIOEnum
+from arcor2.data.common import Action, ActionIOEnum, Project
 from arcor2.exceptions import Arcor2Exception
 
 

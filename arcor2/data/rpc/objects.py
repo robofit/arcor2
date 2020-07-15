@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
+from dataclasses import dataclass, field
 from typing import List, Set
 
-from dataclasses import dataclass, field
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdValue, StrEnum
-from arcor2.data.object_type import ObjectTypeMeta, ObjectActions
-from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix, TypeArgs, RobotArg
+from arcor2.data.object_type import ObjectActions, ObjectTypeMeta
+from arcor2.data.rpc.common import IdArgs, Request, Response, RobotArg, TypeArgs, wo_suffix
 
 
 @dataclass

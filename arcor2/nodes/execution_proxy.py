@@ -8,34 +8,73 @@ import os
 import shutil
 import tempfile
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 from queue import Queue
-from typing import Dict, TYPE_CHECKING, Optional
 from threading import Thread
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+from apispec import APISpec  # type: ignore
+
+from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+
+from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema.apispec import DataclassesPlugin
+
+from flask import Flask, jsonify, request, send_file
+
+from flask_cors import CORS  # type: ignore
+
+from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import websocket  # type: ignore
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
-from flask import Flask, jsonify, request, send_file
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+
 from werkzeug.utils import secure_filename
 
 import arcor2
-from arcor2.data import rpc, events, common, execution
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
+from arcor2.data import common, events, execution, rpc
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
 from arcor2.nodes.execution import PORT as MANAGER_PORT
 from arcor2.settings import PROJECT_PATH
 
-
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
+
+
+class ExecutionState(Enum):
+
+    Undefined: str = "Undefined"
+    Running: str = "Running"
+    Completed: str = "Completed"
+    Faulted: str = "Faulted"
+    Paused: str = "Paused"
+
+
+@dataclass
+class SummaryPackage(JsonSchemaMixin):
+
+    id: str
+    name: Optional[str] = None
+    projectId: Optional[str] = None
+    created: Optional[datetime] = None
+    executed: Optional[datetime] = None
+
+
+@dataclass
+class ExecutionInfo(JsonSchemaMixin):
+
+    state: ExecutionState
+    activePackageId: Optional[str] = None
+    exceptionMessage: Optional[str] = None
+
 
 # Create an APISpec
 spec = APISpec(
     title=SERVICE_NAME,
     version=arcor2.version(),
     openapi_version="3.0.2",
-    plugins=[FlaskPlugin()],
+    plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
 
 app = Flask(__name__)
@@ -54,12 +93,16 @@ else:
 rpc_request_queue: ReqQueue = ReqQueue()
 rpc_responses: Dict[int, RespQueue] = {}
 
+package_state: Optional[common.PackageState] = None
 package_info: Optional[execution.PackageInfo] = None
+exception_message: Optional[str] = None
 
 
 def ws_thread():
 
     global package_info
+    global package_state
+    global exception_message
     assert ws
 
     while True:
@@ -73,9 +116,13 @@ def ws_thread():
             if isinstance(evt, events.PackageInfoEvent):
                 package_info = evt.data
             elif isinstance(evt, events.PackageStateEvent):
+                package_state = evt.data
 
-                if evt.data.state == common.PackageStateEnum.STOPPED:
-                    package_info = None
+                if package_state.state == common.PackageStateEnum.RUNNING:
+                    exception_message = None
+
+            elif isinstance(evt, events.ProjectExceptionEvent):
+                exception_message = evt.data.message
 
         elif "response" in data:
             resp = RPC_MAPPING[data["response"]][1].from_dict(data)
@@ -103,15 +150,17 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() == "zip"
 
 
-@app.route("/packages/<string:package_id>", methods=['PUT'])
-def put_package(package_id: str):
+@app.route("/packages/<string:packageId>", methods=['PUT'])
+def put_package(packageId: str):  # noqa
     """Put package
         ---
         put:
             description: Upload/update execution package.
+            tags:
+               - Packages
             parameters:
                 - in: path
-                  name: package_id
+                  name: packageId
                   schema:
                     type: string
                   required: true
@@ -121,9 +170,11 @@ def put_package(package_id: str):
                     multipart/form-data:
                       schema:
                         type: object
+                        required:
+                            - executionPackage
                         properties:
                           # 'file' will be the field name in this multipart request
-                          file:
+                          executionPackage:
                             type: string
                             format: binary
             responses:
@@ -140,7 +191,7 @@ def put_package(package_id: str):
 
     """
 
-    file = request.files['file']
+    file = request.files['executionPackage']
     file_name = secure_filename(file.filename)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -153,7 +204,7 @@ def put_package(package_id: str):
 
     resp = call_rpc(rpc.execution.UploadPackageRequest(
             id=get_id(),
-            args=rpc.execution.UploadPackageArgs(package_id, b64_str)))
+            args=rpc.execution.UploadPackageArgs(packageId, b64_str)))
 
     if resp.result:
         return "ok", 200
@@ -161,15 +212,17 @@ def put_package(package_id: str):
         return jsonify(resp.messages), 501
 
 
-@app.route("/packages/<string:package_id>", methods=['GET'])
-def get_package(package_id: str):
+@app.route("/packages/<string:packageId>", methods=['GET'])
+def get_package(packageId: str):  # noqa
     """Get execution package.
                 ---
                 get:
                   description: Get zip file with execution package.
+                  tags:
+                    - Packages
                   parameters:
                     - in: path
-                      name: package_id
+                      name: packageId
                       schema:
                         type: string
                       required: true
@@ -187,26 +240,27 @@ def get_package(package_id: str):
                         description: Package ID was not found.
                 """
 
-    package_path = os.path.join(PROJECT_PATH, package_id)
+    package_path = os.path.join(PROJECT_PATH, packageId)
 
     if not os.path.exists(package_path):
         return "Not found", 404
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
-        archive_path = os.path.join(tmpdirname, package_id)
+        archive_path = os.path.join(tmpdirname, packageId)
         shutil.make_archive(archive_path, 'zip', package_path)
 
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 
 
-# TODO use DataClassPlugin / PackageSummary model
 @app.route("/packages", methods=['GET'])
 def get_packages():
     """Gets summary for all stored execution packages.
                 ---
                 get:
                   description: Summary.
+                  tags:
+                    - Packages
                   responses:
                     200:
                       description: Ok
@@ -215,30 +269,36 @@ def get_packages():
                           schema:
                             type: array
                             items:
-                              type: object
-                              properties:
-                                id:
-                                  type: string
-                                date_time:
-                                  type: string
-                                  format: date-time
+                              $ref: SummaryPackage
                 """
 
     resp = call_rpc(rpc.execution.ListPackagesRequest(id=get_id()))
     assert isinstance(resp, rpc.execution.ListPackagesResponse)
 
-    return jsonify([d.to_dict() for d in resp.data]), 200
+    ret: List[Dict] = []
+
+    for pck in resp.data:
+        sp = SummaryPackage(pck.id)
+        sp.name = pck.package_meta.name
+        sp.created = pck.package_meta.built
+        sp.projectId = pck.project_id
+        sp.executed = pck.package_meta.executed
+        ret.append(sp.to_dict())
+
+    return jsonify(ret), 200
 
 
-@app.route("/packages/<string:package_id>", methods=['DELETE'])
-def delete_package(package_id: str):
+@app.route("/packages/<string:packageId>", methods=['DELETE'])
+def delete_package(packageId: str):  # noqa
     """Delete package.
             ---
             delete:
               description: Delete package.
+              tags:
+                - Packages
               parameters:
                 - in: path
-                  name: package_id
+                  name: packageId
                   schema:
                     type: string
                   required: true
@@ -256,7 +316,7 @@ def delete_package(package_id: str):
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.DeletePackageRequest(id=get_id(), args=rpc.common.IdArgs(id=package_id)))
+    resp = call_rpc(rpc.execution.DeletePackageRequest(id=get_id(), args=rpc.common.IdArgs(id=packageId)))
 
     if resp.result:
         return "ok", 200
@@ -264,15 +324,17 @@ def delete_package(package_id: str):
         return jsonify(resp.messages), 501
 
 
-@app.route("/packages/<string:package_id>/start", methods=['PUT'])
-def package_start(package_id: str):
+@app.route("/packages/<string:packageId>/start", methods=['PUT'])
+def package_start(packageId: str):  # noqa
     """Run project
             ---
             put:
               description: Start execution of the execution package.
+              tags:
+                - Packages
               parameters:
                 - in: path
-                  name: package_id
+                  name: packageId
                   schema:
                     type: string
                   required: true
@@ -290,7 +352,7 @@ def package_start(package_id: str):
                             type: string
             """
 
-    resp = call_rpc(rpc.execution.RunPackageRequest(id=get_id(), args=rpc.common.IdArgs(id=package_id)))
+    resp = call_rpc(rpc.execution.RunPackageRequest(id=get_id(), args=rpc.execution.RunPackageArgs(id=packageId)))
 
     if resp.result:
         return "ok", 200
@@ -304,6 +366,8 @@ def packages_stop():
             ---
             put:
               description: Stops execution of the given package.
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
@@ -331,6 +395,8 @@ def packages_pause():
             ---
             put:
               description: Pause execution of the given package.
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
@@ -358,6 +424,8 @@ def packages_resume():
             ---
             put:
               description: Resumes execution of the given package.
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
@@ -379,33 +447,50 @@ def packages_resume():
         return jsonify(resp.messages), 501
 
 
-@app.route("/packages/active", methods=['GET'])
-def packages_active():
-    """Get id of the running package.
+@app.route("/packages/executioninfo", methods=['GET'])
+def packages_executioninfo():
+    """/packages/executioninfo
             ---
             get:
-              description: Get id of the running package.
+              description: /packages/executioninfo
+              tags:
+                - Packages
               responses:
                 200:
                   description: Ok
                   content:
-                    text/plain:
+                    application/json:
                       schema:
-                        type: string
-                        example: demo1
+                        $ref: ExecutionInfo
                 404:
                     description: No project running
             """
 
-    if package_info:
-        return package_info.package_id, 200
+    if package_state is None or package_state.state == common.PackageStateEnum.UNDEFINED:
+        ret = ExecutionInfo(ExecutionState.Undefined)
+    elif package_state.state == common.PackageStateEnum.RUNNING:
+        ret = ExecutionInfo(ExecutionState.Running, package_state.package_id)
+    elif package_state.state == common.PackageStateEnum.PAUSED:
+        ret = ExecutionInfo(ExecutionState.Paused, package_state.package_id)
+    elif package_state.state == common.PackageStateEnum.STOPPED:
+
+        if exception_message:
+            ret = ExecutionInfo(ExecutionState.Faulted, package_state.package_id, exception_message)
+        else:
+            ret = ExecutionInfo(ExecutionState.Completed, package_state.package_id)
     else:
-        return "No project running.", 404
+        return "Unhandled state", 501
+
+    return jsonify(ret.to_dict()), 200
 
 
 @app.route("/swagger/api/swagger.json", methods=["GET"])
 def get_swagger():
     return json.dumps(spec.to_dict())
+
+
+spec.components.schema(SummaryPackage.__name__, schema=SummaryPackage)
+spec.components.schema(ExecutionInfo.__name__, schema=ExecutionInfo)
 
 
 with app.test_request_context():
@@ -417,7 +502,7 @@ with app.test_request_context():
     spec.path(view=packages_stop)
     spec.path(view=packages_pause)
     spec.path(view=packages_resume)
-    spec.path(view=packages_active)
+    spec.path(view=packages_executioninfo)
 
 
 def main():

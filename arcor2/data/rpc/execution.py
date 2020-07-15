@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from typing import List, Optional
-from datetime import datetime
-
 from dataclasses import dataclass, field
+from datetime import datetime
+from typing import List, Optional
+
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import PackageState, ActionState, CurrentAction
+from arcor2.data.common import ActionState, CurrentAction, PackageState
 from arcor2.data.execution import PackageMeta
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
@@ -137,9 +137,14 @@ class RenamePackageResponse(Response):
 
 
 @dataclass
+class RunPackageArgs(IdArgs):
+    cleanup_after_run: bool = True
+
+
+@dataclass
 class RunPackageRequest(Request):
 
-    args: IdArgs
+    args: RunPackageArgs
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -215,3 +220,17 @@ class ResumePackageRequest(Request):
 class ResumePackageResponse(Response):
 
     response: str = field(default=ResumePackageRequest.request, init=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+@dataclass
+class TemporaryPackageRequest(Request):
+
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class TemporaryPackageResponse(Response):
+
+    response: str = field(default=TemporaryPackageRequest.request, init=False)

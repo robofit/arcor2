@@ -1,7 +1,7 @@
-from typing import Dict, Type, Set
+import importlib
 import inspect
 import pkgutil
-import importlib
+from typing import Dict, Set, Type
 
 # TODO just temporary solution - allow loading plugins based on env. var or from project service?
 from arcor2 import parameter_plugins

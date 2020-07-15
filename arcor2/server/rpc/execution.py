@@ -1,18 +1,11 @@
-import tempfile
-import os
-import base64
-import uuid
-
+import asyncio
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import rpc
-import arcor2.helpers as hlp
-from arcor2 import rest
-from arcor2.data import common
-
-from arcor2.server.execution import manager_request
-import arcor2.server.globals as glob
+from arcor2.exceptions import Arcor2Exception
+from arcor2.server import decorators, globals as glob
+from arcor2.server.execution import build_and_upload_package, run_temp_package
 
 
 async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient) -> rpc.execution.BuildProjectResponse:
@@ -23,29 +16,24 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient)
     :return:
     """
 
-    package_id = common.uid()
-
-    # call build service
-    # TODO store data in memory
-    with tempfile.TemporaryDirectory() as tmpdirname:
-
-        path = os.path.join(tmpdirname, "publish.zip")
-
-        await hlp.run_in_executor(rest.download, f"{glob.BUILDER_URL}/project/{req.args.project_id}/publish", path,
-                                  None, {"package_name": req.args.package_name})
-
-        with open(path, "rb") as zip_file:
-            b64_bytes = base64.b64encode(zip_file.read())
-            b64_str = b64_bytes.decode()
-
-    # send data to execution service
-    exe_req = rpc.execution.UploadPackageRequest(uuid.uuid4().int,
-                                                 args=rpc.execution.UploadPackageArgs(package_id, b64_str))
-    exe_resp = await manager_request(exe_req)
+    package_id = await build_and_upload_package(req.args.project_id, req.args.package_name)
 
     resp = rpc.execution.BuildProjectResponse()
     resp.data = rpc.execution.BuildProjectData(package_id)
-    resp.result = exe_resp.result
-    resp.messages = exe_resp.messages
-
+    # TODO broadcast new package_id using event?
     return resp
+
+
+@decorators.project_needed
+async def temporary_package_cb(req: rpc.execution.TemporaryPackageRequest, ui: WsClient) -> None:
+
+    assert glob.PROJECT
+
+    if glob.PROJECT.has_changes():
+        raise Arcor2Exception("Project has unsaved changes.")
+
+    package_id = await build_and_upload_package(glob.PROJECT.id,
+                                                f"Temporary package for project '{glob.PROJECT.name}'.")
+
+    asyncio.ensure_future(run_temp_package(package_id))
+    return None

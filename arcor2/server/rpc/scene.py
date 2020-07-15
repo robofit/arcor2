@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Set, Optional
 import asyncio
+import copy
 import functools
 from contextlib import asynccontextmanager
-import copy
+from typing import Optional, Set
 
 import quaternion  # type: ignore
+
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import aio_persistent_storage as storage, helpers as hlp
-from arcor2.data import rpc, events
 from arcor2.data import common, object_type
+from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
-
-from arcor2.server.robot import get_end_effector_pose
-from arcor2.server.decorators import scene_needed, no_project, no_scene
 from arcor2.server import globals as glob, notifications as notif
-from arcor2.server.robot import collision
-from arcor2.server.scene import add_object_to_scene, auto_add_object_to_scene, open_scene, add_service_to_scene,\
-    clear_scene, get_instance, scene_names, scenes
-from arcor2.server.project import scene_object_pose_updated, remove_object_references_from_projects,\
-    projects_using_object, associated_projects
+from arcor2.server.decorators import no_project, no_scene, scene_needed
 from arcor2.server.helpers import unique_name
-
+from arcor2.server.project import associated_projects, projects_using_object, remove_object_references_from_projects, \
+    scene_object_pose_updated
+from arcor2.server.robot import collision
+from arcor2.server.robot import get_end_effector_pose
+from arcor2.server.scene import add_object_to_scene, add_service_to_scene, auto_add_object_to_scene, clear_scene, \
+    get_instance, open_scene, scene_names, scenes
 
 OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 
@@ -62,7 +61,7 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
     :return:
     """
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't create scene while package runs.")
 
     assert glob.SCENE is None
@@ -77,6 +76,14 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
     glob.SCENE = common.Scene(common.uid(), req.args.name, desc=req.args.desc)
     asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
     return None
+
+
+async def notify_scene_closed(scene_id: str) -> None:
+
+    await notif.broadcast_event(events.SceneClosed())
+    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList)
+    await notif.broadcast_event(events.ShowMainScreenEvent(
+        data=events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList, scene_id)))
 
 
 @scene_needed
@@ -96,10 +103,11 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> None
     if req.dry_run:
         return None
 
+    scene_id = glob.SCENE.id
+
     await clear_scene()
     OBJECTS_WITH_UPDATED_POSE.clear()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneClosed()))
-    return None
+    asyncio.ensure_future(notify_scene_closed(scene_id))
 
 
 @scene_needed
@@ -119,7 +127,7 @@ async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> None:
 @no_project
 async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't open scene while package runs.")
 
     await open_scene(req.args.id)

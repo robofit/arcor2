@@ -1,16 +1,15 @@
 import abc
-from typing import Callable, Any, Dict, Union, Type
 import json
+from typing import Any, Callable, Dict, Type, Union
 
 from typed_ast import ast3 as ast
 
-from arcor2.exceptions import Arcor2Exception
 from arcor2.data.common import ActionParameter, Project, Scene
 from arcor2.data.object_type import ActionParameterMeta
-from arcor2.object_types import Generic
-from arcor2.services import Service
+from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
-
+from arcor2.object_types import Generic
+from arcor2.services.service import Service
 
 TypesDict = Dict[str, Union[Type[Generic], Type[Service]]]
 

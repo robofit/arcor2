@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Callable, Any, Union, Dict, Optional, Type
 import asyncio
 import shutil
+from typing import Any, Callable, Dict, Optional, Type, Union
 
-from arcor2 import service_types_utils as stu, object_types_utils as otu
-from arcor2.data.object_type import ObjectModel, ObjectTypeMeta, ObjectTypeMetaDict, ObjectActionsDict
-from arcor2.data.services import ServiceTypeMeta, ServiceTypeMetaDict
-from arcor2 import aio_persistent_storage as storage
-from arcor2.object_types import Robot
-from arcor2.exceptions import Arcor2Exception
-from arcor2.services import RobotService, Service
-from arcor2.object_types import Generic
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 import arcor2.helpers as hlp
+from arcor2 import aio_persistent_storage as storage
+from arcor2 import object_types_utils as otu, service_types_utils as stu
 from arcor2.data import events
-
+from arcor2.data.object_type import ObjectActionsDict, ObjectModel, ObjectTypeMeta, ObjectTypeMetaDict
+from arcor2.data.services import ServiceTypeMeta, ServiceTypeMetaDict
+from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types import Generic
+from arcor2.object_types import Robot
+from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server import globals as glob, settings
-from arcor2.server.robot import get_robot_meta
 from arcor2.server import notifications as notif
+from arcor2.server.robot import get_robot_meta
+from arcor2.services.robot_service import RobotService
+from arcor2.services.service import Service
 
 
-def find_robot_service() -> Union[None, RobotService]:
+def find_robot_service() -> Optional[RobotService]:
 
     for srv in glob.SERVICES_INSTANCES.values():
         if isinstance(srv, RobotService):
@@ -33,7 +33,10 @@ def find_robot_service() -> Union[None, RobotService]:
 
 def get_obj_type_name(object_id: str) -> str:
 
-    return glob.SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
+    try:
+        return glob.SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
+    except KeyError:
+        raise Arcor2Exception("Unknown object id.")
 
 
 def valid_object_types() -> ObjectTypeMetaDict:
@@ -84,7 +87,7 @@ async def get_service_types() -> None:
         glob.TYPE_DEF_DICT[srv_id.id] = type_def
 
         if issubclass(type_def, RobotService):
-            asyncio.ensure_future(get_robot_meta(type_def))
+            asyncio.ensure_future(get_robot_meta(type_def, srv_type.source))
 
     glob.SERVICE_TYPES = service_types
 
@@ -136,7 +139,7 @@ async def get_object_types() -> None:
             object_types[obj.id].object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
         if issubclass(type_def, Robot):
-            asyncio.ensure_future(get_robot_meta(type_def))
+            asyncio.ensure_future(get_robot_meta(type_def, obj.source))
             asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, type_def))
 
     # if description is missing, try to get it from ancestor(s)
@@ -191,8 +194,6 @@ async def get_object_actions() -> None:  # TODO do it in parallel
             await glob.logger.exception(f"Error while processing service type {service_type}")
 
     glob.ACTIONS = object_actions_dict
-
-    await notif.broadcast_event(events.ObjectTypesChangedEvent(data=list(object_actions_dict.keys())))
 
 
 async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Union[Robot, RobotService]:

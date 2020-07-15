@@ -1,16 +1,16 @@
 import asyncio
-from typing import Optional, List, get_type_hints, Set, AsyncIterator, Union
+from typing import AsyncIterator, List, Optional, Set, Union, get_type_hints
 
-from arcor2.data.common import SceneService, SceneObject, Scene
+from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu, settings
 from arcor2.data import events
+from arcor2.data.common import Scene, SceneObject, SceneService
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.services import Service, RobotService
 from arcor2.object_types import Generic
-from arcor2 import aio_persistent_storage as storage, helpers as hlp, object_types_utils as otu, settings
-
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.server.robot import collision
+from arcor2.services.robot_service import RobotService
+from arcor2.services.service import Service
 
 
 def instances_names() -> Set[str]:
@@ -212,7 +212,7 @@ async def auto_add_object_to_scene(obj_type_name: str, dry_run: bool = False) ->
     return None
 
 
-async def clear_scene() -> None:
+async def clear_scene(do_cleanup: bool = True) -> None:
 
     await glob.logger.info("Clearing the scene.")
     rs = osa.find_robot_service()
@@ -221,7 +221,7 @@ async def clear_scene() -> None:
             await collision(obj_inst, rs, remove=True)
     glob.SCENE_OBJECT_INSTANCES.clear()
 
-    if settings.CLEANUP_SERVICES:
+    if settings.CLEANUP_SERVICES and do_cleanup:
         await asyncio.gather(*[hlp.run_in_executor(srv.cleanup) for srv in glob.SERVICES_INSTANCES.values()])
 
     await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])

@@ -5,32 +5,35 @@
 import argparse
 import asyncio
 import functools
-import json
-import sys
-from typing import get_type_hints, List, Awaitable
 import inspect
+import json
 import os
 import shutil
+import sys
+import uuid
+from typing import get_type_hints
+
+from aiologger.levels import LogLevel  # type: ignore
+
+from aiorun import run  # type: ignore
+
+from dataclasses_jsonschema import ValidationError
 
 import websockets
 from websockets.server import WebSocketServerProtocol as WsClient
-from aiologger.levels import LogLevel  # type: ignore
-from dataclasses_jsonschema import ValidationError
-from aiorun import run  # type: ignore
 
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
 from arcor2 import aio_persistent_storage as storage
-from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
-from arcor2.data import events, common, compile_json_schemas
+from arcor2.data import common, compile_json_schemas, events
 from arcor2.data import rpc
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
+from arcor2.exceptions import Arcor2Exception
+from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
 from arcor2.parameter_plugins import PARAM_PLUGINS
-
-import arcor2.server.globals as glob
-import arcor2.server.objects_services_actions as osa
-from arcor2.server import execution as exe, notifications as notif, rpc as srpc, settings
+from arcor2.server import events as server_events, execution as exe, globals as glob, notifications as notif, \
+    objects_services_actions as osa, rpc as srpc, settings
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -47,7 +50,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
             if "event" in msg:
 
                 if glob.INTERFACES:
-                    await asyncio.wait([hlp.send_json_to_client(intf, message) for intf in glob.INTERFACES])
+                    await asyncio.gather(*[hlp.send_json_to_client(intf, message) for intf in glob.INTERFACES])
 
                 try:
                     evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
@@ -61,9 +64,26 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     glob.PACKAGE_STATE = evt.data
 
                     if evt.data.state == common.PackageStateEnum.STOPPED:
+
+                        if not glob.TEMPORARY_PACKAGE:
+                            # after (ordinary) package is finished, show list of packages
+                            glob.MAIN_SCREEN = \
+                                events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.PackagesList)
+                            await notif.broadcast_event(events.ShowMainScreenEvent(
+                                data=events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.PackagesList,
+                                                               evt.data.package_id)))
+
+                        # temporary package is handled elsewhere
+                        server_events.package_stopped.set()
+                        server_events.package_started.clear()
+
                         glob.CURRENT_ACTION = None
                         glob.ACTION_STATE = None
                         glob.PACKAGE_INFO = None
+
+                    else:
+                        server_events.package_stopped.clear()
+                        server_events.package_started.set()
 
                 elif isinstance(evt, events.ActionStateEvent):
                     glob.ACTION_STATE = evt.data
@@ -86,6 +106,18 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
 
 async def _initialize_server() -> None:
+
+    exe_version = await exe.manager_request(rpc.common.VersionRequest(uuid.uuid4().int))
+    assert isinstance(exe_version, rpc.common.VersionResponse)
+
+    """
+    Following check is especially useful when running server/execution in Docker containers.
+    Then it might easily happen that one tries to use different versions together.
+    """
+    try:
+        hlp.check_compatibility(arcor2.api_version(), exe_version.data.version)
+    except Arcor2Exception as e:
+        raise Arcor2Exception("ARServer/Execution API_VERSION mismatch.") from e
 
     while True:  # wait until Project service becomes available
         try:
@@ -116,24 +148,23 @@ async def register(websocket: WsClient) -> None:
     await glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
-    tasks: List[Awaitable] = []
-
     if glob.PROJECT:
         assert glob.SCENE
-        tasks.append(notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT))))
+        await notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT)))
     elif glob.SCENE:
-        tasks.append(notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
+        await notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE)))
+    elif glob.PACKAGE_INFO:
 
-    tasks.append(websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json()))
+        # this can't be done in parallel - ui expects this order of events
+        await websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
+        await websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json())
 
-    if glob.PACKAGE_INFO:
-        tasks.append(websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json()))
-    if glob.ACTION_STATE:
-        tasks.append(websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json()))
-    if glob.CURRENT_ACTION:
-        tasks.append(websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json()))
-
-    await asyncio.gather(*tasks)
+        if glob.ACTION_STATE:
+            await websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json())
+        if glob.CURRENT_ACTION:
+            await websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json())
+    else:
+        await notif.event(websocket, events.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
 
 
 async def unregister(websocket: WsClient) -> None:

@@ -3,27 +3,26 @@
 
 
 import asyncio
-from typing import Dict, Any
 import copy
-from contextlib import asynccontextmanager
 import inspect
+from contextlib import asynccontextmanager
+from typing import Any, Dict, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import object_types_utils as otu, helpers as hlp
-from arcor2.data import rpc, events, common, object_type
 from arcor2 import aio_persistent_storage as storage
+from arcor2 import helpers as hlp, object_types_utils as otu, transformations as tr
+from arcor2.data import common, events, object_type, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
-from arcor2.source.logic import program_src, SourceException
-
-from arcor2.server.decorators import scene_needed, project_needed, no_project
-from arcor2.server import objects_services_actions as osa, notifications as notif, globals as glob
-from arcor2.server.robot import get_end_effector_pose, get_robot_joints
-from arcor2.server.project import project_problems, open_project, project_names
-from arcor2.server.scene import open_scene, clear_scene, get_instance
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa, robot
+from arcor2.server.decorators import no_project, project_needed, scene_needed
 from arcor2.server.helpers import unique_name
+from arcor2.server.project import open_project, project_names, project_problems
+from arcor2.server.robot import get_end_effector_pose, get_robot_joints
+from arcor2.server.scene import clear_scene, get_instance, open_scene
+from arcor2.source.logic import SourceException, program_src
 
 
 def find_object_action(action: common.Action) -> object_type.ObjectAction:
@@ -126,6 +125,11 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
 
     action = glob.PROJECT.action(req.args.action_id)
 
+    obj_id, action_name = action.parse_type()
+
+    if obj_id in robot.move_in_progress:
+        raise Arcor2Exception("Robot is moving.")
+
     params: Dict[str, Any] = {}
 
     for param in action.parameters:
@@ -135,8 +139,6 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
         except ParameterPluginException as e:
             await glob.logger.error(e)
             raise Arcor2Exception(f"Failed to get value for parameter {param.id}.")
-
-    obj_id, action_name = action.parse_type()
 
     obj = get_instance(obj_id)
 
@@ -303,33 +305,25 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
     if req.args.new_parent_id == ap.parent:
         return None
 
+    check_ap_parent(req.args.new_parent_id)
+
+    if req.dry_run:
+        return
+
     if not ap.parent and req.args.new_parent_id:
         # AP position and all orientations will become relative to the parent
-        new_parent = glob.SCENE.object(req.args.new_parent_id)
-        ap.position = hlp.make_pose_rel(new_parent.pose, common.Pose(ap.position, common.Orientation())).position
-        for ori in ap.orientations:
-            ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
+        tr.make_global_ap_relative(glob.SCENE, glob.PROJECT, ap, req.args.new_parent_id)
 
     elif ap.parent and not req.args.new_parent_id:
         # AP position and all orientations will become absolute
-        old_parent = glob.SCENE.object(ap.parent)
-        ap.position = hlp.make_pose_abs(old_parent.pose, common.Pose(ap.position, common.Orientation())).position
-        for ori in ap.orientations:
-            ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
+        tr.make_relative_ap_global(glob.SCENE, glob.PROJECT, ap)
     else:
 
-        assert ap.parent is not None
+        assert ap.parent
 
         # AP position and all orientations will become relative to another parent
-        old_parent = glob.SCENE.object(ap.parent)
-        new_parent = glob.SCENE.object(req.args.new_parent_id)
-
-        abs_ap_pose = hlp.make_pose_abs(old_parent.pose, common.Pose(ap.position, common.Orientation()))
-        ap.position = hlp.make_pose_rel(new_parent.pose, abs_ap_pose).position
-
-        for ori in ap.orientations:
-            ori.orientation = hlp.make_orientation_abs(old_parent.pose.orientation, ori.orientation)
-            ori.orientation = hlp.make_orientation_rel(new_parent.pose.orientation, ori.orientation)
+        tr.make_relative_ap_global(glob.SCENE, glob.PROJECT, ap)
+        tr.make_global_ap_relative(glob.SCENE, glob.PROJECT, ap, req.args.new_parent_id)
 
     ap.parent = req.args.new_parent_id
     glob.PROJECT.update_modified()
@@ -373,9 +367,7 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
-
-        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
-        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
+        new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     ap.invalidate_joints()
     for joints in ap.robot_joints:
@@ -459,8 +451,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
-        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
-        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
+        new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     orientation = common.NamedOrientation(common.uid(), req.args.name, new_pose.orientation)
     ap.orientations.append(orientation)
@@ -487,9 +478,7 @@ async def update_action_point_orientation_using_robot_cb(
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
-
-        obj = glob.SCENE_OBJECT_INSTANCES[ap.parent]
-        new_pose = hlp.make_pose_rel(obj.pose, new_pose)
+        new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
     ori = glob.PROJECT.orientation(req.args.orientation_id)
     ori.orientation = new_pose.orientation
@@ -530,7 +519,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
 
 async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't open project while package runs.")
 
     # TODO validate using project_problems?
@@ -559,7 +548,7 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> 
 @no_project
 async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state != common.PackageStateEnum.STOPPED:
+    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
         raise Arcor2Exception("Can't create project while package runs.")
 
     unique_name(req.args.name, (await project_names()))
@@ -592,6 +581,14 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
     return None
 
 
+async def notify_project_closed(project_id: str) -> None:
+
+    await notif.broadcast_event(events.ProjectClosed())
+    glob.MAIN_SCREEN = events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ProjectsList)
+    await notif.broadcast_event(events.ShowMainScreenEvent(
+        data=events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ProjectsList, project_id)))
+
+
 @scene_needed
 @project_needed
 async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -> None:
@@ -604,20 +601,36 @@ async def close_project_cb(req: rpc.project.CloseProjectRequest, ui: WsClient) -
     if req.dry_run:
         return None
 
+    project_id = glob.PROJECT.id
+
     glob.PROJECT = None
     await clear_scene()
-    asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
+    asyncio.ensure_future(notify_project_closed(project_id))
 
     return None
+
+
+def check_ap_parent(parent: Optional[str]) -> None:
+
+    assert glob.SCENE
+    assert glob.PROJECT
+
+    if not parent:
+        return
+
+    if parent not in glob.SCENE.object_ids | glob.PROJECT.action_points_ids:
+        raise Arcor2Exception("AP has invalid parent ID (not an object or another AP).")
 
 
 @scene_needed
 @project_needed
 async def add_action_point_cb(req: rpc.project.AddActionPointRequest, ui: WsClient) -> None:
 
+    assert glob.SCENE
     assert glob.PROJECT
 
     unique_name(req.args.name, glob.PROJECT.action_points_names)
+    check_ap_parent(req.args.parent)
 
     if not hlp.is_valid_identifier(req.args.name):
         raise Arcor2Exception("Name has to be valid Python identifier.")
@@ -640,6 +653,10 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
     assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.id)
+
+    for proj_ap in glob.PROJECT.action_points:
+        if proj_ap.parent == ap.id:
+            raise Arcor2Exception(f"Can't remove parent of '{proj_ap.name}' AP.")
 
     for act in glob.PROJECT.actions():
         for param in act.parameters:

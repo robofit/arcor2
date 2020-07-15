@@ -3,10 +3,10 @@ from typing import Callable, List
 from typed_ast import ast3 as ast
 
 from arcor2.data.common import Project, Scene
-from arcor2.parameter_plugins.base import TypesDict, ParameterPlugin
-from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
-from arcor2.parameter_plugins.integer import get_min_max
 from arcor2.data.object_type import ActionParameterMeta
+from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
+from arcor2.parameter_plugins.integer import get_min_max
+from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 
 
 class DoublePlugin(ParameterPlugin):

@@ -1,8 +1,8 @@
 import arcor2.helpers as hlp
-from arcor2.source import SourceException
 from arcor2.object_types_utils import object_actions
-from arcor2.services import Service
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
+from arcor2.services.service import Service
+from arcor2.source import SourceException
 
 
 def check_service_type(service_type_source: str, type_name: str) -> None:

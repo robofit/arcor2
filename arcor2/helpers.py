@@ -1,27 +1,33 @@
-import traceback
-import time
-import sys
-from typing import Optional, Dict, Callable, Tuple, Type, Any, Awaitable, TypeVar, Set
-from types import ModuleType
-import json
 import asyncio
 import importlib
-import re
+import json
 import keyword
 import logging
+import os
+import re
+import sys
+import time
+import traceback
 from collections import deque
+from datetime import datetime, timezone
+from types import ModuleType
+from typing import Any, Awaitable, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
 
-from dataclasses_jsonschema import ValidationError
-
-import websockets
 from aiologger.formatters.base import Formatter  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 
-from arcor2.data.rpc.common import Request
+from dataclasses_jsonschema import ValidationError
+
+import semver  # type: ignore
+
+import websockets
+
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
-from arcor2.data.helpers import RPC_MAPPING, EVENT_MAPPING
+from arcor2.data.execution import PackageMeta
+from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
+from arcor2.data.rpc.common import Request
 from arcor2.exceptions import Arcor2Exception
-from arcor2.data.common import Pose, Position, Orientation
+from arcor2.settings import PROJECT_PATH
 
 
 # TODO what's wrong with following type?
@@ -272,66 +278,6 @@ async def run_in_executor(func, *args):
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 
-def make_position_rel(parent: Position, child: Position) -> Position:
-
-    p = Position()
-
-    p.x = child.x - parent.x
-    p.y = child.y - parent.y
-    p.z = child.z - parent.z
-    return p
-
-
-def make_orientation_rel(parent: Orientation, child: Orientation) -> Orientation:
-
-    p = Orientation()
-    p.set_from_quaternion(child.as_quaternion() / parent.as_quaternion())
-    return p
-
-
-def make_pose_rel(parent: Pose, child: Pose) -> Pose:
-    """
-    :param parent: e.g. scene object
-    :param child:  e.g. action point
-    :return: relative pose
-    """
-
-    p = Pose()
-    p.position = make_position_rel(parent.position, child.position).rotated(parent.orientation, True)
-    p.orientation = make_orientation_rel(parent.orientation, child.orientation)
-    return p
-
-
-def make_position_abs(parent: Position, child: Position) -> Position:
-
-    p = Position()
-    p.x = child.x + parent.x
-    p.y = child.y + parent.y
-    p.z = child.z + parent.z
-    return p
-
-
-def make_orientation_abs(parent: Orientation, child: Orientation) -> Orientation:
-
-    p = Orientation()
-    p.set_from_quaternion(child.as_quaternion()*parent.as_quaternion().conjugate().inverse())
-    return p
-
-
-def make_pose_abs(parent: Pose, child: Pose) -> Pose:
-    """
-    :param parent: e.g. scene object
-    :param child:  e.g. action point
-    :return: absolute pose
-    """
-
-    p = Pose()
-    p.position = child.position.rotated(parent.orientation)
-    p.position = make_position_abs(parent.position, p.position)
-    p.orientation = make_orientation_abs(parent.orientation, child.orientation)
-    return p
-
-
 T = TypeVar('T')
 
 
@@ -352,3 +298,42 @@ def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> T
         raise TypeDefException("Class is not of expected type.")
 
     return cls_def
+
+
+def get_package_meta_path(package_id: str) -> str:
+
+    return os.path.join(PROJECT_PATH, package_id, "package.json")
+
+
+def read_package_meta(package_id: str) -> PackageMeta:
+
+    try:
+        with open(get_package_meta_path(package_id)) as pkg_file:
+            return PackageMeta.from_json(pkg_file.read())
+    except (IOError, ValidationError):
+        return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
+
+
+def write_package_meta(package_id: str, meta: PackageMeta) -> None:
+
+    with open(get_package_meta_path(package_id), "w") as pkg_file:
+        pkg_file.write(meta.to_json())
+
+
+def check_compatibility(my_version: str, their_version: str) -> None:
+
+    try:
+        mv = semver.VersionInfo.parse(my_version)
+        tv = semver.VersionInfo.parse(their_version)
+    except ValueError as e:
+        raise Arcor2Exception from e
+
+    if mv.major != tv.major:
+        raise Arcor2Exception("Different major varsion.")
+
+    if mv.major == 0:
+        if mv.minor != tv.minor:
+            raise Arcor2Exception(f"Our version {my_version} is not compatible with {their_version}.")
+    else:
+        if mv.minor > tv.minor:
+            raise Arcor2Exception(f"Our version {my_version} is outdated for {their_version}.")

@@ -1,10 +1,9 @@
 import abc
-from typing import Any, List, Type
 import json
+from typing import Any, List, Type
 
-
+from arcor2.data.common import ActionParameter, Project, Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
-from arcor2.data.common import Project, Scene, ActionParameter
 
 
 def get_type_name(base: Type[ParameterPlugin]) -> str:

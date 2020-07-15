@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import List, Any, Iterator, Optional, Tuple, Set, Union
-import uuid
+from typing import Any, Iterator, List, Optional, Set, Tuple, Union
+
+from dataclasses_jsonschema import JsonSchemaMixin
 
 import quaternion  # type: ignore
-from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception
 
@@ -252,6 +253,10 @@ class Scene(JsonSchemaMixin):
         for obj in self.objects:
             yield obj.name
 
+    @property
+    def object_ids(self) -> Set[str]:
+        return {obj.id for obj in self.objects}
+
     def object(self, object_id: str) -> SceneObject:
 
         for obj in self.objects:
@@ -384,6 +389,10 @@ class Project(JsonSchemaMixin):
     def action_points_names(self) -> Set[str]:
         return {ap.name for ap in self.action_points}
 
+    @property
+    def action_points_ids(self) -> Set[str]:
+        return {ap.id for ap in self.action_points}
+
     def ap_and_joints(self, joints_id: str) -> Tuple[ProjectActionPoint, ProjectRobotJoints]:
 
         for ap in self.action_points:
@@ -467,6 +476,7 @@ class PackageStateEnum(Enum):
     RUNNING: str = "running"
     STOPPED: str = "stopped"
     PAUSED: str = "paused"
+    UNDEFINED: str = "undefined"
 
 
 class ActionStateEnum(Enum):
@@ -486,7 +496,8 @@ class ActionState(JsonSchemaMixin):
 @dataclass
 class PackageState(JsonSchemaMixin):
 
-    state: PackageStateEnum = PackageStateEnum.STOPPED
+    state: PackageStateEnum = PackageStateEnum.UNDEFINED
+    package_id: Optional[str] = None
 
 
 @dataclass

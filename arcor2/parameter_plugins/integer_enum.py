@@ -1,14 +1,16 @@
-from typing import get_type_hints, Callable, Optional, Set, Any
-from enum import Enum
 import json
 from dataclasses import dataclass
+from enum import Enum
+from typing import Any, Callable, Optional, Set, get_type_hints
 
-from typed_ast import ast3 as ast
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import Project, IntEnum, Scene
+from typed_ast import ast3 as ast
+
+from arcor2.data.common import IntEnum, Project, Scene
 from arcor2.data.object_type import ActionParameterMeta
-from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict, ParameterPluginException
+from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
+
 
 # TODO move IntEnum definition here?
 

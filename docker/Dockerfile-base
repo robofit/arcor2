@@ -21,6 +21,13 @@ RUN cd ~/ \
 	&& git checkout issue_3 \
 	&& pip install -e .
 
+RUN cd ~/ \
+	&& cd install \
+	&& git clone https://github.com/ZdenekM/dataclasses-jsonschema \
+	&& cd dataclasses-jsonschema \
+	&& git checkout issue-126 \
+	&& pip install -e .
+
 RUN mkdir -p ~/project
 ENV PYTHONPATH ~
 ENV ARCOR2_PROJECT_PATH /root/project

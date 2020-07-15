@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import common, execution
+from arcor2.data import common, execution, object_type
 
 
 def wo_suffix(name: str) -> str:
@@ -34,6 +34,26 @@ class Event(JsonSchemaMixin):
     event: str = field(default="", init=False)
     change_type: Optional[EventType] = None
     parent_id: Optional[str] = None
+
+
+@dataclass
+class ShowMainScreenData(JsonSchemaMixin):
+
+    class WhatEnum(common.StrEnum):
+
+        ScenesList: str = "ScenesList"
+        ProjectsList: str = "ProjectsList"
+        PackagesList: str = "PackagesList"
+
+    what: WhatEnum
+    highlight: Optional[str] = None
+
+
+@dataclass
+class ShowMainScreenEvent(Event):
+
+    data: Optional[ShowMainScreenData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 """
@@ -261,9 +281,9 @@ Objects
 
 
 @dataclass
-class ObjectTypesChangedEvent(Event):
+class ChangedObjectTypesEvent(Event):
 
-    data: List[str] = field(default_factory=list)  # changed object types
+    data: List[object_type.ObjectTypeMeta] = field(default_factory=list)  # changed object types
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -306,4 +326,83 @@ class RobotEefData(JsonSchemaMixin):
 class RobotEefEvent(Event):
 
     data: Optional[RobotEefData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class MoveEventType(common.StrEnum):
+    START: str = "start"
+    END: str = "end"
+    FAILED: str = "failed"
+
+
+@dataclass
+class RobotMoveToData(JsonSchemaMixin):
+
+    move_event_type: MoveEventType
+    robot_id: str
+
+
+@dataclass
+class RobotMoveToPoseData(RobotMoveToData):
+
+    end_effector_id: str
+    target_pose: common.Pose
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToPoseEvent(Event):
+
+    data: Optional[RobotMoveToPoseData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RobotMoveToJointsData(RobotMoveToData):
+
+    target_joints: List[common.Joint]
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToJointsEvent(Event):
+
+    data: Optional[RobotMoveToJointsData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RobotMoveToActionPointOrientationData(RobotMoveToData):
+
+    end_effector_id: str
+    orientation_id: str
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToActionPointOrientationEvent(Event):
+
+    data: Optional[RobotMoveToActionPointOrientationData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class RobotMoveToActionPointJointsData(RobotMoveToData):
+
+    joints_id: str
+    message: Optional[str] = None
+
+
+@dataclass
+class RobotMoveToActionPointJointsEvent(Event):
+
+    data: Optional[RobotMoveToActionPointJointsData] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from arcor2.object_types.upload import upload
 from arcor2.data.object_type import Box
+from arcor2.object_types.upload import upload
 
 
 def main() -> None:
