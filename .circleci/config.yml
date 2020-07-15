@@ -50,6 +50,11 @@ jobs:
             cd dataclasses-jsonschema
             git checkout issue-126
             pip install -e .
+            cd ..
+            git clone https://github.com/mbdevpl/horast.git
+            cd horast
+            git checkout issue_3
+            pip install -e .
 
 
       - save_cache:
