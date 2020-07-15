@@ -3,10 +3,11 @@ name: Publish Pre-releases
 on:
   push:
     branches:
-      - 'robofit/devel'
+      - devel
 
 jobs:
   deploy:
+    if: github.repository == 'robofit/arcor2'  # do not run job on forks
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
