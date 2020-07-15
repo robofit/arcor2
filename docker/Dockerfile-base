@@ -22,7 +22,6 @@ RUN cd ~/ \
 	&& pip install -e .
 
 RUN cd ~/ \
-	&& mkdir install \
 	&& cd install \
 	&& git clone https://github.com/ZdenekM/dataclasses-jsonschema \
 	&& cd dataclasses-jsonschema \
