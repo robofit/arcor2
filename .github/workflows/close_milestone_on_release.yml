@@ -1,0 +1,12 @@
+name: Close Milestone On Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Close Milestone With Tagging
+      uses: adlerhsieh/prepare-release@0.1.2
