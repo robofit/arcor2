@@ -1,7 +1,8 @@
 import pkgutil
-import pkg_resources
 import warnings
 from typing import Dict, NamedTuple, Set
+
+import pkg_resources
 
 
 class DynamicParamTuple(NamedTuple):
