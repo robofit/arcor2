@@ -1,4 +1,5 @@
 import pkgutil
+import pkg_resources
 import warnings
 from typing import Dict, NamedTuple, Set
 
@@ -38,7 +39,7 @@ def _version(file: str) -> str:
 
 
 def version() -> str:
-    return _version('VERSION')
+    return pkg_resources.require("arcor2")[0].version
 
 
 def api_version() -> str:
