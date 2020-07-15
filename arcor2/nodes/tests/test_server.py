@@ -12,7 +12,7 @@ import pytest  # type: ignore
 
 import websocket  # type: ignore
 
-from arcor2.data import common, events, rpc, object_type
+from arcor2.data import common, events, object_type, rpc
 from arcor2.nodes.project_mock import PORT as PROJECT_MOCK_PORT
 
 
@@ -355,4 +355,3 @@ def test_project_ap_rpcs(start_processes: None, ws_client: websocket.WebSocket, 
     event(ws_client, events.OpenProject)
 
     # TODO add object-AP, global AP, etc.
-
