@@ -8,13 +8,13 @@ import os
 import shutil
 import tempfile
 from datetime import datetime, timezone
-from typing import Set, Tuple
+from typing import Set, Tuple, Union
 
 from apispec import APISpec  # type: ignore
 
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 
-from flask import Flask, request, send_file
+from flask import Flask, Response, request, send_file
 
 from flask_cors import CORS  # type: ignore
 
@@ -53,8 +53,10 @@ spec = APISpec(
 app = Flask(__name__)
 CORS(app)
 
+RETURN_TYPE = Union[Tuple[str, int], Response]
 
-def _publish(project_id: str, package_name: str) -> Tuple[str, int]:
+
+def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
@@ -161,7 +163,7 @@ def _publish(project_id: str, package_name: str) -> Tuple[str, int]:
 
 
 @app.route("/project/<string:project_id>/publish", methods=['GET'])
-def project_publish(project_id: str) -> Tuple[str, int]:
+def project_publish(project_id: str) -> RETURN_TYPE:
     """Publish project
             ---
             get:
