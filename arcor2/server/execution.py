@@ -45,7 +45,7 @@ async def run_temp_package(package_id: str) -> None:
 
     glob.TEMPORARY_PACKAGE = False
 
-    await manager_request(rpc.execution.DeletePackageRequest(uuid.uuid4().int, args=rpc.execution.IdArgs(package_id)))
+    await manager_request(rpc.execution.DeletePackageRequest(uuid.uuid4().int, args=rpc.common.IdArgs(package_id)))
 
     await project.open_project(project_id)
 
@@ -53,7 +53,7 @@ async def run_temp_package(package_id: str) -> None:
     assert glob.PROJECT
 
     asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
-                                                                                               glob.PROJECT))))
+                                                                                               glob.PROJECT.project))))
 
 
 async def build_and_upload_package(project_id: str, package_name: str) -> str:

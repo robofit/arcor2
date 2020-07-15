@@ -1,7 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Set, Tuple
+from typing import List, NamedTuple, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -53,11 +53,17 @@ class IdArgs(JsonSchemaMixin):
 
 @dataclass
 class RobotArg(JsonSchemaMixin):
+
+    class RobotArgTuple(NamedTuple):
+
+        robot_id: str
+        end_effector: str
+
     robot_id: str = field(metadata=dict(description="Object id of the robot or robot_id within the robot service."))
     end_effector: str
 
-    def as_tuple(self) -> Tuple[str, str]:
-        return self.robot_id, self.end_effector
+    def as_tuple(self) -> RobotArgTuple:
+        return RobotArg.RobotArgTuple(self.robot_id, self.end_effector)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

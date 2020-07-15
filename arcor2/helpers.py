@@ -11,7 +11,7 @@ import traceback
 from collections import deque
 from datetime import datetime, timezone
 from types import ModuleType
-from typing import Any, Awaitable, Callable, Dict, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
 
 from aiologger.formatters.base import Formatter  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
@@ -25,18 +25,19 @@ import websockets
 from arcor2.data.events import Event, ProjectExceptionEvent, ProjectExceptionEventData
 from arcor2.data.execution import PackageMeta
 from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
-from arcor2.data.rpc.common import Request
+from arcor2.data.rpc.common import Request, Response
 from arcor2.exceptions import Arcor2Exception
 from arcor2.settings import PROJECT_PATH
 
 
-# TODO what's wrong with following type?
-# RPC_DICT_TYPE = Dict[Type[Request], Callable[[Request], Coroutine[Any, Any, Union[Response, RPC_RETURN_TYPES]]]]
-RPC_DICT_TYPE = Dict[Type[Request], Any]
+ReqT = TypeVar("ReqT", bound=Request)
+RespT = TypeVar("RespT", bound=Response)
 
-# TODO replace Any with WebsocketSomething
-# EVENT_DICT_TYPE = Dict[Type[Event], Callable[[Any, Event], Coroutine[Any, Any, None]]]
-EVENT_DICT_TYPE = Dict[Type[Event], Any]
+RPC_CB = Callable[[ReqT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, Optional[RespT]]]
+RPC_DICT_TYPE = Dict[Type[ReqT], RPC_CB]
+
+EventT = TypeVar("EventT", bound=Event)
+EVENT_DICT_TYPE = Dict[Type[EventT], Callable[[EventT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, None]]]
 
 LOG_FORMAT = '%(name)s - %(levelname)-8s: %(message)s'
 
@@ -183,12 +184,12 @@ async def server(client: Any,
                     resp = await rpc_dict[req_cls](req, client)
                 except Arcor2Exception as e:
                     await logger.debug(e, exc_info=True)
-                    resp = False, e.message
+                    resp = resp_cls()
+                    resp.result = False
+                    resp.messages = [e.message]
 
                 if resp is None:  # default response
                     resp = resp_cls()
-                elif isinstance(resp, tuple):
-                    resp = resp_cls(result=resp[0], messages=[resp[1]])
                 else:
                     assert isinstance(resp, resp_cls)
 
@@ -212,7 +213,7 @@ async def server(client: Any,
                             break
 
                     req_last_ts[req.request].append(now)
-                    req_per_sec = len(req_last_ts[req.request])/5.0
+                    req_per_sec = len(req_last_ts[req.request]) / 5.0
 
                     if req_per_sec > 2:
                         if req.request not in ignored_reqs:
@@ -243,7 +244,7 @@ async def server(client: Any,
                     await logger.error(f"Invalid event: {data}, error: {e}")
                     continue
 
-                await event_dict[event_cls](client, event)
+                await event_dict[event_cls](event, client)
 
             else:
                 await logger.error(f"unsupported format of message: {data}")
@@ -253,7 +254,7 @@ async def server(client: Any,
         await unregister(client)
 
 
-def format_stacktrace():
+def format_stacktrace() -> str:
     parts = ["Traceback (most recent call last):\n"]
     parts.extend(traceback.format_stack(limit=25)[:-2])
     parts.extend(traceback.format_exception(*sys.exc_info())[1:])
@@ -274,7 +275,10 @@ def print_exception(e: Exception) -> None:
         tb_file.write(format_stacktrace())
 
 
-async def run_in_executor(func, *args):
+S = TypeVar('S')
+
+
+async def run_in_executor(func: Callable[..., S], *args) -> S:
     return await asyncio.get_event_loop().run_in_executor(None, func, *args)
 
 

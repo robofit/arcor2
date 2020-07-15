@@ -1,7 +1,7 @@
 import functools
 import io
 import json
-from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 from PIL import Image, UnidentifiedImageError  # type: ignore
 
@@ -29,11 +29,14 @@ ParamsDict = Optional[Dict[str, Any]]
 
 SESSION = requests.session()
 
+F = TypeVar('F', bound=Callable[..., Any])
 
-def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None):
-    def _handle_exceptions(func):
+
+def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None) \
+        -> Callable[[F], F]:
+    def _handle_exceptions(func: F) -> F:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs) -> Any:
 
             try:
                 return func(*args, **kwargs)
@@ -43,11 +46,14 @@ def handle_exceptions(exception_type: Type[Arcor2Exception] = Arcor2Exception, m
                 else:
                     raise exception_type(e.message) from e
 
-        return wrapper
+        return cast(F, wrapper)
     return _handle_exceptions
 
 
-def convert_keys(d: Union[Dict, List], func: Callable[[str], str]) -> Union[Dict, List]:
+CK = TypeVar('CK', Dict[Any, Any], List[Any])
+
+
+def convert_keys(d: CK, func: Callable[[str], str]) -> CK:
 
     if isinstance(d, dict):
         new_dict = {}
@@ -117,7 +123,7 @@ def _send(url: str, op: Callable, data: OptionalData = None,
         raise RestException("Invalid JSON.", str(e)) from e
 
 
-def post(url: str, data: JsonSchemaMixin, params: ParamsDict = None):
+def post(url: str, data: JsonSchemaMixin, params: ParamsDict = None) -> None:
     _send(url, SESSION.post, data, params)
 
 
@@ -164,7 +170,7 @@ def put_returning_list(url: str, data: OptionalData = None,
     return d
 
 
-def delete(url: str):
+def delete(url: str) -> None:
 
     try:
         resp = SESSION.delete(url, timeout=TIMEOUT, headers=HEADERS)
@@ -174,14 +180,14 @@ def delete(url: str):
     handle_response(resp)
 
 
-def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> Union[Dict, List]:
+def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> CK:
 
     data = _get(url, body, params)
 
     if not isinstance(data, (list, dict)):
         raise RestException("Invalid data, not list or dict.")
 
-    return convert_keys(data, camel_case_to_snake_case)
+    return convert_keys(data, camel_case_to_snake_case)  # type: ignore # probably mypy bug?
 
 
 def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> requests.Response:

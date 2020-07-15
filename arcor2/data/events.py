@@ -143,6 +143,20 @@ class ActionChanged(Event):
 
 
 @dataclass
+class LogicItemChanged(Event):
+
+    data: Optional[common.LogicItem] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class ProjectConstantChanged(Event):
+
+    data: Optional[common.ProjectConstant] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class OrientationChanged(Event):
 
     data: Optional[common.NamedOrientation] = None

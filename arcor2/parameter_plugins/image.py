@@ -1,18 +1,20 @@
 import base64
 import io
 import json
+from typing import Any
 
 import PIL.Image  # type: ignore
 from PIL.Image import Image  # type: ignore
 
-from arcor2.data.common import Project, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import Scene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 
 
 class ImagePlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return Image
 
     @classmethod
@@ -20,7 +22,8 @@ class ImagePlugin(ParameterPlugin):
         return "image"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> Image:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+            -> Image:
         json_str = super(ImagePlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
         b64_bytes = json_str.encode()
         image_data = base64.b64decode(b64_bytes)

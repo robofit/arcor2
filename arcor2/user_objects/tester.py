@@ -11,7 +11,7 @@ class Tester(Generic):
     A generic tester
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(Tester, self).__init__(*args, **kwargs)
         self._cancel: bool = False
         self._param1: str = ""
@@ -44,9 +44,9 @@ class Tester(Generic):
         assert param1 == self._param1
         self._cancel = True
 
-    run_test.__action__ = ActionMetadata(blocking=True)
-    long_running_action.__action__ = ActionMetadata(blocking=True)
-    long_running_action_with_params.__action__ = ActionMetadata(blocking=True)
+    run_test.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    long_running_action.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    long_running_action_with_params.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
 
 Tester.CANCEL_MAPPING[Tester.long_running_action.__name__] = Tester.simple_cancel.__name__

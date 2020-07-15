@@ -150,7 +150,7 @@ async def register(websocket: WsClient) -> None:
 
     if glob.PROJECT:
         assert glob.SCENE
-        await notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT)))
+        await notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT.project)))
     elif glob.SCENE:
         await notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE)))
     elif glob.PACKAGE_INFO:
@@ -230,7 +230,7 @@ async def aio_main() -> None:
     )
 
 
-def main():
+def main() -> None:
 
     assert sys.version_info >= (3, 8)
 

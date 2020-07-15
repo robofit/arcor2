@@ -85,13 +85,14 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> 
 
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
 
-    assert obj_type.object_model and obj_type.object_model.mesh
+    assert obj_type.object_model
+    assert obj_type.object_model.mesh
 
     focus_points = obj_type.object_model.mesh.focus_points
 
     assert focus_points
 
-    if pt_idx < 0 or pt_idx > len(focus_points)-1:
+    if pt_idx < 0 or pt_idx > len(focus_points) - 1:
         raise Arcor2Exception("Index out of range.")
 
     if obj_id not in FOCUS_OBJECT:
@@ -118,7 +119,8 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
 
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
 
-    assert obj_type.object_model and obj_type.object_model.mesh
+    assert obj_type.object_model
+    assert obj_type.object_model.mesh
 
     focus_points = obj_type.object_model.mesh.focus_points
 

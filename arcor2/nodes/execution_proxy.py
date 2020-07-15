@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING, Tuple, Union
 
 from apispec import APISpec  # type: ignore
 
@@ -22,7 +22,7 @@ from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, Response, jsonify, request, send_file
 
 from flask_cors import CORS  # type: ignore
 
@@ -40,6 +40,9 @@ from arcor2.settings import PROJECT_PATH
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
+
+
+RespT = Union[Response, Tuple[str, int]]
 
 
 class ExecutionState(Enum):
@@ -98,7 +101,7 @@ package_info: Optional[execution.PackageInfo] = None
 exception_message: Optional[str] = None
 
 
-def ws_thread():
+def ws_thread() -> None:
 
     global package_info
     global package_state
@@ -151,7 +154,7 @@ def allowed_file(filename):
 
 
 @app.route("/packages/<string:packageId>", methods=['PUT'])
-def put_package(packageId: str):  # noqa
+def put_package(packageId: str) -> RespT:  # noqa
     """Put package
         ---
         put:
@@ -203,8 +206,8 @@ def put_package(packageId: str):  # noqa
             b64_str = b64_bytes.decode()
 
     resp = call_rpc(rpc.execution.UploadPackageRequest(
-            id=get_id(),
-            args=rpc.execution.UploadPackageArgs(packageId, b64_str)))
+        id=get_id(),
+        args=rpc.execution.UploadPackageArgs(packageId, b64_str)))
 
     if resp.result:
         return "ok", 200
@@ -213,7 +216,7 @@ def put_package(packageId: str):  # noqa
 
 
 @app.route("/packages/<string:packageId>", methods=['GET'])
-def get_package(packageId: str):  # noqa
+def get_package(packageId: str) -> RespT:  # noqa
     """Get execution package.
                 ---
                 get:
@@ -254,7 +257,7 @@ def get_package(packageId: str):  # noqa
 
 
 @app.route("/packages", methods=['GET'])
-def get_packages():
+def get_packages() -> RespT:
     """Gets summary for all stored execution packages.
                 ---
                 get:
@@ -289,7 +292,7 @@ def get_packages():
 
 
 @app.route("/packages/<string:packageId>", methods=['DELETE'])
-def delete_package(packageId: str):  # noqa
+def delete_package(packageId: str) -> RespT:  # noqa
     """Delete package.
             ---
             delete:
@@ -325,7 +328,7 @@ def delete_package(packageId: str):  # noqa
 
 
 @app.route("/packages/<string:packageId>/start", methods=['PUT'])
-def package_start(packageId: str):  # noqa
+def package_start(packageId: str) -> RespT:  # noqa
     """Run project
             ---
             put:
@@ -361,7 +364,7 @@ def package_start(packageId: str):  # noqa
 
 
 @app.route("/packages/stop", methods=['PUT'])
-def packages_stop():
+def packages_stop() -> RespT:
     """Stops running project
             ---
             put:
@@ -390,7 +393,7 @@ def packages_stop():
 
 
 @app.route("/packages/pause", methods=['PUT'])
-def packages_pause():
+def packages_pause() -> RespT:
     """Pauses running package.
             ---
             put:
@@ -419,7 +422,7 @@ def packages_pause():
 
 
 @app.route("/packages/resume", methods=['PUT'])
-def packages_resume():
+def packages_resume() -> RespT:
     """Resumes running package.
             ---
             put:
@@ -448,7 +451,7 @@ def packages_resume():
 
 
 @app.route("/packages/executioninfo", methods=['GET'])
-def packages_executioninfo():
+def packages_executioninfo() -> RespT:
     """/packages/executioninfo
             ---
             get:
@@ -485,7 +488,7 @@ def packages_executioninfo():
 
 
 @app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger():
+def get_swagger() -> str:
     return json.dumps(spec.to_dict())
 
 
@@ -505,7 +508,7 @@ with app.test_request_context():
     spec.path(view=packages_executioninfo)
 
 
-def main():
+def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument('-s', '--swagger', action="store_true", default=False)

@@ -1,5 +1,5 @@
 import abc
-from typing import FrozenSet, List
+from typing import List, Set
 
 from arcor2.data.common import Joint, Pose
 from arcor2.data.object_type import MeshFocusAction
@@ -19,7 +19,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def clear_collisions(self):
+    def clear_collisions(self) -> None:
         pass
 
     @abc.abstractmethod
@@ -32,7 +32,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_robot_ids(self) -> FrozenSet[str]:
+    def get_robot_ids(self) -> Set[str]:
         pass
 
     @abc.abstractmethod
@@ -43,7 +43,7 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         raise NotImplementedError("The robot can't be stopped.")
 
     @abc.abstractmethod
-    def get_end_effectors_ids(self, robot_id: str) -> FrozenSet[str]:
+    def get_end_effectors_ids(self, robot_id: str) -> Set[str]:
         pass
 
     @abc.abstractmethod
@@ -79,11 +79,11 @@ class RobotService(Service, metaclass=abc.ABCMeta):
     def focus(self, mfa: MeshFocusAction) -> Pose:
         pass
 
-    def inputs(self, robot_id: str) -> FrozenSet[str]:
-        return frozenset()
+    def inputs(self, robot_id: str) -> Set[str]:
+        return set()
 
-    def outputs(self, robot_id: str) -> FrozenSet[str]:
-        return frozenset()
+    def outputs(self, robot_id: str) -> Set[str]:
+        return set()
 
     def get_input(self, robot_id: str, input_id: str) -> float:
         if input_id not in self.inputs(robot_id):
@@ -97,12 +97,12 @@ class RobotService(Service, metaclass=abc.ABCMeta):
         return None
 
     @abc.abstractmethod
-    def grippers(self, robot_id: str) -> FrozenSet[str]:
-        return frozenset()
+    def grippers(self, robot_id: str) -> Set[str]:
+        return set()
 
     @abc.abstractmethod
-    def suctions(self, robot_id: str) -> FrozenSet[str]:
-        return frozenset()
+    def suctions(self, robot_id: str) -> Set[str]:
+        return set()
 
     @abc.abstractmethod
     def robot_joints(self, robot_id: str) -> List[Joint]:

@@ -59,7 +59,8 @@ async def add_service_to_scene(srv: SceneService, dry_run: bool = False) -> None
     return None
 
 
-async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=False, dry_run: bool = False):
+async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True, srv_obj_ok: bool = False,
+                              dry_run: bool = False) -> None:
     """
 
     :param obj:
@@ -121,7 +122,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
 
         srv_args: List[Service] = []
 
-        for name, ttype in get_type_hints(cls.__init__).items():
+        for _, ttype in get_type_hints(cls.__init__).items():
 
             # service arguments should be listed first
             if not issubclass(ttype, Service):
@@ -130,8 +131,8 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene=True, srv_obj_ok=Fa
             try:
                 srv_args.append(glob.SERVICES_INSTANCES[ttype.__name__])
             except KeyError:
-                return False, f"Object type {obj.type} has invalid typ annotation in the constructor, " \
-                              f"service {ttype.__name__} not available."
+                raise Arcor2Exception(f"Object type {obj.type} has invalid typ annotation in the constructor, "
+                                      f"service {ttype.__name__} not available.")
 
         try:
             obj_inst = cls(*srv_args, obj.id, obj.name, obj.pose, coll_model)  # type: ignore

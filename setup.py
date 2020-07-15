@@ -3,7 +3,10 @@ import arcor2
 
 setup(
     name='arcor2',
-    version=arcor2.version(),
+    version_config={
+        "version_format": "{tag}.dev{sha}",
+        "starting_version": "0.1.0"
+    },
     include_package_data=True,
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     package_data={"arcor2": ["py.typed"]},
@@ -21,11 +24,11 @@ setup(
                   ],
               },
     url='https://github.com/robofit/arcor2',
-    download_url=f'https://github.com/robofit/arcor2/archive/{arcor2.version()}.tar.gz',
     license='LGPL',
     author='Robo@FIT',
     author_email='imaterna@fit.vutbr.cz',
     description='',
+    setup_requires=['better-setuptools-git-version'],
     install_requires=[
         'dataclasses',
         'horast',
@@ -48,6 +51,7 @@ setup(
         'Pillow',
         'aiorun',
         'flask-cors',
+        'typing_inspect',
         'semver'
     ],
     extras_require={

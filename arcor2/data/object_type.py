@@ -6,6 +6,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import DataException
 from arcor2.data.common import ActionMetadata, Pose, Position
+from arcor2.exceptions import Arcor2Exception
 
 
 class Model3dType(Enum):
@@ -112,7 +113,7 @@ class ObjectModel(JsonSchemaMixin):
 
         models_list = [self.box, self.cylinder, self.sphere, self.mesh]
 
-        if models_list.count(None) != len(models_list)-1:
+        if models_list.count(None) != len(models_list) - 1:
             raise DataException("No model specified!")
 
 
@@ -169,9 +170,16 @@ class ObjectAction(JsonSchemaMixin):
     parameters: List[ActionParameterMeta] = field(default_factory=list)
     meta: ActionMetadata = field(default_factory=ActionMetadata)
     origins: Optional[str] = None
-    returns: Optional[str] = None
+    returns: List[str] = field(default_factory=list)  # list of returned types
     disabled: bool = False
     problem: Optional[str] = None
+
+    def parameter(self, param_name: str) -> ActionParameterMeta:
+
+        for param in self.parameters:
+            if param.name == param_name:
+                return param
+        raise Arcor2Exception("Parameter not found.")
 
 
 ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]

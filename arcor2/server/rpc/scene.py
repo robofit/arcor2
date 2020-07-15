@@ -5,7 +5,7 @@ import asyncio
 import copy
 import functools
 from contextlib import asynccontextmanager
-from typing import Optional, Set
+from typing import AsyncGenerator, Optional, Set
 
 import quaternion  # type: ignore
 
@@ -24,12 +24,13 @@ from arcor2.server.robot import collision
 from arcor2.server.robot import get_end_effector_pose
 from arcor2.server.scene import add_object_to_scene, add_service_to_scene, auto_add_object_to_scene, clear_scene, \
     get_instance, open_scene, scene_names, scenes
+from arcor2.services.service import Service
 
 OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 
 
 @asynccontextmanager
-async def managed_scene(scene_id: str, make_copy: bool = False):
+async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerator[common.Scene, None]:
 
     save_back = False
 
@@ -208,8 +209,9 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, 
 
     assert glob.SCENE
 
-    if not (any(obj.id == req.args.id for obj in glob.SCENE.objects) or
-            any(srv.type == req.args.id for srv in glob.SCENE.services)):
+    if not (any(obj.id == req.args.id
+                for obj in glob.SCENE.objects) or any(srv.type == req.args.id
+                                                      for srv in glob.SCENE.services)):
         raise Arcor2Exception("Unknown ID.")
 
     resp = rpc.scene.SceneObjectUsageResponse()
@@ -356,7 +358,7 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
     scene_object.pose.position.z = new_pose.position.z - position_delta.z
 
     scene_object.pose.orientation.set_from_quaternion(
-        new_pose.orientation.as_quaternion()*quaternion.quaternion(0, 1, 0, 0))
+        new_pose.orientation.as_quaternion() * quaternion.quaternion(0, 1, 0, 0))
     obj_inst.pose = scene_object.pose
 
     glob.SCENE.update_modified()
@@ -481,9 +483,13 @@ async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurat
     if req.dry_run:
         return None
 
-    # TODO destroy current instance
-    glob.SERVICES_INSTANCES[req.args.type] = await hlp.run_in_executor(glob.TYPE_DEF_DICT[req.args.type],
-                                                                       req.args.new_configuration)
+    srv_type_def = glob.TYPE_DEF_DICT[req.args.type]
+
+    assert issubclass(srv_type_def, Service)
+
+    await hlp.run_in_executor(glob.SERVICES_INSTANCES[req.args.type].cleanup)
+    glob.SERVICES_INSTANCES[req.args.type] = \
+        await hlp.run_in_executor(srv_type_def, req.args.new_configuration)
     srv.configuration_id = req.args.new_configuration
 
     glob.SCENE.update_modified()

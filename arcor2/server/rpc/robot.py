@@ -41,7 +41,7 @@ async def robot_joints_event(robot_id: str) -> None:
                                for ui in glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]])
 
         end = time.monotonic()
-        await asyncio.sleep(EVENT_PERIOD-(end-start))
+        await asyncio.sleep(EVENT_PERIOD - (end - start))
 
     del ROBOT_JOINTS_TASKS[robot_id]
 
@@ -80,7 +80,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
         await asyncio.gather(*[hlp.send_json_to_client(ui, evt_json) for ui in glob.ROBOT_EEF_REGISTERED_UIS[robot_id]])
 
         end = time.monotonic()
-        await asyncio.sleep(EVENT_PERIOD-(end-start))
+        await asyncio.sleep(EVENT_PERIOD - (end - start))
 
     del EEF_POSE_TASKS[robot_id]
 
@@ -246,8 +246,7 @@ async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: W
         if req.args.end_effector_id is None:
             raise Arcor2Exception("eef id has to be set.")
 
-        ap, _ = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
-        pose = ap.pose(req.args.orientation_id)
+        pose = glob.PROJECT.pose(req.args.orientation_id)
 
         # TODO check if the target pose is reachable (dry_run)
         asyncio.ensure_future(robot.move_to_ap_orientation(

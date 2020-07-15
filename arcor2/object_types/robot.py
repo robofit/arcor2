@@ -1,5 +1,5 @@
 import abc
-from typing import FrozenSet, List, Optional
+from typing import List, Optional, Set
 
 from arcor2.data.common import Joint, Pose
 from arcor2.object_types.generic import Generic
@@ -13,7 +13,7 @@ class Robot(Generic, metaclass=abc.ABCMeta):
     urdf_package_path: Optional[str] = None
 
     @abc.abstractmethod
-    def get_end_effectors_ids(self) -> FrozenSet[str]:
+    def get_end_effectors_ids(self) -> Set[str]:
         pass
 
     @abc.abstractmethod
@@ -25,12 +25,12 @@ class Robot(Generic, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def grippers(self) -> FrozenSet[str]:
-        return frozenset()
+    def grippers(self) -> Set[str]:
+        return set()
 
     @abc.abstractmethod
-    def suctions(self) -> FrozenSet[str]:
-        return frozenset()
+    def suctions(self) -> Set[str]:
+        return set()
 
     def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
         """

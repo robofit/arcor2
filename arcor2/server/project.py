@@ -1,9 +1,9 @@
 import asyncio
-from typing import AsyncIterator, Dict, List, Set
+from typing import AsyncIterator, Dict, List, Set, Union
 
-import arcor2.aio_persistent_storage as storage
-from arcor2.data import events
-from arcor2.data.common import ActionIOEnum, Project, Scene
+from arcor2 import aio_persistent_storage as storage, helpers as hlp
+from arcor2.cached import CachedProject, UpdateableCachedProject
+from arcor2.data import common, events, object_type
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
@@ -16,6 +16,96 @@ async def close_project(do_cleanup: bool = True) -> None:
     glob.PROJECT = None
     await clear_scene(do_cleanup)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
+
+
+def check_action_params(scene: common.Scene, project: CachedProject, action: common.Action,
+                        object_action: object_type.ObjectAction) -> None:
+
+    _, action_type = action.parse_type()
+
+    assert action_type == object_action.name
+
+    if len(object_action.parameters) != len(action.parameters):
+        raise Arcor2Exception("Unexpected number of parameters.")
+
+    for req_param in object_action.parameters:
+
+        param = action.parameter(req_param.name)
+
+        if param.type == common.ActionParameter.TypeEnum.CONSTANT:
+
+            const = project.constant(param.value)
+
+            param_meta = object_action.parameter(param.id)
+            if param_meta.type != const.type:
+                raise Arcor2Exception("Param type does not match constant type.")
+
+        elif param.type == common.ActionParameter.TypeEnum.LINK:
+
+            assert param.type is None
+
+            parsed_link = param.parse_link()
+            outputs = project.action(parsed_link.action_id).flow(parsed_link.flow_name)
+
+            assert len(outputs) == len(object_action.returns)
+
+            param_meta = object_action.parameter(param.id)
+            if param_meta.type != object_action.returns[parsed_link.output_index]:
+                raise Arcor2Exception("Param type does not match action output type.")
+
+        else:
+
+            if param.type not in PARAM_PLUGINS:
+                raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has unknown type: {param.type}.")
+
+            try:
+                PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, scene, project, action.id, param.id)
+            except ParameterPluginException as e:
+                raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has invalid value. {str(e)}")
+
+
+def check_flows(parent: Union[CachedProject, common.ProjectFunction],
+                action: common.Action, action_meta: object_type.ObjectAction) -> None:
+    """
+    Raises exception if there is something wrong with flow(s).
+    :param parent:
+    :param action:
+    :param action_meta:
+    :return:
+    """
+
+    flow = action.flow()  # searches default flow (just this flow is supported so far)
+
+    if len(flow.outputs) != len(action_meta.returns):
+        raise Arcor2Exception("Number of the flow outputs does not match the number of action outputs.")
+
+    for output in flow.outputs:
+        if not hlp.is_valid_identifier(output):
+            raise Arcor2Exception(f"Output {output} is not a valid Python identifier.")
+
+    outputs: Set[str] = set()
+
+    for act in parent.actions:
+        for fl in act.flows:
+            for output in fl.outputs:
+                if output in outputs:
+                    raise Arcor2Exception(f"Output '{output}' is not unique.")
+
+
+def find_object_action(scene: common.Scene, action: common.Action) -> object_type.ObjectAction:
+
+    obj_id, action_type = action.parse_type()
+    obj = scene.object_or_service(obj_id)
+
+    if obj.type not in glob.ACTIONS:
+        raise Arcor2Exception("Unknown object/service type.")
+
+    for act in glob.ACTIONS[obj.type]:
+        if act.name == action_type:
+            if act.disabled:
+                raise Arcor2Exception("Action is disabled.")
+            return act
+    raise Arcor2Exception("Unknown type of action.")
 
 
 async def project_names() -> Set[str]:
@@ -55,7 +145,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
     async for project in projects_using_object_as_parent(glob.SCENE.id, obj_id):
 
-        action_ids: Set[str] = set()
+        # action_ids: Set[str] = set()
 
         for ap in project.action_points:
 
@@ -76,13 +166,9 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
             action_ids.update({act.id for act in ap.actions})
             """
 
-        valid_ids: Set[str] = action_ids | ActionIOEnum.set()
+        # valid_ids: Set[str] = action_ids | ActionIOEnum.set()
 
-        # remove invalid inputs/outputs
-        for ap in project.action_points:
-            for act in ap.actions:
-                act.inputs = [input for input in act.inputs if input.default in valid_ids]
-                act.outputs = [output for output in act.outputs if output.default in valid_ids]
+        # TODO remove invalid logic items
 
         await storage.update_project(project)
         updated_project_ids.add(project.id)
@@ -90,7 +176,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
     await glob.logger.info("Updated projects: {}".format(updated_project_ids))
 
 
-async def projects(scene_id: str) -> AsyncIterator[Project]:
+async def projects(scene_id: str) -> AsyncIterator[common.Project]:
 
     id_list = await storage.get_projects()
 
@@ -104,19 +190,16 @@ async def projects(scene_id: str) -> AsyncIterator[Project]:
         yield project
 
 
-def _project_using_object_as_parent(project: Project, obj_id: str) -> bool:
+def _project_using_object_as_parent(project: common.Project, obj_id: str) -> bool:
 
-    for ap in project.action_points_with_parent:
-
-        assert ap.parent
-
+    for ap in project.action_points:
         if ap.parent == obj_id:
             return True
 
     return False
 
 
-def _project_referencing_object(project: Project, obj_id: str) -> bool:
+def _project_referencing_object(project: common.Project, obj_id: str) -> bool:
 
     for ap in project.action_points:
         for action in ap.actions:
@@ -128,7 +211,7 @@ def _project_referencing_object(project: Project, obj_id: str) -> bool:
     return False
 
 
-async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[common.Project]:
     """
     Combines functionality of projects_using_object_as_parent and projects_referencing_object.
     :param scene_id:
@@ -141,21 +224,21 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Pro
             yield project
 
 
-async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIterator[common.Project]:
 
     async for project in projects(scene_id):
         if _project_using_object_as_parent(project, obj_id):
             yield project
 
 
-async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[Project]:
+async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[common.Project]:
 
     async for project in projects(scene_id):
         if _project_referencing_object(project, obj_id):
             yield project
 
 
-def project_problems(scene: Scene, project: Project) -> List[str]:
+def project_problems(scene: common.Scene, project: CachedProject) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
     scene_services: Set[str] = {srv.type for srv in scene.services}
@@ -183,7 +266,7 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
         for action in ap.actions:
 
             if action.id in action_ids:
-                problems.append(f"Action ID {action.name} of the {ap.name} is not unique.")
+                problems.append(f"Action {action.name} of the {ap.name} is not unique.")
 
             # check if objects have used actions
             obj_id, action_type = action.parse_type()
@@ -203,30 +286,19 @@ def project_problems(scene: Scene, project: Project) -> List[str]:
             else:
                 problems.append(f"Object type {scene_objects[obj_id]} does not have action {action_type} "
                                 f"used in {action.id}.")
+                continue
 
-            # check object's actions parameters
-            action_params: Dict[str, str] = \
-                {param.id: param.type for param in action.parameters}
-            ot_params: Dict[str, str] = {param.name: param.type for param in act.parameters
-                                         for act in glob.ACTIONS[os_type]}
-
-            if action_params != ot_params:
-                problems.append(f"Action ID {action.id} of type {action.type} has invalid parameters.")
-
-            # TODO validate parameter values / instances (for value) are not available here / how to solve it?
-            for param in action.parameters:
-                try:
-                    PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, scene, project, action.id, param.id)
-                except ParameterPluginException:
-                    problems.append(f"Parameter {param.id} of action {act.name} "
-                                    f"has invalid value: '{param.value}'.")
+            try:
+                check_action_params(scene, project, action, act)
+            except Arcor2Exception as e:
+                problems.append(e.message)
 
     return problems
 
 
 async def open_project(project_id: str) -> None:
 
-    project = await storage.get_project(project_id)
+    project = UpdateableCachedProject(await storage.get_project(project_id))
 
     if glob.SCENE:
         if glob.SCENE.id != project.scene_id:

@@ -35,6 +35,8 @@ class Generic(metaclass=abc.ABCMeta):
 
     @classmethod
     def description(cls) -> str:  # TODO mixin with common stuff for objects/services?
+        if not cls.__doc__:
+            return "No description available."
         return parse_docstring(cls.__doc__)["short_description"]
 
     def scene_object(self) -> SceneObject:

@@ -8,13 +8,13 @@ import os
 import shutil
 import tempfile
 from datetime import datetime, timezone
-from typing import Set
+from typing import Set, Tuple, Union
 
 from apispec import APISpec  # type: ignore
 
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 
-from flask import Flask, request, send_file
+from flask import Flask, Response, request, send_file
 
 from flask_cors import CORS  # type: ignore
 
@@ -24,6 +24,7 @@ import horast
 
 import arcor2
 from arcor2 import persistent_storage as ps
+from arcor2.cached import CachedProject
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
@@ -52,13 +53,16 @@ spec = APISpec(
 app = Flask(__name__)
 CORS(app)
 
+RETURN_TYPE = Union[Tuple[str, int], Response]
 
-def _publish(project_id: str, package_name: str):
+
+def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
         try:
             project = ps.get_project(project_id)
+            cached_project = CachedProject(project)
             scene = ps.get_scene(project.scene_id)
 
             project_dir = os.path.join(tmpdirname, "arcor2_project")
@@ -93,7 +97,7 @@ def _publish(project_id: str, package_name: str):
                     obj_types_with_models.add(obj_type.id)
 
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
-                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})
+                    obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})  # type: ignore
 
                     with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
                             as model_file:
@@ -116,7 +120,7 @@ def _publish(project_id: str, package_name: str):
             with open(os.path.join(project_dir, 'script.py'), "w") as script_file:
 
                 if project.has_logic:
-                    script_file.write(program_src(project, scene, built_in_types_names(), True))
+                    script_file.write(program_src(cached_project, scene, built_in_types_names(), True))
                 else:
                     try:
                         script = ps.get_project_sources(project.id).script
@@ -135,7 +139,7 @@ def _publish(project_id: str, package_name: str):
                         logger.info("Script not found on project service, creating one from scratch.")
 
                         # write script without the main loop
-                        script_file.write(program_src(project, scene, built_in_types_names(), False))
+                        script_file.write(program_src(cached_project, scene, built_in_types_names(), False))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
                 res.write(derived_resources_class(project))
@@ -154,12 +158,12 @@ def _publish(project_id: str, package_name: str):
             return str(e), 501
 
         archive_path = os.path.join(tmpdirname, "arcor2_project")
-        shutil.make_archive(archive_path, 'zip',  project_dir)
+        shutil.make_archive(archive_path, 'zip', project_dir)
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 
 
 @app.route("/project/<string:project_id>/publish", methods=['GET'])
-def project_publish(project_id: str):
+def project_publish(project_id: str) -> RETURN_TYPE:
     """Publish project
             ---
             get:
@@ -224,7 +228,7 @@ def project_script(project_id: str):
 
 
 @app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger():
+def get_swagger() -> str:
     return json.dumps(spec.to_dict())
 
 
@@ -233,7 +237,7 @@ with app.test_request_context():
     spec.path(view=project_script)
 
 
-def main():
+def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument('-s', '--swagger', action="store_true", default=False)

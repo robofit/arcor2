@@ -1,3 +1,5 @@
+from typing import Any
+
 from arcor2.data.common import StrEnum
 from arcor2.parameter_plugins.integer_enum import IntegerEnumPlugin
 
@@ -5,7 +7,7 @@ from arcor2.parameter_plugins.integer_enum import IntegerEnumPlugin
 class StringEnumPlugin(IntegerEnumPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return StrEnum
 
     @classmethod

@@ -5,7 +5,8 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from typed_ast import ast3 as ast
 
-from arcor2.data.common import Project, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import Scene
 from arcor2.data.object_type import ActionParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
@@ -72,7 +73,7 @@ def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, act
 class IntegerPlugin(ParameterPlugin):
 
     @classmethod
-    def type(cls):
+    def type(cls) -> Any:
         return int
 
     @classmethod
@@ -86,7 +87,8 @@ class IntegerPlugin(ParameterPlugin):
         get_min_max(IntegerPlugin, param_meta, action_method, action_node)
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) -> int:
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+            -> int:
         return cls.type()(super(IntegerPlugin, cls).value(type_defs, scene, project, action_id, parameter_id))
 
 
@@ -105,6 +107,6 @@ class IntegerListPlugin(ListParameterPlugin):
         super(IntegerListPlugin, cls).meta(param_meta, action_method, action_node)
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: Project, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
             -> List[int]:
         return super(IntegerListPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)

@@ -222,7 +222,8 @@ async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClien
     if not process_running():
         raise Arcor2Exception("Project not running.")
 
-    assert PROCESS is not None and PROCESS.stdin is not None
+    assert PROCESS is not None
+    assert PROCESS.stdin is not None
 
     if PROJECT_EVENT.data.state != PackageStateEnum.PAUSED:
         raise Arcor2Exception("Cannot resume.")

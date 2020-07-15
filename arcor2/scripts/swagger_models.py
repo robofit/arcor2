@@ -4,7 +4,7 @@
 from arcor2.data.utils import generate_swagger
 
 
-def main():
+def main() -> None:
 
     print(generate_swagger())
 

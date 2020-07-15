@@ -1,4 +1,5 @@
-from arcor2.data.common import Orientation, Pose, Position, Project, ProjectActionPoint, Scene
+from arcor2.cached import CachedProject
+from arcor2.data.common import Orientation, Pose, Position, ProjectActionPoint, Scene
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -44,7 +45,7 @@ def make_position_abs(parent: Position, child: Position) -> Position:
 def make_orientation_abs(parent: Orientation, child: Orientation) -> Orientation:
 
     p = Orientation()
-    p.set_from_quaternion(child.as_quaternion()*parent.as_quaternion().conjugate().inverse())
+    p.set_from_quaternion(child.as_quaternion() * parent.as_quaternion().conjugate().inverse())
     return p
 
 
@@ -62,7 +63,7 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     return p
 
 
-def make_relative_ap_global(scene: Scene, project: Project, ap: ProjectActionPoint) -> None:
+def make_relative_ap_global(scene: Scene, project: CachedProject, ap: ProjectActionPoint) -> None:
     """
     Transforms (in place) relative AP into a global one.
     :param scene:
@@ -94,7 +95,7 @@ def make_relative_ap_global(scene: Scene, project: Project, ap: ProjectActionPoi
     ap.parent = None
 
 
-def make_global_ap_relative(scene: Scene, project: Project, ap: ProjectActionPoint, parent_id: str) -> None:
+def make_global_ap_relative(scene: Scene, project: CachedProject, ap: ProjectActionPoint, parent_id: str) -> None:
     """
     Transforms (in place) global AP into a relative one with given parent (can be object or another AP).
     :param scene:
@@ -127,7 +128,7 @@ def make_global_ap_relative(scene: Scene, project: Project, ap: ProjectActionPoi
     ap.parent = parent_id
 
 
-def make_pose_rel_to_parent(scene: Scene, project: Project, pose: Pose, parent_id: str) -> Pose:
+def make_pose_rel_to_parent(scene: Scene, project: CachedProject, pose: Pose, parent_id: str) -> Pose:
     """
     Transforms global Pose into Pose that is relative to a given parent (can be object or AP).
     :param scene:

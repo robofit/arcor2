@@ -43,9 +43,9 @@ def empty_script_tree(add_main_loop: bool = True) -> Module:
 
     if add_main_loop:
         main_body.append(While(
-                        test=NameConstant(value=True),
-                        body=[Pass()],
-                        orelse=[]))
+            test=NameConstant(value=True),
+            body=[Pass()],
+            orelse=[]))
     else:
         """
         put there "pass" in order to make code valid even if there is no other statement (e.g. no object from resources)
@@ -385,7 +385,7 @@ def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
         make_executable(out_file)
 
 
-def clean(x):
+def clean(x: str) -> str:
     return re.sub('\W|^(?=\d)', '_', x)  # noqa
 
 
