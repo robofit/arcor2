@@ -1,4 +1,5 @@
 import abc
+import copy
 from typing import Dict, Optional
 
 from arcor2 import CancelDict, DynamicParamDict
@@ -26,7 +27,10 @@ class Generic(metaclass=abc.ABCMeta):
         self.id = obj_id
         self.name = name
         self.pose = pose
-        self.collision_model = collision_model
+        self.collision_model = copy.deepcopy(collision_model)
+        if self.collision_model:
+            # originally, each model has id == object type (e.g. BigBox) but here we need to set it so something unique
+            self.collision_model.id = self.id
         self._int_dict: Dict[str, int] = {}
 
     @classmethod
