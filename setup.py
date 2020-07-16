@@ -4,9 +4,9 @@ import arcor2
 setup(
     name='arcor2',
     version_config={
-        "version_format": "{tag}.dev{sha}",
-        "starting_version": "0.1.0"
-    },
+            "template": "{tag}.dev{cc}",
+            "starting_version": "0.1.0"
+        },
     include_package_data=True,
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     package_data={"arcor2": ["py.typed"]},
@@ -28,7 +28,7 @@ setup(
     author='Robo@FIT',
     author_email='imaterna@fit.vutbr.cz',
     description='',
-    setup_requires=['better-setuptools-git-version'],
+    setup_requires=['bad-setuptools-git-version'],
     install_requires=[
         'dataclasses',
         'horast',
