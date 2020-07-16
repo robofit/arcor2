@@ -72,6 +72,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             srv_path = os.path.join(project_dir, "services")
 
             os.makedirs(data_path)
+            os.makedirs(os.path.join(data_path, "models"))
             os.makedirs(ot_path)
             os.makedirs(srv_path)
 
@@ -99,7 +100,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
                     obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})  # type: ignore
 
-                    with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
+                    with open(os.path.join(data_path, "models", camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
                             as model_file:
                         model_file.write(obj_model.to_json())
 
