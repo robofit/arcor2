@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set, Tuple, ValuesView
@@ -38,13 +39,15 @@ class CachedProject:
 
     def __init__(self, project: Project):
 
-        self.id: str = project.id
-        self.name: str = project.name
-        self.scene_id: str = project.scene_id
-        self.desc: str = project.desc
-        self.has_logic: bool = project.has_logic
-        self.modified: Optional[datetime] = project.modified
-        self._int_modified: Optional[datetime] = project.int_modified
+        project_copy = deepcopy(project)  # do not modify original project
+
+        self.id: str = project_copy.id
+        self.name: str = project_copy.name
+        self.scene_id: str = project_copy.scene_id
+        self.desc: str = project_copy.desc
+        self.has_logic: bool = project_copy.has_logic
+        self.modified: Optional[datetime] = project_copy.modified
+        self._int_modified: Optional[datetime] = project_copy.int_modified
 
         self._action_points: Dict[str, ProjectActionPoint] = {}
 
@@ -56,7 +59,7 @@ class CachedProject:
         self._logic_items: Dict[str, LogicItem] = {}
         self._functions: Dict[str, ProjectFunction] = {}
 
-        for ap in project.action_points:
+        for ap in project_copy.action_points:
 
             if ap.id in self._action_points:
                 raise CachedProjectException(f"Duplicate AP id: {ap.id}.")
@@ -91,13 +94,13 @@ class CachedProject:
             ap.robot_joints.clear()
             ap.orientations.clear()
 
-        for constant in project.constants:
+        for constant in project_copy.constants:
             self._constants[constant.id] = constant
 
-        for logic_item in project.logic:
+        for logic_item in project_copy.logic:
             self._logic_items[logic_item.id] = logic_item
 
-        for function in project.functions:
+        for function in project_copy.functions:
             self._functions[function.id] = function
 
     @property
