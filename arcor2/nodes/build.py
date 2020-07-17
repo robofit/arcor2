@@ -72,6 +72,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             srv_path = os.path.join(project_dir, "services")
 
             os.makedirs(data_path)
+            os.makedirs(os.path.join(data_path, "models"))
             os.makedirs(ot_path)
             os.makedirs(srv_path)
 
@@ -99,7 +100,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
                     obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})  # type: ignore
 
-                    with open(os.path.join(data_path, camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
+                    with open(os.path.join(data_path, "models", camel_case_to_snake_case(obj_type.id) + ".json"), "w")\
                             as model_file:
                         model_file.write(obj_model.to_json())
 
@@ -142,13 +143,13 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                         script_file.write(program_src(cached_project, scene, built_in_types_names(), False))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
-                res.write(derived_resources_class(project))
+                res.write(derived_resources_class(cached_project))
 
             with open(os.path.join(project_dir, 'actions.py'), "w") as act:
-                act.write(global_actions_class(project))
+                act.write(global_actions_class(cached_project))
 
             with open(os.path.join(project_dir, 'action_points.py'), "w") as aps:
-                aps.write(global_action_points_class(project))
+                aps.write(global_action_points_class(cached_project))
 
             with open(os.path.join(project_dir, 'package.json'), "w") as pkg:
                 pkg.write(PackageMeta(package_name, datetime.now(tz=timezone.utc)).to_json())

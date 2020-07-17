@@ -230,7 +230,8 @@ class ResourcesBase(IntResources):
                 continue
 
             try:
-                models[obj.type] = self.read_project_data(hlp.camel_case_to_snake_case(obj.type), ObjectModel).model()
+                models[obj.type] = self.read_project_data("models/" + hlp.camel_case_to_snake_case(obj.type),
+                                                          ObjectModel).model()
             except IOError:
                 models[obj.type] = None
 
