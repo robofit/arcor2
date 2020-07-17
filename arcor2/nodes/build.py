@@ -143,13 +143,13 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                         script_file.write(program_src(cached_project, scene, built_in_types_names(), False))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
-                res.write(derived_resources_class(project))
+                res.write(derived_resources_class(cached_project))
 
             with open(os.path.join(project_dir, 'actions.py'), "w") as act:
-                act.write(global_actions_class(project))
+                act.write(global_actions_class(cached_project))
 
             with open(os.path.join(project_dir, 'action_points.py'), "w") as aps:
-                aps.write(global_action_points_class(project))
+                aps.write(global_action_points_class(cached_project))
 
             with open(os.path.join(project_dir, 'package.json'), "w") as pkg:
                 pkg.write(PackageMeta(package_name, datetime.now(tz=timezone.utc)).to_json())

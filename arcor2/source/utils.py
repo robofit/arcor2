@@ -16,7 +16,8 @@ from typed_ast.ast3 import AST, Assert, Assign, Attribute, Call, ClassDef, Compa
 import typed_astunparse
 
 import arcor2.data.common
-from arcor2.data.common import ActionPoint, Project
+from arcor2.cached import CachedProject
+from arcor2.data.common import ActionPoint
 from arcor2.source import SCRIPT_HEADER, SourceException
 
 
@@ -389,7 +390,7 @@ def clean(x: str) -> str:
     return re.sub('\W|^(?=\d)', '_', x)  # noqa
 
 
-def global_action_points_class(project: Project) -> str:
+def global_action_points_class(project: CachedProject) -> str:
     tree = Module(body=[])
     tree.body.append(ImportFrom(
         module=arcor2.data.common.__name__,
@@ -485,7 +486,7 @@ def global_action_points_class(project: Project) -> str:
     return tree_to_str(tree)
 
 
-def global_actions_class(project: Project) -> str:
+def global_actions_class(project: CachedProject) -> str:
     tree = Module(body=[])
     tree.body.append(ImportFrom(
         module='resources',
@@ -534,68 +535,68 @@ def global_actions_class(project: Project) -> str:
                 type_comment=None)],
         decorator_list=[])
 
-    for ap in project.action_points:
-        for action in ap.actions:
-            ac_obj, ac_type = action.parse_type()
+    for action in project.actions:
 
-            m = FunctionDef(
-                name=clean(action.name),
-                args=arguments(
-                    args=[arg(
-                        arg='self',
-                        annotation=None,
-                        type_comment=None)],
-                    vararg=None,
-                    kwonlyargs=[],
-                    kw_defaults=[],
-                    kwarg=None,
-                    defaults=[]),
-                body=[Expr(value=Call(
-                    func=Attribute(
-                        value=Subscript(
-                            value=Attribute(
-                                value=Attribute(
-                                    value=Name(
-                                        id='self',
-                                        ctx=Load()),
-                                    attr='_res',
-                                    ctx=Load()),
-                                attr='all_instances',
-                                ctx=Load()),
-                            slice=Index(value=Str(
-                                s=ac_obj,
-                                kind='')),
-                            ctx=Load()),
-                        attr=ac_type,
-                        ctx=Load()),
-                    args=[Attribute(
+        ac_obj, ac_type = action.parse_type()
+
+        m = FunctionDef(
+            name=clean(action.name),
+            args=arguments(
+                args=[arg(
+                    arg='self',
+                    annotation=None,
+                    type_comment=None)],
+                vararg=None,
+                kwonlyargs=[],
+                kw_defaults=[],
+                kwarg=None,
+                defaults=[]),
+            body=[Expr(value=Call(
+                func=Attribute(
+                    value=Subscript(
                         value=Attribute(
-                            value=Name(
-                                id='self',
+                            value=Attribute(
+                                value=Name(
+                                    id='self',
+                                    ctx=Load()),
+                                attr='_res',
                                 ctx=Load()),
-                            attr='_res',
+                            attr='all_instances',
                             ctx=Load()),
-                        attr=clean(action.name),
-                        ctx=Load())],
-                    keywords=[]))],
-                decorator_list=[],
-                returns=None,
-                type_comment=None)
+                        slice=Index(value=Str(
+                            s=ac_obj,
+                            kind='')),
+                        ctx=Load()),
+                    attr=ac_type,
+                    ctx=Load()),
+                args=[Attribute(
+                    value=Attribute(
+                        value=Name(
+                            id='self',
+                            ctx=Load()),
+                        attr='_res',
+                        ctx=Load()),
+                    attr=clean(action.name),
+                    ctx=Load())],
+                keywords=[]))],
+            decorator_list=[],
+            returns=None,
+            type_comment=None)
 
-            cls_def.body.append(m)
+        cls_def.body.append(m)
 
     tree.body.append(cls_def)
     return tree_to_str(tree)
 
 
-def derived_resources_class(project: Project) -> str:
+def derived_resources_class(project: CachedProject) -> str:
     # TODO temporary and ugly solution of circular import
     import arcor2.resources
     from arcor2.resources import ResourcesBase
 
     tree = Module(body=[])
 
-    parameters = [(act.id, clean(act.name)) for aps in project.action_points for act in aps.actions]
+    parameters = [(act.id, clean(act.name)) for act in project.actions]
 
     add_import(tree, arcor2.resources.__name__, ResourcesBase.__name__)
 
