@@ -144,7 +144,6 @@ class Pose(JsonSchemaMixin):
 @dataclass
 class ActionMetadata(JsonSchemaMixin):
 
-    free: bool = False
     blocking: bool = False
     composite: bool = False
     blackbox: bool = False
