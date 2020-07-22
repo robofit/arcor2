@@ -172,10 +172,6 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Type[Ge
 
         meta: ActionMetadata = method_def.__action__
 
-        if not issubclass(type_def, GenericWithPose):
-            # actions of object without pose are automatically set as free
-            meta.free = True
-
         data = ObjectAction(name=method_name, meta=meta)
 
         if method_name in type_def.CANCEL_MAPPING:

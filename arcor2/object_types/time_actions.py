@@ -51,6 +51,6 @@ class TimeActions(Generic):
         """
         return time.time_ns()
 
-    sleep.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
-    rate.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
-    time_ns.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
+    sleep.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    rate.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    time_ns.__action__ = ActionMetadata(blocking=True)  # type: ignore
