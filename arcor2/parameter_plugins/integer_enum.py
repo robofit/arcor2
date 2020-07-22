@@ -7,8 +7,8 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from typed_ast import ast3 as ast
 
-from arcor2.cached import CachedProject
-from arcor2.data.common import IntEnum, Scene
+from arcor2.cached import CachedProject as CProject, CachedScene as CScene
+from arcor2.data.common import IntEnum
 from arcor2.data.object_type import ActionParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 
@@ -45,13 +45,13 @@ class IntegerEnumPlugin(ParameterPlugin):
         param_meta.extra = IntegerEnumExtra(ttype.set()).to_json()
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) \
             -> Enum:
 
         action = project.action(action_id)
         param = action.parameter(parameter_id)
         obj_id, action_type = action.parse_type()
-        obj_type = type_defs[scene.object_or_service(obj_id).type]
+        obj_type = type_defs[scene.object(obj_id).type]
 
         method = getattr(obj_type, action_type)
         ttype = get_type_hints(method)[param.id]

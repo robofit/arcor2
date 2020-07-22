@@ -25,7 +25,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
-from arcor2 import aio_persistent_storage as storage
+from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data import common, compile_json_schemas, events
 from arcor2.data import rpc
 from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
@@ -127,10 +127,7 @@ async def _initialize_server() -> None:
             print(e.message)
             await asyncio.sleep(1)
 
-    # this has to be done sequentially as objects might depend on services so (all) services has to be known first
-    await osa.get_service_types()
     await osa.get_object_types()
-    await osa.get_object_actions()
 
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=glob.VERBOSE)
@@ -150,9 +147,10 @@ async def register(websocket: WsClient) -> None:
 
     if glob.PROJECT:
         assert glob.SCENE
-        await notif.event(websocket, events.OpenProject(data=events.OpenProjectData(glob.SCENE, glob.PROJECT.project)))
+        await notif.event(websocket,
+                          events.OpenProject(data=events.OpenProjectData(glob.SCENE.scene, glob.PROJECT.project)))
     elif glob.SCENE:
-        await notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE)))
+        await notif.event(websocket, events.OpenScene(data=events.OpenSceneData(glob.SCENE.scene)))
     elif glob.PACKAGE_INFO:
 
         # this can't be done in parallel - ui expects this order of events

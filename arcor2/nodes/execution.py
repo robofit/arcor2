@@ -34,7 +34,7 @@ from arcor2.data.events import ActionStateEvent, CurrentActionEvent, Event, Pack
 from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import RPC_DICT_TYPE, aiologger_formatter, read_package_meta, server, write_package_meta
-from arcor2.settings import CLEANUP_SERVICES_NAME, PROJECT_PATH
+from arcor2.settings import PROJECT_PATH
 from arcor2.source.utils import make_executable
 
 PORT = 6790
@@ -165,15 +165,10 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     except FileNotFoundError:
         raise Arcor2Exception("Not an execution package.")
 
-    env = os.environ.copy()
-    if not req.args.cleanup_after_run:
-        env[CLEANUP_SERVICES_NAME] = "False"
-
     await logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(script_path, stdin=asyncio.subprocess.PIPE,
                                                    stdout=asyncio.subprocess.PIPE,
-                                                   stderr=asyncio.subprocess.STDOUT,
-                                                   env=env)
+                                                   stderr=asyncio.subprocess.STDOUT)
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
 

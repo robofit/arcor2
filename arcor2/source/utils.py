@@ -359,7 +359,7 @@ def get_name_attr(name: str, attr: str, ctx: Union[Type[Load], Type[Store]] = Lo
         ctx=ctx())
 
 
-def tree_to_str(tree: Module) -> str:
+def tree_to_str(tree: AST) -> str:
     # TODO why this fails?
     # validator.visit(tree)
 

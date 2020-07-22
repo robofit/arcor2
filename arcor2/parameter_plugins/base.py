@@ -1,18 +1,17 @@
 import abc
 import json
-from typing import Any, Callable, Dict, Type, Union
+from typing import Any, Callable, Dict, Type
 
 from typed_ast import ast3 as ast
 
-from arcor2.cached import CachedProject
-from arcor2.data.common import ActionParameter, Scene
+from arcor2.cached import CachedProject, CachedScene
+from arcor2.data.common import ActionParameter
 from arcor2.data.object_type import ActionParameterMeta
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
-from arcor2.object_types import Generic
-from arcor2.services.service import Service
+from arcor2.object_types.abstract import Generic
 
-TypesDict = Dict[str, Union[Type[Generic], Type[Service]]]
+TypesDict = Dict[str, Type[Generic]]
 
 
 class ParameterPluginException(Arcor2Exception):
@@ -63,7 +62,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
     # TODO not instances but type_defs
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: CachedScene, project: CachedProject, action_id: str, parameter_id: str)\
             -> Any:
 
         param = project.action(action_id).parameter(parameter_id)
@@ -73,7 +72,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
             raise ParameterPluginException(f"Value of {action_id}/{parameter_id} is not a valid JSON.", e)
 
     @classmethod
-    def execution_value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str,
+    def execution_value(cls, type_defs: TypesDict, scene: CachedScene, project: CachedProject, action_id: str,
                         parameter_id: str) -> Any:
 
         return cls.value(type_defs, scene, project, action_id, parameter_id)

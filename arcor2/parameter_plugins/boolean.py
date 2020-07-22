@@ -1,7 +1,6 @@
 from typing import Any, List
 
-from arcor2.cached import CachedProject
-from arcor2.data.common import Scene
+from arcor2.cached import CachedProject as CProject, CachedScene as CScene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 
@@ -17,7 +16,7 @@ class BooleanPlugin(ParameterPlugin):
         return "boolean"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) \
             -> bool:
         return cls.type()(super(BooleanPlugin, cls).value(type_defs, scene, project, action_id, parameter_id))
 
@@ -33,6 +32,6 @@ class BooleanListPlugin(ListParameterPlugin):
         return get_type_name(BooleanPlugin)
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) \
             -> List[bool]:
         return super(BooleanListPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)

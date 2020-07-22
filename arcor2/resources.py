@@ -5,28 +5,25 @@
 import importlib
 import json
 import os
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Optional, Type, TypeVar
 
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
-import arcor2.object_types_utils as otu
 from arcor2 import helpers as hlp, transformations as tr
-from arcor2 import settings
 from arcor2.action import print_event
-from arcor2.cached import CachedProject
+from arcor2.cached import CachedProject, CachedScene
+from arcor2.clients import scene_service
 from arcor2.data.common import CurrentAction, Project, Scene
 from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
 from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception, ResourcesException
-from arcor2.object_types import Generic
-from arcor2.object_types_utils import built_in_types_names
+from arcor2.object_types.abstract import Generic, GenericWithPose
+from arcor2.object_types.utils import built_in_types_names
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.rest import convert_keys
-from arcor2.services.robot_service import RobotService
-from arcor2.services.service import Service
 
 
 # TODO for bound methods - check whether provided action point belongs to the object
@@ -39,45 +36,23 @@ class IntResources:
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
         self.project = CachedProject(project)
-        self.scene = scene
+        self.scene = CachedScene(scene)
 
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
 
-        self.services: Dict[str, Service] = {}
         self.objects: Dict[str, Generic] = {}
-
-        self.robot_service: Optional[RobotService] = None
 
         self.type_defs: TypesDict = {}
 
-        for srv in self.scene.services:
-
-            assert srv.type not in self.services, "Duplicate service {}!".format(srv.type)
-
-            module = importlib.import_module(
-                ResourcesBase.SERVICES_MODULE + "." + hlp.camel_case_to_snake_case(srv.type)
-            )
-            cls = getattr(module, srv.type)
-            assert issubclass(cls, Service)
-
-            srv_inst = cls(srv.configuration_id)
-            self.type_defs[cls.__name__] = cls
-            self.services[srv.type] = srv_inst
-
-            if isinstance(srv_inst, RobotService):
-                assert self.robot_service is None
-                self.robot_service = srv_inst
-
         built_in = built_in_types_names()
 
-        if self.robot_service:
-            self.robot_service.clear_collisions()
+        scene_service.delete_all_collisions()
 
         package_id = os.path.basename(os.getcwd())
         package_meta = hlp.read_package_meta(package_id)
         package_info_event = PackageInfoEvent()
-        package_info_event.data = PackageInfo(package_id, package_meta.name, self.scene, project)
+        package_info_event.data = PackageInfo(package_id, package_meta.name, scene, project)
 
         for scene_obj in self.scene.objects:
 
@@ -95,25 +70,12 @@ class IntResources:
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
-            if hasattr(cls, "from_services"):
-
-                obj_meta = otu.meta_from_def(cls)
-
-                args: List[Service] = []
-
-                for srv_type in obj_meta.needs_services:
-                    args.append(self.services[srv_type])
-
-                # TODO type hints
-                inst = cls(*args, scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type])
+            if issubclass(cls, GenericWithPose):
+                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type])
+            elif issubclass(cls, Generic):
+                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name)
             else:
-                # TODO type hints
-                inst = cls(scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type])
-
-            self.objects[scene_obj.id] = inst
-
-            if self.robot_service:
-                self.robot_service.add_collision(inst)
+                raise Arcor2Exception("Unknown base class.")
 
         for model in models.values():
 
@@ -130,8 +92,6 @@ class IntResources:
                 package_info_event.data.collision_models.meshes.append(model)
 
         print_event(package_info_event)
-
-        self.all_instances: Dict[str, Union[Generic, Service]] = dict(**self.objects, **self.services)
 
     def make_all_poses_absolute(self) -> None:
         """
@@ -151,17 +111,6 @@ class IntResources:
 
         if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
             hlp.print_exception(ex_type(ex_value))
-
-        if self.robot_service:
-            try:
-                for obj in self.objects.values():
-                    self.robot_service.remove_collision(obj)
-            except Arcor2Exception as e:
-                hlp.print_exception(e)
-
-        if settings.CLEANUP_SERVICES:
-            for srv in self.services.values():
-                srv.cleanup()
 
         for obj in self.objects.values():
             obj.cleanup()

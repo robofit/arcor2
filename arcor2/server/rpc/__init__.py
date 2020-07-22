@@ -3,6 +3,11 @@ from arcor2.server.rpc import objects
 from arcor2.server.rpc import project
 from arcor2.server.rpc import robot
 from arcor2.server.rpc import scene
-from arcor2.server.rpc import services
 
-__all__ = ["execution", "objects", "project", "robot", "scene", "services"]
+__all__ = [
+    execution.__name__,
+    objects.__name__,
+    project.__name__,
+    robot.__name__,
+    scene.__name__
+]

@@ -1,10 +1,8 @@
-import json
 from typing import Any
 
-from arcor2.cached import CachedProject
-from arcor2.data.common import ProjectRobotJoints, Scene
+from arcor2.cached import CachedProject as CProject, CachedScene as CScene
+from arcor2.data.common import ProjectRobotJoints
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
-from arcor2.services.robot_service import RobotService
 
 
 class JointsPlugin(ParameterPlugin):
@@ -18,7 +16,7 @@ class JointsPlugin(ParameterPlugin):
         return "joints"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) -> \
+    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) -> \
             ProjectRobotJoints:
 
         ap, action = project.action_point_and_action(action_id)
@@ -26,17 +24,6 @@ class JointsPlugin(ParameterPlugin):
         joints_id = cls.param_value(param)
 
         robot_id, action_method_name = action.parse_type()
-        robot_type = scene.object_or_service(robot_id)
-
-        if issubclass(type_defs[robot_type.type], RobotService):
-
-            for param in action.parameters:
-                if param.id == "robot_id":
-                    robot_id = json.loads(param.value)
-                    break
-            else:
-                raise ParameterPluginException(f"Parameter {param.id} of action {action.id} depends on"
-                                               f" 'robot_id' parameter, which could not be found.")
 
         joints = project.joints(joints_id)
 
@@ -50,7 +37,7 @@ class JointsPlugin(ParameterPlugin):
         return value.to_json()
 
     @classmethod
-    def uses_robot_joints(cls, project: CachedProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+    def uses_robot_joints(cls, project: CProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
 
         param = project.action(action_id).parameter(parameter_id)
         value_id = cls.param_value(param)

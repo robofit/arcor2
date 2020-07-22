@@ -1,5 +1,6 @@
 from arcor2.data.object_type import ObjectTypeMeta
-from arcor2.source.object_types import check_object_type, new_object_type_source
+from arcor2.source.object_types import check_object_type, new_object_type
+from arcor2.source.utils import tree_to_str
 
 
 def test_meta_to_source() -> None:
@@ -7,5 +8,5 @@ def test_meta_to_source() -> None:
     parent = ObjectTypeMeta(type="Generic")
     child = ObjectTypeMeta(type="NewType", description="blabla bla", base="Generic")
 
-    source = new_object_type_source(parent, child)
+    source = tree_to_str(new_object_type(parent, child))
     check_object_type(source, "NewType")

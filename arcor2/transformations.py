@@ -1,5 +1,5 @@
-from arcor2.cached import CachedProject
-from arcor2.data.common import Orientation, Pose, Position, ProjectActionPoint, Scene
+from arcor2.cached import CachedProject, CachedScene
+from arcor2.data.common import Orientation, Pose, Position, ProjectActionPoint
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -63,7 +63,7 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     return p
 
 
-def make_relative_ap_global(scene: Scene, project: CachedProject, ap: ProjectActionPoint) -> None:
+def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: ProjectActionPoint) -> None:
     """
     Transforms (in place) relative AP into a global one.
     :param scene:
@@ -76,7 +76,10 @@ def make_relative_ap_global(scene: Scene, project: CachedProject, ap: ProjectAct
         return
 
     if ap.parent in scene.object_ids:
-        old_parent_pose = scene.object(ap.parent).pose
+        parent_obj = scene.object(ap.parent)
+        if not parent_obj.pose:
+            raise Arcor2Exception("Parent object does not have pose!")
+        old_parent_pose = parent_obj.pose
     elif ap.parent in project.action_points_ids:
         old_parent_pose = Pose(project.action_point(ap.parent).position, Orientation())
     else:
@@ -95,7 +98,7 @@ def make_relative_ap_global(scene: Scene, project: CachedProject, ap: ProjectAct
     ap.parent = None
 
 
-def make_global_ap_relative(scene: Scene, project: CachedProject, ap: ProjectActionPoint, parent_id: str) -> None:
+def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: ProjectActionPoint, parent_id: str) -> None:
     """
     Transforms (in place) global AP into a relative one with given parent (can be object or another AP).
     :param scene:
@@ -108,7 +111,10 @@ def make_global_ap_relative(scene: Scene, project: CachedProject, ap: ProjectAct
     assert project.scene_id == scene.id
 
     if parent_id in scene.object_ids:
-        new_parent_pose = scene.object(parent_id).pose
+        parent_obj = scene.object(parent_id)
+        if not parent_obj.pose:
+            raise Arcor2Exception("Parent object does not have pose!")
+        new_parent_pose = parent_obj.pose
     elif parent_id in project.action_points_ids:
 
         parent_ap = project.action_point(parent_id)
@@ -128,7 +134,7 @@ def make_global_ap_relative(scene: Scene, project: CachedProject, ap: ProjectAct
     ap.parent = parent_id
 
 
-def make_pose_rel_to_parent(scene: Scene, project: CachedProject, pose: Pose, parent_id: str) -> Pose:
+def make_pose_rel_to_parent(scene: CachedScene, project: CachedProject, pose: Pose, parent_id: str) -> Pose:
     """
     Transforms global Pose into Pose that is relative to a given parent (can be object or AP).
     :param scene:
@@ -139,7 +145,10 @@ def make_pose_rel_to_parent(scene: Scene, project: CachedProject, pose: Pose, pa
     """
 
     if parent_id in scene.object_ids:
-        parent_pose = scene.object(parent_id).pose
+        parent_obj = scene.object(parent_id)
+        if not parent_obj.pose:
+            raise Arcor2Exception("Parent object does not have pose!")
+        parent_pose = parent_obj.pose
     elif parent_id in project.action_points_ids:
 
         parent_ap = project.action_point(parent_id)

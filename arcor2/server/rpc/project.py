@@ -11,12 +11,13 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import aio_persistent_storage as storage
-from arcor2 import helpers as hlp, object_types_utils as otu, transformations as tr
-from arcor2.cached import CachedProjectException, UpdateableCachedProject
+from arcor2 import helpers as hlp, transformations as tr
+from arcor2.cached import CachedProjectException, CachedScene, UpdateableCachedProject
+from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
+from arcor2.object_types import utils as otu
 from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.server import globals as glob, notifications as notif, robot
@@ -188,8 +189,9 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
         elif param.value:
 
             try:
-                params[param.id] = PARAM_PLUGINS[param.type].execution_value(glob.TYPE_DEF_DICT, glob.SCENE,
-                                                                             glob.PROJECT, action.id, param.id)
+                params[param.id] = PARAM_PLUGINS[param.type].execution_value(
+                    {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
+                    glob.SCENE, glob.PROJECT, action.id, param.id)
             except ParameterPluginException as e:
                 await glob.logger.error(e)
                 raise Arcor2Exception(f"Failed to get value for parameter {param.id}.")
@@ -209,7 +211,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
     return None
 
 
-async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[str, common.Scene]) -> \
+async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[str, CachedScene]) -> \
         rpc.project.ListProjectsResponseData:
 
     project = await storage.get_project(project_id)
@@ -228,7 +230,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
     try:
         async with scenes_lock:
             if project.scene_id not in scenes:
-                scenes[project.scene_id] = await storage.get_scene(project.scene_id)
+                scenes[project.scene_id] = CachedScene(await storage.get_scene(project.scene_id))
     except storage.PersistentStorageException:
         pd.problems.append("Scene does not exist.")
         return pd
@@ -254,7 +256,7 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -
     projects = await storage.get_projects()
 
     scenes_lock = asyncio.Lock()
-    scenes: Dict[str, common.Scene] = {}
+    scenes: Dict[str, CachedScene] = {}
 
     resp = rpc.project.ListProjectsResponse()
     tasks = [project_info(project_iddesc.id, scenes_lock, scenes) for project_iddesc in projects.items]
@@ -591,7 +593,7 @@ async def open_project_cb(req: rpc.project.OpenProjectRequest, ui: WsClient) -> 
     assert glob.SCENE
     assert glob.PROJECT
 
-    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
+    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE.scene,
                                                                                                glob.PROJECT.project))))
 
     return None
@@ -627,7 +629,7 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
             raise Arcor2Exception("Another scene is opened.")
 
         if glob.SCENE.has_changes():
-            await storage.update_scene(glob.SCENE)
+            await storage.update_scene(glob.SCENE.scene)
             glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
 
     else:
@@ -644,7 +646,7 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
 
     assert glob.SCENE
 
-    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
+    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE.scene,
                                                                                                glob.PROJECT.project))))
     return None
 
@@ -687,7 +689,10 @@ def check_ap_parent(parent: Optional[str]) -> None:
     if not parent:
         return
 
-    if parent not in glob.SCENE.object_ids | glob.PROJECT.action_points_ids:
+    if parent in glob.SCENE.object_ids:
+        if glob.SCENE.object(parent).pose is None:
+            raise Arcor2Exception("AP can't have object without pose as parent.")
+    elif parent not in glob.PROJECT.action_points_ids:
         raise Arcor2Exception("AP has invalid parent ID (not an object or another AP).")
 
 
