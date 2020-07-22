@@ -5,22 +5,27 @@
 import asyncio
 from typing import Dict, List
 
+import horast
+
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import aio_persistent_storage as storage
-from arcor2 import helpers as hlp, object_types_utils as otu
+from arcor2 import helpers as hlp
+from arcor2.cached import CachedScene
+from arcor2.clients import aio_persistent_storage as storage, aio_scene_service as scene_srv
 from arcor2.data import events, rpc
-from arcor2.data.common import Pose, Position, Scene
+from arcor2.data.common import Pose, Position
 from arcor2.data.object_type import MeshFocusAction, Model3dType
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types import Generic
+from arcor2.object_types import utils as otu
+from arcor2.object_types.abstract import GenericWithPose, Robot
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
 from arcor2.server.robot import get_end_effector_pose
-from arcor2.server.scene import scenes
-from arcor2.source.object_types import new_object_type_source
+from arcor2.server.scene import scenes, set_object_pose
+from arcor2.source.object_types import new_object_type
+from arcor2.source.utils import tree_to_str
 
 FOCUS_OBJECT: Dict[str, Dict[int, Pose]] = {}  # object_id / idx, pose
 FOCUS_OBJECT_ROBOT: Dict[str, rpc.common.RobotArg] = {}  # key: object_id
@@ -53,10 +58,13 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: Ws
 
     inst = await osa.get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
 
-    if not glob.ROBOT_META[inst.__class__.__name__].features.focus:
+    robot_type = glob.OBJECT_TYPES[inst.__class__.__name__]
+    assert robot_type.robot_meta
+
+    if not robot_type.robot_meta.features.focus:
         raise Arcor2Exception("Robot/service does not support focusing.")
 
-    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
+    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
 
     if not obj_type.object_model or obj_type.object_model.type != Model3dType.MESH:
         raise Arcor2Exception("Only available for objects with mesh model.")
@@ -83,7 +91,9 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> 
     if obj_id not in glob.SCENE_OBJECT_INSTANCES:
         raise Arcor2Exception("Unknown object_id.")
 
-    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
+    # TODO check that object has pose
+
+    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
 
     assert obj_type.object_model
     assert obj_type.object_model.mesh
@@ -117,7 +127,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
     if obj_id not in FOCUS_OBJECT:
         raise Arcor2Exception("focusObjectStart/focusObject has to be called first.")
 
-    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)]
+    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
 
     assert obj_type.object_model
     assert obj_type.object_model.mesh
@@ -130,12 +140,14 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
         raise Arcor2Exception("Not all points were done.")
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
-    robot_inst = await osa.get_robot_instance(robot_id)
-    assert hasattr(robot_inst, "focus")  # mypy does not deal with hasattr
 
     assert glob.SCENE
 
     obj = glob.SCENE.object(obj_id)
+    assert obj.pose
+
+    obj_inst = glob.SCENE_OBJECT_INSTANCES[obj_id]
+    assert isinstance(obj_inst, GenericWithPose)
 
     fp: List[Position] = []
     rp: List[Position] = []
@@ -150,8 +162,8 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
     await glob.logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
 
     try:
-        obj.pose = await hlp.run_in_executor(robot_inst.focus, mfa)  # type: ignore
-    except Arcor2Exception as e:
+        obj.pose = await scene_srv.focus(mfa)
+    except scene_srv.SceneServiceException as e:
         await glob.logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
         raise Arcor2Exception("Focusing failed.") from e
 
@@ -161,6 +173,8 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
 
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
+    asyncio.ensure_future(set_object_pose(obj_inst, obj.pose))
+
     return None
 
 
@@ -171,18 +185,31 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
     if meta.type in glob.OBJECT_TYPES:
         raise Arcor2Exception("Object type already exists.")
 
+    if not hlp.is_valid_type(meta.type):
+        raise Arcor2Exception("Object type invalid (should be CamelCase).")
+
     if meta.base not in glob.OBJECT_TYPES:
         raise Arcor2Exception(f"Unknown base object type '{meta.base}', "
                               f"known types are: {', '.join(glob.OBJECT_TYPES.keys())}.")
 
-    if not hlp.is_valid_type(meta.type):
-        raise Arcor2Exception("Object type invalid (should be CamelCase).")
+    base = glob.OBJECT_TYPES[meta.base]
+
+    if base.meta.disabled:
+        raise Arcor2Exception("Base object is disabled.")
+
+    assert base.type_def is not None
+
+    if issubclass(base.type_def, Robot):
+        raise Arcor2Exception("Can't subclass Robot.")
 
     if req.dry_run:
         return None
 
+    meta.has_pose = issubclass(base.type_def, GenericWithPose)
+
     obj = meta.to_object_type()
-    obj.source = new_object_type_source(glob.OBJECT_TYPES[meta.base], meta)
+    ast = new_object_type(glob.OBJECT_TYPES[meta.base].meta, meta)
+    obj.source = tree_to_str(ast)
 
     if meta.object_model and meta.object_model.type != Model3dType.MESH:
         assert meta.type == meta.object_model.model().id
@@ -200,10 +227,12 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
 
     await storage.update_object_type(obj)
 
-    glob.OBJECT_TYPES[meta.type] = meta
-    glob.ACTIONS[meta.type] = otu.object_actions(TYPE_TO_PLUGIN,
-                                                 hlp.type_def_from_source(obj.source, obj.id, Generic), obj.source)
-    otu.add_ancestor_actions(meta.type, glob.ACTIONS, glob.OBJECT_TYPES)
+    type_def = hlp.type_def_from_source(obj.source, obj.id, base.type_def)
+    ast = horast.parse(obj.source)
+    actions = otu.object_actions(TYPE_TO_PLUGIN, type_def, ast)
+
+    glob.OBJECT_TYPES[meta.type] = otu.ObjectTypeData(meta, type_def, actions, ast)
+    otu.add_ancestor_actions(meta.type, glob.OBJECT_TYPES)
 
     asyncio.ensure_future(notif.broadcast_event(events.ChangedObjectTypesEvent(events.EventType.ADD, data=[meta])))
     return None
@@ -212,21 +241,20 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
 async def get_object_actions_cb(req: rpc.objects.GetActionsRequest, ui: WsClient) -> rpc.objects.GetActionsResponse:
 
     try:
-        return rpc.objects.GetActionsResponse(data=glob.ACTIONS[req.args.type])
+        return rpc.objects.GetActionsResponse(data=list(glob.OBJECT_TYPES[req.args.type].actions.values()))
     except KeyError:
         raise Arcor2Exception(f"Unknown object type: '{req.args.type}'.")
 
 
 async def get_object_types_cb(req: rpc.objects.GetObjectTypesRequest, ui: WsClient) ->\
         rpc.objects.GetObjectTypesResponse:
-    return rpc.objects.GetObjectTypesResponse(data=list(glob.OBJECT_TYPES.values()))
+    return rpc.objects.GetObjectTypesResponse(data=[obj.meta for obj in glob.OBJECT_TYPES.values()])
 
 
-def check_scene_for_object_type(scene: Scene, object_type: str) -> None:
+def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
 
-    for obj in scene.objects:
-        if obj.type == object_type:
-            raise Arcor2Exception(f"Object type used in scene '{scene.name}'.")
+    if list(scene.objects_of_type(object_type)):
+        raise Arcor2Exception(f"Object type used in scene '{scene.name}'.")
 
 
 async def delete_object_type_cb(req: rpc.objects.DeleteObjectTypeRequest, ui: WsClient) -> None:
@@ -236,12 +264,12 @@ async def delete_object_type_cb(req: rpc.objects.DeleteObjectTypeRequest, ui: Ws
     except KeyError:
         raise Arcor2Exception("Unknown object type.")
 
-    if obj_type.built_in:
+    if obj_type.meta.built_in:
         raise Arcor2Exception("Can't delete built-in type.")
 
-    for meta in glob.OBJECT_TYPES.values():
-        if meta.base == req.args.id:
-            raise Arcor2Exception(f"Object type is base of '{meta.type}'.")
+    for obj in glob.OBJECT_TYPES.values():
+        if obj.meta.base == req.args.id:
+            raise Arcor2Exception(f"Object type is base of '{obj.meta.type}'.")
 
     async for scene in scenes():
         check_scene_for_object_type(scene, req.args.id)
@@ -255,12 +283,12 @@ async def delete_object_type_cb(req: rpc.objects.DeleteObjectTypeRequest, ui: Ws
     await storage.delete_object_type(req.args.id)
 
     # do not care so much if delete_model fails
-    if obj_type.object_model:
+    if obj_type.meta.object_model:
         try:
-            await storage.delete_model(obj_type.object_model.model().id)
+            await storage.delete_model(obj_type.meta.object_model.model().id)
         except storage.PersistentStorageException as e:
             asyncio.ensure_future(glob.logger.error(e.message))
 
     del glob.OBJECT_TYPES[req.args.id]
     asyncio.ensure_future(notif.broadcast_event(
-        events.ChangedObjectTypesEvent(events.EventType.REMOVE, data=[obj_type])))
+        events.ChangedObjectTypesEvent(events.EventType.REMOVE, data=[obj_type.meta])))

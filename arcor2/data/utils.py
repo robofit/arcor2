@@ -27,8 +27,7 @@ def generate_swagger() -> str:
 
     # TODO avoid explicit naming of all sub-modules in rpc module
     for module in (arcor2.data.common, arcor2.data.object_type, rpc.common, rpc.execution, rpc.objects,
-                   rpc.robot, rpc.scene, rpc.project, rpc.services,
-                   rpc.storage, arcor2.data.events):
+                   rpc.robot, rpc.scene, rpc.project, rpc.storage, arcor2.data.events):
         for _, obj in inspect.getmembers(module):
 
             if not inspect.isclass(obj) or not issubclass(obj, JsonSchemaMixin) or obj == JsonSchemaMixin:

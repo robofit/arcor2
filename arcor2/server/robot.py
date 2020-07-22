@@ -1,17 +1,14 @@
 import inspect
 import os
-from typing import List, Optional, Set, Type, Union
-
-from horast import parse
+from typing import List, Set, Type
 
 from typed_ast.ast3 import AST
 
 import arcor2.helpers as hlp
 from arcor2.data import common, events, robot
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types import Generic, Robot
+from arcor2.object_types.abstract import Robot
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
-from arcor2.services.robot_service import RobotService
 from arcor2.source.utils import function_implemented
 
 
@@ -23,32 +20,6 @@ class RobotPoseException(Arcor2Exception):
 move_in_progress: Set[str] = set()  # set of robot IDs that are moving right now
 
 
-async def collision(obj: Generic,
-                    rs: Optional[RobotService] = None, *, add: bool = False, remove: bool = False) -> None:
-    """
-
-    :param obj: Instance of the object.
-    :param add:
-    :param remove:
-    :param rs:
-    :return:
-    """
-
-    assert add ^ remove
-
-    if not obj.collision_model:
-        return
-
-    if rs is None:
-        rs = osa.find_robot_service()
-    if rs:
-        try:
-            # TODO notify user somehow when something went wrong?
-            await hlp.run_in_executor(rs.add_collision if add else rs.remove_collision, obj)
-        except Arcor2Exception as e:
-            await glob.logger.error(e)
-
-
 async def get_end_effectors(robot_id: str) -> Set[str]:
     """
     :param robot_id:
@@ -56,11 +27,7 @@ async def get_end_effectors(robot_id: str) -> Set[str]:
     """
 
     robot_inst = await osa.get_robot_instance(robot_id)
-
-    if isinstance(robot_inst, Robot):
-        return await hlp.run_in_executor(robot_inst.get_end_effectors_ids)
-    else:
-        return await hlp.run_in_executor(robot_inst.get_end_effectors_ids, robot_id)
+    return await hlp.run_in_executor(robot_inst.get_end_effectors_ids)
 
 
 async def get_grippers(robot_id: str) -> Set[str]:
@@ -70,11 +37,7 @@ async def get_grippers(robot_id: str) -> Set[str]:
     """
 
     robot_inst = await osa.get_robot_instance(robot_id)
-
-    if isinstance(robot_inst, Robot):
-        return await hlp.run_in_executor(robot_inst.grippers)
-    else:
-        return await hlp.run_in_executor(robot_inst.grippers, robot_id)
+    return await hlp.run_in_executor(robot_inst.grippers)
 
 
 async def get_suctions(robot_id: str) -> Set[str]:
@@ -84,11 +47,7 @@ async def get_suctions(robot_id: str) -> Set[str]:
     """
 
     robot_inst = await osa.get_robot_instance(robot_id)
-
-    if isinstance(robot_inst, Robot):
-        return await hlp.run_in_executor(robot_inst.suctions)
-    else:
-        return await hlp.run_in_executor(robot_inst.suctions, robot_id)
+    return await hlp.run_in_executor(robot_inst.suctions)
 
 
 async def get_end_effector_pose(robot_id: str, end_effector: str) -> common.Pose:
@@ -99,11 +58,7 @@ async def get_end_effector_pose(robot_id: str, end_effector: str) -> common.Pose
     """
 
     robot_inst = await osa.get_robot_instance(robot_id, end_effector)
-
-    if isinstance(robot_inst, Robot):
-        return await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
-    else:
-        return await hlp.run_in_executor(robot_inst.get_end_effector_pose, robot_id, end_effector)
+    return await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
 
 
 async def get_robot_joints(robot_id: str) -> List[common.Joint]:
@@ -113,37 +68,34 @@ async def get_robot_joints(robot_id: str) -> List[common.Joint]:
     """
 
     robot_inst = await osa.get_robot_instance(robot_id)
-
-    if isinstance(robot_inst, Robot):
-        return await hlp.run_in_executor(robot_inst.robot_joints)
-    else:
-        return await hlp.run_in_executor(robot_inst.robot_joints, robot_id)
+    return await hlp.run_in_executor(robot_inst.robot_joints)
 
 
-def feature(tree: AST, robot_type: Union[Type[Robot], Type[RobotService]], func_name: str) -> bool:
+def feature(tree: AST, robot_type: Type[Robot], func_name: str) -> bool:
 
     if not function_implemented(tree, func_name):  # TODO what if the function is implemented in predecessor?
         return False
 
     sign = inspect.signature(getattr(robot_type, func_name))
-
-    if issubclass(robot_type, Robot):
-        return inspect.signature(getattr(Robot, func_name)) == sign
-    elif issubclass(robot_type, RobotService):
-        return inspect.signature(getattr(RobotService, func_name)) == sign
-    else:
-        raise Arcor2Exception("Unknown robot type.")
+    return inspect.signature(getattr(Robot, func_name)) == sign
 
 
-async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]], source: str) -> None:
+async def get_robot_meta(robot_type: Type[Robot]) -> None:
 
     # TODO use inspect.getsource(robot_type) instead of source parameters
     #  once we will get rid of type_def_from_source / temp. module
 
+    obj_type = glob.OBJECT_TYPES[robot_type.__name__]
+
+    if obj_type.meta.disabled:
+        raise Arcor2Exception("Disabled object type.")
+
     meta = robot.RobotMeta(robot_type.__name__)
     meta.features.focus = hasattr(robot_type, "focus")  # TODO more sophisticated test? (attr(s) and return value?)
 
-    tree = parse(source)
+    tree = obj_type.ast
+    assert tree is not None
+
     meta.features.move_to_pose = feature(tree, robot_type, Robot.move_to_pose.__name__)
     meta.features.move_to_joints = feature(tree, robot_type, Robot.move_to_joints.__name__)
     meta.features.stop = feature(tree, robot_type, Robot.stop.__name__)
@@ -151,7 +103,7 @@ async def get_robot_meta(robot_type: Union[Type[Robot], Type[RobotService]], sou
     if issubclass(robot_type, Robot) and robot_type.urdf_package_path:
         meta.urdf_package_filename = os.path.split(robot_type.urdf_package_path)[1]
 
-    glob.ROBOT_META[robot_type.__name__] = meta
+    glob.OBJECT_TYPES[robot_type.__name__].robot_meta = meta
 
 
 async def stop(robot_id: str) -> None:
@@ -164,10 +116,7 @@ async def stop(robot_id: str) -> None:
     robot_inst = await osa.get_robot_instance(robot_id)
 
     try:
-        if isinstance(robot_inst, Robot):
-            await hlp.run_in_executor(robot_inst.stop)
-        elif isinstance(robot_inst, RobotService):
-            await hlp.run_in_executor(robot_inst.stop, robot_id)
+        await hlp.run_in_executor(robot_inst.stop)
     except NotImplementedError as e:
         raise Arcor2Exception from e
 
@@ -196,12 +145,7 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
     move_in_progress.add(robot_id)
 
     try:
-
-        if isinstance(robot_inst, Robot):
-            await hlp.run_in_executor(robot_inst.move_to_pose, end_effector_id, pose, speed)
-        elif isinstance(robot_inst, RobotService):
-            await hlp.run_in_executor(robot_inst.move_to_pose, robot_id, end_effector_id, pose, speed)
-
+        await hlp.run_in_executor(robot_inst.move_to_pose, end_effector_id, pose, speed)
     except (NotImplementedError, Arcor2Exception) as e:
         await glob.logger.error(f"Robot movement failed with: {str(e)}")
         move_in_progress.remove(robot_id)
@@ -258,12 +202,7 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
     move_in_progress.add(robot_id)
 
     try:
-
-        if isinstance(robot_inst, Robot):
-            await hlp.run_in_executor(robot_inst.move_to_joints, joints, speed)
-        elif isinstance(robot_inst, RobotService):
-            await hlp.run_in_executor(robot_inst.move_to_joints, robot_id, joints, speed)
-
+        await hlp.run_in_executor(robot_inst.move_to_joints, joints, speed)
     except (NotImplementedError, Arcor2Exception) as e:
         await glob.logger.error(f"Robot movement failed with: {str(e)}")
 

@@ -1,23 +1,19 @@
 import time
-from typing import FrozenSet, Optional
+from typing import Optional
 
 from arcor2.action import action
 from arcor2.data.common import ActionMetadata
-from arcor2.services.service import Service
+from arcor2.object_types.abstract import Generic
 
 
-class TimeService(Service):
+class TimeActions(Generic):
     """
     Time-related actions.
     """
 
-    def __init__(self, configuration_id: str):  # TODO avoid need for configuration_id?
-        super(TimeService, self).__init__(configuration_id)
+    def __init__(self, obj_id: str, name: str) -> None:
+        super(TimeActions, self).__init__(obj_id, name)
         self._rate_start_time: Optional[float] = None
-
-    @staticmethod
-    def get_configuration_ids() -> FrozenSet[str]:
-        return frozenset({"default"})
 
     @action
     def sleep(self, seconds: float = 1.0) -> None:
@@ -55,6 +51,6 @@ class TimeService(Service):
         """
         return time.time_ns()
 
-    sleep.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    rate.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    time_ns.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    sleep.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
+    rate.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
+    time_ns.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore

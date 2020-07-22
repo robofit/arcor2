@@ -12,18 +12,15 @@ from aiologger.levels import LogLevel  # type: ignore
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
-from arcor2.cached import UpdateableCachedProject
+from arcor2.cached import UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import events
-from arcor2.data.common import ActionState, CurrentAction, PackageState, Scene
+from arcor2.data.common import ActionState, CurrentAction, PackageState
 from arcor2.data.execution import PackageInfo
-from arcor2.data.object_type import ObjectActionsDict, ObjectTypeMetaDict
-from arcor2.data.robot import RobotMeta
-from arcor2.data.services import ServiceTypeMetaDict
 from arcor2.nodes.build import PORT as BUILD_PORT
 from arcor2.nodes.execution import PORT as EXE_PORT
-from arcor2.object_types import Generic
-from arcor2.parameter_plugins.base import TypesDict
-from arcor2.services.service import Service
+from arcor2.object_types.abstract import Generic
+from arcor2.object_types.utils import ObjectTypeDict
+
 
 logger = Logger.with_default_handlers(name='server', formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
 VERBOSE: bool = False
@@ -33,23 +30,17 @@ BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{BUILD_PORT}")
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 
-SCENE: Optional[Scene] = None
+SCENE: Optional[UpdateableCachedScene] = None
 PROJECT: Optional[UpdateableCachedProject] = None
+
 MAIN_SCREEN: Optional[events.ShowMainScreenData] = \
     events.ShowMainScreenData(events.ShowMainScreenData.WhatEnum.ScenesList)
 
 INTERFACES: Set[WsClient] = set()
 
-OBJECT_TYPES: ObjectTypeMetaDict = {}
-SERVICE_TYPES: ServiceTypeMetaDict = {}
-ROBOT_META: Dict[str, RobotMeta] = {}
-TYPE_DEF_DICT: TypesDict = {}
+OBJECT_TYPES: ObjectTypeDict = {}
 
-# TODO merge it into one dict?
 SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
-SERVICES_INSTANCES: Dict[str, Service] = {}
-
-ACTIONS: ObjectActionsDict = {}  # used for actions of both object_types / services
 
 RUNNING_ACTION: Optional[str] = None  # ID of an action that is being executed during project editing
 RUNNING_ACTION_PARAMS: Optional[Dict[str, Any]] = None

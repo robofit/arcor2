@@ -23,12 +23,12 @@ from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 import horast
 
 import arcor2
-from arcor2 import persistent_storage as ps
-from arcor2.cached import CachedProject
+from arcor2.cached import CachedProject, CachedScene
+from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
-from arcor2.object_types_utils import built_in_types_names
+from arcor2.object_types.utils import built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
@@ -64,6 +64,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             project = ps.get_project(project_id)
             cached_project = CachedProject(project)
             scene = ps.get_scene(project.scene_id)
+            cached_scene = CachedScene(scene)
 
             project_dir = os.path.join(tmpdirname, "arcor2_project")
 
@@ -107,11 +108,6 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                 with open(os.path.join(ot_path, camel_case_to_snake_case(obj_type.id)) + ".py", "w") as obj_file:
                     obj_file.write(obj_type.source)
 
-            for scene_srv in scene.services:
-                srv = ps.get_service_type(scene_srv.type)
-                with open(os.path.join(srv_path, camel_case_to_snake_case(srv.id)) + ".py", "w") as srv_file:
-                    srv_file.write(srv.source)
-
         except ps.PersistentStorageException as e:
             logger.exception("Failed to get something from the project service.")
             return str(e), 404
@@ -121,7 +117,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             with open(os.path.join(project_dir, 'script.py'), "w") as script_file:
 
                 if project.has_logic:
-                    script_file.write(program_src(cached_project, scene, built_in_types_names(), True))
+                    script_file.write(program_src(cached_project, cached_scene, built_in_types_names(), True))
                 else:
                     try:
                         script = ps.get_project_sources(project.id).script
@@ -140,7 +136,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                         logger.info("Script not found on project service, creating one from scratch.")
 
                         # write script without the main loop
-                        script_file.write(program_src(cached_project, scene, built_in_types_names(), False))
+                        script_file.write(program_src(cached_project, cached_scene, built_in_types_names(), False))
 
             with open(os.path.join(project_dir, 'resources.py'), "w") as res:
                 res.write(derived_resources_class(cached_project))

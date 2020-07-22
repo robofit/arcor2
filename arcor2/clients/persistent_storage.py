@@ -3,7 +3,6 @@ import os
 from arcor2 import rest
 from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
 from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, Model3dType, Models, ObjectType
-from arcor2.data.services import ServiceType
 from arcor2.exceptions import Arcor2Exception
 
 URL = os.getenv("ARCOR2_PERSISTENT_STORAGE_URL", "http://0.0.0.0:11000")
@@ -71,18 +70,8 @@ def get_object_type(object_type_id: str) -> ObjectType:
 
 
 @rest.handle_exceptions(PersistentStorageException)
-def get_service_type(service_type_id: str) -> ServiceType:
-    return rest.get(f"{URL}/service_type/{service_type_id}", ServiceType)
-
-
-@rest.handle_exceptions(PersistentStorageException)
 def get_object_type_ids() -> IdDescList:
     return rest.get(f"{URL}/object_types", IdDescList)
-
-
-@rest.handle_exceptions(PersistentStorageException)
-def get_service_type_ids() -> IdDescList:
-    return rest.get(f"{URL}/service_types", IdDescList)
 
 
 @rest.handle_exceptions(PersistentStorageException)
@@ -117,13 +106,6 @@ def update_object_type(object_type: ObjectType) -> None:
 def delete_object_type(object_type_id: str) -> None:
 
     rest.delete(f"{URL}/object_type/{object_type_id}")
-
-
-@rest.handle_exceptions(PersistentStorageException)
-def update_service_type(service_type: ServiceType) -> None:
-
-    assert service_type.id
-    rest.put(f"{URL}/service_type", service_type)
 
 
 @rest.handle_exceptions(PersistentStorageException)

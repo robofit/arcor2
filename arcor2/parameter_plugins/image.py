@@ -6,8 +6,7 @@ from typing import Any
 import PIL.Image  # type: ignore
 from PIL.Image import Image  # type: ignore
 
-from arcor2.cached import CachedProject
-from arcor2.data.common import Scene
+from arcor2.cached import CachedProject as CProject, CachedScene as CScene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 
 
@@ -22,7 +21,7 @@ class ImagePlugin(ParameterPlugin):
         return "image"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) \
             -> Image:
         json_str = super(ImagePlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
         b64_bytes = json_str.encode()
