@@ -1,8 +1,9 @@
 import asyncio
 from typing import AsyncIterator, Dict, List, Set, Union
 
-from arcor2 import aio_persistent_storage as storage, helpers as hlp
-from arcor2.cached import CachedProject, UpdateableCachedProject
+from arcor2 import helpers as hlp
+from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
+from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data import common, events, object_type
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -18,7 +19,7 @@ async def close_project(do_cleanup: bool = True) -> None:
     asyncio.ensure_future(notif.broadcast_event(events.ProjectClosed()))
 
 
-def check_action_params(scene: common.Scene, project: CachedProject, action: common.Action,
+def check_action_params(scene: CachedScene, project: CachedProject, action: common.Action,
                         object_action: object_type.ObjectAction) -> None:
 
     _, action_type = action.parse_type()
@@ -59,7 +60,9 @@ def check_action_params(scene: common.Scene, project: CachedProject, action: com
                 raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has unknown type: {param.type}.")
 
             try:
-                PARAM_PLUGINS[param.type].value(glob.TYPE_DEF_DICT, scene, project, action.id, param.id)
+                PARAM_PLUGINS[param.type].value(
+                    {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
+                    scene, project, action.id, param.id)
             except ParameterPluginException as e:
                 raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has invalid value. {str(e)}")
 
@@ -92,20 +95,25 @@ def check_flows(parent: Union[CachedProject, common.ProjectFunction],
                     raise Arcor2Exception(f"Output '{output}' is not unique.")
 
 
-def find_object_action(scene: common.Scene, action: common.Action) -> object_type.ObjectAction:
+def find_object_action(scene: CachedScene, action: common.Action) -> object_type.ObjectAction:
 
     obj_id, action_type = action.parse_type()
-    obj = scene.object_or_service(obj_id)
+    obj = scene.object(obj_id)
 
-    if obj.type not in glob.ACTIONS:
-        raise Arcor2Exception("Unknown object/service type.")
+    try:
+        obj_type = glob.OBJECT_TYPES[obj.type]
+    except KeyError:
+        raise Arcor2Exception("Unknown object type.")
 
-    for act in glob.ACTIONS[obj.type]:
-        if act.name == action_type:
-            if act.disabled:
-                raise Arcor2Exception("Action is disabled.")
-            return act
-    raise Arcor2Exception("Unknown type of action.")
+    try:
+        act = obj_type.actions[action_type]
+    except KeyError:
+        raise Arcor2Exception("Unknown type of action.")
+
+    if act.disabled:
+        raise Arcor2Exception("Action is disabled.")
+
+    return act
 
 
 async def project_names() -> Set[str]:
@@ -238,15 +246,14 @@ async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterat
             yield project
 
 
-def project_problems(scene: common.Scene, project: CachedProject) -> List[str]:
+def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
-    scene_services: Set[str] = {srv.type for srv in scene.services}
 
     action_ids: Set[str] = set()
     problems: List[str] = []
 
-    unknown_types = ({obj.type for obj in scene.objects} | scene_services) - glob.ACTIONS.keys()
+    unknown_types = {obj.type for obj in scene.objects} - glob.OBJECT_TYPES.keys()
 
     if unknown_types:
         return [f"Scene invalid, contains unknown types: {unknown_types}."]
@@ -271,7 +278,7 @@ def project_problems(scene: common.Scene, project: CachedProject) -> List[str]:
             # check if objects have used actions
             obj_id, action_type = action.parse_type()
 
-            if obj_id not in scene_objects.keys() | scene_services:
+            if obj_id not in scene_objects.keys():
                 problems.append(f"Object ID {obj_id} which action is used in {action.name} does not exist in scene.")
                 continue
 
@@ -280,16 +287,13 @@ def project_problems(scene: common.Scene, project: CachedProject) -> List[str]:
             except KeyError:
                 os_type = obj_id  # service
 
-            for act in glob.ACTIONS[os_type]:
-                if action_type == act.name:
-                    break
-            else:
+            if action_type not in glob.OBJECT_TYPES[os_type].actions:
                 problems.append(f"Object type {scene_objects[obj_id]} does not have action {action_type} "
                                 f"used in {action.id}.")
                 continue
 
             try:
-                check_action_params(scene, project, action, act)
+                check_action_params(scene, project, action, glob.OBJECT_TYPES[os_type].actions[action_type])
             except Arcor2Exception as e:
                 problems.append(e.message)
 

@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set, Union
+from typing import List, Optional, Set, Union
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import DataException
-from arcor2.data.common import ActionMetadata, Pose, Position
+from arcor2.data.common import ActionMetadata, Pose, Position, SceneObjectSetting
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -128,10 +128,12 @@ class ObjectTypeMeta(JsonSchemaMixin):
     built_in: bool = False
     base: str = field(default_factory=str)
     object_model: Optional[ObjectModel] = None
-    needs_services: Set[str] = field(default_factory=set)
+    needs_parent_type: Optional[str] = None
+    has_pose: bool = False
     abstract: bool = False
     disabled: bool = False
     problem: Optional[str] = None
+    settings: List[SceneObjectSetting] = field(default_factory=list)
 
     def to_object_type(self) -> ObjectType:
 
@@ -182,9 +184,7 @@ class ObjectAction(JsonSchemaMixin):
         raise Arcor2Exception("Parameter not found.")
 
 
-ObjectTypeMetaDict = Dict[str, ObjectTypeMeta]
 ObjectActions = List[ObjectAction]
-ObjectActionsDict = Dict[str, ObjectActions]
 
 
 @dataclass

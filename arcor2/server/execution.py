@@ -52,7 +52,7 @@ async def run_temp_package(package_id: str) -> None:
     assert glob.SCENE
     assert glob.PROJECT
 
-    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE,
+    asyncio.ensure_future(notif.broadcast_event(events.OpenProject(data=events.OpenProjectData(glob.SCENE.scene,
                                                                                                glob.PROJECT.project))))
 
 

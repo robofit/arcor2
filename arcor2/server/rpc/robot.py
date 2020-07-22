@@ -7,7 +7,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 from arcor2 import helpers as hlp
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types import Robot
+from arcor2.object_types.abstract import Robot
 from arcor2.server import globals as glob, objects_services_actions as osa, robot
 from arcor2.server.decorators import project_needed, scene_needed
 
@@ -93,7 +93,9 @@ async def robot_eef_pose_event(robot_id: str) -> None:
 async def get_robot_meta_cb(req: rpc.robot.GetRobotMetaRequest, ui: WsClient) ->\
         rpc.robot.GetRobotMetaResponse:
 
-    return rpc.robot.GetRobotMetaResponse(data=list(glob.ROBOT_META.values()))
+    return rpc.robot.GetRobotMetaResponse(
+        data=[obj.robot_meta for obj in glob.OBJECT_TYPES.values() if obj.robot_meta is not None]
+    )
 
 
 @scene_needed
@@ -183,7 +185,12 @@ async def register_for_robot_event_cb(req: rpc.robot.RegisterForRobotEventReques
 
 async def check_feature(robot_id: str, feature_name: str) -> None:
 
-    if not getattr(glob.ROBOT_META[(await osa.get_robot_instance(robot_id)).__class__.__name__].features, feature_name):
+    obj_type = glob.OBJECT_TYPES[(await osa.get_robot_instance(robot_id)).__class__.__name__]
+
+    if obj_type.robot_meta is None:
+        raise Arcor2Exception("Not a robot.")
+
+    if not getattr(obj_type.robot_meta.features, feature_name):
         raise Arcor2Exception(f"Robot does not support '{feature_name}' feature.")
 
 

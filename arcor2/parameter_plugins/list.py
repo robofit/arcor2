@@ -2,8 +2,8 @@ import abc
 import json
 from typing import Any, List, Type
 
-from arcor2.cached import CachedProject
-from arcor2.data.common import ActionParameter, Scene
+from arcor2.cached import CachedProject as CProject, CachedScene as CScene
+from arcor2.data.common import ActionParameter
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 
 
@@ -15,7 +15,7 @@ class ListParameterPlugin(ParameterPlugin):
 
     @classmethod
     @abc.abstractmethod
-    def value(cls, type_defs: TypesDict, scene: Scene, project: CachedProject, action_id: str, parameter_id: str) \
+    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) \
             -> List[Any]:
 
         val = super(ListParameterPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
