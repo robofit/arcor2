@@ -46,7 +46,7 @@ class TestObject(GenericWithPose):
         pass
 
     action_1.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    action_2.__action__ = ActionMetadata(free=True)  # type: ignore
+    action_2.__action__ = ActionMetadata()  # type: ignore
     # action_3 is missing its metadata
     action_4.__action__ = ActionMetadata()  # type: ignore
 
@@ -100,7 +100,7 @@ def test_object_actions() -> None:
 
         elif act.name == TestObject.action_2.__name__:
 
-            assert act.meta == ActionMetadata(free=True)
+            assert act.meta == ActionMetadata()
             assert len(act.returns) == 1
             assert act.description == "Short description"
             assert not act.disabled

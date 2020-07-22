@@ -20,6 +20,6 @@ class LogicActions(Generic):
     def greater_than(self, val1: int, val2: int) -> bool:
         return val1 > val2
 
-    equals.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
-    less_than.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
-    greater_than.__action__ = ActionMetadata(blocking=True, free=True)  # type: ignore
+    equals.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    less_than.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    greater_than.__action__ = ActionMetadata(blocking=True)  # type: ignore
