@@ -19,8 +19,6 @@ from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
 from arcor2.source.utils import find_function
 
-SERVICES_METHOD_NAME = "from_services"
-
 
 class ObjectTypeException(Arcor2Exception):
     pass
@@ -140,7 +138,7 @@ class IgnoreActionException(Arcor2Exception):
     pass
 
 
-def resolve_param(plugins: Dict[Type, Type[ParameterPlugin]], name: str, ttype) -> Type[ParameterPlugin]:
+def _resolve_param(plugins: Dict[Type, Type[ParameterPlugin]], name: str, ttype) -> Type[ParameterPlugin]:
 
     try:
         return plugins[ttype]
@@ -198,17 +196,17 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Type[Ge
 
                     if typing_inspect.is_tuple_type(ttype):
                         for arg in typing_inspect.get_args(ttype):
-                            resolved_param = resolve_param(plugins, name, arg)
+                            resolved_param = _resolve_param(plugins, name, arg)
                             if resolved_param is None:
                                 raise IgnoreActionException("None in return tuple is not supported.")
                             data.returns.append(resolved_param.type_name())
                     else:
                         # TODO resolving needed for e.g. enums - add possible values to action metadata somewhere?
-                        data.returns = [resolve_param(plugins, name, ttype).type_name()]
+                        data.returns = [_resolve_param(plugins, name, ttype).type_name()]
 
                     continue
 
-                param_type = resolve_param(plugins, name, ttype)
+                param_type = _resolve_param(plugins, name, ttype)
 
                 assert param_type is not None
 
@@ -270,3 +268,18 @@ def add_ancestor_actions(obj_type_name: str, object_types: ObjectTypeDict) -> No
             if not action.origins:
                 action.origins = base_name
             object_types[obj_type_name].actions[action.name] = action
+
+
+__ALL__ = [
+    ObjectTypeException.__name__,
+    ObjectTypeData.__name__,
+    "ObjectTypeDict",
+    built_in_types.__name__,
+    get_built_in_type.__name__,
+    built_in_types_names.__name__,
+    DataError.__name__,
+    meta_from_def.__name__,
+    built_in_types_data.__name__,
+    object_actions.__name__,
+    add_ancestor_actions.__name__
+]
