@@ -7,6 +7,7 @@ from typed_ast.ast3 import AST
 import arcor2.helpers as hlp
 from arcor2.data import common, events, robot
 from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Robot
 from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
 from arcor2.source.utils import function_implemented
@@ -80,30 +81,30 @@ def feature(tree: AST, robot_type: Type[Robot], func_name: str) -> bool:
     return inspect.signature(getattr(Robot, func_name)) == sign
 
 
-async def get_robot_meta(robot_type: Type[Robot]) -> None:
+async def get_robot_meta(obj_type: otu.ObjectTypeData) -> None:
 
     # TODO use inspect.getsource(robot_type) instead of source parameters
     #  once we will get rid of type_def_from_source / temp. module
 
-    obj_type = glob.OBJECT_TYPES[robot_type.__name__]
-
     if obj_type.meta.disabled:
         raise Arcor2Exception("Disabled object type.")
 
-    meta = robot.RobotMeta(robot_type.__name__)
-    meta.features.focus = hasattr(robot_type, "focus")  # TODO more sophisticated test? (attr(s) and return value?)
+    obj_type.robot_meta = robot.RobotMeta(obj_type.meta.type)
+
+    # TODO more sophisticated test? (attr(s) and return value?)
+    obj_type.robot_meta.features.focus = hasattr(obj_type.type_def, "focus")
 
     tree = obj_type.ast
     assert tree is not None
+    assert obj_type.type_def is not None
+    assert issubclass(obj_type.type_def, Robot)
 
-    meta.features.move_to_pose = feature(tree, robot_type, Robot.move_to_pose.__name__)
-    meta.features.move_to_joints = feature(tree, robot_type, Robot.move_to_joints.__name__)
-    meta.features.stop = feature(tree, robot_type, Robot.stop.__name__)
+    obj_type.robot_meta.features.move_to_pose = feature(tree, obj_type.type_def, Robot.move_to_pose.__name__)
+    obj_type.robot_meta.features.move_to_joints = feature(tree, obj_type.type_def, Robot.move_to_joints.__name__)
+    obj_type.robot_meta.features.stop = feature(tree, obj_type.type_def, Robot.stop.__name__)
 
-    if issubclass(robot_type, Robot) and robot_type.urdf_package_path:
-        meta.urdf_package_filename = os.path.split(robot_type.urdf_package_path)[1]
-
-    glob.OBJECT_TYPES[robot_type.__name__].robot_meta = meta
+    if issubclass(obj_type.type_def, Robot) and obj_type.type_def.urdf_package_path:
+        obj_type.robot_meta.urdf_package_filename = os.path.split(obj_type.type_def.urdf_package_path)[1]
 
 
 async def stop(robot_id: str) -> None:
