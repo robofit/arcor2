@@ -59,12 +59,14 @@ async def get_object_data(obj_id: str) -> otu.ObjectTypeData:
         kwargs = {model.type().value.lower(): model}
         meta.object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
+    ast = horast.parse(obj.source)
+    otd = otu.ObjectTypeData(meta, type_def, otu.object_actions(TYPE_TO_PLUGIN, type_def, ast), ast)
+
     if issubclass(type_def, Robot):
-        asyncio.ensure_future(get_robot_meta(type_def))
+        await get_robot_meta(otd)
         asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, type_def))
 
-    ast = horast.parse(obj.source)
-    return otu.ObjectTypeData(meta, type_def, otu.object_actions(TYPE_TO_PLUGIN, type_def, ast), ast)
+    return otd
 
 
 async def get_object_types() -> None:

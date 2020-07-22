@@ -7,7 +7,7 @@ from arcor2.clients import aio_persistent_storage as storage, aio_scene_service 
 from arcor2.data.common import Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic, GenericWithPose
+from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.server import globals as glob
 
 
@@ -89,7 +89,11 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
 
     assert obj_type.type_def is not None
 
-    if issubclass(obj_type.type_def, GenericWithPose):
+    if issubclass(obj_type.type_def, Robot):
+        assert obj.pose is not None
+        # TODO RPC should return here (instantiation could take long time) -> events
+        glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name, obj.pose)
+    elif issubclass(obj_type.type_def, GenericWithPose):
         assert obj.pose is not None
         coll_model: Optional[Models] = None
         if obj_type.meta.object_model:

@@ -17,14 +17,15 @@ class GenericException(Arcor2Exception):
     pass
 
 
+@dataclass
+class Settings(JsonSchemaMixin):
+    pass
+
+
 class Generic(metaclass=abc.ABCMeta):
     """
     Generic object
     """
-
-    @dataclass
-    class Settings(JsonSchemaMixin):
-        pass
 
     DYNAMIC_PARAMS: DynamicParamDict = {}
     CANCEL_MAPPING: CancelDict = {}
@@ -35,9 +36,9 @@ class Generic(metaclass=abc.ABCMeta):
         self.name = name
 
         if settings is None:
-            settings = Generic.Settings()
+            settings = Settings()
 
-        self.settings: Generic.Settings = settings
+        self.settings: Settings = settings
 
     @classmethod
     def description(cls) -> str:
@@ -61,9 +62,10 @@ class Generic(metaclass=abc.ABCMeta):
 
 class GenericWithPose(Generic):
 
-    def __init__(self, obj_id: str, name: str, pose: Pose, collision_model: Optional[Models] = None):
+    def __init__(self, obj_id: str, name: str, pose: Pose, collision_model: Optional[Models] = None,
+                 settings: Optional[Settings] = None):
 
-        super(GenericWithPose, self).__init__(obj_id, name)
+        super(GenericWithPose, self).__init__(obj_id, name, settings)
 
         self._pose = pose
         self.collision_model = copy.deepcopy(collision_model)
@@ -97,6 +99,9 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     """
     Abstract class representing robot and its basic capabilities (motion)
     """
+
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None):
+        super(Robot, self).__init__(obj_id, name, pose, None, settings)
 
     urdf_package_path: Optional[str] = None
 
@@ -148,6 +153,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
 
 
 __ALL__ = [
+    Settings.__name__,
     Generic.__name__,
     GenericWithPose.__name__,
     Robot.__name__,
