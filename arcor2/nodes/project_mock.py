@@ -21,7 +21,7 @@ from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 import arcor2
-from arcor2.data import common, object_type, services
+from arcor2.data import common, object_type
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.rest import convert_keys
 
@@ -51,7 +51,6 @@ RespT = Union[Response, Tuple[str, int]]
 SCENES: Dict[str, common.Scene] = {}
 PROJECTS: Dict[str, common.Project] = {}
 OBJECT_TYPES: Dict[str, object_type.ObjectType] = {}
-SERVICE_TYPES: Dict[str, services.ServiceType] = {}
 
 BOXES: Dict[str, object_type.Box] = {}
 CYLINDERS: Dict[str, object_type.Cylinder] = {}
@@ -378,112 +377,6 @@ def get_object_types() -> RespT:
     return cast(Response, jsonify(ret.to_dict()))
 
 
-@app.route("/service_type", methods=['PUT'])
-def put_service_type() -> RespT:
-    """Add or update service type.
-        ---
-        put:
-            tags:
-                - ServiceType
-            description: Add or update service type.
-            requestBody:
-                  content:
-                    application/json:
-                      schema:
-                        $ref: ServiceType
-            responses:
-                200:
-                  description: Ok
-    """
-
-    srv_type = services.ServiceType.from_dict(convert_keys(request.json, camel_case_to_snake_case))
-    SERVICE_TYPES[srv_type.id] = srv_type
-    return "ok", 200
-
-
-@app.route("/service_type/<string:id>", methods=['GET'])
-def get_service_type(id: str) -> RespT:
-    """Add or update ServiceType.
-        ---
-        get:
-            tags:
-                - ServiceType
-            summary: Gets ServiceType by service id.
-            parameters:
-                - name: id
-                  in: path
-                  description: unique ID
-                  required: true
-                  schema:
-                    type: string
-            responses:
-                200:
-                  description: Ok
-                  content:
-                    application/json:
-                        schema:
-                            $ref: ServiceType
-    """
-
-    try:
-        return cast(Response, jsonify(SERVICE_TYPES[id].to_dict()))
-    except KeyError:
-        return "Not found", 404
-
-
-@app.route("/service_type/<string:id>", methods=['DELETE'])
-def delete_service_type(id: str) -> RespT:
-    """Deletes service type.
-        ---
-        delete:
-            tags:
-                - ServiceType
-            summary: Deletes service type.
-            parameters:
-                - name: id
-                  in: path
-                  description: unique ID
-                  required: true
-                  schema:
-                    type: string
-            responses:
-                200:
-                  description: Ok
-    """
-
-    try:
-        del SERVICE_TYPES[id]
-    except KeyError:
-        return "Not found", 404
-
-    return "ok", 200
-
-
-@app.route("/service_types", methods=['GET'])
-def get_service_types() -> RespT:
-    """Add or update ServiceType.
-        ---
-        get:
-            tags:
-            - ServiceType
-            summary: Gets all object types id and description.
-            responses:
-                '200':
-                  description: Success
-                  content:
-                    application/json:
-                      schema:
-                        $ref: IdDescList
-    """
-
-    ret = common.IdDescList()
-
-    for srv_type in SERVICE_TYPES.values():
-        ret.items.append(common.IdDesc(srv_type.id, "", srv_type.desc))
-
-    return cast(Response, jsonify(ret.to_dict()))
-
-
 @app.route("/models/box", methods=['PUT'])
 def put_box() -> RespT:
     """Add or update box.
@@ -686,7 +579,6 @@ spec.components.schema(common.Project.__name__, schema=common.Project)
 spec.components.schema(common.Scene.__name__, schema=common.Scene)
 spec.components.schema(common.IdDescList.__name__, schema=common.IdDescList)
 spec.components.schema(object_type.ObjectType.__name__, schema=object_type.ObjectType)
-spec.components.schema(services.ServiceType.__name__, schema=services.ServiceType)
 spec.components.schema(object_type.Box.__name__, schema=object_type.Box)
 spec.components.schema(object_type.Cylinder.__name__, schema=object_type.Cylinder)
 spec.components.schema(object_type.Sphere.__name__, schema=object_type.Sphere)
@@ -708,11 +600,6 @@ with app.test_request_context():
     spec.path(view=get_object_type)
     spec.path(view=delete_object_type)
     spec.path(view=get_object_types)
-
-    spec.path(view=put_service_type)
-    spec.path(view=get_service_type)
-    spec.path(view=delete_service_type)
-    spec.path(view=get_service_types)
 
     spec.path(view=put_box)
     spec.path(view=get_box)

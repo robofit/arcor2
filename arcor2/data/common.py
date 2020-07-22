@@ -3,10 +3,10 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Union, cast
+from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, cast
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -191,19 +191,22 @@ class ActionPoint(JsonSchemaMixin):
 
 
 @dataclass
+class SceneObjectSetting(JsonSchemaMixin):
+
+    key: str
+    type: str
+    value: str
+
+
+@dataclass
 class SceneObject(JsonSchemaMixin):
 
     id: str
     name: str
     type: str
-    pose: Pose
-
-
-@dataclass
-class SceneService(JsonSchemaMixin):
-
-    type: str
-    configuration_id: str
+    pose: Optional[Pose] = None
+    settings: List[SceneObjectSetting] = field(default_factory=list)
+    children: List["SceneObject"] = field(default_factory=list)
 
 
 @dataclass
@@ -212,63 +215,9 @@ class Scene(JsonSchemaMixin):
     id: str
     name: str
     objects: List[SceneObject] = field(default_factory=list)
-    services: List[SceneService] = field(default_factory=list)
     desc: str = field(default_factory=str)
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
-
-    def bare(self) -> "Scene":
-        return Scene(self.id, self.name, desc=self.desc)
-
-    def update_modified(self) -> None:
-        self.int_modified = datetime.now(tz=timezone.utc)
-
-    def has_changes(self) -> bool:
-
-        if self.int_modified is None:
-            return False
-
-        if self.modified is None:
-            return True
-
-        return self.int_modified > self.modified
-
-    def object_names(self) -> Iterator[str]:
-
-        for obj in self.objects:
-            yield obj.name
-
-    @property
-    def object_ids(self) -> Set[str]:
-        return {obj.id for obj in self.objects}
-
-    def object(self, object_id: str) -> SceneObject:
-
-        for obj in self.objects:
-            if obj.id == object_id:
-                return obj
-        raise Arcor2Exception(f"Object ID {object_id} not found.")
-
-    def service(self, service_type: str) -> SceneService:
-
-        for srv in self.services:
-            if srv.type == service_type:
-                return srv
-        raise Arcor2Exception(f"Service of type {service_type} not found.")
-
-    def object_or_service(self, object_or_service_id: str) -> Union[SceneObject, SceneService]:
-
-        try:
-            return self.object(object_or_service_id)
-        except Arcor2Exception:
-            pass
-
-        try:
-            return self.service(object_or_service_id)
-        except Arcor2Exception:
-            pass
-
-        raise Arcor2Exception(f"Scene does not contain object/service with id '{object_or_service_id}'.")
 
 
 @dataclass

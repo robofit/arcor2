@@ -177,13 +177,6 @@ class SceneObjectChanged(Event):
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
-@dataclass
-class SceneServiceChanged(Event):
-
-    data: Optional[common.SceneService] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
 """
 ------------------------------------------------------------------------------------------------------------------------
 Project execution

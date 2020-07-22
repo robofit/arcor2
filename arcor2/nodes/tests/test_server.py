@@ -14,6 +14,8 @@ import websocket  # type: ignore
 
 from arcor2.data import common, events, object_type, rpc
 from arcor2.nodes.project_mock import PORT as PROJECT_MOCK_PORT
+from arcor2.nodes.scene_mock import PORT as SCENE_MOCK_PORT
+from arcor2.object_types.abstract import Generic, GenericWithPose
 
 
 def finish_processes(processes) -> None:
@@ -32,10 +34,11 @@ def start_processes() -> Iterator[None]:
         my_env = os.environ.copy()
         my_env["ARCOR2_DATA_PATH"] = tmp_dir
         my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = f"http://0.0.0.0:{PROJECT_MOCK_PORT}"
+        my_env["ARCOR2_SCENE_SERVICE_URL"] = f"http://0.0.0.0:{SCENE_MOCK_PORT}"
 
         processes = []
 
-        for cmd in ("arcor2_project_mock", "arcor2_execution", "arcor2_server"):
+        for cmd in ("arcor2_project_mock", "arcor2_scene_mock", "arcor2_execution", "arcor2_server"):
             processes.append(subprocess.Popen(cmd, env=my_env, stdout=subprocess.PIPE))
 
         yield None
@@ -115,18 +118,46 @@ def scene(ws_client: websocket.WebSocket) -> Iterator[common.Scene]:
 
     assert call_rpc(
         ws_client,
-        rpc.objects.NewObjectTypeRequest(uid(), object_type.ObjectTypeMeta(test_type, base="Generic")),
+        rpc.objects.NewObjectTypeRequest(uid(), object_type.ObjectTypeMeta(test_type, base=Generic.__name__)),
         rpc.objects.NewObjectTypeResponse
     ).result
 
-    event(ws_client, events.ChangedObjectTypesEvent)
+    tt_evt = event(ws_client, events.ChangedObjectTypesEvent)
+    assert len(tt_evt.data) == 1
+    assert not tt_evt.data[0].has_pose
+    assert tt_evt.data[0].type == test_type
+    assert tt_evt.data[0].base == Generic.__name__
 
     assert call_rpc(
         ws_client,
         rpc.scene.AddObjectToSceneRequest(uid(),
-                                          rpc.scene.AddObjectToSceneRequestArgs("test_type", test_type, common.Pose())),
+                                          rpc.scene.AddObjectToSceneRequestArgs("test_type", test_type)),
         rpc.scene.AddObjectToSceneResponse
-    )
+    ).result
+
+    event(ws_client, events.SceneObjectChanged)
+
+    test_type_with_pose = "TestTypeWithPose"
+
+    assert call_rpc(
+        ws_client,
+        rpc.objects.NewObjectTypeRequest(uid(), object_type.ObjectTypeMeta(test_type_with_pose,
+                                                                           base=GenericWithPose.__name__)),
+        rpc.objects.NewObjectTypeResponse
+    ).result
+
+    ttwp_evt = event(ws_client, events.ChangedObjectTypesEvent)
+    assert len(ttwp_evt.data) == 1
+    assert ttwp_evt.data[0].has_pose
+    assert ttwp_evt.data[0].type == test_type_with_pose
+    assert ttwp_evt.data[0].base == GenericWithPose.__name__
+
+    assert call_rpc(
+        ws_client,
+        rpc.scene.AddObjectToSceneRequest(uid(),
+                                          rpc.scene.AddObjectToSceneRequestArgs("test_type_with_pose", test_type)),
+        rpc.scene.AddObjectToSceneResponse
+    ).result
 
     event(ws_client, events.SceneObjectChanged)
 
@@ -166,7 +197,6 @@ def test_scene_basic_rpcs(start_processes: None, ws_client: websocket.WebSocket)
     assert open_scene_event.data.scene.name == test
     assert open_scene_event.data.scene.desc == test
     assert not open_scene_event.data.scene.objects
-    assert not open_scene_event.data.scene.services
 
     # attempt to create a new scene while scene is open should fail
     assert not call_rpc(ws_client,

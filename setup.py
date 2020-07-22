@@ -17,10 +17,10 @@ setup(
                       'arcor2_build = arcor2.nodes.build:main',
                       'arcor2_upload_ot = arcor2.scripts.upload_object_type:main',
                       'arcor2_swagger_models = arcor2.scripts.swagger_models:main',
-                      'arcor2_upload_services = arcor2.scripts.upload_services:main',
                       'arcor2_execution_proxy = arcor2.nodes.execution_proxy:main',
                       'arcor2_broadcaster = arcor2.nodes.broadcaster:main',
-                      'arcor2_project_mock = arcor2.nodes.project_mock:main'
+                      'arcor2_project_mock = arcor2.nodes.project_mock:main',
+                      'arcor2_scene_mock = arcor2.nodes.scene_mock:main'
                   ],
               },
     url='https://github.com/robofit/arcor2',

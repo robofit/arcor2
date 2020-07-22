@@ -6,8 +6,8 @@ from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, Pose, SceneService
-from arcor2.data.rpc.common import IdArgs, Request, Response, TypeArgs, wo_suffix
+from arcor2.data.common import IdDesc, Pose, SceneObjectSetting
+from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
 
 @dataclass
@@ -35,29 +35,13 @@ class SceneObjectUsageResponse(Response):
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-
-@dataclass
-class AutoAddObjectToSceneRequest(Request):
-
-    args: TypeArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AutoAddObjectToSceneResponse(Response):
-
-    response: str = field(default=AutoAddObjectToSceneRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
 @dataclass
 class AddObjectToSceneRequestArgs(JsonSchemaMixin):
 
     name: str
     type: str
-    pose: Pose
+    pose: Optional[Pose] = None
+    settings: List[SceneObjectSetting] = field(default_factory=list)
 
 
 @dataclass
@@ -73,21 +57,6 @@ class AddObjectToSceneResponse(Response):
 
     response: str = field(default=AddObjectToSceneRequest.request, init=False)
 
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class AddServiceToSceneRequest(Request):
-
-    args: SceneService
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddServiceToSceneResponse(Response):
-
-    response: str = field(default=AddServiceToSceneRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -319,28 +288,6 @@ class UpdateSceneDescriptionResponse(Response):
 
     response: str = field(default=UpdateSceneDescriptionRequest.request, init=False)
 
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class UpdateServiceConfigurationArgs(JsonSchemaMixin):
-
-    type: str
-    new_configuration: str
-
-
-@dataclass
-class UpdateServiceConfigurationRequest(Request):
-
-    args: UpdateServiceConfigurationArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateServiceConfigurationResponse(Response):
-
-    response: str = field(default=UpdateServiceConfigurationRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 

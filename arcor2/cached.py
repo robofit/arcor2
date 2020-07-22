@@ -1,13 +1,109 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Set, Tuple, ValuesView
+from typing import Dict, Iterator, List, Optional, Set, Tuple, ValuesView
 
 from arcor2.data.common import Action, LogicItem, NamedOrientation, Pose, Position, Project, ProjectActionPoint,\
-    ProjectConstant, ProjectFunction, ProjectRobotJoints
+    ProjectConstant, ProjectFunction, ProjectRobotJoints, Scene, SceneObject
 from arcor2.exceptions import Arcor2Exception
 
 # TODO cached ProjectFunction (actions from functions are totally ignored at the moment)
+
+
+class CachedSceneException(Arcor2Exception):
+    pass
+
+
+class CachedScene:
+
+    def __init__(self, scene: Scene):
+
+        self.id: str = scene.id
+        self.name: str = scene.name
+        self.desc: str = scene.desc
+        self.modified: Optional[datetime] = scene.modified
+        self.int_modified: Optional[datetime] = scene.int_modified
+
+        # TODO deal with children
+        self._objects: Dict[str, SceneObject] = {}
+
+        for obj in scene.objects:
+
+            if obj.id in self._objects:
+                raise CachedSceneException(f"Duplicate object id: {obj.id}.")
+
+            self._objects[obj.id] = obj
+
+    @property
+    def bare(self) -> Scene:
+        return Scene(self.id, self.name, desc=self.desc)
+
+    def object_names(self) -> Iterator[str]:
+
+        for obj in self._objects.values():
+            yield obj.name
+
+    @property
+    def objects(self) -> Iterator[SceneObject]:
+
+        for obj in self._objects.values():
+            yield obj
+
+    @property
+    def object_ids(self) -> Set[str]:
+        return set(self._objects.keys())
+
+    def object(self, object_id: str) -> SceneObject:
+
+        try:
+            return self._objects[object_id]
+        except KeyError:
+            raise Arcor2Exception(f"Object ID {object_id} not found.")
+
+    def objects_of_type(self, obj_type: str) -> Iterator[SceneObject]:
+
+        for obj in self.objects:
+            if obj.type == obj_type:
+                yield obj
+
+    @property
+    def scene(self) -> Scene:
+
+        sc = self.bare
+        sc.modified = self.modified
+        sc.int_modified = self.int_modified
+        sc.objects = list(self.objects)
+        return sc
+
+
+class UpdateableCachedScene(CachedScene):
+
+    def update_modified(self) -> None:
+        self.int_modified = datetime.now(tz=timezone.utc)
+
+    def has_changes(self) -> bool:
+
+        if self.int_modified is None:
+            return False
+
+        if self.modified is None:
+            return True
+
+        return self.int_modified > self.modified
+
+    def upsert_object(self, obj: SceneObject) -> None:
+
+        self._objects[obj.id] = obj
+        self.update_modified()
+
+    def delete_object(self, obj_id: str) -> None:
+
+        try:
+            del self._objects[obj_id]
+        except KeyError as e:
+            raise Arcor2Exception("Object id not found.") from e
+
+        self.update_modified()
 
 
 class CachedProjectException(Arcor2Exception):

@@ -11,26 +11,27 @@ import quaternion  # type: ignore
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import aio_persistent_storage as storage, helpers as hlp
+from arcor2 import helpers as hlp
+from arcor2.cached import UpdateableCachedScene
+from arcor2.clients import aio_persistent_storage as storage, aio_scene_service as scene_srv
 from arcor2.data import common, object_type
 from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types.abstract import GenericWithPose
 from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.decorators import no_project, no_scene, scene_needed
 from arcor2.server.helpers import unique_name
 from arcor2.server.project import associated_projects, projects_using_object, remove_object_references_from_projects, \
     scene_object_pose_updated
-from arcor2.server.robot import collision
 from arcor2.server.robot import get_end_effector_pose
-from arcor2.server.scene import add_object_to_scene, add_service_to_scene, auto_add_object_to_scene, clear_scene, \
-    get_instance, open_scene, scene_names, scenes
-from arcor2.services.service import Service
+from arcor2.server.scene import add_object_to_scene, clear_scene, \
+    get_instance, open_scene, scene_names, scenes, set_object_pose
 
 OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 
 
 @asynccontextmanager
-async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerator[common.Scene, None]:
+async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerator[UpdateableCachedScene, None]:
 
     save_back = False
 
@@ -42,7 +43,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerato
             scene = glob.SCENE
     else:
         save_back = True
-        scene = await storage.get_scene(scene_id)
+        scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     if make_copy:
         scene.id = common.uid()
@@ -51,7 +52,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerato
         yield scene
     finally:
         if save_back:
-            asyncio.ensure_future(storage.update_scene(scene))
+            asyncio.ensure_future(storage.update_scene(scene.scene))
 
 
 @no_scene
@@ -74,8 +75,9 @@ async def new_scene_cb(req: rpc.scene.NewSceneRequest, ui: WsClient) -> None:
     if req.dry_run:
         return None
 
-    glob.SCENE = common.Scene(common.uid(), req.args.name, desc=req.args.desc)
-    asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
+    glob.SCENE = UpdateableCachedScene(common.Scene(common.uid(), req.args.name, desc=req.args.desc))
+    asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE.scene))))
+    asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
     return None
 
 
@@ -116,7 +118,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> None
 async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
-    await storage.update_scene(glob.SCENE)
+    await storage.update_scene(glob.SCENE.scene)
     glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
     asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
     for obj_id in OBJECTS_WITH_UPDATED_POSE:
@@ -133,7 +135,7 @@ async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> None:
 
     await open_scene(req.args.id)
     assert glob.SCENE
-    asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE))))
+    asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE.scene))))
     return None
 
 
@@ -153,7 +155,7 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest, ui: WsC
 
     assert glob.SCENE
 
-    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose)
+    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose, req.args.settings)
 
     await add_object_to_scene(obj, dry_run=req.dry_run)
 
@@ -162,39 +164,6 @@ async def add_object_to_scene_cb(req: rpc.scene.AddObjectToSceneRequest, ui: WsC
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.ADD, data=obj)))
-    return None
-
-
-@scene_needed
-@no_project
-async def auto_add_object_to_scene_cb(req: rpc.scene.AutoAddObjectToSceneRequest, ui: WsClient) -> None:
-    assert glob.SCENE
-
-    obj = req.args
-    await auto_add_object_to_scene(obj.type, req.dry_run)
-
-    if req.dry_run:
-        return None
-
-    glob.SCENE.update_modified()
-    return None
-
-
-@scene_needed
-@no_project
-async def add_service_to_scene_cb(req: rpc.scene.AddServiceToSceneRequest, ui: WsClient) -> None:
-
-    assert glob.SCENE
-
-    srv = req.args
-    await add_service_to_scene(srv, req.dry_run)
-
-    if req.dry_run:
-        return None
-
-    glob.SCENE.services.append(srv)
-    glob.SCENE.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.ADD, data=srv)))
     return None
 
 
@@ -209,9 +178,7 @@ async def scene_object_usage_request_cb(req: rpc.scene.SceneObjectUsageRequest, 
 
     assert glob.SCENE
 
-    if not (any(obj.id == req.args.id
-                for obj in glob.SCENE.objects) or any(srv.type == req.args.id
-                                                      for srv in glob.SCENE.services)):
+    if not (any(obj.id == req.args.id for obj in glob.SCENE.objects)):
         raise Arcor2Exception("Unknown ID.")
 
     resp = rpc.scene.SceneObjectUsageResponse()
@@ -265,40 +232,24 @@ async def remove_from_scene_cb(req: rpc.scene.RemoveFromSceneRequest, ui: WsClie
     assert glob.SCENE
 
     if not req.args.force and {proj.name async for proj in projects_using_object(glob.SCENE.id, req.args.id)}:
-        raise Arcor2Exception("Can't remove object/service that is used in project(s).")
+        raise Arcor2Exception("Can't remove object that is used in project(s).")
 
     if req.dry_run:
         return None
 
-    if req.args.id in glob.SCENE_OBJECT_INSTANCES:
-
-        obj = glob.SCENE.object(req.args.id)
-        glob.SCENE.objects = [obj for obj in glob.SCENE.objects if obj.id != req.args.id]
-        obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
-        await collision(obj_inst, remove=True)
-        del glob.SCENE_OBJECT_INSTANCES[req.args.id]
-        if req.args.id in OBJECTS_WITH_UPDATED_POSE:
-            OBJECTS_WITH_UPDATED_POSE.remove(req.args.id)
-        asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.REMOVE, data=obj)))
-
-    elif req.args.id in glob.SERVICES_INSTANCES:
-
-        # first check if some object is not using it
-        for obj in glob.SCENE.objects:
-            if req.args.id in glob.OBJECT_TYPES[obj.type].needs_services:
-                raise Arcor2Exception(f"Object {obj.id} ({obj.type}) "
-                                      f"relies on the service to be removed: {req.args.id}.")
-
-        srv = glob.SCENE.service(req.args.id)
-        glob.SCENE.services = [srv for srv in glob.SCENE.services if srv.type != req.args.id]
-        del glob.SERVICES_INSTANCES[req.args.id]
-        asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.REMOVE, data=srv)))
-
-    else:
+    if req.args.id not in glob.SCENE_OBJECT_INSTANCES:
         raise Arcor2Exception("Unknown id.")
 
-    glob.SCENE.update_modified()
+    obj = glob.SCENE.object(req.args.id)
+    glob.SCENE.delete_object(req.args.id)
+    obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
+
+    del glob.SCENE_OBJECT_INSTANCES[req.args.id]
+    if req.args.id in OBJECTS_WITH_UPDATED_POSE:
+        OBJECTS_WITH_UPDATED_POSE.remove(req.args.id)
+    asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.REMOVE, data=obj)))
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
+    asyncio.ensure_future(hlp.run_in_executor(obj_inst.cleanup))
     return None
 
 
@@ -319,10 +270,10 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
     scene_object = glob.SCENE.object(req.args.id)
 
-    if glob.OBJECT_TYPES[scene_object.type].needs_services:
-        raise Arcor2Exception("Can't manipulate object created by service.")
-
     obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
+
+    if not isinstance(obj_inst, GenericWithPose):
+        raise Arcor2Exception("Object without pose.")
 
     if obj_inst.collision_model:
         if isinstance(obj_inst.collision_model, object_type.Mesh) and req.args.pivot != rpc.objects.PivotEnum.MIDDLE:
@@ -353,17 +304,20 @@ async def update_object_pose_using_robot_cb(req: rpc.objects.UpdateObjectPoseUsi
 
     position_delta = position_delta.rotated(new_pose.orientation)
 
+    assert scene_object.pose
+
     scene_object.pose.position.x = new_pose.position.x - position_delta.x
     scene_object.pose.position.y = new_pose.position.y - position_delta.y
     scene_object.pose.position.z = new_pose.position.z - position_delta.z
 
     scene_object.pose.orientation.set_from_quaternion(
         new_pose.orientation.as_quaternion() * quaternion.quaternion(0, 1, 0, 0))
-    obj_inst.pose = scene_object.pose
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=scene_object)))
     OBJECTS_WITH_UPDATED_POSE.add(scene_object.id)
+    asyncio.ensure_future(set_object_pose(obj_inst, scene_object.pose))
+
     return None
 
 
@@ -375,16 +329,19 @@ async def update_object_pose_cb(req: rpc.scene.UpdateObjectPoseRequest, ui: WsCl
 
     obj = glob.SCENE.object(req.args.object_id)
 
-    if glob.OBJECT_TYPES[obj.type].needs_services:
-        raise Arcor2Exception("Can't manipulate object created by service.")
+    if not obj.pose:
+        raise Arcor2Exception("Object without pose.")
 
     obj.pose = req.args.pose
-    glob.SCENE_OBJECT_INSTANCES[req.args.object_id].pose = req.args.pose
+
+    obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.object_id]
+    assert isinstance(obj_inst, GenericWithPose)
 
     glob.SCENE.update_modified()
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
-
     OBJECTS_WITH_UPDATED_POSE.add(obj.id)
+    asyncio.ensure_future(set_object_pose(obj_inst, obj.pose))
+
     return None
 
 
@@ -423,7 +380,7 @@ async def rename_scene_cb(req: rpc.scene.RenameSceneRequest, ui: WsClient) -> No
     async with managed_scene(req.args.id) as scene:
         scene.name = req.args.new_name
         asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
-                                                                        data=scene.bare())))
+                                                                        data=scene.bare)))
     return None
 
 
@@ -442,10 +399,10 @@ async def delete_scene_cb(req: rpc.scene.DeleteSceneRequest, ui: WsClient) -> \
     if req.dry_run:
         return None
 
-    scene = await storage.get_scene(req.args.id)
+    scene = UpdateableCachedScene(await storage.get_scene(req.args.id))
     await storage.delete_scene(req.args.id)
     asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.REMOVE,
-                                                                    data=scene.bare())))
+                                                                    data=scene.bare)))
     return None
 
 
@@ -463,38 +420,7 @@ async def update_scene_description_cb(req: rpc.scene.UpdateSceneDescriptionReque
         scene.desc = req.args.new_description
         scene.update_modified()
         asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
-                                                                        data=scene.bare())))
-    return None
-
-
-@scene_needed
-async def update_service_configuration_cb(req: rpc.scene.UpdateServiceConfigurationRequest, ui: WsClient) -> None:
-
-    assert glob.SCENE
-
-    srv = glob.SCENE.service(req.args.type)
-
-    # first check if some object is not using it
-    for obj in glob.SCENE.objects:
-        if req.args.type in glob.OBJECT_TYPES[obj.type].needs_services:
-            raise Arcor2Exception(f"Object {obj.name} ({obj.type}) relies "
-                                  f"on the service to be removed: {req.args.type}.")
-
-    if req.dry_run:
-        return None
-
-    srv_type_def = glob.TYPE_DEF_DICT[req.args.type]
-
-    assert issubclass(srv_type_def, Service)
-
-    await hlp.run_in_executor(glob.SERVICES_INSTANCES[req.args.type].cleanup)
-    glob.SERVICES_INSTANCES[req.args.type] = \
-        await hlp.run_in_executor(srv_type_def, req.args.new_configuration)
-    srv.configuration_id = req.args.new_configuration
-
-    glob.SCENE.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.SceneServiceChanged(events.EventType.UPDATE, data=srv)))
-
+                                                                        data=scene.bare)))
     return None
 
 
@@ -504,6 +430,6 @@ async def copy_scene_cb(req: rpc.scene.CopySceneRequest, ui: WsClient) -> None:
     async with managed_scene(req.args.source_id, make_copy=True) as scene:
         scene.name = req.args.target_name
         asyncio.ensure_future(notif.broadcast_event(events.SceneChanged(events.EventType.UPDATE_BASE,
-                                                                        data=scene.bare())))
+                                                                        data=scene.bare)))
 
     return None

@@ -1,7 +1,7 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, TYPE_CHECKING, TypeVar, Union, cast, no_type_check
+from typing import Any, Callable, TYPE_CHECKING, TypeVar, Union, cast
 
 from arcor2.data.common import ActionState, ActionStateEnum, PackageState, PackageStateEnum
 from arcor2.data.events import ActionStateEvent, Event, PackageStateEvent
@@ -9,8 +9,7 @@ from arcor2.data.events import ActionStateEvent, Event, PackageStateEvent
 HANDLE_ACTIONS = True
 
 if TYPE_CHECKING:
-    from arcor2.object_types import Generic  # NOQA
-    from arcor2.services.service import Service  # NOQA
+    from arcor2.object_types.abstract import Generic  # NOQA
 
 
 try:
@@ -44,7 +43,7 @@ except ImportError:
         return None
 
 
-def handle_action(inst: Union["Service", "Generic"], f: Callable[..., Any], where: ActionStateEnum) -> None:
+def handle_action(inst: "Generic", f: Callable[..., Any], where: ActionStateEnum) -> None:
 
     # can't import Service/Generic here (circ. import)
     if hasattr(inst, "id"):
@@ -79,7 +78,6 @@ F = TypeVar('F', bound=Callable[..., Any])
 
 def action(f: F) -> F:
 
-    @no_type_check
     @wraps(f)
     def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
 
@@ -88,18 +86,18 @@ def action(f: F) -> F:
             kwargs = args[1]
             args = (args[0],)
 
-        if not action.inside_composite and HANDLE_ACTIONS:
+        if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
             handle_action(args[0], f, ActionStateEnum.BEFORE)
 
-        if wrapper.__action__.composite:  # TODO and not step_into
-            action.inside_composite = f
+        if wrapper.__action__.composite:  # type: ignore # TODO and not step_into
+            action.inside_composite = f  # type: ignore
 
         res = f(*args, **kwargs)
 
-        if action.inside_composite == f:
-            action.inside_composite = None
+        if action.inside_composite == f:  # type: ignore
+            action.inside_composite = None  # type: ignore
 
-        if not action.inside_composite and HANDLE_ACTIONS:
+        if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
             handle_action(args[0], f, ActionStateEnum.AFTER)
 
         return res

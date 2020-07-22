@@ -3,10 +3,10 @@ from typing import List
 
 from arcor2.action import action
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types import Generic
+from arcor2.object_types.abstract import GenericWithPose
 
 
-class Tester(Generic):
+class Tester(GenericWithPose):
     """
     A generic tester
     """
