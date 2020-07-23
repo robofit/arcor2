@@ -65,7 +65,7 @@ def delete_all_collisions() -> None:
         delete_collision_id(cid)
 
 
-__ALL__ = [
+__all__ = [
     SceneServiceException.__name__,
     upsert_collision.__name__,
     delete_collision_id.__name__,
