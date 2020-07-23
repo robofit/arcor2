@@ -270,7 +270,7 @@ def add_ancestor_actions(obj_type_name: str, object_types: ObjectTypeDict) -> No
             object_types[obj_type_name].actions[action.name] = action
 
 
-__ALL__ = [
+__all__ = [
     ObjectTypeException.__name__,
     ObjectTypeData.__name__,
     "ObjectTypeDict",

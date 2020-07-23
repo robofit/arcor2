@@ -37,8 +37,11 @@ class Generic(metaclass=abc.ABCMeta):
 
         if settings is None:
             settings = Settings()
+        self._settings = settings
 
-        self.settings: Settings = settings
+    @property
+    def settings(self) -> Settings:
+        return self._settings
 
     @classmethod
     def description(cls) -> str:
@@ -152,8 +155,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         raise NotImplementedError("The robot can't be stopped.")
 
 
-__ALL__ = [
-    Settings.__name__,
+__all__ = [
     Generic.__name__,
     GenericWithPose.__name__,
     Robot.__name__,

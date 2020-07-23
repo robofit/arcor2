@@ -27,7 +27,7 @@ async def focus(mfa: MeshFocusAction) -> Pose:
 async def delete_all_collisions() -> None:
     await asyncio.gather(*[delete_collision_id(coll_id) for coll_id in await collision_ids()])
 
-__ALL__ = [
+__all__ = [
     upsert_collision.__name__,
     delete_collision_id.__name__,
     collision_ids.__name__,
