@@ -39,11 +39,12 @@ from arcor2.source.utils import make_executable
 
 PORT = 6790
 
-logger = Logger.with_default_handlers(name='manager', formatter=aiologger_formatter())
+logger = Logger.with_default_handlers(name='Execution', formatter=aiologger_formatter())
 
 PROCESS: Union[asyncio.subprocess.Process, None] = None
-PROJECT_EVENT: PackageStateEvent = PackageStateEvent()
-PACKAGE_INFO_EVENT: Optional[PackageInfoEvent] = None
+PACKAGE_STATE_EVENT: PackageStateEvent = PackageStateEvent()
+RUNNING_PACKAGE_ID: Optional[str] = None
+PACKAGE_INFO_EVENT: Optional[PackageInfoEvent] = None  # in case of manually written scripts, this might not be sent
 ACTION_EVENT: Optional[ActionStateEvent] = None
 ACTION_ARGS_EVENT: Optional[CurrentActionEvent] = None
 TASK = None
@@ -58,26 +59,28 @@ def process_running() -> bool:
     return PROCESS is not None and PROCESS.returncode is None
 
 
-async def project_state(event: PackageStateEvent):
+async def package_state(event: PackageStateEvent):
 
-    global PROJECT_EVENT
-    PROJECT_EVENT = event
+    global PACKAGE_STATE_EVENT
+    PACKAGE_STATE_EVENT = event
     await send_to_clients(event)
 
 
-async def read_proc_stdout(package_id: str) -> None:
+async def read_proc_stdout() -> None:
 
-    global PROJECT_EVENT
+    global PACKAGE_STATE_EVENT
     global ACTION_EVENT
     global ACTION_ARGS_EVENT
     global PACKAGE_INFO_EVENT
+    global RUNNING_PACKAGE_ID
 
     logger.info("Reading script stdout...")
 
     assert PROCESS is not None
     assert PROCESS.stdout is not None
+    assert RUNNING_PACKAGE_ID is not None
 
-    await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.RUNNING, package_id)))
+    await package_state(PackageStateEvent(data=PackageState(PackageStateEnum.RUNNING, RUNNING_PACKAGE_ID)))
 
     printed_out: List[str] = []
 
@@ -109,8 +112,8 @@ async def read_proc_stdout(package_id: str) -> None:
             continue
 
         if isinstance(evt, PackageStateEvent):
-            evt.data.package_id = package_id
-            await project_state(evt)
+            evt.data.package_id = RUNNING_PACKAGE_ID
+            await package_state(evt)
             continue
         elif isinstance(evt, ActionStateEvent):
             ACTION_EVENT = evt
@@ -139,14 +142,17 @@ async def read_proc_stdout(package_id: str) -> None:
             await logger.warn(
                 f"Process ended with non-zero return code ({PROCESS.returncode}), but didn't printed out anything.")
 
-    await project_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED, package_id)))
+    await package_state(PackageStateEvent(data=PackageState(PackageStateEnum.STOPPED, RUNNING_PACKAGE_ID)))
     logger.info(f"Process finished with returncode {PROCESS.returncode}.")
+
+    RUNNING_PACKAGE_ID = None
 
 
 async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> None:
 
     global PROCESS
     global TASK
+    global RUNNING_PACKAGE_ID
 
     if process_running():
         raise Arcor2Exception("Already running!")
@@ -176,12 +182,15 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     meta.executed = datetime.now(tz=timezone.utc)
     write_package_meta(req.args.id, meta)
 
-    TASK = asyncio.ensure_future(read_proc_stdout(req.args.id))  # run task in background
+    RUNNING_PACKAGE_ID = req.args.id
+
+    TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
 
 
 async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -> None:
 
     global PACKAGE_INFO_EVENT
+    global RUNNING_PACKAGE_ID
 
     if not process_running():
         raise Arcor2Exception("Project not running.")
@@ -194,6 +203,7 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -
     await logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
     PACKAGE_INFO_EVENT = None
+    RUNNING_PACKAGE_ID = None
 
 
 async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient) -> None:
@@ -204,7 +214,7 @@ async def pause_package_cb(req: rpc.execution.PausePackageRequest, ui: WsClient)
     assert PROCESS is not None
     assert PROCESS.stdin is not None
 
-    if PROJECT_EVENT.data.state != PackageStateEnum.RUNNING:
+    if PACKAGE_STATE_EVENT.data.state != PackageStateEnum.RUNNING:
         raise Arcor2Exception("Cannot pause.")
 
     PROCESS.stdin.write("p\n".encode())
@@ -220,7 +230,7 @@ async def resume_package_cb(req: rpc.execution.ResumePackageRequest, ui: WsClien
     assert PROCESS is not None
     assert PROCESS.stdin is not None
 
-    if PROJECT_EVENT.data.state != PackageStateEnum.PAUSED:
+    if PACKAGE_STATE_EVENT.data.state != PackageStateEnum.PAUSED:
         raise Arcor2Exception("Cannot resume.")
 
     PROCESS.stdin.write("r\n".encode())
@@ -232,7 +242,7 @@ async def package_state_cb(req: rpc.execution.PackageStateRequest, ui: WsClient)
         rpc.execution.PackageStateResponse:
 
     resp = rpc.execution.PackageStateResponse()
-    resp.data.project = PROJECT_EVENT.data
+    resp.data.project = PACKAGE_STATE_EVENT.data
     if ACTION_EVENT:
         resp.data.action = ACTION_EVENT.data
     if ACTION_ARGS_EVENT:
@@ -294,18 +304,20 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient)
             continue
 
         package_dir = os.path.basename(folder_path)
+        package_meta = read_package_meta(package_dir)
 
-        with open(os.path.join(folder_path, "data", "project.json")) as project_file:
-            try:
+        try:
+            with open(os.path.join(folder_path, "data", "project.json")) as project_file:
                 project = Project.from_json(project_file.read())
-            except ValidationError as e:
-                await logger.error(f"Failed to parse project file of {package_dir}: {e}")
-                continue
+        except (ValidationError, IOError) as e:
+            await logger.error(f"Failed to read/parse project file of {package_dir}: {e}")
 
-        assert project.modified
-
-        resp.data.append(rpc.execution.PackageSummary(package_dir, project.id, project.modified,
-                                                      read_package_meta(package_dir)))
+            resp.data.append(rpc.execution.PackageSummary(
+                package_dir, "N/A", datetime.fromtimestamp(0, tz=timezone.utc), package_meta))
+        else:
+            assert project.modified
+            resp.data.append(rpc.execution.PackageSummary(
+                package_dir, project.id, project.modified, package_meta))
 
         # TODO report manual changes (check last modification of files)?
 
@@ -314,7 +326,7 @@ async def list_packages_cb(req: rpc.execution.ListPackagesRequest, ui: WsClient)
 
 async def delete_package_cb(req: rpc.execution.DeletePackageRequest, ui: WsClient) -> None:
 
-    if PACKAGE_INFO_EVENT and PACKAGE_INFO_EVENT.data and PACKAGE_INFO_EVENT.data.package_id == req.args.id:
+    if RUNNING_PACKAGE_ID and RUNNING_PACKAGE_ID == req.args.id:
         raise Arcor2Exception("Package is being executed.")
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
@@ -354,7 +366,7 @@ async def register(websocket: WsClient) -> None:
     await logger.info("Registering new client")
     CLIENTS.add(websocket)
 
-    tasks: List[Awaitable] = [websocket.send(PROJECT_EVENT.to_json())]
+    tasks: List[Awaitable] = [websocket.send(PACKAGE_STATE_EVENT.to_json())]
 
     if PACKAGE_INFO_EVENT:
         tasks.append(websocket.send(PACKAGE_INFO_EVENT.to_json()))
