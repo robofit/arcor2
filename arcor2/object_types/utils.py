@@ -1,7 +1,7 @@
 import copy
 import inspect
 from dataclasses import dataclass, field
-from typing import Dict, Iterator, Optional, Set, Tuple, Type, get_type_hints
+from typing import Any, Callable, Dict, Iterator, Optional, Set, Tuple, Type, get_type_hints
 
 import horast
 
@@ -17,7 +17,7 @@ from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
-from arcor2.source.utils import find_function
+from arcor2.source.utils import SourceException, find_function
 
 
 class ObjectTypeException(Arcor2Exception):
@@ -151,40 +151,51 @@ def _resolve_param(plugins: Dict[Type, Type[ParameterPlugin]], name: str, ttype)
     raise IgnoreActionException(f"Parameter {name} has unknown type {ttype}.")
 
 
+def iterate_over_actions(type_def: Type[Generic]) -> Iterator[Tuple[str, Callable[[Any, ], Any]]]:
+
+    for method_name, method in inspect.getmembers(type_def, inspect.isroutine):
+
+        try:
+            if not isinstance(method.__action__, ActionMetadata):
+                continue
+        except AttributeError:
+            continue
+
+        yield method_name, method
+
+
 def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Type[Generic], tree: AST) \
         -> Dict[str, ObjectAction]:
 
     ret: Dict[str, ObjectAction] = {}
 
     # ...inspect.ismethod does not work on un-initialized classes
-    for method_name, method_def in inspect.getmembers(type_def, predicate=inspect.isfunction):
+    for method_name, method_def in iterate_over_actions(type_def):
 
-        # TODO check also if the method has 'action' decorator (ast needed)
-        if not hasattr(method_def, "__action__"):
-            continue
-
-        # action from ancestor, will be copied later (only if the action was not overridden)
-        base_cls_def = type_def.__bases__[0]
-        if hasattr(base_cls_def, method_name) and getattr(base_cls_def, method_name) == method_def:
-            continue
-
-        meta: ActionMetadata = method_def.__action__
+        meta: ActionMetadata = method_def.__action__  # type: ignore
 
         data = ObjectAction(name=method_name, meta=meta)
 
         if method_name in type_def.CANCEL_MAPPING:
             meta.cancellable = True
 
-        doc = parse_docstring(method_def.__doc__)
-        doc_short = doc["short_description"]
-        if doc_short:
-            data.description = doc_short
-
-        signature = inspect.signature(method_def)
-
-        method_tree = find_function(method_name, tree)
-
         try:
+
+            if not method_def.__doc__:
+                doc = {}
+            else:
+                doc = parse_docstring(method_def.__doc__)
+                doc_short = doc["short_description"]
+                if doc_short:
+                    data.description = doc_short
+
+            signature = inspect.signature(method_def)
+
+            try:
+                method_tree = find_function(method_name, tree)
+            except SourceException:
+                # function is probably defined in predecessor, will be added later
+                continue
 
             for name, ttype in get_type_hints(method_def).items():
 
