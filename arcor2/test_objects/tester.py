@@ -1,7 +1,6 @@
 import time
 from typing import List
 
-from arcor2.action import action
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import GenericWithPose
 
@@ -16,20 +15,33 @@ class Tester(GenericWithPose):
         self._cancel: bool = False
         self._param1: str = ""
 
-    @action
     def run_test(self, seq: List[float], seq_id: List[str], eqp_res: List[bool]) -> List[bool]:
+        """
+        Run test with many parameters.
+        :param seq:
+        :param seq_id:
+        :param eqp_res:
+        :return:
+        """
         return [bool(seq), bool(seq_id), bool(eqp_res)]
 
-    @action
     def long_running_action(self) -> None:
+        """
+        This runs for long time.
+        :return:
+        """
         for _ in range(60):
             time.sleep(1)
             if self._cancel:
                 self._cancel = False
                 break
 
-    @action
     def long_running_action_with_params(self, param1: str) -> None:
+        """
+        Runs for long time.
+        :param param1:
+        :return:
+        """
         self._param1 = param1
         for _ in range(60):
             time.sleep(1)
