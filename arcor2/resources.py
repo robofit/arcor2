@@ -11,7 +11,7 @@ from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
 from arcor2 import helpers as hlp, transformations as tr
-from arcor2.action import print_event
+from arcor2.action import patch_object_actions, print_event
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import scene_service
 from arcor2.data.common import CurrentAction, Project, Scene
@@ -66,6 +66,7 @@ class IntResources:
                 )
 
             cls = getattr(module, scene_obj.type)
+            patch_object_actions(cls)
             self.type_defs[cls.__name__] = cls
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
