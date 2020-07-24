@@ -1,15 +1,25 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, TYPE_CHECKING, TypeVar, Union, cast
+from typing import Any, Callable, Type, TypeVar, Union, cast
 
 from arcor2.data.common import ActionState, ActionStateEnum, PackageState, PackageStateEnum
 from arcor2.data.events import ActionStateEvent, Event, PackageStateEvent
+from arcor2.object_types.abstract import Generic
+from arcor2.object_types.utils import iterate_over_actions
 
 HANDLE_ACTIONS = True
 
-if TYPE_CHECKING:
-    from arcor2.object_types.abstract import Generic  # NOQA
+
+def patch_object_actions(type_def: Type[Generic]) -> None:
+    """
+    Dynamically adds @action decorator to the methods with assigned ActionMetadata.
+    :param type_def:
+    :return:
+    """
+
+    for method_name, method in iterate_over_actions(type_def):
+        setattr(type_def, method_name, action(method))
 
 
 try:

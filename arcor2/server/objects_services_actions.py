@@ -8,6 +8,7 @@ from typing import Optional, Type
 import horast
 
 from arcor2 import helpers as hlp
+from arcor2.action import patch_object_actions
 from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data.object_type import ObjectModel, ObjectTypeMeta
 from arcor2.exceptions import Arcor2Exception
@@ -53,6 +54,8 @@ async def get_object_data(obj_id: str) -> otu.ObjectTypeData:
         await glob.logger.warning(f"Disabling object type {obj.id}.")
         await glob.logger.debug(e, exc_info=True)
         return otu.ObjectTypeData(ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=e.message))
+
+    patch_object_actions(type_def)
 
     if obj.model:
         model = await storage.get_model(obj.model.id, obj.model.type)
