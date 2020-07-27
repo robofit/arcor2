@@ -280,6 +280,13 @@ class ActionCancelledEvent(Event):
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
+@dataclass
+class PackageChanged(Event):
+
+    data: Optional[execution.PackageSummary] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
 """
 ------------------------------------------------------------------------------------------------------------------------
 Objects
