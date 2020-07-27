@@ -139,7 +139,7 @@ async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
             if ap.parent != obj_id:
                 continue
 
-            await glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
+            glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
             ap.invalidate_joints()
 
         await storage.update_project(project)
@@ -181,7 +181,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
         await storage.update_project(project)
         updated_project_ids.add(project.id)
 
-    await glob.logger.info("Updated projects: {}".format(updated_project_ids))
+    glob.logger.info("Updated projects: {}".format(updated_project_ids))
 
 
 async def projects(scene_id: str) -> AsyncIterator[common.Project]:
