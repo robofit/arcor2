@@ -202,10 +202,13 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
     if issubclass(base.type_def, Robot):
         raise Arcor2Exception("Can't subclass Robot.")
 
+    meta.has_pose = issubclass(base.type_def, GenericWithPose)
+
+    if not meta.has_pose and meta.object_model:
+        raise Arcor2Exception("Object without pose can't have collision model.")
+
     if req.dry_run:
         return None
-
-    meta.has_pose = issubclass(base.type_def, GenericWithPose)
 
     obj = meta.to_object_type()
     ast = new_object_type(glob.OBJECT_TYPES[meta.base].meta, meta)

@@ -89,10 +89,6 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     glob.ACTION_STATE = evt.data
                 elif isinstance(evt, events.CurrentActionEvent):
                     glob.CURRENT_ACTION = evt.data
-                elif isinstance(evt, events.ProjectExceptionEvent):
-                    pass
-                else:
-                    await glob.logger.warn(f"Unhandled type of event from Execution: {evt.event}")
 
             elif "response" in msg:
 

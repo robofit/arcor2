@@ -7,7 +7,7 @@ from typing import List, Optional
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import ActionState, CurrentAction, PackageState
-from arcor2.data.execution import PackageMeta
+from arcor2.data.execution import PackageSummary
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
 
@@ -77,17 +77,6 @@ class ModifiedFile(JsonSchemaMixin):
 
     filename: str
     modified: datetime
-
-
-@dataclass
-class PackageSummary(JsonSchemaMixin):
-
-    id: str
-    project_id: str
-    modified: datetime = field(metadata=dict(
-        description="Last modification of the project embedded in the execution package."))
-    # modified_files: List[ModifiedFile] = field(default_factory=list)
-    package_meta: PackageMeta = field(metadata=dict(description="Content of 'package.json'."))
 
 
 @dataclass
