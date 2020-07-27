@@ -83,7 +83,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
     if dry_run:
         return None
 
-    await glob.logger.debug(f"Creating instance {obj.id} ({obj.type}).")
+    glob.logger.debug(f"Creating instance {obj.id} ({obj.type}).")
 
     # TODO settings -> dataclass
 
@@ -119,7 +119,7 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
 
 async def clear_scene(do_cleanup: bool = True) -> None:
 
-    await glob.logger.info("Clearing the scene.")
+    glob.logger.info("Clearing the scene.")
     glob.SCENE_OBJECT_INSTANCES.clear()
     await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
     glob.SCENE = None

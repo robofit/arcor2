@@ -121,10 +121,10 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
     try:
         action_result = await hlp.run_in_executor(action_method, *params.values())
     except Arcor2Exception as e:
-        await glob.logger.error(e)
+        glob.logger.error(e)
         evt.data.error = e.message
     except (AttributeError, TypeError) as e:
-        await glob.logger.error(e)
+        glob.logger.error(e)
         evt.data.error = str(e)
     else:
         if action_result is not None:
@@ -193,7 +193,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
                     {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
                     glob.SCENE, glob.PROJECT, action.id, param.id)
             except ParameterPluginException as e:
-                await glob.logger.error(e)
+                glob.logger.error(e)
                 raise Arcor2Exception(f"Failed to get value for parameter {param.id}.")
 
     obj = get_instance(obj_id)
@@ -204,7 +204,7 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
     glob.RUNNING_ACTION = action.id
     glob.RUNNING_ACTION_PARAMS = params
 
-    await glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
+    glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
 
     # schedule execution and return success
     asyncio.ensure_future(execute_action(getattr(obj, action_name), params))

@@ -154,12 +154,12 @@ async def server(client: Any,
             try:
                 data = json.loads(message)
             except json.decoder.JSONDecodeError as e:
-                await logger.error(f"Invalid data: '{message}'.")
-                await logger.debug(e)
+                logger.error(f"Invalid data: '{message}'.")
+                logger.debug(e)
                 continue
 
             if not isinstance(data, dict):
-                await logger.error(f"Invalid data: '{data}'.")
+                logger.error(f"Invalid data: '{data}'.")
                 continue
 
             if "request" in data:  # ...then it is RPC
@@ -167,23 +167,23 @@ async def server(client: Any,
                 try:
                     req_cls, resp_cls = RPC_MAPPING[data['request']]
                 except KeyError:
-                    await logger.error(f"Unknown RPC request: {data}.")
+                    logger.error(f"Unknown RPC request: {data}.")
                     continue
 
                 if req_cls not in rpc_dict:
-                    await logger.debug(f"Ignoring RPC request: {data}.")
+                    logger.debug(f"Ignoring RPC request: {data}.")
                     continue
 
                 try:
                     req = req_cls.from_dict(data)
                 except ValidationError as e:
-                    await logger.error(f"Invalid RPC: {data}, error: {e}")
+                    logger.error(f"Invalid RPC: {data}, error: {e}")
                     continue
 
                 try:
                     resp = await rpc_dict[req_cls](req, client)
                 except Arcor2Exception as e:
-                    await logger.debug(e, exc_info=True)
+                    logger.debug(e, exc_info=True)
                     resp = resp_cls()
                     resp.result = False
                     resp.messages = [e.message]
@@ -218,7 +218,7 @@ async def server(client: Any,
                     if req_per_sec > 2:
                         if req.request not in ignored_reqs:
                             ignored_reqs.add(req.request)
-                            await logger.debug(f"Request of type {req.request} will be silenced.")
+                            logger.debug(f"Request of type {req.request} will be silenced.")
                     elif req_per_sec < 1:
                         if req.request in ignored_reqs:
                             ignored_reqs.remove(req.request)
@@ -231,23 +231,23 @@ async def server(client: Any,
                 try:
                     event_cls = EVENT_MAPPING[data["event"]]
                 except KeyError as e:
-                    await logger.error(f"Unknown event type: {e}.")
+                    logger.error(f"Unknown event type: {e}.")
                     continue
 
                 if event_cls not in event_dict:
-                    await logger.debug(f"Ignoring event: {data}.")
+                    logger.debug(f"Ignoring event: {data}.")
                     continue
 
                 try:
                     event = event_cls.from_dict(data)
                 except ValidationError as e:
-                    await logger.error(f"Invalid event: {data}, error: {e}")
+                    logger.error(f"Invalid event: {data}, error: {e}")
                     continue
 
                 await event_dict[event_cls](event, client)
 
             else:
-                await logger.error(f"unsupported format of message: {data}")
+                logger.error(f"unsupported format of message: {data}")
     except websockets.exceptions.ConnectionClosed:
         pass
     finally:
