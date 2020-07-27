@@ -148,7 +148,7 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
     try:
         await hlp.run_in_executor(robot_inst.move_to_pose, end_effector_id, pose, speed)
     except (NotImplementedError, Arcor2Exception) as e:
-        await glob.logger.error(f"Robot movement failed with: {str(e)}")
+        glob.logger.error(f"Robot movement failed with: {str(e)}")
         move_in_progress.remove(robot_id)
         raise Arcor2Exception from e
 
@@ -205,7 +205,7 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
     try:
         await hlp.run_in_executor(robot_inst.move_to_joints, joints, speed)
     except (NotImplementedError, Arcor2Exception) as e:
-        await glob.logger.error(f"Robot movement failed with: {str(e)}")
+        glob.logger.error(f"Robot movement failed with: {str(e)}")
 
         move_in_progress.remove(robot_id)
         raise Arcor2Exception from e

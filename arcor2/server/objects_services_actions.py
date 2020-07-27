@@ -51,8 +51,8 @@ async def get_object_data(obj_id: str) -> otu.ObjectTypeData:
         type_def = hlp.type_def_from_source(obj.source, obj.id, Generic)
         meta = otu.meta_from_def(type_def)
     except (otu.ObjectTypeException, hlp.TypeDefException) as e:
-        await glob.logger.warning(f"Disabling object type {obj.id}.")
-        await glob.logger.debug(e, exc_info=True)
+        glob.logger.warning(f"Disabling object type {obj.id}.")
+        glob.logger.debug(e, exc_info=True)
         return otu.ObjectTypeData(ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=e.message))
 
     patch_object_actions(type_def)
@@ -88,7 +88,7 @@ async def get_object_types() -> None:
             try:
                 obj_type.meta.description = otu.obj_description_from_base(object_types, obj_type.meta)
             except otu.DataError as e:
-                await glob.logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
+                glob.logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
 
         if not obj_type.meta.disabled and not obj_type.meta.built_in:
             otu.add_ancestor_actions(obj_type.meta.type, object_types)

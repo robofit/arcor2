@@ -216,8 +216,8 @@ async def action_param_values_cb(req: rpc.objects.ActionParamValuesRequest, ui: 
     try:
         method = getattr(inst, method_name)
     except AttributeError:
-        await glob.logger.error(f"Unable to get values for parameter {req.args.param_id}, "
-                                f"object/service {inst.id} has no method named {method_name}.")
+        glob.logger.error(f"Unable to get values for parameter {req.args.param_id}, "
+                          f"object/service {inst.id} has no method named {method_name}.")
         raise Arcor2Exception("System error.")
 
     # TODO update hlp.run_in_executor to support kwargs
