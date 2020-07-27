@@ -53,15 +53,9 @@ except ImportError:
         return None
 
 
-def handle_action(inst: "Generic", f: Callable[..., Any], where: ActionStateEnum) -> None:
+def handle_action(inst: Generic, f: Callable[..., Any], where: ActionStateEnum) -> None:
 
-    # can't import Service/Generic here (circ. import)
-    if hasattr(inst, "id"):
-        obj_id = inst.id  # type: ignore
-    else:
-        obj_id = inst.__class__.__name__
-
-    print_event(ActionStateEvent(data=ActionState(obj_id, f.__name__, where)))
+    print_event(ActionStateEvent(data=ActionState(inst.id, f.__name__, where)))
 
     ctrl_cmd = read_stdin()
 
@@ -89,7 +83,7 @@ F = TypeVar('F', bound=Callable[..., Any])
 def action(f: F) -> F:
 
     @wraps(f)
-    def wrapper(*args: Union["Generic", Any], **kwargs: Any) -> Any:
+    def wrapper(*args: Union[Generic, Any], **kwargs: Any) -> Any:
 
         # automagical overload for dictionary (allow to get rid of ** in script).
         if len(args) == 2 and isinstance(args[1], dict) and not kwargs:
