@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Iterator, Optional, Set, Tuple, Type, ge
 
 import horast
 
-from typed_ast.ast3 import AST
+from typed_ast.ast3 import AST, Name
 
 import typing_inspect  # type: ignore
 
@@ -15,9 +15,9 @@ from arcor2.data.object_type import ActionParameterMeta, ObjectAction, ObjectTyp
 from arcor2.data.robot import RobotMeta
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
+from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
-from arcor2.source.utils import SourceException, find_function
+from arcor2.source.utils import SourceException, find_class_def, find_function
 
 
 class ObjectTypeException(Arcor2Exception):
@@ -98,16 +98,27 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
     obj = ObjectTypeMeta(type_def.__name__,
                          type_def.description(),
                          built_in=built_in,
-                         # TODO kind of hack to make Generic etc. abstract
-                         abstract=inspect.isabstract(type_def) or type_def in (Generic, GenericWithPose, Robot),
+                         abstract=type_def.abstract(),
                          has_pose=issubclass(type_def, GenericWithPose))
 
-    bases = inspect.getmro(type_def)
-
-    if len(bases) > 2:
-        obj.base = bases[1].__name__
+    for base in inspect.getmro(type_def)[1:-1]:  # skip type itself (first base) and the last one (object)
+        if issubclass(base, Generic):
+            obj.base = base.__name__
+            break
 
     return obj
+
+
+def base_from_source(source: str, cls_name: str) -> Optional[str]:
+
+    cls_def = find_class_def(cls_name, horast.parse(source))
+    if not cls_def.bases:
+        return None
+
+    base_name = cls_def.bases[-1]  # allow usage of mixins e.g. class MyType(mixin, Generic)
+
+    assert isinstance(base_name, Name)
+    return base_name.id
 
 
 def built_in_types_data(plugins: Dict[Type, Type[ParameterPlugin]]) -> ObjectTypeDict:

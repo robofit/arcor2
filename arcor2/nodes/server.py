@@ -34,6 +34,7 @@ from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.server import events as server_events, execution as exe, globals as glob, notifications as notif, \
     objects_services_actions as osa, rpc as srpc, settings
+from arcor2.source.object_types import prepare_object_types_dir
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -253,6 +254,8 @@ def main() -> None:
     if os.path.exists(settings.URDF_PATH):
         shutil.rmtree(settings.URDF_PATH)
     os.makedirs(settings.URDF_PATH)
+
+    prepare_object_types_dir(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
 
     run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 

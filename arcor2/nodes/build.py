@@ -26,9 +26,9 @@ import arcor2
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
-from arcor2.data.object_type import ObjectModel
+from arcor2.data.object_type import ObjectModel, ObjectType
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
-from arcor2.object_types.utils import built_in_types_names
+from arcor2.object_types.utils import base_from_source, built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.logic import program_src  # , get_logic_from_source
 from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
@@ -56,9 +56,29 @@ CORS(app)
 RETURN_TYPE = Union[Tuple[str, int], Response]
 
 
+def get_base(object_types: Set[str], obj_type: ObjectType, ot_path: str) -> None:
+
+    base = base_from_source(obj_type.source, obj_type.id)
+
+    if not base:
+        return
+
+    if base not in object_types and base not in built_in_types_names():
+
+        base_obj_type = ps.get_object_type(base)
+
+        with open(os.path.join(ot_path, camel_case_to_snake_case(base_obj_type.id)) + ".py", "w") as obj_file:
+            obj_file.write(base_obj_type.source)
+
+        object_types.add(base)
+
+        # try to get base of the base
+        get_base(object_types, base_obj_type, ot_path)
+
+
 def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    with tempfile.TemporaryDirectory() as pkg_tmp_dir:
 
         try:
             project = ps.get_project(project_id)
@@ -66,21 +86,16 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             scene = ps.get_scene(project.scene_id)
             cached_scene = CachedScene(scene)
 
-            project_dir = os.path.join(tmpdirname, "arcor2_project")
+            project_dir = os.path.join(pkg_tmp_dir, "arcor2_project")
 
             data_path = os.path.join(project_dir, "data")
             ot_path = os.path.join(project_dir, "object_types")
-            srv_path = os.path.join(project_dir, "services")
 
             os.makedirs(data_path)
             os.makedirs(os.path.join(data_path, "models"))
             os.makedirs(ot_path)
-            os.makedirs(srv_path)
 
             with open(os.path.join(ot_path, "__init__.py"), "w"):
-                pass
-
-            with open(os.path.join(srv_path, "__init__.py"), "w"):
                 pass
 
             with open(os.path.join(data_path, "project.json"), "w") as project_file:
@@ -89,9 +104,10 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             with open(os.path.join(data_path, "scene.json"), "w") as scene_file:
                 scene_file.write(scene.to_json())
 
+            obj_types = set(cached_scene.object_types)
             obj_types_with_models: Set[str] = set()
 
-            for scene_obj in scene.objects:  # TODO handle inheritance
+            for scene_obj in scene.objects:
 
                 obj_type = ps.get_object_type(scene_obj.type)
 
@@ -107,6 +123,9 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
                 with open(os.path.join(ot_path, camel_case_to_snake_case(obj_type.id)) + ".py", "w") as obj_file:
                     obj_file.write(obj_type.source)
+
+                # handle inheritance
+                get_base(obj_types, obj_type, ot_path)
 
         except ps.PersistentStorageException as e:
             logger.exception("Failed to get something from the project service.")
@@ -154,7 +173,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             logger.exception("Failed to generate script.")
             return str(e), 501
 
-        archive_path = os.path.join(tmpdirname, "arcor2_project")
+        archive_path = os.path.join(pkg_tmp_dir, "arcor2_project")
         shutil.make_archive(archive_path, 'zip', project_dir)
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 

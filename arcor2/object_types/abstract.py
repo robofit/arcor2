@@ -1,5 +1,6 @@
 import abc
 import copy
+import inspect
 from dataclasses import dataclass
 from typing import List, Optional, Set
 
@@ -29,6 +30,7 @@ class Generic(metaclass=abc.ABCMeta):
 
     DYNAMIC_PARAMS: DynamicParamDict = {}
     CANCEL_MAPPING: CancelDict = {}
+    _ABSTRACT = True
 
     def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
 
@@ -38,6 +40,10 @@ class Generic(metaclass=abc.ABCMeta):
         if settings is None:
             settings = Settings()
         self._settings = settings
+
+    @classmethod
+    def abstract(cls) -> bool:
+        return inspect.isabstract(cls) or cls._ABSTRACT
 
     @property
     def settings(self) -> Settings:

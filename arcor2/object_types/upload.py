@@ -6,7 +6,6 @@ from arcor2.data.object_type import Models, ObjectType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import ImportClsException, import_cls
 from arcor2.object_types.abstract import Generic, GenericWithPose
-from arcor2.source import SourceException
 from arcor2.source.object_types import check_object_type
 
 
@@ -26,8 +25,8 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None) -> None:
         source = source_file.read()
 
         try:
-            check_object_type(source, type_def.__name__)
-        except SourceException as e:
+            check_object_type(type_def)
+        except Arcor2Exception as e:
             print(e)
             raise UploadException(f"There is something wrong with source code of '{type_def.__name__}'.")
 

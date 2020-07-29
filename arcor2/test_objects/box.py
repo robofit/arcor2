@@ -4,6 +4,8 @@ from arcor2.object_types.abstract import GenericWithPose
 
 class Box(GenericWithPose):
 
+    _ABSTRACT = False
+
     def test(self) -> None:
         """
         Run test.

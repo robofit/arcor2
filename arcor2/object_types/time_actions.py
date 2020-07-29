@@ -10,6 +10,8 @@ class TimeActions(Generic):
     Time-related actions.
     """
 
+    _ABSTRACT = False
+
     def __init__(self, obj_id: str, name: str) -> None:
         super(TimeActions, self).__init__(obj_id, name)
         self._rate_start_time: Optional[float] = None
