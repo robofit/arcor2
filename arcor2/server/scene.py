@@ -89,27 +89,35 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
 
     assert obj_type.type_def is not None
 
-    if issubclass(obj_type.type_def, Robot):
-        assert obj.pose is not None
-        # TODO RPC should return here (instantiation could take long time) -> events
-        glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name, obj.pose)
-    elif issubclass(obj_type.type_def, GenericWithPose):
-        assert obj.pose is not None
-        coll_model: Optional[Models] = None
-        if obj_type.meta.object_model:
-            coll_model = obj_type.meta.object_model.model()
+    try:
 
-        # TODO RPC should return here (instantiation could take long time) -> events
-        glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
-            obj_type.type_def, obj.id, obj.name, obj.pose, coll_model)
+        if issubclass(obj_type.type_def, Robot):
+            assert obj.pose is not None
+            # TODO RPC should return here (instantiation could take long time) -> events
+            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name,
+                                                                            obj.pose)
+        elif issubclass(obj_type.type_def, GenericWithPose):
+            assert obj.pose is not None
+            coll_model: Optional[Models] = None
+            if obj_type.meta.object_model:
+                coll_model = obj_type.meta.object_model.model()
 
-    elif issubclass(obj_type.type_def, Generic):
-        assert obj.pose is None
-        # TODO RPC should return here (instantiation could take long time) -> events
-        glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name)
+            # TODO RPC should return here (instantiation could take long time) -> events
+            # TODO handle settings
+            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
+                obj_type.type_def, obj.id, obj.name, obj.pose, coll_model)
 
-    else:
-        raise Arcor2Exception("Object type with unknown base.")
+        elif issubclass(obj_type.type_def, Generic):
+            assert obj.pose is None
+            # TODO RPC should return here (instantiation could take long time) -> events
+            # TODO handle settings
+            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name)
+
+        else:
+            raise Arcor2Exception("Object type with unknown base.")
+
+    except (TypeError, ValueError) as e:  # catch some most often exceptions
+        raise Arcor2Exception("Failed to create object instance.") from e
 
     if add_to_scene:
         glob.SCENE.upsert_object(obj)

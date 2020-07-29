@@ -5,8 +5,6 @@
 import asyncio
 from typing import Dict, List
 
-import horast
-
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
@@ -19,7 +17,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import GenericWithPose, Robot
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa, settings
 from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
 from arcor2.server.robot import get_end_effector_pose
@@ -228,11 +226,13 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
             glob.logger.error(e)
             raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
 
-    await storage.update_object_type(obj)
-
-    type_def = hlp.type_def_from_source(obj.source, obj.id, base.type_def)
-    ast = horast.parse(obj.source)
+    type_def = await hlp.run_in_executor(
+        hlp.save_and_import_type_def, obj.source, obj.id, base.type_def, settings.OBJECT_TYPE_PATH,
+        settings.OBJECT_TYPE_MODULE)
+    assert issubclass(type_def, base.type_def)
     actions = otu.object_actions(TYPE_TO_PLUGIN, type_def, ast)
+
+    await storage.update_object_type(obj)
 
     glob.OBJECT_TYPES[meta.type] = otu.ObjectTypeData(meta, type_def, actions, ast)
     otu.add_ancestor_actions(meta.type, glob.OBJECT_TYPES)

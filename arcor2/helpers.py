@@ -285,23 +285,40 @@ async def run_in_executor(func: Callable[..., S], *args) -> S:
 T = TypeVar('T')
 
 
-def type_def_from_source(source: str, type_name: str, output_type: Type[T]) -> Type[T]:
+def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], path: str, module_name: str) -> Type[T]:
+    """
+    Save source to a file in object_type_path directory.
 
-    mod = ModuleType('temp_module')
-    try:
-        exec(source, mod.__dict__)
-    except Exception as e:  # exec might raise almost anything
-        raise TypeDefException(e)
+    :param source:
+    :param type_name:
+    :param output_type:
+    :param object_type_path:
+    :return:
+    """
+
+    if path not in sys.path:
+        sys.path.append(path)
+
+    type_file = camel_case_to_snake_case(type_name)
+    full_path = os.path.join(path, module_name, type_file)
+
+    with open(f"{full_path}.py", "w") as file:
+        file.write(source)
 
     try:
-        cls_def = getattr(mod, type_name)
+        module = importlib.import_module(f"{module_name}.{type_file}")
+    except ModuleNotFoundError:
+        raise ImportClsException(f"Module '{module_name}' not found.")
+
+    try:
+        cls = getattr(module, type_name)
     except AttributeError:
-        raise TypeDefException(f"Source does not contain class named '{type_name}'.")
+        raise ImportClsException(f"Class {type_name} not found in module '{module_name}'.")
 
-    if not issubclass(cls_def, output_type):
-        raise TypeDefException("Class is not of expected type.")
+    if not issubclass(cls, output_type):
+        raise ImportClsException("Not a required type.")
 
-    return cls_def
+    return cls
 
 
 def get_package_meta_path(package_id: str) -> str:

@@ -67,6 +67,10 @@ class CachedScene:
                 yield obj
 
     @property
+    def object_types(self) -> Set[str]:
+        return {obj.type for obj in self.objects}
+
+    @property
     def scene(self) -> Scene:
 
         sc = self.bare
