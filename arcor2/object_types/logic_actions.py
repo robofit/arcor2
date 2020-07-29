@@ -7,6 +7,8 @@ class LogicActions(Generic):
     Logic-related actions.
     """
 
+    _ABSTRACT = False
+
     def equals(self, val1: int, val2: int) -> bool:
         """
         Tests if two integer values are equal.

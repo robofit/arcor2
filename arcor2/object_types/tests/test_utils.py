@@ -16,6 +16,8 @@ class TestObject(GenericWithPose):
     TestObject description
     """
 
+    _ABSTRACT = False
+
     def action_1(self, param1: str, param2: int, param3: bool = False) -> None:
         """
         Short description

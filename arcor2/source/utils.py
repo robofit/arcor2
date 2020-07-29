@@ -167,6 +167,29 @@ def find_function(name: str, tree: Union[Module, AST]) -> FunctionDef:
     return ff.function_node
 
 
+def find_class_def(name: str, tree: Union[Module, AST]) -> ClassDef:
+    class FindClassDef(NodeVisitor):
+
+        def __init__(self) -> None:
+            self.cls_def_node: Optional[ClassDef] = None
+
+        def visit_ClassDef(self, node: ClassDef) -> None:
+            if node.name == name:
+                self.cls_def_node = node
+                return
+
+            if not self.cls_def_node:
+                self.generic_visit(node)
+
+    ff = FindClassDef()
+    ff.visit(tree)
+
+    if ff.cls_def_node is None:
+        raise SourceException(f"Class definition {name} not found.")
+
+    return ff.cls_def_node
+
+
 def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) -> None:
     """
     Adds "from ... import ..." to the beginning of the script.
