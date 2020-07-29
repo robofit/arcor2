@@ -100,17 +100,17 @@ async def read_proc_stdout() -> None:
             data = json.loads(stripped)
         except json.decoder.JSONDecodeError:
             printed_out.append(decoded)
-            await logger.error(decoded.strip())
+            logger.error(decoded.strip())
             continue
 
         if not isinstance(data, dict) or "event" not in data:
-            await logger.error("Strange data from script: {}".format(data))
+            logger.error("Strange data from script: {}".format(data))
             continue
 
         try:
             evt = EVENT_MAPPING[data["event"]].from_dict(data)
         except ValidationError as e:
-            await logger.error("Invalid event: {}, error: {}".format(data, e))
+            logger.error("Invalid event: {}, error: {}".format(data, e))
             continue
 
         if isinstance(evt, events.PackageStateEvent):
@@ -145,7 +145,7 @@ async def read_proc_stdout() -> None:
                 tb_file.write("".join(printed_out))
 
         else:
-            await logger.warn(
+            logger.warn(
                 f"Process ended with non-zero return code ({PROCESS.returncode}), but didn't printed out anything.")
 
     await package_state(
@@ -181,7 +181,7 @@ async def run_package_cb(req: rpc.execution.RunPackageRequest, ui: WsClient) -> 
     except FileNotFoundError:
         raise Arcor2Exception("Not an execution package.")
 
-    await logger.info(f"Starting script: {script_path}")
+    logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(script_path, stdin=asyncio.subprocess.PIPE,
                                                    stdout=asyncio.subprocess.PIPE,
                                                    stderr=asyncio.subprocess.STDOUT)
@@ -208,9 +208,9 @@ async def stop_package_cb(req: rpc.execution.StopPackageRequest, ui: WsClient) -
     assert PROCESS is not None
     assert TASK is not None
 
-    await logger.info("Terminating process")
+    logger.info("Terminating process")
     PROCESS.terminate()
-    await logger.info("Waiting for process to finish...")
+    logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
     PACKAGE_INFO_EVENT = None
     RUNNING_PACKAGE_ID = None
@@ -280,7 +280,7 @@ async def _upload_package_cb(req: rpc.execution.UploadPackageRequest, ui: WsClie
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(tmpdirname)
         except zipfile.BadZipFile as e:
-            await logger.error(e)
+            logger.error(e)
             raise Arcor2Exception("Invalid zip file.")
 
         os.remove(zip_path)
@@ -318,7 +318,7 @@ async def get_summary(path: str) -> PackageSummary:
         with open(os.path.join(path, "data", "project.json")) as project_file:
             project = common.Project.from_json(project_file.read())
     except (ValidationError, IOError) as e:
-        await logger.error(f"Failed to read/parse project file of {package_dir}: {e}")
+        logger.error(f"Failed to read/parse project file of {package_dir}: {e}")
 
         return PackageSummary(package_dir, "N/A", datetime.fromtimestamp(0, tz=timezone.utc), package_meta)
 
@@ -391,7 +391,7 @@ async def send_to_clients(event: events.Event) -> None:
 
 async def register(websocket: WsClient) -> None:
 
-    await logger.info("Registering new client")
+    logger.info("Registering new client")
     CLIENTS.add(websocket)
 
     tasks: List[Awaitable] = [websocket.send(PACKAGE_STATE_EVENT.to_json())]
@@ -403,7 +403,7 @@ async def register(websocket: WsClient) -> None:
 
 
 async def unregister(websocket: WsClient) -> None:
-    await logger.info("Unregistering client")
+    logger.info("Unregistering client")
     CLIENTS.remove(websocket)
 
 RPC_DICT: RPC_DICT_TYPE = {

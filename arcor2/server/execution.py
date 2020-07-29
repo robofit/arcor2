@@ -37,11 +37,11 @@ async def run_temp_package(package_id: str) -> None:
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
-        await glob.logger.warning(f"Execution of temporary package failed with: {exe_resp.messages}.")
+        glob.logger.warning(f"Execution of temporary package failed with: {exe_resp.messages}.")
     else:
         await server_events.package_started.wait()
         await server_events.package_stopped.wait()
-        await glob.logger.info("Temporary package stopped, let's remove it and reopen project.")
+        glob.logger.info("Temporary package stopped, let's remove it and reopen project.")
 
     glob.TEMPORARY_PACKAGE = False
 
@@ -107,13 +107,13 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
 
     while True:
 
-        await glob.logger.info("Attempting connection to manager...")
+        glob.logger.info("Attempting connection to manager...")
 
         try:
 
             async with websockets.connect(glob.MANAGER_URL) as manager_client:
 
-                await glob.logger.info("Connected to manager.")
+                glob.logger.info("Connected to manager.")
 
                 future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
 
@@ -133,5 +133,5 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
                         await MANAGER_RPC_REQUEST_QUEUE.put(msg)
                         break
         except ConnectionRefusedError as e:
-            await glob.logger.error(e)
+            glob.logger.error(e)
             await asyncio.sleep(delay=1.0)

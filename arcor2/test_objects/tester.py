@@ -10,6 +10,8 @@ class Tester(GenericWithPose):
     A generic tester
     """
 
+    _ABSTRACT = False
+
     def __init__(self, *args, **kwargs) -> None:
         super(Tester, self).__init__(*args, **kwargs)
         self._cancel: bool = False

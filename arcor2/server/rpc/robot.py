@@ -23,7 +23,7 @@ async def robot_joints_event(robot_id: str) -> None:
 
     global ROBOT_JOINTS_TASKS
 
-    await glob.logger.info(f"Sending '{events.RobotJointsEvent.__name__}' for robot '{robot_id}' started.")
+    glob.logger.info(f"Sending '{events.RobotJointsEvent.__name__}' for robot '{robot_id}' started.")
     while glob.SCENE and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]:
 
         start = time.monotonic()
@@ -48,7 +48,7 @@ async def robot_joints_event(robot_id: str) -> None:
     # TODO notify UIs that registration was cancelled
     del glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]
 
-    await glob.logger.info(f"Sending '{events.RobotJointsEvent.__name__}' for robot '{robot_id}' stopped.")
+    glob.logger.info(f"Sending '{events.RobotJointsEvent.__name__}' for robot '{robot_id}' stopped.")
 
 
 async def eef_pose(robot_id: str, eef_id: str) -> events.EefPose:
@@ -60,7 +60,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
 
     global EEF_POSE_TASKS
 
-    await glob.logger.info(f"Sending '{events.RobotEefEvent.__name__}' for robot '{robot_id}' started.")
+    glob.logger.info(f"Sending '{events.RobotEefEvent.__name__}' for robot '{robot_id}' started.")
 
     while glob.SCENE and glob.ROBOT_EEF_REGISTERED_UIS[robot_id]:
 
@@ -87,7 +87,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
     # TODO notify UIs that registration was cancelled
     del glob.ROBOT_EEF_REGISTERED_UIS[robot_id]
 
-    await glob.logger.info(f"Sending '{events.RobotEefEvent.__name__}' for robot '{robot_id}' stopped.")
+    glob.logger.info(f"Sending '{events.RobotEefEvent.__name__}' for robot '{robot_id}' stopped.")
 
 
 async def get_robot_meta_cb(req: rpc.robot.GetRobotMetaRequest, ui: WsClient) ->\

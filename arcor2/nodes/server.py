@@ -34,6 +34,7 @@ from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.server import events as server_events, execution as exe, globals as glob, notifications as notif, \
     objects_services_actions as osa, rpc as srpc, settings
+from arcor2.source.object_types import prepare_object_types_dir
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
@@ -55,7 +56,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 try:
                     evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
                 except ValidationError as e:
-                    await glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
+                    glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
                     continue
 
                 if isinstance(evt, events.PackageInfoEvent):
@@ -98,7 +99,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 exe.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
     except websockets.exceptions.ConnectionClosed:
-        await glob.logger.error("Connection to manager closed.")
+        glob.logger.error("Connection to manager closed.")
 
 
 async def _initialize_server() -> None:
@@ -128,7 +129,7 @@ async def _initialize_server() -> None:
     bound_handler = functools.partial(hlp.server, logger=glob.logger, register=register, unregister=unregister,
                                       rpc_dict=RPC_DICT, event_dict=EVENT_DICT, verbose=glob.VERBOSE)
 
-    await glob.logger.info("Server initialized.")
+    glob.logger.info("Server initialized.")
     await asyncio.wait([websockets.serve(bound_handler, '0.0.0.0', glob.PORT)])
 
 
@@ -138,7 +139,7 @@ async def list_meshes_cb(req: rpc.storage.ListMeshesRequest, ui: WsClient) -> rp
 
 async def register(websocket: WsClient) -> None:
 
-    await glob.logger.info("Registering new ui")
+    glob.logger.info("Registering new ui")
     glob.INTERFACES.add(websocket)
 
     if glob.PROJECT:
@@ -162,7 +163,7 @@ async def register(websocket: WsClient) -> None:
 
 
 async def unregister(websocket: WsClient) -> None:
-    await glob.logger.info("Unregistering ui")  # TODO print out some identifier
+    glob.logger.info("Unregistering ui")  # TODO print out some identifier
     glob.INTERFACES.remove(websocket)
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
@@ -253,6 +254,8 @@ def main() -> None:
     if os.path.exists(settings.URDF_PATH):
         shutil.rmtree(settings.URDF_PATH)
     os.makedirs(settings.URDF_PATH)
+
+    prepare_object_types_dir(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
 
     run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 

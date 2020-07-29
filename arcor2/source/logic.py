@@ -26,7 +26,7 @@ def program_src(project: CProject, scene: CScene, built_in_objects: Set[str], ad
         else:
             add_import(tree, "object_types." + camel_case_to_snake_case(obj.type), obj.type, try_to_import=False)
 
-        object_instance_from_res(tree, obj.name, obj.id, obj.type, "objects")
+        object_instance_from_res(tree, obj.name, obj.id, obj.type)
 
     if add_logic:
         add_logic_to_loop(tree, scene, project)

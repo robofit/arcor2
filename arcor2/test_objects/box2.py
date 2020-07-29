@@ -1,4 +1,4 @@
-from arcor2.test_objects.box import Box
+from .box import Box
 
 
 class Box2(Box):

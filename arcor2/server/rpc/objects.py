@@ -5,8 +5,6 @@
 import asyncio
 from typing import Dict, List
 
-import horast
-
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
@@ -19,7 +17,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import GenericWithPose, Robot
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa, settings
 from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
 from arcor2.server.robot import get_end_effector_pose
@@ -78,7 +76,7 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: Ws
 
     FOCUS_OBJECT_ROBOT[req.args.object_id] = req.args.robot
     FOCUS_OBJECT[obj_id] = {}
-    await glob.logger.info(f'Start of focusing for {obj_id}.')
+    glob.logger.info(f'Start of focusing for {obj_id}.')
     return None
 
 
@@ -106,7 +104,7 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> 
         raise Arcor2Exception("Index out of range.")
 
     if obj_id not in FOCUS_OBJECT:
-        await glob.logger.info(f'Start of focusing for {obj_id}.')
+        glob.logger.info(f'Start of focusing for {obj_id}.')
         FOCUS_OBJECT[obj_id] = {}
 
     robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
@@ -159,15 +157,15 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
 
     mfa = MeshFocusAction(fp, rp)
 
-    await glob.logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
+    glob.logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
 
     try:
         obj.pose = await scene_srv.focus(mfa)
     except scene_srv.SceneServiceException as e:
-        await glob.logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
+        glob.logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
         raise Arcor2Exception("Focusing failed.") from e
 
-    await glob.logger.info(f"Done focusing for {obj_id}.")
+    glob.logger.info(f"Done focusing for {obj_id}.")
 
     clean_up_after_focus(obj_id)
 
@@ -225,14 +223,16 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
         try:
             meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
         except storage.PersistentStorageException as e:
-            await glob.logger.error(e)
+            glob.logger.error(e)
             raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
 
-    await storage.update_object_type(obj)
-
-    type_def = hlp.type_def_from_source(obj.source, obj.id, base.type_def)
-    ast = horast.parse(obj.source)
+    type_def = await hlp.run_in_executor(
+        hlp.save_and_import_type_def, obj.source, obj.id, base.type_def, settings.OBJECT_TYPE_PATH,
+        settings.OBJECT_TYPE_MODULE)
+    assert issubclass(type_def, base.type_def)
     actions = otu.object_actions(TYPE_TO_PLUGIN, type_def, ast)
+
+    await storage.update_object_type(obj)
 
     glob.OBJECT_TYPES[meta.type] = otu.ObjectTypeData(meta, type_def, actions, ast)
     otu.add_ancestor_actions(meta.type, glob.OBJECT_TYPES)
@@ -290,7 +290,7 @@ async def delete_object_type_cb(req: rpc.objects.DeleteObjectTypeRequest, ui: Ws
         try:
             await storage.delete_model(obj_type.meta.object_model.model().id)
         except storage.PersistentStorageException as e:
-            asyncio.ensure_future(glob.logger.error(e.message))
+            glob.logger.error(e.message)
 
     del glob.OBJECT_TYPES[req.args.id]
     asyncio.ensure_future(notif.broadcast_event(
