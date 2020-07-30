@@ -59,10 +59,10 @@ async def focus_object_start_cb(req: rpc.objects.FocusObjectStartRequest, ui: Ws
     robot_type = glob.OBJECT_TYPES[inst.__class__.__name__]
     assert robot_type.robot_meta
 
-    if not robot_type.robot_meta.features.focus:
-        raise Arcor2Exception("Robot/service does not support focusing.")
-
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
+
+    if not obj_type.has_pose:
+        raise Arcor2Exception("Only available for objects with pose.")
 
     if not obj_type.object_model or obj_type.object_model.type != Model3dType.MESH:
         raise Arcor2Exception("Only available for objects with mesh model.")
@@ -89,10 +89,9 @@ async def focus_object_cb(req: rpc.objects.FocusObjectRequest, ui: WsClient) -> 
     if obj_id not in glob.SCENE_OBJECT_INSTANCES:
         raise Arcor2Exception("Unknown object_id.")
 
-    # TODO check that object has pose
-
     obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
 
+    assert obj_type.has_pose
     assert obj_type.object_model
     assert obj_type.object_model.mesh
 
@@ -137,8 +136,6 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
     if len(FOCUS_OBJECT[obj_id]) < len(focus_points):
         raise Arcor2Exception("Not all points were done.")
 
-    robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
-
     assert glob.SCENE
 
     obj = glob.SCENE.object(obj_id)
@@ -160,10 +157,13 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
     glob.logger.debug(f'Attempt to focus for object {obj_id}, data: {mfa}')
 
     try:
-        obj.pose = await scene_srv.focus(mfa)
+        new_pose = await scene_srv.focus(mfa)
     except scene_srv.SceneServiceException as e:
         glob.logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
         raise Arcor2Exception("Focusing failed.") from e
+
+    obj.pose = new_pose
+    glob.SCENE.update_modified()
 
     glob.logger.info(f"Done focusing for {obj_id}.")
 
@@ -171,7 +171,7 @@ async def focus_object_done_cb(req: rpc.objects.FocusObjectDoneRequest, ui: WsCl
 
     asyncio.ensure_future(notif.broadcast_event(events.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
-    asyncio.ensure_future(set_object_pose(obj_inst, obj.pose))
+    asyncio.ensure_future(set_object_pose(obj_inst, new_pose))
 
     return None
 

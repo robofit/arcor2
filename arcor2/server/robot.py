@@ -74,7 +74,7 @@ async def get_robot_joints(robot_id: str) -> List[common.Joint]:
 
 def feature(tree: AST, robot_type: Type[Robot], func_name: str) -> bool:
 
-    if not function_implemented(tree, func_name):  # TODO what if the function is implemented in predecessor?
+    if not function_implemented(tree, func_name):
         return False
 
     sign = inspect.signature(getattr(robot_type, func_name))
@@ -83,16 +83,10 @@ def feature(tree: AST, robot_type: Type[Robot], func_name: str) -> bool:
 
 async def get_robot_meta(obj_type: otu.ObjectTypeData) -> None:
 
-    # TODO use inspect.getsource(robot_type) instead of source parameters
-    #  once we will get rid of type_def_from_source / temp. module
-
     if obj_type.meta.disabled:
         raise Arcor2Exception("Disabled object type.")
 
     obj_type.robot_meta = robot.RobotMeta(obj_type.meta.type)
-
-    # TODO more sophisticated test? (attr(s) and return value?)
-    obj_type.robot_meta.features.focus = hasattr(obj_type.type_def, "focus")
 
     tree = obj_type.ast
     assert tree is not None

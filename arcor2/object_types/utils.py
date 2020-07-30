@@ -123,8 +123,6 @@ def base_from_source(source: str, cls_name: str) -> Optional[str]:
 
 def built_in_types_data(plugins: Dict[Type, Type[ParameterPlugin]]) -> ObjectTypeDict:
 
-    # TODO get built_in_types sources and rather use get_object_actions(source)?
-
     ret: ObjectTypeDict = {}
 
     # built-in object types / services
