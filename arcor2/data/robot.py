@@ -7,7 +7,6 @@ from dataclasses_jsonschema import JsonSchemaMixin
 @dataclass
 class RobotFeatures(JsonSchemaMixin):
 
-    focus: bool = False
     move_to_pose: bool = False
     move_to_joints: bool = False
     stop: bool = False
