@@ -61,7 +61,6 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    # TODO not instances but type_defs
     def value(cls, type_defs: TypesDict, scene: CachedScene, project: CachedProject, action_id: str, parameter_id: str)\
             -> Any:
 

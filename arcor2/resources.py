@@ -26,12 +26,9 @@ from arcor2.parameter_plugins.base import TypesDict
 from arcor2.rest import convert_keys
 
 
-# TODO for bound methods - check whether provided action point belongs to the object
-
 class IntResources:
 
     CUSTOM_OBJECT_TYPES_MODULE = "object_types"
-    SERVICES_MODULE = "services"
 
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 

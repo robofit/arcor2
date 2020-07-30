@@ -27,7 +27,6 @@ from arcor2.server.project import check_action_params, check_flows, find_object_
     project_problems
 from arcor2.server.robot import get_end_effector_pose, get_robot_joints
 from arcor2.server.scene import clear_scene, get_instance, open_scene
-from arcor2.source import SourceException
 from arcor2.source.logic import program_src
 
 
@@ -245,7 +244,7 @@ async def project_info(project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[
     try:
         program_src(cached_project, scenes[project.scene_id], otu.built_in_types_names())
         pd.executable = True
-    except SourceException as e:
+    except Arcor2Exception as e:
         pd.problems.append(e.message)
 
     return pd
