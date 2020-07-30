@@ -20,7 +20,6 @@ async def build_project_cb(req: rpc.execution.BuildProjectRequest, ui: WsClient)
 
     resp = rpc.execution.BuildProjectResponse()
     resp.data = rpc.execution.BuildProjectData(package_id)
-    # TODO broadcast new package_id using event?
     return resp
 
 
