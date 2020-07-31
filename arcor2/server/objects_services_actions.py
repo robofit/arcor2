@@ -53,7 +53,13 @@ async def get_object_data(object_types: otu.ObjectTypeDict, obj_id: str) -> None
     obj = await storage.get_object_type(obj_id)
     base = otu.base_from_source(obj.source, obj_id)
     if base and base not in object_types.keys():
-        await get_object_data(object_types, base)
+        try:
+            await get_object_data(object_types, base)
+        except Arcor2Exception:
+            object_types[obj_id] = \
+                otu.ObjectTypeData(
+                    ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem="Can't get base."))
+            return
 
     try:
         type_def = await hlp.run_in_executor(
