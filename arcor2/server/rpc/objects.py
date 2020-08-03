@@ -17,7 +17,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import GenericWithPose, Robot
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa, settings
+from arcor2.server import globals as glob, notifications as notif, objects_actions as osa, settings
 from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
 from arcor2.server.robot import get_end_effector_pose
