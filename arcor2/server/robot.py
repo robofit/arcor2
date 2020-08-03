@@ -9,7 +9,7 @@ from arcor2.data import common, events, robot
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Robot
-from arcor2.server import globals as glob, notifications as notif, objects_services_actions as osa
+from arcor2.server import globals as glob, notifications as notif, objects_actions as osa
 from arcor2.source.utils import function_implemented
 
 

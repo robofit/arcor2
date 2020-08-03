@@ -8,7 +8,7 @@ from arcor2 import helpers as hlp
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Robot
-from arcor2.server import globals as glob, objects_services_actions as osa, robot
+from arcor2.server import globals as glob, objects_actions as osa, robot
 from arcor2.server.decorators import project_needed, scene_needed
 
 TaskDict = Dict[str, asyncio.Task]
