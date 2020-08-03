@@ -33,7 +33,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.server import events as server_events, execution as exe, globals as glob, notifications as notif, \
-    objects_services_actions as osa, rpc as srpc, settings
+    objects_actions as osa, rpc as srpc, settings
 from arcor2.source.object_types import prepare_object_types_dir
 
 # disables before/after messages, etc.
