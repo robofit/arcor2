@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages  # type: ignore
-import arcor2
 
 setup(
     name='arcor2',
@@ -27,9 +26,9 @@ setup(
     url='https://github.com/robofit/arcor2',
     license='LGPL',
     author='Robo@FIT',
-    author_email='imaterna@fit.vutbr.cz',
+    author_email='imaterna@fit.vut.cz',
     description='',
-    setup_requires=['bad-setuptools-git-version'],
+    setup_requires=['another-setuptools-git-version'],
     install_requires=[
         'dataclasses',
         'horast',
