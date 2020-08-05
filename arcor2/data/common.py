@@ -190,9 +190,9 @@ class ActionPoint(JsonSchemaMixin):
 
 
 @dataclass
-class SceneObjectSetting(JsonSchemaMixin):
+class Parameter(JsonSchemaMixin):
 
-    key: str
+    name: str
     type: str
     value: str
 
@@ -204,7 +204,7 @@ class SceneObject(JsonSchemaMixin):
     name: str
     type: str
     pose: Optional[Pose] = None
-    settings: List[SceneObjectSetting] = field(default_factory=list)
+    settings: List[Parameter] = field(default_factory=list)
     children: List["SceneObject"] = field(default_factory=list)
 
 
@@ -231,16 +231,12 @@ class ActionParameterException(Arcor2Exception):
 
 
 @dataclass
-class ActionParameter(JsonSchemaMixin):
+class ActionParameter(Parameter):
 
     class TypeEnum(StrEnum):
 
         CONSTANT: str = "constant"
         LINK: str = "link"
-
-    id: str
-    type: str
-    value: str
 
     def parse_link(self) -> LinkToActionOutput:
         assert self.type == ActionParameter.TypeEnum.LINK
@@ -287,7 +283,7 @@ class Action(JsonSchemaMixin):
     def parameter(self, parameter_id: str) -> ActionParameter:
 
         for param in self.parameters:
-            if parameter_id == param.id:
+            if parameter_id == param.name:
                 return param
 
         raise Arcor2Exception("Param not found")
@@ -391,6 +387,13 @@ class ProjectFunction(JsonSchemaMixin):
 
 
 @dataclass
+class SceneObjectOverride(JsonSchemaMixin):
+
+    id: str
+    parameters: List[Parameter]
+
+
+@dataclass
 class Project(JsonSchemaMixin):
 
     id: str
@@ -404,6 +407,7 @@ class Project(JsonSchemaMixin):
     constants: List[ProjectConstant] = field(default_factory=list)
     functions: List[ProjectFunction] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
+    object_overrides: List[SceneObjectOverride] = field(default_factory=list)
 
 
 @dataclass

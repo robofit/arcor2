@@ -1,13 +1,11 @@
-import inspect
-
-import horast
+from dataclasses import dataclass
 
 import pytest  # type: ignore
 
 from arcor2.action import patch_object_actions
-from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import GenericWithPose
-from arcor2.object_types.utils import meta_from_def, object_actions
+from arcor2.data.common import ActionMetadata, StrEnum
+from arcor2.object_types.abstract import Generic, GenericWithPose, Settings
+from arcor2.object_types.utils import meta_from_def, object_actions, parse_def
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 
 
@@ -63,12 +61,12 @@ def test_meta_from_def() -> None:
     assert not meta.built_in
     assert meta.base == GenericWithPose.__name__
     assert meta.has_pose
+    assert not meta.settings
 
 
 def test_object_actions() -> None:
 
-    source = inspect.getsource(TestObject)
-    actions = object_actions(TYPE_TO_PLUGIN, TestObject, horast.parse(source))
+    actions = object_actions(TestObject, parse_def(TestObject))
     assert len(actions) == 2
 
     for act in actions.values():
@@ -104,3 +102,69 @@ def test_object_actions() -> None:
             assert not act.parameters
         else:
             pytest.fail(f"Unknown action: {act.name}.")
+
+
+class MyEnum(StrEnum):
+
+    OPT1: str = "opt1"
+    OPT2: str = "opt2"
+    OPT3: str = "opt3"
+
+
+@dataclass
+class NestedSettings(Settings):
+
+    boolean: bool
+
+
+@dataclass
+class TestObjectSettings(Settings):
+
+    string: str
+    integer: int
+    boolean: bool
+    double: float
+    enum: StrEnum
+    nested_settings: NestedSettings
+
+
+class TestObjectWithSettings(Generic):
+
+    def __init__(self, obj_id: str, name: str, settings: TestObjectSettings) -> None:
+        super(TestObjectWithSettings, self).__init__(obj_id, name, settings)
+
+
+def test_settings() -> None:
+
+    meta = meta_from_def(TestObjectWithSettings)
+    assert len(meta.settings) == 6
+
+    assert meta.settings[0].name == "string"
+    assert not meta.settings[0].children
+    assert meta.settings[0].type == TYPE_TO_PLUGIN[str].type_name()
+
+    assert meta.settings[1].name == "integer"
+    assert not meta.settings[1].children
+    assert meta.settings[1].type == TYPE_TO_PLUGIN[int].type_name()
+
+    assert meta.settings[2].name == "boolean"
+    assert not meta.settings[2].children
+    assert meta.settings[2].type == TYPE_TO_PLUGIN[bool].type_name()
+
+    assert meta.settings[3].name == "double"
+    assert not meta.settings[3].children
+    assert meta.settings[3].type == TYPE_TO_PLUGIN[float].type_name()
+
+    assert meta.settings[4].name == "enum"
+    assert not meta.settings[4].children
+    assert meta.settings[4].type == TYPE_TO_PLUGIN[StrEnum].type_name()
+
+    assert meta.settings[5].name == "nested_settings"
+    assert len(meta.settings[5].children) == 1
+    assert meta.settings[5].type == "dataclass"  # TODO plugin for this?
+
+    nested = meta.settings[5].children[0]
+
+    assert nested.name == "boolean"
+    assert not nested.children
+    assert nested.type == TYPE_TO_PLUGIN[bool].type_name()

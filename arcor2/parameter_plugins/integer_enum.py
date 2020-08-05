@@ -9,7 +9,7 @@ from typed_ast import ast3 as ast
 
 from arcor2.cached import CachedProject as CProject, CachedScene as CScene
 from arcor2.data.common import IntEnum
-from arcor2.data.object_type import ActionParameterMeta
+from arcor2.data.object_type import ParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 
 
@@ -35,7 +35,7 @@ class IntegerEnumPlugin(ParameterPlugin):
         return "integer_enum"
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
+    def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
         super(IntegerEnumPlugin, cls).meta(param_meta, action_method, action_node)
 
         ttype = get_type_hints(action_method)[param_meta.name]
@@ -54,7 +54,7 @@ class IntegerEnumPlugin(ParameterPlugin):
         obj_type = type_defs[scene.object(obj_id).type]
 
         method = getattr(obj_type, action_type)
-        ttype = get_type_hints(method)[param.id]
+        ttype = get_type_hints(method)[param.name]
 
         if not issubclass(ttype, cls.type()):
             raise ParameterPluginException(f"Type {ttype.__name__} is not subclass of {cls.type().__name__}.")

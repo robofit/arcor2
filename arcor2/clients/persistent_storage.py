@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from arcor2 import rest
 from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
@@ -75,17 +76,17 @@ def get_object_type_ids() -> IdDescList:
 
 
 @rest.handle_exceptions(PersistentStorageException)
-def update_project(project: Project) -> None:
+def update_project(project: Project) -> datetime:
 
     assert project.id
-    rest.put(f"{URL}/project", project)
+    return datetime.fromisoformat(rest.put_returning_primitive(f"{URL}/project", str, project))
 
 
 @rest.handle_exceptions(PersistentStorageException)
-def update_scene(scene: Scene) -> None:
+def update_scene(scene: Scene) -> datetime:
 
     assert scene.id
-    rest.put(f"{URL}/scene", scene)
+    return datetime.fromisoformat(rest.put_returning_primitive(f"{URL}/scene", str, scene))
 
 
 @rest.handle_exceptions(PersistentStorageException)
