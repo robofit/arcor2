@@ -1,9 +1,9 @@
 import copy
 import inspect
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterator, Optional, Set, Tuple, Type, get_type_hints
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
 
-import horast
+from dataclasses_jsonschema import JsonSchemaMixin
 
 from typed_ast.ast3 import AST, Name
 
@@ -11,13 +11,14 @@ import typing_inspect  # type: ignore
 
 import arcor2
 from arcor2.data.common import ActionMetadata
-from arcor2.data.object_type import ActionParameterMeta, ObjectAction, ObjectTypeMeta
+from arcor2.data.object_type import ObjectAction, ObjectTypeMeta, ParameterMeta
 from arcor2.data.robot import RobotMeta
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic, GenericWithPose
+from arcor2.object_types.abstract import Generic, GenericWithPose, Settings
+from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
-from arcor2.source.utils import SourceException, find_class_def, find_function
+from arcor2.source.utils import SourceException, find_class_def, find_function, parse, parse_def
 
 
 class ObjectTypeException(Arcor2Exception):
@@ -93,6 +94,29 @@ def obj_description_from_base(data: ObjectTypeDict, obj_type: ObjectTypeMeta) ->
     return obj_description_from_base(data, data[obj.meta.base].meta)
 
 
+def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]:
+
+    ret: List[ParameterMeta] = []
+
+    # TODO Will this work for inherited properties? Make a test! There is also dataclasses.fields maybe...
+    for name, ttype in get_type_hints(type_def.__init__).items():
+        if name == "return":
+            continue
+
+        if issubclass(ttype, JsonSchemaMixin):
+            pm = ParameterMeta(name=name, type="dataclass")  # TODO come-up with plugin for this?
+            pm.children = get_dataclass_params(ttype)
+        else:
+            param_type = _resolve_param(name, ttype)
+            assert param_type is not None
+            pm = ParameterMeta(name=name, type=param_type.type_name())
+            # TODO meta, default, etc.
+
+        ret.append(pm)
+
+    return ret
+
+
 def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectTypeMeta:
 
     obj = ObjectTypeMeta(type_def.__name__,
@@ -106,12 +130,25 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
             obj.base = base.__name__
             break
 
+    sig = inspect.signature(type_def.__init__)
+    try:
+        param = sig.parameters["settings"]
+    except KeyError:
+        pass
+    else:
+        if param.default is not None:
+
+            settings_def = param.annotation
+
+            if issubclass(settings_def, Settings):
+                obj.settings = get_dataclass_params(settings_def)
+
     return obj
 
 
 def base_from_source(source: str, cls_name: str) -> Optional[str]:
 
-    cls_def = find_class_def(cls_name, horast.parse(source))
+    cls_def = find_class_def(cls_name, parse(source))
     if not cls_def.bases:
         return None
 
@@ -121,7 +158,7 @@ def base_from_source(source: str, cls_name: str) -> Optional[str]:
     return base_name.id
 
 
-def built_in_types_data(plugins: Dict[Type, Type[ParameterPlugin]]) -> ObjectTypeDict:
+def built_in_types_data() -> ObjectTypeDict:
 
     ret: ObjectTypeDict = {}
 
@@ -130,11 +167,11 @@ def built_in_types_data(plugins: Dict[Type, Type[ParameterPlugin]]) -> ObjectTyp
 
         assert issubclass(type_def, Generic)
 
-        ast = horast.parse(inspect.getsource(type_def))
+        ast = parse_def(type_def)
 
         d = ObjectTypeData(meta_from_def(type_def, built_in=True),
                            type_def,
-                           object_actions(plugins, type_def, ast),
+                           object_actions(type_def, ast),
                            ast
                            )
 
@@ -147,12 +184,12 @@ class IgnoreActionException(Arcor2Exception):
     pass
 
 
-def _resolve_param(plugins: Dict[Type, Type[ParameterPlugin]], name: str, ttype) -> Type[ParameterPlugin]:
+def _resolve_param(name: str, ttype) -> Type[ParameterPlugin]:
 
     try:
-        return plugins[ttype]
+        return TYPE_TO_PLUGIN[ttype]
     except KeyError:
-        for k, v in plugins.items():
+        for k, v in TYPE_TO_PLUGIN.items():
             if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
                 return v
 
@@ -173,8 +210,7 @@ def iterate_over_actions(type_def: Type[Generic]) -> Iterator[Tuple[str, Callabl
         yield method_name, method
 
 
-def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Type[Generic], tree: AST) \
-        -> Dict[str, ObjectAction]:
+def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction]:
 
     ret: Dict[str, ObjectAction] = {}
 
@@ -216,21 +252,21 @@ def object_actions(plugins: Dict[Type, Type[ParameterPlugin]], type_def: Type[Ge
 
                     if typing_inspect.is_tuple_type(ttype):
                         for arg in typing_inspect.get_args(ttype):
-                            resolved_param = _resolve_param(plugins, name, arg)
+                            resolved_param = _resolve_param(name, arg)
                             if resolved_param is None:
                                 raise IgnoreActionException("None in return tuple is not supported.")
                             data.returns.append(resolved_param.type_name())
                     else:
                         # TODO resolving needed for e.g. enums - add possible values to action metadata somewhere?
-                        data.returns = [_resolve_param(plugins, name, ttype).type_name()]
+                        data.returns = [_resolve_param(name, ttype).type_name()]
 
                     continue
 
-                param_type = _resolve_param(plugins, name, ttype)
+                param_type = _resolve_param(name, ttype)
 
                 assert param_type is not None
 
-                args = ActionParameterMeta(name=name, type=param_type.type_name())
+                args = ParameterMeta(name=name, type=param_type.type_name())
                 try:
                     param_type.meta(args, method_def, method_tree)
                 except ParameterPluginException as e:

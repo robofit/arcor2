@@ -175,25 +175,25 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
                 raise Arcor2Exception(f"Action '{prev_action.name}' has to be executed first.")
 
             if isinstance(results, collections_abc.Iterable) and not isinstance(results, str):
-                params[param.id] = results[parsed_link.output_index]
+                params[param.name] = results[parsed_link.output_index]
             else:
                 assert parsed_link.output_index == 0
-                params[param.id] = results
+                params[param.name] = results
 
         elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
             const = glob.PROJECT.constant(param.value)
             # TODO use plugin to get the value
             import json
-            params[param.id] = json.loads(const.value)
+            params[param.name] = json.loads(const.value)
         elif param.value:
 
             try:
-                params[param.id] = PARAM_PLUGINS[param.type].execution_value(
+                params[param.name] = PARAM_PLUGINS[param.type].execution_value(
                     {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
-                    glob.SCENE, glob.PROJECT, action.id, param.id)
+                    glob.SCENE, glob.PROJECT, action.id, param.name)
             except ParameterPluginException as e:
                 glob.logger.error(e)
-                raise Arcor2Exception(f"Failed to get value for parameter {param.id}.")
+                raise Arcor2Exception(f"Failed to get value for parameter {param.name}.")
 
     obj = get_instance(obj_id)
 
@@ -317,8 +317,8 @@ async def remove_action_point_joints_cb(req: rpc.project.RemoveActionPointJoints
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
-            if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, req.args.joints_id):
-                raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.id}).")
+            if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.name, req.args.joints_id):
+                raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.name}).")
 
     joints_to_be_removed = glob.PROJECT.remove_joints(req.args.joints_id)
 
@@ -570,8 +570,8 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
-            if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, req.args.orientation_id):
-                raise Arcor2Exception(f"Orientation used in action {act.name} (parameter {param.id}).")
+            if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.name, req.args.orientation_id):
+                raise Arcor2Exception(f"Orientation used in action {act.name} (parameter {param.name}).")
 
     if req.dry_run:
         return None
@@ -605,9 +605,7 @@ async def save_project_cb(req: rpc.project.SaveProjectRequest, ui: WsClient) -> 
     assert glob.SCENE
     assert glob.PROJECT
 
-    await storage.update_project(glob.PROJECT.project)
-    # TODO get modified from response
-    glob.PROJECT.modified = (await storage.get_project(glob.PROJECT.id)).modified
+    glob.PROJECT.modified = await storage.update_project(glob.PROJECT.project)
     asyncio.ensure_future(notif.broadcast_event(events.ProjectSaved()))
     return None
 
@@ -628,9 +626,7 @@ async def new_project_cb(req: rpc.project.NewProjectRequest, ui: WsClient) -> No
             raise Arcor2Exception("Another scene is opened.")
 
         if glob.SCENE.has_changes():
-            await storage.update_scene(glob.SCENE.scene)
-            glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
-
+            glob.SCENE.modified = await storage.update_scene(glob.SCENE.scene)
     else:
 
         if req.args.scene_id not in {scene.id for scene in (await storage.get_scenes()).items}:
@@ -753,12 +749,12 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
                 continue
 
             for joints in ap.robot_joints:
-                if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.id, joints.id):
-                    raise Arcor2Exception(f"Joints {joints.name} used in action {act.name} (parameter {param.id}).")
+                if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.name, joints.id):
+                    raise Arcor2Exception(f"Joints {joints.name} used in action {act.name} (parameter {param.name}).")
 
             for ori in ap.orientations:
-                if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.id, ori.id):
-                    raise Arcor2Exception(f"Orientation {ori.name} used in action {act.name} (parameter {param.id}).")
+                if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.name, ori.id):
+                    raise Arcor2Exception(f"Orientation {ori.name} used in action {act.name} (parameter {param.name}).")
 
             # TODO some hypothetical parameter type could use just bare ActionPoint (its position)
 
@@ -845,7 +841,7 @@ def check_action_usage(action: common.Action) -> None:
             if param.type == common.ActionParameter.TypeEnum.LINK:
                 link = param.parse_link()
                 if action.id == link.action_id:
-                    raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.id}.")
+                    raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.name}.")
 
     # check logic
     for log in glob.PROJECT.logic:

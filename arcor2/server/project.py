@@ -37,7 +37,7 @@ def check_action_params(scene: CachedScene, project: CachedProject, action: comm
 
             const = project.constant(param.value)
 
-            param_meta = object_action.parameter(param.id)
+            param_meta = object_action.parameter(param.name)
             if param_meta.type != const.type:
                 raise Arcor2Exception("Param type does not match constant type.")
 
@@ -50,21 +50,21 @@ def check_action_params(scene: CachedScene, project: CachedProject, action: comm
 
             assert len(outputs) == len(object_action.returns)
 
-            param_meta = object_action.parameter(param.id)
+            param_meta = object_action.parameter(param.name)
             if param_meta.type != object_action.returns[parsed_link.output_index]:
                 raise Arcor2Exception("Param type does not match action output type.")
 
         else:
 
             if param.type not in PARAM_PLUGINS:
-                raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has unknown type: {param.type}.")
+                raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has unknown type: {param.type}.")
 
             try:
                 PARAM_PLUGINS[param.type].value(
                     {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
-                    scene, project, action.id, param.id)
+                    scene, project, action.id, param.name)
             except ParameterPluginException as e:
-                raise Arcor2Exception(f"Parameter {param.id} of action {action.name} has invalid value. {str(e)}")
+                raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has invalid value. {str(e)}")
 
 
 def check_flows(parent: Union[CachedProject, common.ProjectFunction],

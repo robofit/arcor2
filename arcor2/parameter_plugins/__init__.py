@@ -20,6 +20,7 @@ for _, module_name, _ in pkgutil.iter_modules(parameter_plugins.__path__):  # ty
             continue
         PLUGINS.add(obj)
 
+Plugins = Dict[Type, Type[ParameterPlugin]]
 
 TYPE_TO_PLUGIN: Dict[Type, Type[ParameterPlugin]] = {}
 

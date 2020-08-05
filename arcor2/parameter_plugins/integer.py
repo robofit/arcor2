@@ -6,7 +6,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from typed_ast import ast3 as ast
 
 from arcor2.cached import CachedProject as CProject, CachedScene as CScene
-from arcor2.data.object_type import ActionParameterMeta
+from arcor2.data.object_type import ParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 from arcor2.source.utils import find_asserts
@@ -46,7 +46,7 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
             continue
 
         try:
-            if ass.test.comparators[0].id == param_name:  # type: ignore
+            if ass.test.comparators[0].name == param_name:  # type: ignore
                 return ass.test.left.n, ass.test.comparators[1].n  # type: ignore
         except AttributeError:
             continue
@@ -54,7 +54,7 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
     raise AssertNotFound()
 
 
-def get_min_max(cls: Type[ParameterPlugin], param_meta: ActionParameterMeta, action_method: Callable,
+def get_min_max(cls: Type[ParameterPlugin], param_meta: ParameterMeta, action_method: Callable,
                 action_node: ast.FunctionDef) -> None:
 
     try:
@@ -80,7 +80,7 @@ class IntegerPlugin(ParameterPlugin):
         return "integer"
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
+    def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
 
         super(IntegerPlugin, cls).meta(param_meta, action_method, action_node)
         get_min_max(IntegerPlugin, param_meta, action_method, action_node)
@@ -102,7 +102,7 @@ class IntegerListPlugin(ListParameterPlugin):
         return get_type_name(IntegerPlugin)
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
+    def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
         super(IntegerListPlugin, cls).meta(param_meta, action_method, action_node)
 
     @classmethod

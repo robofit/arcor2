@@ -78,7 +78,7 @@ def put_project() -> RespT:
     project = common.Project.from_dict(convert_keys(request.json, camel_case_to_snake_case))
     project.modified = datetime.now(tz=timezone.utc)
     PROJECTS[project.id] = project
-    return "ok", 200
+    return cast(Response, jsonify(project.modified.isoformat()))
 
 
 @app.route("/project/<string:id>", methods=['GET'])
@@ -185,7 +185,7 @@ def put_scene() -> RespT:
     scene = common.Scene.from_dict(convert_keys(request.json, camel_case_to_snake_case))
     scene.modified = datetime.now(tz=timezone.utc)
     SCENES[scene.id] = scene
-    return "ok", 200
+    return cast(Response, jsonify(scene.modified.isoformat()))
 
 
 @app.route("/scene/<string:id>", methods=['GET'])
