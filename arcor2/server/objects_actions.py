@@ -7,12 +7,12 @@ from typing import Optional, Type
 
 from arcor2 import helpers as hlp
 from arcor2.action import patch_object_actions
-from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data.object_type import ObjectModel, ObjectTypeMeta
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
 from arcor2.server import globals as glob, settings
+from arcor2.server.clients import persistent_storage as storage
 from arcor2.server.robot import get_robot_meta
 from arcor2.source.object_types import prepare_object_types_dir
 from arcor2.source.utils import parse
