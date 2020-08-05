@@ -53,7 +53,7 @@ setup(
         'flask-cors',
         'typing_inspect',
         'semver',
-        'ring'
+        'lru-dict'
     ],
     extras_require={
         'test': [

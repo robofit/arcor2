@@ -9,7 +9,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
-from arcor2.clients import aio_persistent_storage as storage, aio_scene_service as scene_srv
+from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
 from arcor2.data.common import Pose, Position
 from arcor2.data.object_type import MeshFocusAction, Model3dType
@@ -17,6 +17,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import GenericWithPose, Robot
 from arcor2.server import globals as glob, notifications as notif, objects_actions as osa, settings
+from arcor2.server.clients import persistent_storage as storage
 from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
 from arcor2.server.robot import get_end_effector_pose

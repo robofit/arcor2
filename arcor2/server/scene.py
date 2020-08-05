@@ -3,12 +3,13 @@ from typing import AsyncIterator, Optional, Set
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
-from arcor2.clients import aio_persistent_storage as storage, aio_scene_service as scene_srv
+from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data.common import Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.server import globals as glob
+from arcor2.server.clients import persistent_storage as storage
 
 
 def instances_names() -> Set[str]:
