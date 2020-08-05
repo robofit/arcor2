@@ -13,7 +13,6 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp, transformations as tr
 from arcor2.cached import CachedProjectException, CachedScene, UpdateableCachedProject
-from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
@@ -21,6 +20,7 @@ from arcor2.object_types import utils as otu
 from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.server import globals as glob, notifications as notif, robot
+from arcor2.server.clients import persistent_storage as storage
 from arcor2.server.decorators import no_project, project_needed, scene_needed
 from arcor2.server.helpers import unique_name
 from arcor2.server.project import check_action_params, check_flows, find_object_action, open_project, project_names,\
