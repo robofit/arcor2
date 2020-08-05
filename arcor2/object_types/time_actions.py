@@ -14,7 +14,7 @@ class TimeActions(Generic):
 
     def __init__(self, obj_id: str, name: str) -> None:
         super(TimeActions, self).__init__(obj_id, name)
-        self._rate_start_time: Optional[float] = None
+        self._last_time: Optional[float] = None
 
     def sleep(self, seconds: float = 1.0) -> None:
 
@@ -33,14 +33,14 @@ class TimeActions(Generic):
 
         now = time.monotonic()
 
-        if self._rate_start_time is None:
-            self._rate_start_time = now
-            return
+        if self._last_time is not None:
 
-        dif = self._rate_start_time + period - now
+            dif = self._last_time + period - now
 
-        if dif > 0:
-            time.sleep(dif)
+            if dif > 0:
+                time.sleep(dif)
+
+        self._last_time = now
 
     def time_ns(self) -> int:
         """
