@@ -20,8 +20,6 @@ from flask_cors import CORS  # type: ignore
 
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
-import horast
-
 import arcor2
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import persistent_storage as ps
@@ -31,7 +29,7 @@ from arcor2.helpers import camel_case_to_snake_case, logger_formatter
 from arcor2.object_types.utils import base_from_source, built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.logic import program_src  # , get_logic_from_source
-from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class
+from arcor2.source.utils import derived_resources_class, global_action_points_class, global_actions_class, parse
 
 PORT = int(os.getenv("ARCOR2_BUILD_PORT", 5008))
 SERVICE_NAME = "ARCOR2 Build Service"
@@ -143,8 +141,8 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
                         # check if it is a valid Python code
                         try:
-                            horast.parse(script)
-                        except SyntaxError:
+                            parse(script)
+                        except SourceException:
                             logger.exception("Failed to parse code of the uploaded script.")
                             return "Invalid code.", 501
 

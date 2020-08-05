@@ -5,8 +5,6 @@ import asyncio
 import shutil
 from typing import Optional, Type
 
-import horast
-
 from arcor2 import helpers as hlp
 from arcor2.action import patch_object_actions
 from arcor2.clients import aio_persistent_storage as storage
@@ -14,10 +12,10 @@ from arcor2.data.object_type import ObjectModel, ObjectTypeMeta
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server import globals as glob, settings
 from arcor2.server.robot import get_robot_meta
 from arcor2.source.object_types import prepare_object_types_dir
+from arcor2.source.utils import parse
 
 
 def get_obj_type_name(object_id: str) -> str:
@@ -81,8 +79,8 @@ async def get_object_data(object_types: otu.ObjectTypeDict, obj_id: str) -> None
         kwargs = {model.type().value.lower(): model}
         meta.object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
-    ast = horast.parse(obj.source)
-    otd = otu.ObjectTypeData(meta, type_def, otu.object_actions(TYPE_TO_PLUGIN, type_def, ast), ast)
+    ast = parse(obj.source)
+    otd = otu.ObjectTypeData(meta, type_def, otu.object_actions(type_def, ast), ast)
 
     if issubclass(type_def, Robot):
         await get_robot_meta(otd)
@@ -95,7 +93,7 @@ async def get_object_types() -> None:
 
     await hlp.run_in_executor(prepare_object_types_dir, settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
 
-    object_types: otu.ObjectTypeDict = otu.built_in_types_data(TYPE_TO_PLUGIN)
+    object_types: otu.ObjectTypeDict = otu.built_in_types_data()
 
     obj_ids = await storage.get_object_type_ids()
 

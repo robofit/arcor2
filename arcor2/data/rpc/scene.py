@@ -6,7 +6,7 @@ from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, Pose, SceneObjectSetting
+from arcor2.data.common import IdDesc, Parameter, Pose
 from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
 
 
@@ -41,7 +41,7 @@ class AddObjectToSceneRequestArgs(JsonSchemaMixin):
     name: str
     type: str
     pose: Optional[Pose] = None
-    settings: List[SceneObjectSetting] = field(default_factory=list)
+    settings: List[Parameter] = field(default_factory=list)
 
 
 @dataclass

@@ -16,7 +16,6 @@ from arcor2.data.object_type import MeshFocusAction, Model3dType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import GenericWithPose, Robot
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.server import globals as glob, notifications as notif, objects_actions as osa, settings
 from arcor2.server.decorators import no_project, scene_needed
 from arcor2.server.project import scene_object_pose_updated
@@ -230,7 +229,7 @@ async def new_object_type_cb(req: rpc.objects.NewObjectTypeRequest, ui: WsClient
         hlp.save_and_import_type_def, obj.source, obj.id, base.type_def, settings.OBJECT_TYPE_PATH,
         settings.OBJECT_TYPE_MODULE)
     assert issubclass(type_def, base.type_def)
-    actions = otu.object_actions(TYPE_TO_PLUGIN, type_def, ast)
+    actions = otu.object_actions(type_def, ast)
 
     await storage.update_object_type(obj)
 

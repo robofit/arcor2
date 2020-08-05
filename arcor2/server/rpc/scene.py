@@ -118,8 +118,7 @@ async def close_scene_cb(req: rpc.scene.CloseSceneRequest, ui: WsClient) -> None
 async def save_scene_cb(req: rpc.scene.SaveSceneRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
-    await storage.update_scene(glob.SCENE.scene)
-    glob.SCENE.modified = (await storage.get_scene(glob.SCENE.id)).modified
+    glob.SCENE.modified = await storage.update_scene(glob.SCENE.scene)
     asyncio.ensure_future(notif.broadcast_event(events.SceneSaved()))
     for obj_id in OBJECTS_WITH_UPDATED_POSE:
         asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj_id))

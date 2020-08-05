@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from arcor2.clients import persistent_storage
 from arcor2.clients.persistent_storage import PersistentStorageException  # noqa
 from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
@@ -53,12 +55,12 @@ async def get_object_type_ids() -> IdDescList:
     return await run_in_executor(persistent_storage.get_object_type_ids)
 
 
-async def update_project(project: Project) -> None:
-    await run_in_executor(persistent_storage.update_project, project)
+async def update_project(project: Project) -> datetime:
+    return await run_in_executor(persistent_storage.update_project, project)
 
 
-async def update_scene(scene: Scene) -> None:
-    await run_in_executor(persistent_storage.update_scene, scene)
+async def update_scene(scene: Scene) -> datetime:
+    return await run_in_executor(persistent_storage.update_scene, scene)
 
 
 async def update_project_sources(project_sources: ProjectSources) -> None:

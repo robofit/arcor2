@@ -1,4 +1,5 @@
 import importlib
+import inspect
 import os
 import re
 import stat
@@ -6,7 +7,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 import autopep8  # type: ignore
 
-from horast import parse, unparse
+import horast
 
 from typed_ast.ast3 import AST, Assert, Assign, Attribute, Call, ClassDef, Compare, Eq, ExceptHandler, Expr, \
     FunctionDef, If, ImportFrom, Index, Load, Module, Name, NameConstant, NodeTransformer, NodeVisitor, Pass, Raise, \
@@ -19,6 +20,21 @@ import arcor2.data.common
 from arcor2.cached import CachedProject
 from arcor2.data.common import ActionPoint
 from arcor2.source import SCRIPT_HEADER, SourceException
+
+
+def parse(source: str) -> AST:
+
+    try:
+        return horast.parse(source)
+    except SyntaxError as e:
+        raise SourceException("Failed to parse the code.") from e
+
+
+def parse_def(type_def: Type) -> AST:
+    try:
+        return parse(inspect.getsource(type_def))
+    except OSError as e:
+        raise SourceException("Failed to get the source code.") from e
 
 
 def main_loop_body(tree: Module) -> List[Any]:
@@ -387,7 +403,7 @@ def tree_to_str(tree: AST) -> str:
     # validator.visit(tree)
 
     fix_missing_locations(tree)
-    generated_code: str = unparse(tree)
+    generated_code: str = horast.unparse(tree)
     generated_code = autopep8.fix_code(generated_code, options={'aggressive': 1})
 
     return generated_code
