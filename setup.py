@@ -52,7 +52,8 @@ setup(
         'aiorun',
         'flask-cors',
         'typing_inspect',
-        'semver'
+        'semver',
+        'ring'
     ],
     extras_require={
         'test': [
