@@ -6,7 +6,7 @@ from typed_ast import ast3 as ast
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import ActionParameter
-from arcor2.data.object_type import ActionParameterMeta
+from arcor2.data.object_type import ParameterMeta
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types.abstract import Generic
@@ -38,7 +38,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         return camel_case_to_snake_case(cls.type().__name__)
 
     @classmethod
-    def meta(cls, param_meta: ActionParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
+    def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
 
         assert param_meta.type == cls.type_name()
         assert param_meta.name
@@ -52,10 +52,11 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         try:
             ret = json.loads(param.value)
         except ValueError:
-            raise ParameterPluginException(f"Parameter: {param.id} has invalid value: {param.value}.")
+            raise ParameterPluginException(f"Parameter: {param.name} has invalid value: {param.value}.")
 
         if not isinstance(ret, str):
-            raise ParameterPluginException(f"Parameter: {param.id} has invalid value (string expected): {param.value}.")
+            raise ParameterPluginException(
+                f"Parameter: {param.name} has invalid value (string expected): {param.value}.")
 
         return ret
 

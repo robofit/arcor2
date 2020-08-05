@@ -133,8 +133,8 @@ class IntResources:
         ret: Dict[str, Any] = {}
 
         for param in act.parameters:
-            ret[param.id] = PARAM_PLUGINS[param.type].execution_value(self.type_defs, self.scene, self.project,
-                                                                      action_id, param.id)
+            ret[param.name] = PARAM_PLUGINS[param.type].execution_value(self.type_defs, self.scene, self.project,
+                                                                        action_id, param.name)
 
         return ret
 

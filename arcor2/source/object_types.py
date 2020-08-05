@@ -1,8 +1,5 @@
-import inspect
 import os
 from typing import Type
-
-import horast
 
 from typed_ast.ast3 import AST, AnnAssign, Assign, ClassDef, ImportFrom, Index, Load, Module, Name, NameConstant,\
     Pass, Store, Str, Subscript, alias
@@ -12,8 +9,7 @@ from arcor2.data.object_type import ObjectTypeMeta
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import built_in_types_names, meta_from_def, object_actions
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-from arcor2.source.utils import find_function, get_name, get_name_attr
+from arcor2.source.utils import find_function, get_name, get_name_attr, parse_def
 
 
 def prepare_object_types_dir(path: str, module: str) -> None:
@@ -34,7 +30,7 @@ def check_object_type(type_def: Type[Generic]) -> None:
     """
 
     meta_from_def(type_def, False)
-    object_actions(TYPE_TO_PLUGIN, type_def, horast.parse(inspect.getsource(type_def)))
+    object_actions(type_def, parse_def(type_def))
 
 
 def fix_object_name(object_id: str) -> str:
