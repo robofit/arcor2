@@ -13,12 +13,13 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2.cached import UpdateableCachedScene
-from arcor2.clients import aio_persistent_storage as storage, aio_scene_service as scene_srv
+from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import common, object_type
 from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import GenericWithPose
 from arcor2.server import globals as glob, notifications as notif
+from arcor2.server.clients import persistent_storage as storage
 from arcor2.server.decorators import no_project, no_scene, scene_needed
 from arcor2.server.helpers import unique_name
 from arcor2.server.project import associated_projects, projects_using_object, remove_object_references_from_projects, \

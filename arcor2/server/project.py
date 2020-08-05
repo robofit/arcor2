@@ -3,12 +3,12 @@ from typing import AsyncIterator, Dict, List, Set, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
-from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data import common, events, object_type
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.server import globals as glob, notifications as notif
+from arcor2.server.clients import persistent_storage as storage
 from arcor2.server.scene import clear_scene, open_scene
 
 

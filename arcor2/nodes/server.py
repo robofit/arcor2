@@ -25,7 +25,6 @@ from websockets.server import WebSocketServerProtocol as WsClient
 import arcor2
 import arcor2.helpers as hlp
 from arcor2 import action as action_mod
-from arcor2.clients import aio_persistent_storage as storage
 from arcor2.data import common, compile_json_schemas, events
 from arcor2.data import rpc
 from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
@@ -34,6 +33,7 @@ from arcor2.nodes.execution import RPC_DICT as EXE_RPC_DICT
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.server import events as server_events, execution as exe, globals as glob, notifications as notif, \
     objects_actions as osa, rpc as srpc, settings
+from arcor2.server.clients import persistent_storage as storage
 from arcor2.source.object_types import prepare_object_types_dir
 
 # disables before/after messages, etc.
@@ -118,7 +118,7 @@ async def _initialize_server() -> None:
 
     while True:  # wait until Project service becomes available
         try:
-            await storage.get_projects()
+            await storage.initialize_module()
             break
         except storage.PersistentStorageException as e:
             print(e.message)
