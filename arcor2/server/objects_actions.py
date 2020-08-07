@@ -65,6 +65,7 @@ async def get_object_data(object_types: otu.ObjectTypeDict, obj_id: str) -> None
             settings.OBJECT_TYPE_MODULE)
         assert issubclass(type_def, Generic)
         meta = otu.meta_from_def(type_def)
+        otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:
         glob.logger.warning(f"Disabling object type {obj.id}.")
         glob.logger.debug(e, exc_info=True)

@@ -8,7 +8,7 @@ import arcor2.object_types
 from arcor2.data.object_type import ObjectTypeMeta
 from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types.abstract import Generic
-from arcor2.object_types.utils import built_in_types_names, meta_from_def, object_actions
+from arcor2.object_types.utils import built_in_types_names, get_settings_def, meta_from_def, object_actions
 from arcor2.source.utils import find_function, get_name, get_name_attr, parse_def
 
 
@@ -31,6 +31,7 @@ def check_object_type(type_def: Type[Generic]) -> None:
 
     meta_from_def(type_def, False)
     object_actions(type_def, parse_def(type_def))
+    get_settings_def(type_def)
 
 
 def fix_object_name(object_id: str) -> str:
