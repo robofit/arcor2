@@ -308,7 +308,7 @@ async def open_project(project_id: str) -> None:
         if glob.SCENE.id != project.scene_id:
             raise Arcor2Exception("Required project is associated to another scene.")
     else:
-        await open_scene(project.scene_id)
+        await open_scene(project.scene_id, object_overrides=project.overrides)
 
     assert glob.SCENE
     for ap in project.action_points_with_parent:

@@ -20,7 +20,7 @@ from arcor2.data.execution import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception, ResourcesException
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
-from arcor2.object_types.utils import built_in_types_names
+from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.rest import convert_keys
@@ -68,12 +68,15 @@ class IntResources:
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
+            settings = settings_from_params(cls, scene_obj.settings, self.project.overrides[scene_obj.id])
+
             if issubclass(cls, Robot):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose)
+                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose, settings)
             elif issubclass(cls, GenericWithPose):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type])
+                self.objects[scene_obj.id] = \
+                    cls(scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings)
             elif issubclass(cls, Generic):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name)
+                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, settings)
             else:
                 raise Arcor2Exception("Unknown base class.")
 

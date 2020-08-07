@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, Iterator, List, Optional, Set, Tuple, ValuesView
 
-from arcor2.data.common import Action, LogicItem, NamedOrientation, Pose, Position, Project, ProjectActionPoint,\
-    ProjectConstant, ProjectFunction, ProjectRobotJoints, Scene, SceneObject
+from arcor2.data.common import Action, LogicItem, NamedOrientation, Parameter, Pose, Position, Project,\
+    ProjectActionPoint, ProjectConstant, ProjectFunction, ProjectRobotJoints, Scene, SceneObject, SceneObjectOverride
 from arcor2.exceptions import Arcor2Exception
 
 # TODO cached ProjectFunction (actions from functions are totally ignored at the moment)
@@ -159,6 +159,8 @@ class CachedProject:
         self._logic_items: Dict[str, LogicItem] = {}
         self._functions: Dict[str, ProjectFunction] = {}
 
+        self.overrides: Dict[str, List[Parameter]] = {}
+
         for ap in project_copy.action_points:
 
             if ap.id in self._action_points:
@@ -193,6 +195,9 @@ class CachedProject:
             ap.actions.clear()
             ap.robot_joints.clear()
             ap.orientations.clear()
+
+        for override in project_copy.object_overrides:
+            self.overrides[override.id] = override.parameters
 
         for constant in project_copy.constants:
             self._constants[constant.id] = constant
@@ -240,6 +245,7 @@ class CachedProject:
                 if ap == parent_ap:
                     ap.orientations.append(self._orientations.data[ori_id])
 
+        proj.object_overrides = [SceneObjectOverride(k, v) for k, v in self.overrides.items()]
         proj.constants = list(self.constants)
         proj.functions = list(self.functions)
         proj.logic = list(self.logic)

@@ -1,13 +1,14 @@
 import asyncio
-from typing import AsyncIterator, Optional, Set
+from typing import AsyncIterator, Dict, List, Optional, Set
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
 from arcor2.clients import aio_scene_service as scene_srv
-from arcor2.data.common import Pose, SceneObject
+from arcor2.data.common import Parameter, Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
+from arcor2.object_types.utils import settings_from_params
 from arcor2.server import globals as glob
 from arcor2.server.clients import persistent_storage as storage
 
@@ -37,8 +38,12 @@ async def set_object_pose(obj: GenericWithPose, pose: Pose) -> None:
     await hlp.run_in_executor(setattr, obj, "pose", pose)
 
 
-async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
-                              dry_run: bool = False, parent_id: Optional[str] = None) -> None:
+async def add_object_to_scene(
+        obj: SceneObject,
+        add_to_scene: bool = True,
+        dry_run: bool = False,
+        parent_id: Optional[str] = None,
+        overrides: Optional[List[Parameter]] = None) -> None:
     """
 
     :param obj:
@@ -57,7 +62,8 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
     if obj_type.meta.disabled:
         raise Arcor2Exception("Object type disabled.")
 
-    # TODO check whether object has all required settings
+    if {s.name for s in obj_type.meta.settings} != {s.name for s in obj.settings}:
+        raise Arcor2Exception("Some required parameter is missing.")
 
     # TODO check whether object needs parent and if so, if the parent is in scene and parent_id is set
     if obj_type.meta.needs_parent_type:
@@ -86,7 +92,9 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
 
     glob.logger.debug(f"Creating instance {obj.id} ({obj.type}).")
 
-    # TODO settings -> dataclass
+    # settings -> dataclass
+    assert obj_type.type_def
+    settings = settings_from_params(obj_type.type_def, obj.settings, overrides)
 
     assert obj_type.type_def is not None
 
@@ -95,8 +103,8 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
         if issubclass(obj_type.type_def, Robot):
             assert obj.pose is not None
             # TODO RPC should return here (instantiation could take long time) -> events
-            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name,
-                                                                            obj.pose)
+            glob.SCENE_OBJECT_INSTANCES[obj.id] = \
+                await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name, obj.pose, settings)
         elif issubclass(obj_type.type_def, GenericWithPose):
             assert obj.pose is not None
             coll_model: Optional[Models] = None
@@ -104,15 +112,14 @@ async def add_object_to_scene(obj: SceneObject, add_to_scene: bool = True,
                 coll_model = obj_type.meta.object_model.model()
 
             # TODO RPC should return here (instantiation could take long time) -> events
-            # TODO handle settings
-            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
-                obj_type.type_def, obj.id, obj.name, obj.pose, coll_model)
+            glob.SCENE_OBJECT_INSTANCES[obj.id] = \
+                await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name, obj.pose, coll_model, settings)
 
         elif issubclass(obj_type.type_def, Generic):
             assert obj.pose is None
             # TODO RPC should return here (instantiation could take long time) -> events
-            # TODO handle settings
-            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name)
+            glob.SCENE_OBJECT_INSTANCES[obj.id] = \
+                await hlp.run_in_executor(obj_type.type_def, obj.id, obj.name, settings)
 
         else:
             raise Arcor2Exception("Object type with unknown base.")
@@ -134,13 +141,20 @@ async def clear_scene(do_cleanup: bool = True) -> None:
     glob.SCENE = None
 
 
-async def open_scene(scene_id: str) -> None:
+async def open_scene(scene_id: str, object_overrides: Optional[Dict[str, List[Parameter]]] = None) -> None:
 
     asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
     glob.SCENE = UpdateableCachedScene(await storage.get_scene(scene_id))
 
+    if object_overrides is None:
+        object_overrides = {}
+
     try:
-        await asyncio.gather(*[add_object_to_scene(obj, add_to_scene=False) for obj in glob.SCENE.objects])
+        await asyncio.gather(
+            *[add_object_to_scene(obj,
+                                  add_to_scene=False,
+                                  overrides=object_overrides[obj.id] if obj.id in object_overrides else None)
+              for obj in glob.SCENE.objects])
     except Arcor2Exception as e:
         await clear_scene()
         raise Arcor2Exception(f"Failed to open scene. {e.message}") from e
