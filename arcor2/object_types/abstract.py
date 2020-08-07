@@ -75,7 +75,7 @@ class Generic(metaclass=abc.ABCMeta):
 class GenericWithPose(Generic):
 
     def __init__(self, obj_id: str, name: str, pose: Pose, collision_model: Optional[Models] = None,
-                 settings: Optional[Settings] = None):
+                 settings: Optional[Settings] = None) -> None:
 
         super(GenericWithPose, self).__init__(obj_id, name, settings)
 
@@ -112,7 +112,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     Abstract class representing robot and its basic capabilities (motion)
     """
 
-    def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None):
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
         super(Robot, self).__init__(obj_id, name, pose, None, settings)
 
     urdf_package_path: Optional[str] = None
