@@ -20,6 +20,9 @@ class GenericException(Arcor2Exception):
 
 @dataclass
 class Settings(JsonSchemaMixin):
+    """
+    Default (empty) settings for ARCOR2 objects.
+    """
     pass
 
 
