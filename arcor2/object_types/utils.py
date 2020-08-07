@@ -104,6 +104,8 @@ def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]
 
     ret: List[ParameterMeta] = []
 
+    sig = inspect.signature(type_def.__init__)
+
     # TODO Will this work for inherited properties? Make a test! There is also dataclasses.fields maybe...
     for name, ttype in get_type_hints(type_def.__init__).items():
         if name == "return":
@@ -116,7 +118,12 @@ def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]
             param_type = _resolve_param(name, ttype)
             assert param_type is not None
             pm = ParameterMeta(name=name, type=param_type.type_name())
-            # TODO meta, default, etc.
+
+            def_val = sig.parameters[name].default
+            if def_val is not inspect.Parameter.empty:
+                pm.default_value = param_type.value_to_json(def_val)
+
+            # TODO description, ranges, etc.
 
         ret.append(pm)
 
@@ -353,7 +360,7 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
                 def_val = signature.parameters[name].default
                 if def_val is not inspect.Parameter.empty:
-                    args.default_value = def_val
+                    args.default_value = param_type.value_to_json(def_val)
 
                 try:
                     args.description = doc["params"][name].strip()
