@@ -2,7 +2,7 @@ import time
 from typing import Optional
 
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import Generic
+from arcor2.object_types.abstract import Generic, Settings
 
 
 class TimeActions(Generic):
@@ -12,8 +12,8 @@ class TimeActions(Generic):
 
     _ABSTRACT = False
 
-    def __init__(self, obj_id: str, name: str) -> None:
-        super(TimeActions, self).__init__(obj_id, name)
+    def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
+        super(TimeActions, self).__init__(obj_id, name, settings)
         self._last_time: Optional[float] = None
 
     def sleep(self, seconds: float = 1.0) -> None:
