@@ -1,16 +1,17 @@
 import copy
 import inspect
+import json
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
 
-from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 
 from typed_ast.ast3 import AST, Name
 
 import typing_inspect  # type: ignore
 
 import arcor2
-from arcor2.data.common import ActionMetadata
+from arcor2.data.common import ActionMetadata, Parameter
 from arcor2.data.object_type import ObjectAction, ObjectTypeMeta, ParameterMeta
 from arcor2.data.robot import RobotMeta
 from arcor2.docstring import parse_docstring
@@ -95,6 +96,11 @@ def obj_description_from_base(data: ObjectTypeDict, obj_type: ObjectTypeMeta) ->
 
 
 def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]:
+    """
+    Analyzes properties of dataclass and returns their metadata.
+    :param type_def:
+    :return:
+    """
 
     ret: List[ParameterMeta] = []
 
@@ -117,6 +123,81 @@ def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]
     return ret
 
 
+def settings_from_params(
+        type_def: Type[Generic], settings: List[Parameter], overrides: Optional[List[Parameter]] = None) -> Settings:
+    """
+    Constructs instance of Settings from two arrays of parameters (scene settings and project overrides).
+    :param type_def:
+    :param settings:
+    :param overrides:
+    :return:
+    """
+
+    if overrides is None:
+        overrides = []
+
+    final: Dict[str, Parameter] = {s.name: s for s in settings}
+    for over in overrides:
+        if over.name not in final:
+            raise Arcor2Exception("Invalid override.")
+
+        if over.type != final[over.name].type:
+            raise Arcor2Exception("Type mismatch.")
+
+        final[over.name] = over
+
+    settings_def = get_settings_def(type_def)
+    settings_data: Dict[str, Any] = {}
+
+    settings_def_type_hints = get_type_hints(settings_def.__init__)
+
+    for s in final.values():
+
+        try:
+            setting_def = settings_def_type_hints[s.name]
+        except KeyError as e:
+            raise Arcor2Exception(f"Unknown property {s.name}.") from e
+
+        try:
+            if issubclass(setting_def, JsonSchemaMixin):
+                settings_data[s.name] = json.loads(s.value)
+            else:
+                settings_data[s.name] = setting_def(json.loads(s.value))
+        except (ValueError, ValidationError) as e:
+            raise Arcor2Exception(f"Parameter {s.name} has invalid value.") from e
+
+    try:
+        settings_cls = settings_def.from_dict(settings_data)
+    except (ValueError, ValidationError) as e:
+        raise Arcor2Exception("Validation of settings failed.") from e
+
+    return settings_cls
+
+
+def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
+    """
+    Get settings definition from object type definition.
+    :param type_def:
+    :return:
+    """
+
+    sig = inspect.signature(type_def.__init__)
+    try:
+        param = sig.parameters["settings"]
+    except KeyError:
+        raise Arcor2Exception("Type has no settings.")
+
+    if typing_inspect.is_optional_type(param.annotation):
+        settings_cls = typing_inspect.get_args(param.annotation)[0]
+    else:
+        settings_cls = param.annotation
+
+    if not issubclass(settings_cls, Settings):
+        raise Arcor2Exception("Settings have invalid type.")
+
+    return settings_cls
+
+
 def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectTypeMeta:
 
     obj = ObjectTypeMeta(type_def.__name__,
@@ -130,18 +211,10 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
             obj.base = base.__name__
             break
 
-    sig = inspect.signature(type_def.__init__)
     try:
-        param = sig.parameters["settings"]
-    except KeyError:
+        obj.settings = get_dataclass_params(get_settings_def(type_def))
+    except Arcor2Exception:
         pass
-    else:
-        if param.default is not None:
-
-            settings_def = param.annotation
-
-            if issubclass(settings_def, Settings):
-                obj.settings = get_dataclass_params(settings_def)
 
     return obj
 

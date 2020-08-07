@@ -1,11 +1,12 @@
+import json
 from dataclasses import dataclass
 
 import pytest  # type: ignore
 
 from arcor2.action import patch_object_actions
-from arcor2.data.common import ActionMetadata, StrEnum
+from arcor2.data.common import ActionMetadata, Parameter, StrEnum
 from arcor2.object_types.abstract import Generic, GenericWithPose, Settings
-from arcor2.object_types.utils import meta_from_def, object_actions, parse_def
+from arcor2.object_types.utils import meta_from_def, object_actions, parse_def, settings_from_params
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 
 
@@ -124,7 +125,7 @@ class TestObjectSettings(Settings):
     integer: int
     boolean: bool
     double: float
-    enum: StrEnum
+    enum: MyEnum
     nested_settings: NestedSettings
 
 
@@ -168,3 +169,24 @@ def test_settings() -> None:
     assert nested.name == "boolean"
     assert not nested.children
     assert nested.type == TYPE_TO_PLUGIN[bool].type_name()
+
+
+def test_settings_from_params() -> None:
+
+    settings = settings_from_params(
+        TestObjectWithSettings,
+        [
+            Parameter("string", "string", json.dumps("value")),
+            Parameter("integer", "integer", json.dumps(1)),
+            Parameter("boolean", "boolean", json.dumps(False)),
+            Parameter("double", "double", json.dumps(1.0)),
+            Parameter("enum", "enum", json.dumps(MyEnum.OPT1)),
+            Parameter("nested_settings", "dataclass", NestedSettings(True).to_json())
+        ],
+        [
+            Parameter("integer", "integer", json.dumps(2)),
+            Parameter("double", "double", json.dumps(2.0))
+        ]
+    )
+
+    assert isinstance(settings, TestObjectSettings)
