@@ -314,10 +314,9 @@ async def open_project(project_id: str) -> None:
     for ap in project.action_points_with_parent:
 
         assert ap.parent
-        try:
-            glob.SCENE.object(ap.parent)
-        except Arcor2Exception:
+
+        if ap.parent not in glob.SCENE.object_ids | project.action_points_ids:
             await clear_scene()
-            raise Arcor2Exception(f"Action point's {ap.name} parent not available in the scene.")
+            raise Arcor2Exception(f"Action point's {ap.name} parent not available.")
 
     glob.PROJECT = project
