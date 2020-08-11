@@ -590,7 +590,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap, orientation = glob.PROJECT.ap_and_orientation(req.args.action_point_id)
+    ap, orientation = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
