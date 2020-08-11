@@ -400,7 +400,6 @@ class UpdateActionPointOrientationResponse(Response):
 
 @dataclass
 class RemoveActionPointOrientationRequestArgs(JsonSchemaMixin):
-    action_point_id: str
     orientation_id: str
 
 

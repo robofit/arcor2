@@ -7,7 +7,7 @@ import collections.abc as collections_abc
 import copy
 import inspect
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Set
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -356,6 +356,29 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: 
     return None
 
 
+def detect_ap_loop(ap: common.ActionPoint, new_parent_id: str) -> None:
+
+    assert glob.PROJECT
+
+    visited_ids: Set[str] = set()
+    ap = copy.deepcopy(ap)
+    ap.parent = new_parent_id
+    while True:
+
+        if ap.id in visited_ids:
+            raise Arcor2Exception("Loop detected!")
+
+        visited_ids.add(ap.id)
+
+        if ap.parent is None:
+            break
+
+        try:
+            ap = glob.PROJECT.action_point(ap.parent)
+        except Arcor2Exception:
+            break
+
+
 @scene_needed
 @project_needed
 async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParentRequest, ui: WsClient) -> None:
@@ -369,6 +392,7 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
         return None
 
     check_ap_parent(req.args.new_parent_id)
+    detect_ap_loop(ap, req.args.new_parent_id)
 
     if req.dry_run:
         return
@@ -566,7 +590,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap, orientation = glob.PROJECT.ap_and_orientation(req.args.action_point_id)
+    ap, orientation = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
