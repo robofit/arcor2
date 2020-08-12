@@ -62,7 +62,7 @@ async def add_object_to_scene(
     if obj_type.meta.disabled:
         raise Arcor2Exception("Object type disabled.")
 
-    if {s.name for s in obj_type.meta.settings} != {s.name for s in obj.settings}:
+    if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in obj.settings}:
         raise Arcor2Exception("Some required parameter is missing.")
 
     # TODO check whether object needs parent and if so, if the parent is in scene and parent_id is set
