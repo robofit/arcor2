@@ -136,8 +136,9 @@ async def add_object_to_scene(
 async def clear_scene(do_cleanup: bool = True) -> None:
 
     glob.logger.info("Clearing the scene.")
+    if do_cleanup:
+        await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
     glob.SCENE_OBJECT_INSTANCES.clear()
-    await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
     glob.SCENE = None
 
 
@@ -149,13 +150,18 @@ async def open_scene(scene_id: str, object_overrides: Optional[Dict[str, List[Pa
     if object_overrides is None:
         object_overrides = {}
 
+    tasks = [
+        asyncio.ensure_future(add_object_to_scene(
+            obj,
+            add_to_scene=False,
+            overrides=object_overrides[obj.id] if obj.id in object_overrides else None))
+        for obj in glob.SCENE.objects]
+
     try:
-        await asyncio.gather(
-            *[add_object_to_scene(obj,
-                                  add_to_scene=False,
-                                  overrides=object_overrides[obj.id] if obj.id in object_overrides else None)
-              for obj in glob.SCENE.objects])
+        await asyncio.gather(*tasks)
     except Arcor2Exception as e:
+        for t in tasks:
+            t.cancel()
         await clear_scene()
         raise Arcor2Exception(f"Failed to open scene. {e.message}") from e
 
