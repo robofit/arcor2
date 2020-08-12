@@ -1,5 +1,8 @@
 import os
-from typing import Set
+from dataclasses import dataclass
+from typing import Optional, Set
+
+from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2 import rest
 from arcor2.data.common import Pose
@@ -13,11 +16,21 @@ class SceneServiceException(Arcor2Exception):
     pass
 
 
-def upsert_collision(model: Models, pose: Pose) -> None:
+@dataclass
+class MeshParameters(JsonSchemaMixin):
+
+    mesh_scale_x: float = 1.0
+    mesh_scale_y: float = 1.0
+    mesh_scale_z: float = 1.0
+    transform_id: str = "world"
+
+
+def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshParameters] = None) -> None:
     """
     Adds arbitrary collision model to the collision scene.
     :param model: Box, Sphere, Cylinder, Mesh
     :param pose: Pose of the collision object.
+    :param mesh_parameters: Some additional parameters might be specified for mesh collision model.
     :return:
 
     Example usage:
@@ -34,12 +47,8 @@ def upsert_collision(model: Models, pose: Pose) -> None:
     del params["id"]
     params[model.__class__.__name__.lower() + "Id"] = model_id
 
-    # TODO temporary hack
-    if model.type() == Model3dType.MESH:
-        params["mesh_scale_x"] = 1.0
-        params["mesh_scale_y"] = 1.0
-        params["mesh_scale_z"] = 1.0
-        params["transform_id"] = "world"
+    if model.type() == Model3dType.MESH and mesh_parameters:
+        params.update(mesh_parameters.to_dict())
 
     rest.put(f"{URL}/collisions/{model.type().value.lower()}", pose, params)
 
