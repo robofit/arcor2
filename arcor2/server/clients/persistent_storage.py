@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from typing import Dict
 
@@ -67,8 +68,9 @@ async def update_project(project: Project) -> datetime:
     assert project.id
     ret = await ps.update_project(project)
     _projects_list[project.id] = IdDesc(project.id, project.name, project.desc)
-    _projects[project.id] = project
+    _projects[project.id] = deepcopy(project)
     _projects[project.id].modified = ret
+    _projects[project.id].int_modified = None
     return ret
 
 
@@ -77,8 +79,10 @@ async def update_scene(scene: Scene) -> datetime:
     assert scene.id
     ret = await ps.update_scene(scene)
     _scenes_list[scene.id] = IdDesc(scene.id, scene.name, scene.desc)
-    _scenes[scene.id] = scene
+    _scenes[scene.id] = deepcopy(scene)
     _scenes[scene.id].modified = ret
+    _scenes[scene.id].int_modified = None
+
     return ret
 
 
