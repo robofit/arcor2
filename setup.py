@@ -58,8 +58,16 @@ setup(
     extras_require={
         'test': [
             'pytest',
-            'pytest-docker-compose',
-            'openapi-spec-validator'
+            'pytest-repeat',
+            'pytest-randomly',
+            'openapi-spec-validator',
+            'flake8',
+            'mypy',
+            'flake8-import-order',
+            'flake8-tidy-imports',
+            'flake8-annotations-coverage',
+            'flake8-pytest-style',
+            'flake8-bugbear'
             ],
         'docs': ['sphinx']
     },

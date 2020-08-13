@@ -44,7 +44,6 @@ jobs:
             sudo apt-get install build-essential git
             pip install --upgrade pip setuptools
             pip install -e .[test]
-            pip install pytest flake8 mypy flake8-import-order flake8-tidy-imports flake8-annotations-coverage flake8-pytest-style flake8-bugbear
             cd ..
             git clone https://github.com/ZdenekM/dataclasses-jsonschema
             cd dataclasses-jsonschema
@@ -78,7 +77,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            py.test -m "not integration" --docker-compose arcor2/docker arcor2
+            py.test --count=3 -x arcor2
 
       - store_artifacts:
           path: test-reports
