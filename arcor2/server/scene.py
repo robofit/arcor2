@@ -137,14 +137,17 @@ async def clear_scene(do_cleanup: bool = True) -> None:
 
     glob.logger.info("Clearing the scene.")
     if do_cleanup:
-        await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
+        try:
+            await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
+        except Arcor2Exception:
+            glob.logger.exception("Exception occurred while cleaning up objects.")
     glob.SCENE_OBJECT_INSTANCES.clear()
     glob.SCENE = None
 
 
 async def open_scene(scene_id: str, object_overrides: Optional[Dict[str, List[Parameter]]] = None) -> None:
 
-    asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
+    await scene_srv.delete_all_collisions()  # just for sure (has to be awaited so things happen in order)
     glob.SCENE = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     if object_overrides is None:

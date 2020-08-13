@@ -135,6 +135,8 @@ async def open_scene_cb(req: rpc.scene.OpenSceneRequest, ui: WsClient) -> None:
 
     await open_scene(req.args.id)
     assert glob.SCENE
+    assert glob.SCENE.int_modified is None
+    assert not glob.SCENE.has_changes()
     asyncio.ensure_future(notif.broadcast_event(events.OpenScene(data=events.OpenSceneData(glob.SCENE.scene))))
     return None
 
