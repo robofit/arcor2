@@ -77,6 +77,7 @@ def put_project() -> RespT:
 
     project = common.Project.from_dict(convert_keys(request.json, camel_case_to_snake_case))
     project.modified = datetime.now(tz=timezone.utc)
+    project.int_modified = None
     PROJECTS[project.id] = project
     return cast(Response, jsonify(project.modified.isoformat()))
 
@@ -184,6 +185,7 @@ def put_scene() -> RespT:
 
     scene = common.Scene.from_dict(convert_keys(request.json, camel_case_to_snake_case))
     scene.modified = datetime.now(tz=timezone.utc)
+    scene.int_modified = None
     SCENES[scene.id] = scene
     return cast(Response, jsonify(scene.modified.isoformat()))
 
