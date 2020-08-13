@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionParameter, Flow, IdDesc, Orientation, Position, ProjectLogicIf
+from arcor2.data.common import ActionParameter, Flow, IdDesc, Joint, Orientation, Position, ProjectLogicIf
 from arcor2.data.rpc.common import IdArgs, Request, Response, RobotArg, wo_suffix
 
 
@@ -194,6 +194,7 @@ class AddActionPointJointsRequestArgs(JsonSchemaMixin):
     action_point_id: str
     robot_id: str
     name: str = "default"
+    joints: Optional[List[Joint]] = None
 
 
 @dataclass

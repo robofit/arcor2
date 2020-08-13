@@ -274,10 +274,17 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
     unique_name(req.args.name, ap.joints_names())
 
+    new_joints = await get_robot_joints(req.args.robot_id)
+
+    if req.args.joints is not None:
+
+        if {joint.name for joint in req.args.joints} != {joint.name for joint in new_joints}:
+            raise Arcor2Exception("Joint names does not match the robot.")
+
+        new_joints = req.args.joints
+
     if req.dry_run:
         return None
-
-    new_joints = await get_robot_joints(req.args.robot_id)
 
     prj = common.ProjectRobotJoints(common.uid(), req.args.name, req.args.robot_id, new_joints, True)
     glob.PROJECT.upsert_joints(ap.id, prj)
