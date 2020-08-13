@@ -6,15 +6,14 @@ from arcor2.data.events import ActionStateEvent
 from arcor2.object_types.abstract import Generic
 
 
-class MyObject(Generic):
-
-    def action(self) -> None:
-        pass
-
-    action.__action__ = ActionMetadata()  # type: ignore
-
-
 def test_patch_object_actions(monkeypatch, capsys) -> None:
+
+    class MyObject(Generic):
+
+        def action(self) -> None:
+            pass
+
+        action.__action__ = ActionMetadata()  # type: ignore
 
     # @action tries to read from stdin
     sio = io.StringIO()
