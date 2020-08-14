@@ -125,6 +125,15 @@ class Orientation(IterableIndexable):
 
         return cast(bool, quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.e-8)[0])
 
+    def __post_init__(self):
+
+        nq = self.as_quaternion()  # in order to get normalized quaternion
+
+        self.x = nq.x
+        self.y = nq.y
+        self.z = nq.z
+        self.w = nq.w
+
 
 @dataclass
 class NamedOrientation(JsonSchemaMixin):
