@@ -272,7 +272,7 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
 
-    unique_name(req.args.name, ap.joints_names())
+    unique_name(req.args.name, glob.PROJECT.ap_joint_names(ap.id))
 
     new_joints = await get_robot_joints(req.args.robot_id)
 
@@ -492,8 +492,7 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
     assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
-
-    unique_name(req.args.name, ap.orientation_names())
+    unique_name(req.args.name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
         return None
@@ -540,7 +539,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
     assert glob.PROJECT
 
     ap = glob.PROJECT.action_point(req.args.action_point_id)
-    unique_name(req.args.name, ap.orientation_names())
+    unique_name(req.args.name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
         return None
@@ -1205,7 +1204,7 @@ async def rename_action_point_joints_cb(req: rpc.project.RenameActionPointJoints
     assert glob.PROJECT
 
     ap, joints = glob.PROJECT.ap_and_joints(req.args.joints_id)
-    unique_name(req.args.new_name, ap.joints_names())
+    unique_name(req.args.new_name, glob.PROJECT.ap_joint_names(ap.id))
 
     if req.dry_run:
         return None
@@ -1224,7 +1223,7 @@ async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointO
     assert glob.PROJECT
 
     ap, ori = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
-    unique_name(req.args.new_name, ap.orientation_names())
+    unique_name(req.args.new_name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
         return None
