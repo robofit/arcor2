@@ -1,5 +1,5 @@
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.data.common import Orientation, Pose, Position, ProjectActionPoint
+from arcor2.data.common import BareActionPoint, Orientation, Pose, Position
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -63,7 +63,7 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     return p
 
 
-def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: ProjectActionPoint) -> None:
+def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: BareActionPoint) -> None:
     """
     Transforms (in place) relative AP into a global one.
     :param scene:
@@ -81,16 +81,16 @@ def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: Proj
             raise Arcor2Exception("Parent object does not have pose!")
         old_parent_pose = parent_obj.pose
     elif ap.parent in project.action_points_ids:
-        old_parent_pose = Pose(project.action_point(ap.parent).position, Orientation())
+        old_parent_pose = Pose(project.bare_action_point(ap.parent).position, Orientation())
     else:
         raise Arcor2Exception("AP has unknown parent_id.")
 
     ap.position = make_pose_abs(old_parent_pose, Pose(ap.position, Orientation())).position
-    for ori in ap.orientations:
+    for ori in project.ap_orientations(ap.id):
         ori.orientation = make_orientation_abs(old_parent_pose.orientation, ori.orientation)
 
     if ap.parent in project.action_points_ids:
-        parent_ap = project.action_point(ap.parent)
+        parent_ap = project.bare_action_point(ap.parent)
         if parent_ap.parent:
             ap.parent = parent_ap.parent
             make_relative_ap_global(scene, project, ap)
@@ -98,7 +98,7 @@ def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: Proj
     ap.parent = None
 
 
-def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: ProjectActionPoint, parent_id: str) -> None:
+def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: BareActionPoint, parent_id: str) -> None:
     """
     Transforms (in place) global AP into a relative one with given parent (can be object or another AP).
     :param scene:
@@ -117,7 +117,7 @@ def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: Proj
         new_parent_pose = parent_obj.pose
     elif parent_id in project.action_points_ids:
 
-        parent_ap = project.action_point(parent_id)
+        parent_ap = project.bare_action_point(parent_id)
 
         if parent_ap.parent:
             make_global_ap_relative(scene, project, ap, parent_ap.parent)
@@ -128,7 +128,7 @@ def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: Proj
         raise Arcor2Exception("Unknown parent_id.")
 
     ap.position = make_pose_rel(new_parent_pose, Pose(ap.position, Orientation())).position
-    for ori in ap.orientations:
+    for ori in project.ap_orientations(ap.id):
         ori.orientation = make_orientation_rel(new_parent_pose.orientation, ori.orientation)
 
     ap.parent = parent_id
@@ -151,7 +151,7 @@ def make_pose_rel_to_parent(scene: CachedScene, project: CachedProject, pose: Po
         parent_pose = parent_obj.pose
     elif parent_id in project.action_points_ids:
 
-        parent_ap = project.action_point(parent_id)
+        parent_ap = project.bare_action_point(parent_id)
 
         if parent_ap.parent:
             pose = make_pose_rel_to_parent(scene, project, pose, parent_ap.parent)

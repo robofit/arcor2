@@ -140,9 +140,9 @@ async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
                 continue
 
             glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
-            ap.invalidate_joints()
+            project.invalidate_joints(ap.id)
 
-        await storage.update_project(project)
+        await storage.update_project(project.project)
 
 
 async def remove_object_references_from_projects(obj_id: str) -> None:
@@ -155,36 +155,35 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
         # action_ids: Set[str] = set()
 
-        for ap in project.action_points:
+        # delete actions using the object
+        for action_to_delete in {act.id for act in project.actions if act.parse_type()[0] == obj_id}:
+            project.remove_action(action_to_delete)
 
-            # delete actions using the object
-            ap.actions = [act for act in ap.actions if act.parse_type()[0] != obj_id]
+        # delete actions using obj's action points as parameters
+        # TODO fix this!
+        """
+        actions_using_invalid_param: Set[str] = \
+            {act.id for act in ap.actions for param in act.parameters
+             if param.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE) and
+             param.value.startswith(obj_id)}
 
-            # delete actions using obj's action points as parameters
-            # TODO fix this!
-            """
-            actions_using_invalid_param: Set[str] = \
-                {act.id for act in ap.actions for param in act.parameters
-                 if param.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE) and
-                 param.value.startswith(obj_id)}
+        ap.actions = [act for act in ap.actions if act.id not in actions_using_invalid_param]
 
-            ap.actions = [act for act in ap.actions if act.id not in actions_using_invalid_param]
-
-            # get IDs of remaining actions
-            action_ids.update({act.id for act in ap.actions})
-            """
+        # get IDs of remaining actions
+        action_ids.update({act.id for act in ap.actions})
+        """
 
         # valid_ids: Set[str] = action_ids | ActionIOEnum.set()
 
         # TODO remove invalid logic items
 
-        await storage.update_project(project)
+        await storage.update_project(project.project)
         updated_project_ids.add(project.id)
 
     glob.logger.info("Updated projects: {}".format(updated_project_ids))
 
 
-async def projects(scene_id: str) -> AsyncIterator[common.Project]:
+async def projects(scene_id: str) -> AsyncIterator[UpdateableCachedProject]:
 
     id_list = await storage.get_projects()
 
@@ -195,10 +194,10 @@ async def projects(scene_id: str) -> AsyncIterator[common.Project]:
         if project.scene_id != scene_id:
             continue
 
-        yield project
+        yield UpdateableCachedProject(project)
 
 
-def _project_using_object_as_parent(project: common.Project, obj_id: str) -> bool:
+def _project_using_object_as_parent(project: CachedProject, obj_id: str) -> bool:
 
     for ap in project.action_points:
         if ap.parent == obj_id:
@@ -207,19 +206,18 @@ def _project_using_object_as_parent(project: common.Project, obj_id: str) -> boo
     return False
 
 
-def _project_referencing_object(project: common.Project, obj_id: str) -> bool:
+def _project_referencing_object(project: CachedProject, obj_id: str) -> bool:
 
-    for ap in project.action_points:
-        for action in ap.actions:
-            action_obj_id, _ = action.parse_type()
+    for action in project.actions:
+        action_obj_id, _ = action.parse_type()
 
-            if action_obj_id == obj_id:
-                return True
+        if action_obj_id == obj_id:
+            return True
 
     return False
 
 
-async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[common.Project]:
+async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[UpdateableCachedProject]:
     """
     Combines functionality of projects_using_object_as_parent and projects_referencing_object.
     :param scene_id:
@@ -232,14 +230,14 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[com
             yield project
 
 
-async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIterator[common.Project]:
+async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIterator[UpdateableCachedProject]:
 
     async for project in projects(scene_id):
         if _project_using_object_as_parent(project, obj_id):
             yield project
 
 
-async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[common.Project]:
+async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[CachedProject]:
 
     async for project in projects(scene_id):
         if _project_referencing_object(project, obj_id):
@@ -265,12 +263,12 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
             problems.append(f"Action point '{ap.name}' has parent '{ap.parent}' that does not exist in the scene.")
             continue
 
-        for joints in ap.robot_joints:
+        for joints in project.ap_joints(ap.id):
             if not joints.is_valid:
                 problems.append(f"Action point {ap.name} has invalid joints: {joints.name} "
                                 f"(robot {joints.robot_id}).")
 
-        for action in ap.actions:
+        for action in project.actions:
 
             if action.id in action_ids:
                 problems.append(f"Action {action.name} of the {ap.name} is not unique.")
