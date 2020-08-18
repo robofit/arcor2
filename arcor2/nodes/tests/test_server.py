@@ -8,6 +8,7 @@ from typing import Iterator, Tuple, Type, TypeVar
 
 import pytest  # type: ignore
 
+from arcor2.clients import persistent_storage
 from arcor2.clients.arserver import ARServer, uid
 from arcor2.data import common, events, object_type, rpc
 from arcor2.nodes.project_mock import PORT as PROJECT_MOCK_PORT
@@ -15,6 +16,8 @@ from arcor2.nodes.scene_mock import PORT as SCENE_MOCK_PORT
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.time_actions import TimeActions
 
+
+persistent_storage.URL = f"http://0.0.0.0:{PROJECT_MOCK_PORT}"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -460,6 +463,8 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     add_logic_item(ars, action.id, common.LogicItem.END)
 
     save_project(ars)
+
+    LOGGER.debug(persistent_storage.get_project(proj.project.id))
 
     # TODO test also temporary package
 
