@@ -297,6 +297,30 @@ class CachedProject:
         except KeyError:
             raise CachedProjectException("Unknown orientation.")
 
+    def ap_orientations(self, ap_id: str) -> List[NamedOrientation]:
+
+        # TODO come up with something more efficient
+        return [
+            self._orientations.data[ori_id]
+            for ori_id, parent_ap in self._orientations.parent.items()
+            if ap_id == parent_ap.id
+        ]
+
+    def ap_joints(self, ap_id: str) -> List[ProjectRobotJoints]:
+
+        # TODO come up with something more efficient
+        return [
+            self._joints.data[joints_id]
+            for joints_id, parent_ap in self._joints.parent.items()
+            if ap_id == parent_ap.id
+        ]
+
+    def ap_orientation_names(self, ap_id: str) -> Set[str]:
+        return {ori.name for ori in self.ap_orientations(ap_id)}
+
+    def ap_joint_names(self, ap_id: str) -> Set[str]:
+        return {joints.name for joints in self.ap_joints(ap_id)}
+
     def orientation(self, orientation_id: str) -> NamedOrientation:
 
         try:

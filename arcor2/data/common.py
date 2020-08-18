@@ -186,12 +186,6 @@ class ActionPoint(JsonSchemaMixin):
     orientations: List[NamedOrientation] = field(default_factory=list)
     robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
 
-    def orientation_names(self) -> Set[str]:
-        return {ori.name for ori in self.orientations}
-
-    def joints_names(self) -> Set[str]:
-        return {joints.name for joints in self.robot_joints}
-
     def invalidate_joints(self) -> None:
 
         for joints in self.robot_joints:
