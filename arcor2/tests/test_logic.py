@@ -1,7 +1,7 @@
 import pytest  # type: ignore
 
 from arcor2.cached import UpdateableCachedProject
-from arcor2.data.common import Action, Flow, LogicItem, Position, Project, ProjectActionPoint, Scene
+from arcor2.data.common import Action, ActionPoint, Flow, LogicItem, Position, Project, Scene
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import check_for_loops
 
@@ -16,7 +16,7 @@ def scene() -> Scene:
 def project() -> UpdateableCachedProject:
 
     project = Project("p1", "p1", "s1")
-    ap1 = ProjectActionPoint("ap1", "ap1", Position())
+    ap1 = ActionPoint("ap1", "ap1", Position())
     project.action_points.append(ap1)
 
     ap1.actions.append(Action("ac1", "ac1", "Test/test", flows=[Flow()]))

@@ -79,7 +79,7 @@ class OpenScene(Event):
 @dataclass
 class SceneChanged(Event):
 
-    data: Optional[common.Scene] = None
+    data: Optional[common.BareScene] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -98,7 +98,7 @@ class SceneClosed(Event):
 @dataclass
 class ProjectChanged(Event):
 
-    data: Optional[common.Project] = None
+    data: Optional[common.BareProject] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
@@ -131,14 +131,14 @@ class ProjectClosed(Event):
 @dataclass
 class ActionPointChanged(Event):
 
-    data: Optional[common.ProjectActionPoint] = None
+    data: Optional[common.BareActionPoint] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
 class ActionChanged(Event):
 
-    data: Optional[common.Action] = None
+    data: Optional[common.BareAction] = None
     event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 

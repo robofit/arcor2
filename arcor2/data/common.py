@@ -177,22 +177,6 @@ class ProjectRobotJoints(JsonSchemaMixin):
 
 
 @dataclass
-class ActionPoint(JsonSchemaMixin):
-
-    id: str
-    name: str
-    position: Position
-    parent: Optional[str] = None
-    orientations: List[NamedOrientation] = field(default_factory=list)
-    robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
-
-    def invalidate_joints(self) -> None:
-
-        for joints in self.robot_joints:
-            joints.is_valid = False
-
-
-@dataclass
 class Parameter(JsonSchemaMixin):
 
     name: str
@@ -212,14 +196,23 @@ class SceneObject(JsonSchemaMixin):
 
 
 @dataclass
-class Scene(JsonSchemaMixin):
+class BareScene(JsonSchemaMixin):
 
     id: str
     name: str
-    objects: List[SceneObject] = field(default_factory=list)
     desc: str = field(default_factory=str)
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
+
+
+@dataclass
+class Scene(BareScene):
+
+    objects: List[SceneObject] = field(default_factory=list)
+
+    @staticmethod
+    def from_bare(bare: BareScene) -> "Scene":
+        return Scene(bare.id, bare.name, bare.desc, bare.modified, bare.int_modified)
 
 
 @dataclass
@@ -262,16 +255,21 @@ class Flow(JsonSchemaMixin):
 
 
 @dataclass
-class Action(JsonSchemaMixin):
+class BareAction(JsonSchemaMixin):
+
+    id: str
+    name: str
+    type: str
+
+
+@dataclass
+class Action(BareAction):
 
     class ParsedType(NamedTuple):
 
         obj_id: str
         action_type: str
 
-    id: str
-    name: str
-    type: str
     parameters: List[ActionParameter] = field(default_factory=list)
     flows: List[Flow] = field(default_factory=list)
 
@@ -292,8 +290,8 @@ class Action(JsonSchemaMixin):
         raise Arcor2Exception("Param not found")
 
     @property
-    def bare(self) -> "Action":
-        return Action(self.id, self.name, self.type)
+    def bare(self) -> BareAction:
+        return BareAction(self.id, self.name, self.type)
 
     def flow(self, flow_type: FlowTypes = FlowTypes.DEFAULT) -> Flow:
 
@@ -304,15 +302,24 @@ class Action(JsonSchemaMixin):
 
 
 @dataclass
-class ProjectActionPoint(ActionPoint):
+class BareActionPoint(JsonSchemaMixin):
 
+    id: str
+    name: str
+    position: Position
+    parent: Optional[str] = None
+
+
+@dataclass
+class ActionPoint(BareActionPoint):
+
+    orientations: List[NamedOrientation] = field(default_factory=list)
+    robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
     actions: List[Action] = field(default_factory=list)
 
-    def action_ids(self) -> Set[str]:
-        return {action.id for action in self.actions}
-
-    def bare(self) -> "ProjectActionPoint":
-        return ProjectActionPoint(self.id, self.name, self.position, self.parent)
+    @staticmethod
+    def from_bare(bare: BareActionPoint) -> "ActionPoint":
+        return ActionPoint(bare.id, bare.name, bare.position, bare.parent)
 
 
 @dataclass
@@ -397,7 +404,7 @@ class SceneObjectOverride(JsonSchemaMixin):
 
 
 @dataclass
-class Project(JsonSchemaMixin):
+class BareProject(JsonSchemaMixin):
 
     id: str
     name: str
@@ -406,11 +413,20 @@ class Project(JsonSchemaMixin):
     has_logic: bool = True
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
-    action_points: List[ProjectActionPoint] = field(default_factory=list)
+
+
+@dataclass
+class Project(BareProject):
+
+    action_points: List[ActionPoint] = field(default_factory=list)
     constants: List[ProjectConstant] = field(default_factory=list)
     functions: List[ProjectFunction] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
     object_overrides: List[SceneObjectOverride] = field(default_factory=list)
+
+    @staticmethod
+    def from_bare(bare: BareProject) -> "Project":
+        return Project(bare.id, bare.name, bare.scene_id, bare.desc, bare.has_logic, bare.modified, bare.int_modified)
 
 
 @dataclass
