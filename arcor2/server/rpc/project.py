@@ -270,7 +270,7 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
     unique_name(req.args.name, glob.PROJECT.ap_joint_names(ap.id))
 
@@ -342,7 +342,7 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: 
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
     if req.args.new_name == ap.name:
         return None
@@ -358,12 +358,11 @@ async def rename_action_point_cb(req: rpc.project.RenameActionPointRequest, ui: 
     ap.name = req.args.new_name
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
-                                                                          data=ap.bare())))
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE, data=ap)))
     return None
 
 
-def detect_ap_loop(ap: common.ActionPoint, new_parent_id: str) -> None:
+def detect_ap_loop(ap: common.BareActionPoint, new_parent_id: str) -> None:
 
     assert glob.PROJECT
 
@@ -381,7 +380,7 @@ def detect_ap_loop(ap: common.ActionPoint, new_parent_id: str) -> None:
             break
 
         try:
-            ap = glob.PROJECT.action_point(ap.parent)
+            ap = glob.PROJECT.bare_action_point(ap.parent)
         except Arcor2Exception:
             break
 
@@ -393,7 +392,7 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
     if req.args.new_parent_id == ap.parent:
         return None
@@ -431,25 +430,35 @@ async def update_action_point_parent_cb(req: rpc.project.UpdateActionPointParent
     return None
 
 
+async def update_ap_position(ap: common.BareActionPoint, position: common.Position) -> None:
+    """
+    Updates position of an AP and sends notification about joints that become invalid because of it.
+    :param ap_id:
+    :param position:
+    :return:
+    """
+
+    assert glob.PROJECT
+
+    valid_joints = [joints for joints in glob.PROJECT.ap_joints(ap.id) if joints.is_valid]
+    glob.PROJECT.update_ap_position(ap.id, position)
+
+    for joints in valid_joints:  # those are now invalid, so let's notify UI about the change
+
+        assert not joints.is_valid
+
+        asyncio.ensure_future(
+            notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, ap.id, data=joints)))
+
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE, data=ap)))
+
+
 @scene_needed
 @project_needed
 async def update_action_point_position_cb(req: rpc.project.UpdateActionPointPositionRequest, ui: WsClient) -> None:
 
-    assert glob.SCENE
     assert glob.PROJECT
-
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
-
-    ap.position = req.args.new_position
-    ap.invalidate_joints()
-    for joints in ap.robot_joints:
-        asyncio.ensure_future(
-            notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, ap.id, data=joints)))
-
-    glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
-                                                                          data=ap.bare())))
-    return None
+    await update_ap_position(glob.PROJECT.bare_action_point(req.args.action_point_id), req.args.new_position)
 
 
 @scene_needed
@@ -459,23 +468,13 @@ async def update_action_point_using_robot_cb(req: rpc.project.UpdateActionPointU
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
         new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
-    ap.invalidate_joints()
-    for joints in ap.robot_joints:
-        asyncio.ensure_future(
-            notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, ap.id, data=joints)))
-
-    ap.position = new_pose.position
-
-    glob.PROJECT.update_modified()
-
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.UPDATE_BASE,
-                                                                          data=ap.bare())))
+    await update_ap_position(glob.PROJECT.bare_action_point(req.args.action_point_id), new_pose.position)
     return None
 
 
@@ -491,7 +490,7 @@ async def add_action_point_orientation_cb(req: rpc.project.AddActionPointOrienta
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
     unique_name(req.args.name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
@@ -538,7 +537,7 @@ async def add_action_point_orientation_using_robot_cb(req: rpc.project.AddAction
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
     unique_name(req.args.name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
@@ -569,7 +568,7 @@ async def update_action_point_orientation_using_robot_cb(
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
@@ -748,13 +747,13 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
 
     assert glob.PROJECT
 
-    ap = glob.PROJECT.action_point(req.args.id)
+    ap = glob.PROJECT.bare_action_point(req.args.id)
 
     for proj_ap in glob.PROJECT.action_points_with_parent:
         if proj_ap.parent == ap.id:
             raise Arcor2Exception(f"Can't remove parent of '{proj_ap.name}' AP.")
 
-    ap_action_ids = ap.action_ids()
+    ap_action_ids = glob.PROJECT.ap_action_ids(ap.id)
 
     # check if AP's actions aren't involved in logic
     # TODO 'force' param to remove logical connections?
@@ -778,11 +777,11 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
             if not param.is_value():
                 continue
 
-            for joints in ap.robot_joints:
+            for joints in glob.PROJECT.ap_joints(ap.id):
                 if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.name, joints.id):
                     raise Arcor2Exception(f"Joints {joints.name} used in action {act.name} (parameter {param.name}).")
 
-            for ori in ap.orientations:
+            for ori in glob.PROJECT.ap_orientations(ap.id):
                 if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.name, ori.id):
                     raise Arcor2Exception(f"Orientation {ori.name} used in action {act.name} (parameter {param.name}).")
 
@@ -792,7 +791,7 @@ async def remove_action_point_cb(req: rpc.project.RemoveActionPointRequest, ui: 
         return None
 
     glob.PROJECT.remove_action_point(req.args.id)
-    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.REMOVE, data=ap.bare())))
+    asyncio.ensure_future(notif.broadcast_event(events.ActionPointChanged(events.EventType.REMOVE, data=ap)))
     return None
 
 
@@ -803,7 +802,7 @@ async def add_action_cb(req: rpc.project.AddActionRequest, ui: WsClient) -> None
     assert glob.PROJECT
     assert glob.SCENE
 
-    ap = glob.PROJECT.action_point(req.args.action_point_id)
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
     unique_name(req.args.name, glob.PROJECT.action_user_names())
 
@@ -1109,11 +1108,10 @@ async def remove_constant_cb(req: rpc.project.RemoveConstantRequest, ui: WsClien
     const = glob.PROJECT.constant(req.args.constant_id)
 
     # check for usage
-    for ap in glob.PROJECT.action_points:
-        for act in ap.actions:
-            for param in act.parameters:
-                if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.value == const.id:
-                    raise Arcor2Exception("Constant used as action parameter.")
+    for act in glob.PROJECT.actions:
+        for param in act.parameters:
+            if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.value == const.id:
+                raise Arcor2Exception("Constant used as action parameter.")
 
     if req.dry_run:
         return
