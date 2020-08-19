@@ -86,12 +86,13 @@ async def get_robot_meta(obj_type: otu.ObjectTypeData) -> None:
     if obj_type.meta.disabled:
         raise Arcor2Exception("Disabled object type.")
 
-    obj_type.robot_meta = robot.RobotMeta(obj_type.meta.type)
+    assert obj_type.type_def is not None
+    assert issubclass(obj_type.type_def, Robot)
+
+    obj_type.robot_meta = robot.RobotMeta(obj_type.meta.type, obj_type.type_def.robot_type)
 
     tree = obj_type.ast
     assert tree is not None
-    assert obj_type.type_def is not None
-    assert issubclass(obj_type.type_def, Robot)
 
     obj_type.robot_meta.features.move_to_pose = feature(tree, obj_type.type_def, Robot.move_to_pose.__name__)
     obj_type.robot_meta.features.move_to_joints = feature(tree, obj_type.type_def, Robot.move_to_joints.__name__)

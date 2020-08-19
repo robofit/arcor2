@@ -86,7 +86,7 @@ async def get_object_data(object_types: otu.ObjectTypeDict, obj_id: str) -> None
     ast = parse(obj.source)
     otd = otu.ObjectTypeData(meta, type_def, otu.object_actions(type_def, ast), ast)
 
-    if issubclass(type_def, Robot):
+    if issubclass(type_def, Robot) and not type_def.abstract():
         await get_robot_meta(otd)
         asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, type_def))
 

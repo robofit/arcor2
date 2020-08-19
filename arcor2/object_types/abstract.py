@@ -10,6 +10,7 @@ from arcor2 import CancelDict, DynamicParamDict
 from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Pose, SceneObject
 from arcor2.data.object_type import Models
+from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
 
@@ -115,6 +116,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
         super(Robot, self).__init__(obj_id, name, pose, None, settings)
 
+    robot_type = RobotType.ARTICULATED
     urdf_package_path: Optional[str] = None
 
     @abc.abstractmethod
