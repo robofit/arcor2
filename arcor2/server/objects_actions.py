@@ -40,7 +40,10 @@ def handle_robot_urdf(robot: Type[Robot]) -> None:
     if not robot.urdf_package_path:
         return
 
-    shutil.copy(robot.urdf_package_path, settings.URDF_PATH)
+    try:
+        shutil.copy(robot.urdf_package_path, settings.URDF_PATH)
+    except FileNotFoundError as e:
+        glob.logger.error(f"Failed to copy URDF archive for {robot.__name__}: {e}.")
 
 
 async def get_object_data(object_types: otu.ObjectTypeDict, obj_id: str) -> None:
