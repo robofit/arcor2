@@ -86,10 +86,6 @@ async def get_object_data(object_types: otu.ObjectTypeDict, obj_id: str) -> None
     ast = parse(obj.source)
     otd = otu.ObjectTypeData(meta, type_def, otu.object_actions(type_def, ast), ast)
 
-    if issubclass(type_def, Robot) and not type_def.abstract():
-        await get_robot_meta(otd)
-        asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, type_def))
-
     object_types[obj_id] = otd
 
 
@@ -118,6 +114,12 @@ async def get_object_types() -> None:
             otu.add_ancestor_actions(obj_type.meta.type, object_types)
 
     glob.OBJECT_TYPES = object_types
+
+    for obj_type in glob.OBJECT_TYPES.values():
+
+        if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
+            await get_robot_meta(obj_type)
+            asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, obj_type.type_def))
 
 
 async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Robot:
