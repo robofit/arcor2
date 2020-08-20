@@ -81,22 +81,38 @@ def feature(tree: AST, robot_type: Type[Robot], func_name: str) -> bool:
     return inspect.signature(getattr(Robot, func_name)) == sign
 
 
+def _feature(type_def: Type[Robot], method_name: str) -> bool:
+
+    assert glob.OBJECT_TYPES
+
+    method = getattr(type_def, method_name)
+    where_it_is_defined = glob.OBJECT_TYPES[method.__qualname__.split(".")[0]]
+
+    if where_it_is_defined.type_def is Robot or where_it_is_defined.meta.disabled:
+        return False
+
+    assert where_it_is_defined.ast is not None
+    assert where_it_is_defined.type_def is not None
+    assert issubclass(where_it_is_defined.type_def, Robot)
+
+    return feature(where_it_is_defined.ast, where_it_is_defined.type_def, method_name)
+
+
 async def get_robot_meta(obj_type: otu.ObjectTypeData) -> None:
 
     if obj_type.meta.disabled:
         raise Arcor2Exception("Disabled object type.")
 
     assert obj_type.type_def is not None
-    assert issubclass(obj_type.type_def, Robot)
+
+    if not issubclass(obj_type.type_def, Robot):
+        raise Arcor2Exception("Not a robot.")
 
     obj_type.robot_meta = robot.RobotMeta(obj_type.meta.type, obj_type.type_def.robot_type)
 
-    tree = obj_type.ast
-    assert tree is not None
-
-    obj_type.robot_meta.features.move_to_pose = feature(tree, obj_type.type_def, Robot.move_to_pose.__name__)
-    obj_type.robot_meta.features.move_to_joints = feature(tree, obj_type.type_def, Robot.move_to_joints.__name__)
-    obj_type.robot_meta.features.stop = feature(tree, obj_type.type_def, Robot.stop.__name__)
+    obj_type.robot_meta.features.move_to_pose = _feature(obj_type.type_def, Robot.move_to_pose.__name__)
+    obj_type.robot_meta.features.move_to_joints = _feature(obj_type.type_def, Robot.move_to_joints.__name__)
+    obj_type.robot_meta.features.stop = _feature(obj_type.type_def, Robot.stop.__name__)
 
     if issubclass(obj_type.type_def, Robot) and obj_type.type_def.urdf_package_path:
         obj_type.robot_meta.urdf_package_filename = os.path.split(obj_type.type_def.urdf_package_path)[1]
