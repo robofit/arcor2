@@ -267,7 +267,8 @@ async def list_projects_cb(req: rpc.project.ListProjectsRequest, ui: WsClient) -
 
 @scene_needed
 @project_needed
-async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsRequest, ui: WsClient) -> None:
+async def add_action_point_joints_using_robot_cb(
+        req: rpc.project.AddActionPointJointsUsingRobotRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -277,13 +278,6 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
     unique_name(req.args.name, glob.PROJECT.ap_joint_names(ap.id))
 
     new_joints = await get_robot_joints(req.args.robot_id)
-
-    if req.args.joints is not None:
-
-        if {joint.name for joint in req.args.joints} != {joint.name for joint in new_joints}:
-            raise Arcor2Exception("Joint names does not match the robot.")
-
-        new_joints = req.args.joints
 
     if req.dry_run:
         return None
@@ -296,18 +290,37 @@ async def add_action_point_joints_cb(req: rpc.project.AddActionPointJointsReques
 
 @scene_needed
 @project_needed
+async def update_action_point_joints_using_robot_cb(
+        req: rpc.project.UpdateActionPointJointsUsingRobotRequest, ui: WsClient) -> None:
+
+    assert glob.SCENE
+    assert glob.PROJECT
+
+    robot_joints = glob.PROJECT.joints(req.args.joints_id)
+    robot_joints.joints = await get_robot_joints(robot_joints.robot_id)
+    robot_joints.is_valid = True
+
+    glob.PROJECT.update_modified()
+    asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, data=robot_joints)))
+    return None
+
+
+@scene_needed
+@project_needed
 async def update_action_point_joints_cb(req: rpc.project.UpdateActionPointJointsRequest, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
 
     robot_joints = glob.PROJECT.joints(req.args.joints_id)
-    new_joints = await get_robot_joints(req.args.robot_id)
-    robot_joints.joints = new_joints
-    robot_joints.robot_id = req.args.robot_id
-    robot_joints.is_valid = True
 
+    if {joint.name for joint in req.args.joints} != {joint.name for joint in robot_joints.joints}:
+        raise Arcor2Exception("Joint names does not match the robot.")
+
+    robot_joints.joints = await get_robot_joints(robot_joints.robot_id)
+    robot_joints.is_valid = True
     glob.PROJECT.update_modified()
+
     asyncio.ensure_future(notif.broadcast_event(events.JointsChanged(events.EventType.UPDATE, data=robot_joints)))
     return None
 
@@ -570,13 +583,13 @@ async def update_action_point_orientation_using_robot_cb(
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
+    ap, ori = glob.PROJECT.bare_ap_and_orientation(req.args.orientation_id)
+
     new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
     if ap.parent:
         new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
-    ori = glob.PROJECT.orientation(req.args.orientation_id)
     ori.orientation = new_pose.orientation
 
     glob.PROJECT.update_modified()
