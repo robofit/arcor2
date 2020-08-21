@@ -13,6 +13,7 @@ from arcor2.data.object_type import Models
 from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import NonBlockingLock
 
 
 class GenericException(Arcor2Exception):
@@ -108,6 +109,10 @@ class GenericWithPose(Generic):
             scene_service.delete_collision_id(self.collision_model.id)
 
 
+class RobotException(Arcor2Exception):
+    pass
+
+
 class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     """
     Abstract class representing robot and its basic capabilities (motion)
@@ -115,9 +120,25 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
 
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
         super(Robot, self).__init__(obj_id, name, pose, None, settings)
+        self._move_lock = NonBlockingLock()
 
     robot_type = RobotType.ARTICULATED
     urdf_package_path: Optional[str] = None
+
+    @property
+    def move_in_progress(self) -> bool:
+        return self._move_lock.locked()
+
+    def check_if_ready_to_move(self) -> None:
+        """
+        The method should raise exception when the robot is not ready to move for some reason.
+        :return:
+        """
+
+        if self.move_in_progress:
+            raise RobotException("Already moving.")
+
+        return None
 
     @abc.abstractmethod
     def get_end_effectors_ids(self) -> Set[str]:
@@ -170,5 +191,6 @@ __all__ = [
     Generic.__name__,
     GenericWithPose.__name__,
     Robot.__name__,
-    GenericException.__name__
+    GenericException.__name__,
+    RobotException.__name__
 ]
