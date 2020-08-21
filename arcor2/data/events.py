@@ -37,6 +37,25 @@ class Event(JsonSchemaMixin):
 
 
 @dataclass
+class NotificationEventData(JsonSchemaMixin):
+
+    class NotificationLevel(common.StrEnum):
+        INFO: str = "Info"
+        WARN: str = "Warn"
+        ERROR: str = "Error"
+
+    message: str
+    level: NotificationLevel
+
+
+@dataclass
+class NotificationEvent(Event):
+
+    data: Optional[NotificationEventData] = None
+    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
 class ShowMainScreenData(JsonSchemaMixin):
 
     class WhatEnum(common.StrEnum):
