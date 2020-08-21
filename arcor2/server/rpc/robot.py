@@ -4,7 +4,7 @@ from typing import Awaitable, Callable, Dict
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import helpers as hlp
+from arcor2 import helpers as hlp, transformations as tr
 from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Robot
@@ -239,9 +239,8 @@ async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: W
 
     await robot.check_robot_before_move(req.args.robot_id)
 
+    assert glob.SCENE
     assert glob.PROJECT
-
-    # TODO check RobotMeta if the robot supports this
 
     if (req.args.orientation_id is None) == (req.args.joints_id is None):
         raise Arcor2Exception("Set orientation or joints. Not both.")
@@ -253,7 +252,7 @@ async def move_to_action_point_cb(req: rpc.robot.MoveToActionPointRequest, ui: W
         if req.args.end_effector_id is None:
             raise Arcor2Exception("eef id has to be set.")
 
-        pose = glob.PROJECT.pose(req.args.orientation_id)
+        pose = tr.abs_pose_from_ap_orientation(glob.SCENE, glob.PROJECT, req.args.orientation_id)
 
         # TODO check if the target pose is reachable (dry_run)
         asyncio.ensure_future(robot.move_to_ap_orientation(

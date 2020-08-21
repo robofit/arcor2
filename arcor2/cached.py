@@ -271,7 +271,7 @@ class CachedProject:
         except KeyError:
             raise CachedProjectException("Unknown joints.")
 
-    def ap_and_orientation(self, orientation_id: str) -> Tuple[cmn.BareActionPoint, cmn.NamedOrientation]:
+    def bare_ap_and_orientation(self, orientation_id: str) -> Tuple[cmn.BareActionPoint, cmn.NamedOrientation]:
 
         try:
             return self._orientations.parent[orientation_id], self._orientations.data[orientation_id]
@@ -320,11 +320,6 @@ class CachedProject:
             return self._orientations.data[orientation_id]
         except KeyError:
             raise CachedProjectException("Unknown orientation.")
-
-    def pose(self, orientation_id: str) -> cmn.Pose:
-
-        ap, ori = self.ap_and_orientation(orientation_id)
-        return cmn.Pose(ap.position, ori.orientation)
 
     def action(self, action_id: str) -> cmn.Action:
 

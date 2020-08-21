@@ -17,9 +17,10 @@ from arcor2.data import common, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
 from arcor2.object_types import utils as otu
+from arcor2.object_types.abstract import Robot
 from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPluginException
-from arcor2.server import globals as glob, notifications as notif, robot
+from arcor2.server import globals as glob, notifications as notif
 from arcor2.server.clients import persistent_storage as storage
 from arcor2.server.decorators import no_project, project_needed, scene_needed
 from arcor2.server.helpers import unique_name
@@ -158,9 +159,6 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
 
     obj_id, action_name = action.parse_type()
 
-    if obj_id in robot.move_in_progress:
-        raise Arcor2Exception("Robot is moving.")
-
     params: Dict[str, Any] = {}
 
     for param in action.parameters:
@@ -196,6 +194,10 @@ async def execute_action_cb(req: rpc.project.ExecuteActionRequest, ui: WsClient)
                 raise Arcor2Exception(f"Failed to get value for parameter {param.name}.")
 
     obj = get_instance(obj_id)
+
+    if isinstance(obj, Robot):
+        if obj.move_in_progress:
+            raise Arcor2Exception("Can't execute actions while the robot moves.")
 
     if not hasattr(obj, action_name):
         raise Arcor2Exception("Internal error: object does not have the requested method.")
@@ -595,7 +597,7 @@ async def remove_action_point_orientation_cb(req: rpc.project.RemoveActionPointO
     assert glob.SCENE
     assert glob.PROJECT
 
-    ap, orientation = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
+    ap, orientation = glob.PROJECT.bare_ap_and_orientation(req.args.orientation_id)
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
@@ -1220,7 +1222,7 @@ async def rename_action_point_orientation_cb(req: rpc.project.RenameActionPointO
 
     assert glob.PROJECT
 
-    ap, ori = glob.PROJECT.ap_and_orientation(req.args.orientation_id)
+    ap, ori = glob.PROJECT.bare_ap_and_orientation(req.args.orientation_id)
     unique_name(req.args.new_name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
