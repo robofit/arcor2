@@ -189,26 +189,25 @@ class RemoveActionPointResponse(Response):
 
 
 @dataclass
-class AddActionPointJointsRequestArgs(JsonSchemaMixin):
+class AddActionPointJointsUsingRobotRequestArgs(JsonSchemaMixin):
 
     action_point_id: str
     robot_id: str
     name: str = "default"
-    joints: Optional[List[Joint]] = None
 
 
 @dataclass
-class AddActionPointJointsRequest(Request):
+class AddActionPointJointsUsingRobotRequest(Request):
 
-    args: AddActionPointJointsRequestArgs
+    args: AddActionPointJointsUsingRobotRequestArgs
     dry_run: bool = False
     request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
 
 
 @dataclass
-class AddActionPointJointsResponse(Response):
+class AddActionPointJointsUsingRobotResponse(Response):
 
-    response: str = field(default=AddActionPointJointsRequest.request, init=False)
+    response: str = field(default=AddActionPointJointsUsingRobotRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -332,9 +331,8 @@ class AddActionPointOrientationUsingRobotResponse(Response):
 @dataclass
 class UpdateActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
 
-    action_point_id: str
-    robot: RobotArg
     orientation_id: str
+    robot: RobotArg
 
 
 @dataclass
@@ -559,8 +557,8 @@ class RemoveLogicItemResponse(Response):
 @dataclass
 class UpdateActionPointJointsRequestArgs(JsonSchemaMixin):
 
-    robot_id: str
     joints_id: str = "default"
+    joints: List[Joint] = field(default_factory=list)
 
 
 @dataclass
@@ -574,6 +572,27 @@ class UpdateActionPointJointsRequest(Request):
 class UpdateActionPointJointsResponse(Response):
 
     response: str = field(default=UpdateActionPointJointsRequest.request, init=False)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UpdateActionPointJointsUsingRobotRequestArgs(JsonSchemaMixin):
+
+    joints_id: str = "default"
+
+
+@dataclass
+class UpdateActionPointJointsUsingRobotRequest(Request):
+
+    args: UpdateActionPointJointsUsingRobotRequestArgs
+    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+
+
+@dataclass
+class UpdateActionPointJointsUsingRobotResponse(Response):
+
+    response: str = field(default=UpdateActionPointJointsUsingRobotRequest.request, init=False)
 
 # ----------------------------------------------------------------------------------------------------------------------
 
