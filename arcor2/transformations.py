@@ -1,4 +1,4 @@
-from arcor2.cached import CachedProject, CachedScene
+from arcor2.cached import CachedProject as CProject, CachedScene as CScene
 from arcor2.data.common import BareActionPoint, Orientation, Pose, Position
 from arcor2.exceptions import Arcor2Exception
 
@@ -63,7 +63,7 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     return p
 
 
-def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: BareActionPoint) -> None:
+def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> None:
     """
     Transforms (in place) relative AP into a global one.
     :param scene:
@@ -98,7 +98,7 @@ def make_relative_ap_global(scene: CachedScene, project: CachedProject, ap: Bare
     ap.parent = None
 
 
-def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: BareActionPoint, parent_id: str) -> None:
+def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoint, parent_id: str) -> None:
     """
     Transforms (in place) global AP into a relative one with given parent (can be object or another AP).
     :param scene:
@@ -134,7 +134,7 @@ def make_global_ap_relative(scene: CachedScene, project: CachedProject, ap: Bare
     ap.parent = parent_id
 
 
-def make_pose_rel_to_parent(scene: CachedScene, project: CachedProject, pose: Pose, parent_id: str) -> Pose:
+def make_pose_rel_to_parent(scene: CScene, project: CProject, pose: Pose, parent_id: str) -> Pose:
     """
     Transforms global Pose into Pose that is relative to a given parent (can be object or AP).
     :param scene:
@@ -162,3 +162,42 @@ def make_pose_rel_to_parent(scene: CachedScene, project: CachedProject, pose: Po
         raise Arcor2Exception("Unknown parent_id.")
 
     return make_pose_rel(parent_pose, pose)
+
+
+# TODO mostly duplicate of make_pose_rel_to_parent
+def _abs_pose_from_ap_orientation(scene: CScene, project: CProject, pose: Pose, parent_id: str) -> Pose:
+
+    if parent_id in scene.object_ids:
+        parent_obj = scene.object(parent_id)
+        if not parent_obj.pose:
+            raise Arcor2Exception("Parent object does not have pose!")
+        parent_pose = parent_obj.pose
+    elif parent_id in project.action_points_ids:
+
+        parent_ap = project.bare_action_point(parent_id)
+
+        if parent_ap.parent:
+            pose = _abs_pose_from_ap_orientation(scene, project, pose, parent_ap.parent)
+
+        parent_pose = Pose(parent_ap.position, Orientation())
+
+    else:
+        raise Arcor2Exception("Unknown parent_id.")
+
+    return make_pose_abs(parent_pose, pose)
+
+
+def abs_pose_from_ap_orientation(scene: CScene, project: CProject, orientation_id: str) -> Pose:
+    """
+    Returns absolute Pose without modifying anything within the project.
+    :param orientation_id:
+    :return:
+    """
+
+    ap, ori = project.bare_ap_and_orientation(orientation_id)
+    pose = Pose(ap.position, ori.orientation)
+
+    if not ap.parent:
+        return pose
+
+    return _abs_pose_from_ap_orientation(scene, project, pose, ap.parent)
