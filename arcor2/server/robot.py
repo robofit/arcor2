@@ -17,10 +17,6 @@ class RobotPoseException(Arcor2Exception):
     pass
 
 
-# TODO how to prevent execution of robot (move) action and e.g. moveToAp?
-move_in_progress: Set[str] = set()  # set of robot IDs that are moving right now
-
-
 async def get_end_effectors(robot_id: str) -> Set[str]:
     """
     :param robot_id:
@@ -120,25 +116,21 @@ async def get_robot_meta(obj_type: otu.ObjectTypeData) -> None:
 
 async def stop(robot_id: str) -> None:
 
-    global move_in_progress
-
-    if robot_id not in move_in_progress:
-        raise Arcor2Exception("Robot is not moving.")
-
     robot_inst = await osa.get_robot_instance(robot_id)
+
+    if not robot_inst.move_in_progress:
+        raise Arcor2Exception("Robot is not moving.")
 
     try:
         await hlp.run_in_executor(robot_inst.stop)
     except NotImplementedError as e:
         raise Arcor2Exception from e
 
-    move_in_progress.remove(robot_id)
-
 
 async def check_robot_before_move(robot_id: str) -> None:
 
-    if robot_id in move_in_progress:
-        raise Arcor2Exception("Robot is moving.")
+    robot_inst = await osa.get_robot_instance(robot_id)
+    robot_inst.check_if_ready_to_move()
 
     if glob.RUNNING_ACTION:
 
@@ -154,16 +146,12 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
 
     robot_inst = await osa.get_robot_instance(robot_id, end_effector_id)
-    move_in_progress.add(robot_id)
 
     try:
         await hlp.run_in_executor(robot_inst.move_to_pose, end_effector_id, pose, speed)
     except (NotImplementedError, Arcor2Exception) as e:
         glob.logger.error(f"Robot movement failed with: {str(e)}")
-        move_in_progress.remove(robot_id)
-        raise Arcor2Exception from e
-
-    move_in_progress.remove(robot_id)
+        raise Arcor2Exception(str(e)) from e
 
 
 async def move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float) -> None:
@@ -211,17 +199,11 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
 
     robot_inst = await osa.get_robot_instance(robot_id)
 
-    move_in_progress.add(robot_id)
-
     try:
         await hlp.run_in_executor(robot_inst.move_to_joints, joints, speed)
     except (NotImplementedError, Arcor2Exception) as e:
         glob.logger.error(f"Robot movement failed with: {str(e)}")
-
-        move_in_progress.remove(robot_id)
-        raise Arcor2Exception from e
-
-    move_in_progress.remove(robot_id)
+        raise Arcor2Exception(str(e)) from e
 
 
 async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float) -> None:

@@ -10,6 +10,7 @@ import time
 import traceback
 from collections import deque
 from datetime import datetime, timezone
+from threading import Lock
 from types import ModuleType
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
 
@@ -358,3 +359,23 @@ def check_compatibility(my_version: str, their_version: str) -> None:
     else:
         if mv.minor > tv.minor:
             raise Arcor2Exception(f"Our version {my_version} is outdated for {their_version}.")
+
+
+class NonBlockingLock:
+    """
+    This lock can only be used as a context manager.
+    """
+
+    def __init__(self):
+        self._lock = Lock()
+
+    def locked(self) -> bool:
+        return self._lock.locked()
+
+    def __enter__(self) -> None:
+        if not self._lock.acquire(blocking=False):
+            raise Arcor2Exception("Can't get the lock.")
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self._lock.release()
+        return None
