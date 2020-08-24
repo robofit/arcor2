@@ -106,12 +106,22 @@ class Orientation(IterableIndexable):
     z: float = 0.0
     w: float = 1.0
 
+    @staticmethod
+    def _normalized(q: quaternion.quaternion) -> quaternion.quaternion:
+
+        nq = q.normalized()
+
+        if nq.isnan():
+            raise Arcor2Exception("Invalid quaternion.")
+
+        return nq
+
     def as_quaternion(self) -> quaternion.quaternion:
-        return quaternion.quaternion(self.w, self.x, self.y, self.z).normalized()
+        return Orientation._normalized(quaternion.quaternion(self.w, self.x, self.y, self.z))
 
     def set_from_quaternion(self, q: quaternion.quaternion) -> None:
 
-        nq = q.normalized()
+        nq = Orientation._normalized(q)
 
         self.x = nq.x
         self.y = nq.y
