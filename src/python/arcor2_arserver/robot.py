@@ -160,10 +160,10 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
 
 async def move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float) -> None:
 
+    Data = sevts.r.RobotMoveToPose.Data
+
     await notif.broadcast_event(
-        sevts.r.RobotMoveToPoseEvent(
-            data=sevts.r.RobotMoveToPoseData(sevts.r.MoveEventType.START, robot_id, end_effector_id, pose)
-        )
+        sevts.r.RobotMoveToPose(Data(Data.MoveEventType.START, robot_id, end_effector_id, pose))
     )
 
     try:
@@ -171,30 +171,22 @@ async def move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, s
 
     except Arcor2Exception as e:
         await notif.broadcast_event(
-            sevts.r.RobotMoveToPoseEvent(
-                data=sevts.r.RobotMoveToPoseData(
-                    sevts.r.MoveEventType.FAILED, robot_id, end_effector_id, pose, message=str(e)
-                )
-            )
+            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.FAILED, robot_id, end_effector_id, pose, message=str(e)))
         )
         return
 
-    await notif.broadcast_event(
-        sevts.r.RobotMoveToPoseEvent(
-            data=sevts.r.RobotMoveToPoseData(sevts.r.MoveEventType.END, robot_id, end_effector_id, pose)
-        )
-    )
+    await notif.broadcast_event(sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_id, end_effector_id, pose)))
 
 
 async def move_to_ap_orientation(
     robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, orientation_id: str
 ) -> None:
 
+    Data = sevts.r.RobotMoveToActionPointOrientation.Data
+
     await notif.broadcast_event(
-        sevts.r.RobotMoveToActionPointOrientationEvent(
-            data=sevts.r.RobotMoveToActionPointOrientationData(
-                sevts.r.MoveEventType.START, robot_id, end_effector_id, orientation_id
-            )
+        sevts.r.RobotMoveToActionPointOrientation(
+            Data(Data.MoveEventType.START, robot_id, end_effector_id, orientation_id)
         )
     )
 
@@ -203,19 +195,15 @@ async def move_to_ap_orientation(
 
     except Arcor2Exception as e:
         await notif.broadcast_event(
-            sevts.r.RobotMoveToActionPointOrientationEvent(
-                data=sevts.r.RobotMoveToActionPointOrientationData(
-                    sevts.r.MoveEventType.FAILED, robot_id, end_effector_id, orientation_id, message=str(e)
-                )
+            sevts.r.RobotMoveToActionPointOrientation(
+                Data(Data.MoveEventType.FAILED, robot_id, end_effector_id, orientation_id, message=str(e))
             )
         )
         return
 
     await notif.broadcast_event(
-        sevts.r.RobotMoveToActionPointOrientationEvent(
-            data=sevts.r.RobotMoveToActionPointOrientationData(
-                sevts.r.MoveEventType.END, robot_id, end_effector_id, orientation_id
-            )
+        sevts.r.RobotMoveToActionPointOrientation(
+            Data(Data.MoveEventType.END, robot_id, end_effector_id, orientation_id)
         )
     )
 
@@ -235,11 +223,9 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
 
 async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float) -> None:
 
-    await notif.broadcast_event(
-        sevts.r.RobotMoveToJointsEvent(
-            data=sevts.r.RobotMoveToJointsData(sevts.r.MoveEventType.START, robot_id, joints)
-        )
-    )
+    Data = sevts.r.RobotMoveToJoints.Data
+
+    await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.START, robot_id, joints)))
 
     try:
 
@@ -248,24 +234,20 @@ async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float
     except Arcor2Exception as e:
 
         await notif.broadcast_event(
-            sevts.r.RobotMoveToJointsEvent(
-                data=sevts.r.RobotMoveToJointsData(sevts.r.MoveEventType.FAILED, robot_id, joints, message=str(e))
-            )
+            sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.FAILED, robot_id, joints, message=str(e)))
         )
 
         return
 
-    await notif.broadcast_event(
-        sevts.r.RobotMoveToJointsEvent(data=sevts.r.RobotMoveToJointsData(sevts.r.MoveEventType.END, robot_id, joints))
-    )
+    await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_id, joints)))
 
 
 async def move_to_ap_joints(robot_id: str, joints: List[common.Joint], speed: float, joints_id: str) -> None:
 
+    Data = sevts.r.RobotMoveToActionPointJoints.Data
+
     await notif.broadcast_event(
-        sevts.r.RobotMoveToActionPointJointsEvent(
-            data=sevts.r.RobotMoveToActionPointJointsData(sevts.r.MoveEventType.START, robot_id, joints_id)
-        )
+        sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.START, robot_id, joints_id))
     )
 
     try:
@@ -275,17 +257,9 @@ async def move_to_ap_joints(robot_id: str, joints: List[common.Joint], speed: fl
     except Arcor2Exception as e:
 
         await notif.broadcast_event(
-            sevts.r.RobotMoveToActionPointJointsEvent(
-                data=sevts.r.RobotMoveToActionPointJointsData(
-                    sevts.r.MoveEventType.FAILED, robot_id, joints_id, message=str(e)
-                )
-            )
+            sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.FAILED, robot_id, joints_id, message=str(e)))
         )
 
         return
 
-    await notif.broadcast_event(
-        sevts.r.RobotMoveToActionPointJointsEvent(
-            data=sevts.r.RobotMoveToActionPointJointsData(sevts.r.MoveEventType.END, robot_id, joints_id)
-        )
-    )
+    await notif.broadcast_event(sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.END, robot_id, joints_id)))

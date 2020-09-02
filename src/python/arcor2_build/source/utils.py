@@ -1,6 +1,4 @@
-import os
 import re
-import stat
 from typing import Any, Dict, List, Optional
 
 from typed_ast.ast3 import (
@@ -41,7 +39,7 @@ from typed_ast.ast3 import (
 import arcor2.data.common
 from arcor2.cached import CachedProject
 from arcor2.data.common import ActionPoint
-from arcor2.source import SCRIPT_HEADER, SourceException
+from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, get_name_attr, parse, tree_to_str
 
 
@@ -266,22 +264,6 @@ def add_method_call_in_main(tree: Module, instance: str, method: str, args: List
     main_body.insert(
         last_assign_idx + 1, Expr(value=Call(func=get_name_attr(instance, method), args=args, keywords=[]))
     )
-
-
-def make_executable(path_to_file: str) -> None:
-    st = os.stat(path_to_file)
-    os.chmod(path_to_file, st.st_mode | stat.S_IEXEC)
-
-
-def tree_to_script(tree: Module, out_file: str, executable: bool) -> None:
-    generated_code = tree_to_str(tree)
-
-    with open(out_file, "w") as f:
-        f.write(SCRIPT_HEADER)
-        f.write(generated_code)
-
-    if executable:
-        make_executable(out_file)
 
 
 def clean(x: str) -> str:

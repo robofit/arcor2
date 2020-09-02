@@ -22,6 +22,7 @@ from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
 from arcor2.helpers import camel_case_to_snake_case, logger_formatter
 from arcor2.object_types.utils import base_from_source, built_in_types_names
+from arcor2.package import make_executable
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
@@ -124,9 +125,11 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             logger.exception("Failed to get something from the project service.")
             return str(e), 404
 
+        script_path = os.path.join(project_dir, "script.py")
+
         try:
 
-            with open(os.path.join(project_dir, "script.py"), "w") as script_file:
+            with open(script_path, "w") as script_file:
 
                 if project.has_logic:
                     script_file.write(program_src(cached_project, cached_scene, built_in_types_names(), True))
@@ -166,6 +169,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             logger.exception("Failed to generate script.")
             return str(e), 501
 
+        make_executable(script_path)
         archive_path = os.path.join(pkg_tmp_dir, "arcor2_project")
         shutil.make_archive(archive_path, "zip", project_dir)
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)

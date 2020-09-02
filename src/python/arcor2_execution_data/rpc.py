@@ -4,178 +4,146 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionState, CurrentAction, PackageState
-from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
+from arcor2.data import events
+from arcor2.data.rpc.common import RPC, IdArgs
 from arcor2_execution_data.common import PackageSummary
 
 
-@dataclass
-class UploadPackageArgs(JsonSchemaMixin):
+class UploadPackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str = field(metadata=dict(description="Id of the execution package."))
+            data: str = field(metadata=dict(description="Base64 encoded content of the zip file."))
 
-    id: str = field(metadata=dict(description="Id of the execution package."))
-    data: str = field(metadata=dict(description="Base64 encoded content of the zip file."))
+        args: Args
 
-
-@dataclass
-class UploadPackageRequest(Request):
-
-    args: UploadPackageArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UploadPackageResponse(Response):
-
-    response: str = field(default=UploadPackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ListPackagesRequest(Request):
+class ListPackages(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    @dataclass
+    class ModifiedFile(JsonSchemaMixin):
 
+        filename: str
+        modified: datetime
 
-@dataclass
-class ModifiedFile(JsonSchemaMixin):
-
-    filename: str
-    modified: datetime
-
-
-@dataclass
-class ListPackagesResponse(Response):
-
-    data: List[PackageSummary] = field(default_factory=list)
-    response: str = field(default=ListPackagesRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: List[PackageSummary] = field(default_factory=list)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class DeletePackageRequest(Request):
+class DeletePackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs
 
-    args: IdArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class DeletePackageResponse(Response):
-
-    response: str = field(default=DeletePackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenamePackageArgs(JsonSchemaMixin):
+class RenamePackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            package_id: str
+            new_name: str
 
-    package_id: str
-    new_name: str
+        args: Args
 
-
-@dataclass
-class RenamePackageRequest(Request):
-
-    args: RenamePackageArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RenamePackageResponse(Response):
-
-    response: str = field(default=RenamePackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RunPackageArgs(IdArgs):
-    cleanup_after_run: bool = True
+class RunPackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(IdArgs):
+            cleanup_after_run: bool = True
 
+        args: Args
 
-@dataclass
-class RunPackageRequest(Request):
-
-    args: RunPackageArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RunPackageResponse(Response):
-
-    response: str = field(default=RunPackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class StopPackageRequest(Request):
+class StopPackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class StopPackageResponse(Response):
-
-    response: str = field(default=StopPackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class PausePackageRequest(Request):
+class PausePackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class PausePackageResponse(Response):
-
-    response: str = field(default=PausePackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class PackageStateRequest(Request):
+class PackageState(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    @dataclass
+    class Response(RPC.Response):
+        @dataclass
+        class Data(JsonSchemaMixin):
+            project: events.PackageState.Data
+            action: Optional[events.ActionState.Data] = None
+            action_args: Optional[events.CurrentAction.Data] = None
 
-
-@dataclass
-class PackageStateData(JsonSchemaMixin):
-
-    project: PackageState = field(default_factory=PackageState)
-    action: Optional[ActionState] = None
-    action_args: Optional[CurrentAction] = None
-
-
-@dataclass
-class PackageStateResponse(Response):
-
-    data: PackageStateData = field(default_factory=PackageStateData)
-    response: str = field(default=PackageStateRequest.request, init=False)
+        data: Optional[Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ResumePackageRequest(Request):
+class ResumePackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class ResumePackageResponse(Response):
-
-    response: str = field(default=ResumePackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass

@@ -11,7 +11,7 @@ import os
 import shutil
 import sys
 import uuid
-from typing import get_type_hints
+from typing import Dict, Type, get_type_hints
 
 import websockets
 from aiologger.levels import LogLevel  # type: ignore
@@ -25,8 +25,7 @@ import arcor2_arserver_data
 import arcor2_execution_data
 from arcor2 import action as action_mod
 from arcor2 import ws_server
-from arcor2.data import common, compile_json_schemas, events, rpc
-from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
+from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.data.utils import generate_swagger
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
@@ -42,13 +41,18 @@ from arcor2_arserver.object_types.source import prepare_object_types_dir
 from arcor2_arserver_data import events as evts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.rpc import objects as obj_rpc
-from arcor2_execution_data import exposed_rpcs as exe_exposed_rpcs
+from arcor2_execution_data import EVENTS as EXE_EVENTS
+from arcor2_execution_data import EXPOSED_RPCS
+from arcor2_execution_data import RPCS as EXE_RPCS
 
 # disables before/after messages, etc.
 action_mod.HANDLE_ACTIONS = False
 
 
 async def handle_manager_incoming_messages(manager_client) -> None:
+
+    event_mapping: Dict[str, Type[events.Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
+    rpc_mapping: Dict[str, Type[rpc.common.RPC]] = {r.__name__: r for r in EXE_RPCS}
 
     try:
 
@@ -62,27 +66,27 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     await asyncio.gather(*[ws_server.send_json_to_client(intf, message) for intf in glob.INTERFACES])
 
                 try:
-                    evt = EVENT_MAPPING[msg["event"]].from_dict(msg)
+                    evt = event_mapping[msg["event"]].from_dict(msg)
                 except ValidationError as e:
                     glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
                     continue
 
-                if isinstance(evt, events.PackageInfoEvent):
+                if isinstance(evt, events.PackageInfo):
                     glob.PACKAGE_INFO = evt.data
-                elif isinstance(evt, events.PackageStateEvent):
+                elif isinstance(evt, events.PackageState):
                     glob.PACKAGE_STATE = evt.data
 
-                    if evt.data.state == common.PackageStateEnum.STOPPED:
+                    if evt.data.state == events.PackageState.Data.StateEnum.STOPPED:
 
                         if not glob.TEMPORARY_PACKAGE:
                             # after (ordinary) package is finished, show list of packages
-                            glob.MAIN_SCREEN = evts.c.ShowMainScreenData(
-                                evts.c.ShowMainScreenData.WhatEnum.PackagesList
+                            glob.MAIN_SCREEN = evts.c.ShowMainScreen.Data(
+                                evts.c.ShowMainScreen.Data.WhatEnum.PackagesList
                             )
                             await notif.broadcast_event(
-                                evts.c.ShowMainScreenEvent(
-                                    data=evts.c.ShowMainScreenData(
-                                        evts.c.ShowMainScreenData.WhatEnum.PackagesList, evt.data.package_id
+                                evts.c.ShowMainScreen(
+                                    evts.c.ShowMainScreen.Data(
+                                        evts.c.ShowMainScreen.Data.WhatEnum.PackagesList, evt.data.package_id
                                     )
                                 )
                             )
@@ -99,16 +103,16 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                         server_events.package_stopped.clear()
                         server_events.package_started.set()
 
-                elif isinstance(evt, events.ActionStateEvent):
+                elif isinstance(evt, events.ActionState):
                     glob.ACTION_STATE = evt.data
-                elif isinstance(evt, events.CurrentActionEvent):
+                elif isinstance(evt, events.CurrentAction):
                     glob.CURRENT_ACTION = evt.data
 
             elif "response" in msg:
 
                 # TODO handle potential errors
-                _, resp_cls = RPC_MAPPING[msg["response"]]
-                resp = resp_cls.from_dict(msg)
+                rpc_cls = rpc_mapping[msg["response"]]
+                resp = rpc_cls.Response.from_dict(msg)
                 exe.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
     except websockets.exceptions.ConnectionClosed:
@@ -117,8 +121,12 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
 async def _initialize_server() -> None:
 
-    exe_version = await exe.manager_request(rpc.common.VersionRequest(uuid.uuid4().int))
-    assert isinstance(exe_version, rpc.common.VersionResponse)
+    exe_version = await exe.manager_request(rpc.common.Version.Request(uuid.uuid4().int))
+    assert isinstance(exe_version, rpc.common.Version.Response)
+    if not exe_version.result:
+        raise Arcor2Exception("Failed to get Execution version.")
+
+    assert exe_version.data is not None
 
     """
     Following check is especially useful when running server/execution in Docker containers.
@@ -153,8 +161,8 @@ async def _initialize_server() -> None:
     await asyncio.wait([websockets.serve(bound_handler, "0.0.0.0", glob.PORT)])
 
 
-async def list_meshes_cb(req: obj_rpc.ListMeshesRequest, ui: WsClient) -> obj_rpc.ListMeshesResponse:
-    return obj_rpc.ListMeshesResponse(data=await storage.get_meshes())
+async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_rpc.ListMeshes.Response:
+    return obj_rpc.ListMeshes.Response(data=await storage.get_meshes())
 
 
 async def register(websocket: WsClient) -> None:
@@ -165,22 +173,23 @@ async def register(websocket: WsClient) -> None:
     if glob.PROJECT:
         assert glob.SCENE
         await notif.event(
-            websocket, evts.p.OpenProject(data=evts.p.OpenProjectData(glob.SCENE.scene, glob.PROJECT.project))
+            websocket, evts.p.OpenProject(evts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project))
         )
     elif glob.SCENE:
-        await notif.event(websocket, evts.s.OpenScene(data=evts.s.OpenSceneData(glob.SCENE.scene)))
+        await notif.event(websocket, evts.s.OpenScene(evts.s.OpenScene.Data(glob.SCENE.scene)))
     elif glob.PACKAGE_INFO:
 
         # this can't be done in parallel - ui expects this order of events
-        await websocket.send(events.PackageStateEvent(data=glob.PACKAGE_STATE).to_json())
-        await websocket.send(events.PackageInfoEvent(data=glob.PACKAGE_INFO).to_json())
+        await websocket.send(events.PackageState(glob.PACKAGE_STATE).to_json())
+        await websocket.send(events.PackageInfo(glob.PACKAGE_INFO).to_json())
 
         if glob.ACTION_STATE:
-            await websocket.send(events.ActionStateEvent(data=glob.ACTION_STATE).to_json())
+            await websocket.send(events.ActionState(glob.ACTION_STATE).to_json())
         if glob.CURRENT_ACTION:
-            await websocket.send(events.CurrentActionEvent(data=glob.CURRENT_ACTION).to_json())
+            await websocket.send(events.CurrentAction(glob.CURRENT_ACTION).to_json())
     else:
-        await notif.event(websocket, evts.c.ShowMainScreenEvent(data=glob.MAIN_SCREEN))
+        assert glob.MAIN_SCREEN
+        await notif.event(websocket, evts.c.ShowMainScreen(glob.MAIN_SCREEN))
 
 
 async def unregister(websocket: WsClient) -> None:
@@ -195,19 +204,22 @@ async def unregister(websocket: WsClient) -> None:
             registered_uis.remove(websocket)
 
 
-async def system_info_cb(req: srpc.c.SystemInfoRequest, ui: WsClient) -> srpc.c.SystemInfoResponse:
+async def system_info_cb(req: srpc.c.SystemInfo.Request, ui: WsClient) -> srpc.c.SystemInfo.Response:
 
-    resp = srpc.c.SystemInfoResponse()
-    resp.data.version = arcor2_arserver.version()
-    resp.data.api_version = arcor2_arserver_data.version()
-    resp.data.supported_parameter_types = set(PARAM_PLUGINS.keys())
-    resp.data.supported_rpc_requests = {key.request for key in RPC_DICT.keys()}
+    resp = srpc.c.SystemInfo.Response()
+    resp.data = resp.Data(
+        arcor2_arserver.version(),
+        arcor2_arserver_data.version(),
+        set(PARAM_PLUGINS.keys()),
+        {key for key in RPC_DICT.keys()},
+    )
     return resp
 
 
-RPC_DICT: ws_server.RPC_DICT_TYPE = {srpc.c.SystemInfoRequest: system_info_cb}
+RPC_DICT: ws_server.RPC_DICT_TYPE = {srpc.c.SystemInfo.__name__: (srpc.c.SystemInfo, system_info_cb)}
 
 # discovery of RPC callbacks
+# TODO refactor it into arcor2 package (to be used by arcor2_execution)
 for _, rpc_module in inspect.getmembers(srpc_callbacks, inspect.ismodule):
     for rpc_cb_name, rpc_cb in inspect.getmembers(rpc_module):
 
@@ -216,16 +228,14 @@ for _, rpc_module in inspect.getmembers(srpc_callbacks, inspect.ismodule):
 
         hints = get_type_hints(rpc_cb)
 
-        try:
-            ttype = hints["req"]
-        except KeyError:
-            continue
+        req_cls = hints["req"]
+        rpc_cls = getattr(sys.modules[req_cls.__module__], req_cls.__qualname__.split(".")[0])
 
-        RPC_DICT[ttype] = rpc_cb
+        RPC_DICT[rpc_cls.__name__] = (rpc_cls, rpc_cb)
 
 # add Project Manager RPC API
-for exposed_rpc in exe_exposed_rpcs:
-    RPC_DICT[exposed_rpc] = exe.manager_request
+for exposed_rpc in EXPOSED_RPCS:
+    RPC_DICT[exposed_rpc.__name__] = (exposed_rpc, exe.manager_request)
 
 
 # events from clients

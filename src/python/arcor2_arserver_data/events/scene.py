@@ -1,46 +1,35 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common
-from arcor2.data.events import Event, wo_suffix
-
-
-@dataclass
-class OpenSceneData(JsonSchemaMixin):
-
-    scene: common.Scene
+from arcor2.data.events import Event
 
 
 @dataclass
 class OpenScene(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        scene: common.Scene
 
-    data: Optional[OpenSceneData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 @dataclass
 class SceneChanged(Event):
-
-    data: Optional[common.BareScene] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.BareScene
 
 
 @dataclass
 class SceneSaved(Event):
-
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    pass
 
 
 @dataclass
 class SceneClosed(Event):
-
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    pass
 
 
 @dataclass
 class SceneObjectChanged(Event):
-
-    data: Optional[common.SceneObject] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.SceneObject

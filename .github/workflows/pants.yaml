@@ -29,7 +29,10 @@ jobs:
         ./pants --version
     - name: Lint
       run: |
-        ./pants --changed-since=origin/main lint ::
+        ./pants lint ::
+    - name: Lint
+        run: |
+          ./pants typecheck ::
     - name: Test
       run: |
-        ./pants --changed-since=origin/main --changed-dependees=transitive test ::
+        ./pants test ::

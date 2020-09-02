@@ -20,8 +20,8 @@ from arcor2_arserver_data import events as sevts
 from arcor2_execution_data import rpc as erpc
 
 if TYPE_CHECKING:
-    ReqQueue = asyncio.Queue[rpc.common.Request]
-    RespQueue = asyncio.Queue[rpc.common.Response]
+    ReqQueue = asyncio.Queue[rpc.common.RPC.Request]
+    RespQueue = asyncio.Queue[rpc.common.RPC.Response]
 else:
     ReqQueue = asyncio.Queue
     RespQueue = asyncio.Queue
@@ -37,8 +37,8 @@ async def run_temp_package(package_id: str) -> None:
     glob.TEMPORARY_PACKAGE = True
 
     await project.close_project(do_cleanup=False)
-
-    exe_req = erpc.RunPackageRequest(uuid.uuid4().int, args=erpc.RunPackageArgs(package_id, cleanup_after_run=False))
+    req = erpc.RunPackage.Request
+    exe_req = req(uuid.uuid4().int, args=req.Args(package_id, cleanup_after_run=False))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
@@ -50,7 +50,7 @@ async def run_temp_package(package_id: str) -> None:
 
     glob.TEMPORARY_PACKAGE = False
 
-    await manager_request(erpc.DeletePackageRequest(uuid.uuid4().int, args=rpc.common.IdArgs(package_id)))
+    await manager_request(erpc.DeletePackage.Request(uuid.uuid4().int, args=rpc.common.IdArgs(package_id)))
 
     await project.open_project(project_id)
 
@@ -58,7 +58,7 @@ async def run_temp_package(package_id: str) -> None:
     assert glob.PROJECT
 
     asyncio.ensure_future(
-        notif.broadcast_event(sevts.p.OpenProject(data=sevts.p.OpenProjectData(glob.SCENE.scene, glob.PROJECT.project)))
+        notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
     )
 
 
@@ -90,7 +90,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             b64_str = b64_bytes.decode()
 
     # send data to execution service
-    exe_req = erpc.UploadPackageRequest(uuid.uuid4().int, args=erpc.UploadPackageArgs(package_id, b64_str))
+    exe_req = erpc.UploadPackage.Request(uuid.uuid4().int, args=erpc.UploadPackage.Request.Args(package_id, b64_str))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
@@ -101,13 +101,12 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
     return package_id
 
 
-async def manager_request(req: rpc.common.Request, ui: Optional[WsClient] = None) -> rpc.common.Response:
+async def manager_request(req: rpc.common.RPC.Request, ui: Optional[WsClient] = None) -> rpc.common.RPC.Response:
 
     assert req.id not in MANAGER_RPC_RESPONSES
 
     MANAGER_RPC_RESPONSES[req.id] = RespQueue(maxsize=1)
     await MANAGER_RPC_REQUEST_QUEUE.put(req)
-
     resp = await MANAGER_RPC_RESPONSES[req.id].get()
     del MANAGER_RPC_RESPONSES[req.id]
     return resp

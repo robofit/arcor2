@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-
 import asyncio
 import collections.abc as collections_abc
 import copy
@@ -15,7 +11,7 @@ from arcor2 import helpers as hlp
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProjectException, CachedScene, UpdateableCachedProject
 from arcor2.data import common
-from arcor2.data.events import EventType
+from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
 from arcor2.object_types.abstract import Robot
@@ -77,7 +73,7 @@ async def managed_project(project_id: str, make_copy: bool = False) -> AsyncGene
 
 @scene_needed
 @project_needed
-async def cancel_action_cb(req: srpc.p.CancelActionRequest, ui: WsClient) -> None:
+async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -112,7 +108,7 @@ async def cancel_action_cb(req: srpc.p.CancelActionRequest, ui: WsClient) -> Non
 
     await hlp.run_in_executor(cancel_method, *cancel_params.values())
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.a.ActionCancelledEvent()))
+    asyncio.ensure_future(notif.broadcast_event(sevts.a.ActionCancelled()))
     glob.RUNNING_ACTION = None
     glob.RUNNING_ACTION_PARAMS = None
 
@@ -121,10 +117,9 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     assert glob.RUNNING_ACTION
 
-    await notif.broadcast_event(sevts.a.ActionExecutionEvent(data=sevts.a.ActionExecutionData(glob.RUNNING_ACTION)))
+    await notif.broadcast_event(sevts.a.ActionExecution(sevts.a.ActionExecution.Data(glob.RUNNING_ACTION)))
 
-    evt = sevts.a.ActionResultEvent()
-    evt.data.action_id = glob.RUNNING_ACTION
+    evt = sevts.a.ActionResult(sevts.a.ActionResult.Data(glob.RUNNING_ACTION))
 
     try:
         action_result = await hlp.run_in_executor(action_method, *params.values())
@@ -154,7 +149,7 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
 @scene_needed
 @project_needed
-async def execute_action_cb(req: srpc.p.ExecuteActionRequest, ui: WsClient) -> None:
+async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -228,13 +223,13 @@ async def execute_action_cb(req: srpc.p.ExecuteActionRequest, ui: WsClient) -> N
 
 async def project_info(
     project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[str, CachedScene]
-) -> srpc.p.ListProjectsResponseData:
+) -> srpc.p.ListProjects.Response.Data:
 
     project = await storage.get_project(project_id)
 
     assert project.modified is not None
 
-    pd = srpc.p.ListProjectsResponseData(
+    pd = srpc.p.ListProjects.Response.Data(
         id=project.id, desc=project.desc, name=project.name, scene_id=project.scene_id, modified=project.modified
     )
 
@@ -267,14 +262,14 @@ async def project_info(
     return pd
 
 
-async def list_projects_cb(req: srpc.p.ListProjectsRequest, ui: WsClient) -> srpc.p.ListProjectsResponse:
+async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> srpc.p.ListProjects.Response:
 
     projects = await storage.get_projects()
 
     scenes_lock = asyncio.Lock()
     scenes: Dict[str, CachedScene] = {}
 
-    resp = srpc.p.ListProjectsResponse()
+    resp = srpc.p.ListProjects.Response()
     tasks = [project_info(project_iddesc.id, scenes_lock, scenes) for project_iddesc in projects.items]
     resp.data = await asyncio.gather(*tasks)
     return resp
@@ -283,7 +278,7 @@ async def list_projects_cb(req: srpc.p.ListProjectsRequest, ui: WsClient) -> srp
 @scene_needed
 @project_needed
 async def add_action_point_joints_using_robot_cb(
-    req: srpc.p.AddActionPointJointsUsingRobotRequest, ui: WsClient
+    req: srpc.p.AddActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
 
     assert glob.SCENE
@@ -300,14 +295,18 @@ async def add_action_point_joints_using_robot_cb(
 
     prj = common.ProjectRobotJoints(common.uid(), req.args.name, req.args.robot_id, new_joints, True)
     glob.PROJECT.upsert_joints(ap.id, prj)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.JointsChanged(EventType.ADD, ap.id, data=prj)))
+
+    evt = sevts.p.JointsChanged(prj)
+    evt.change_type = Event.Type.ADD
+    evt.parent_id = ap.id
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
 async def update_action_point_joints_using_robot_cb(
-    req: srpc.p.UpdateActionPointJointsUsingRobotRequest, ui: WsClient
+    req: srpc.p.UpdateActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
 
     assert glob.SCENE
@@ -318,13 +317,16 @@ async def update_action_point_joints_using_robot_cb(
     robot_joints.is_valid = True
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.JointsChanged(EventType.UPDATE, data=robot_joints)))
+
+    evt = sevts.p.JointsChanged(robot_joints)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJointsRequest, ui: WsClient) -> None:
+async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -338,13 +340,15 @@ async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJointsReque
     robot_joints.is_valid = True
     glob.PROJECT.update_modified()
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.JointsChanged(EventType.UPDATE, data=robot_joints)))
+    evt = sevts.p.JointsChanged(robot_joints)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJointsRequest, ui: WsClient) -> None:
+async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Request, ui: WsClient) -> None:
     """Removes joints from action point.
 
     :param req:
@@ -362,13 +366,16 @@ async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJointsReque
     joints_to_be_removed = glob.PROJECT.remove_joints(req.args.joints_id)
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.JointsChanged(EventType.REMOVE, data=joints_to_be_removed)))
+
+    evt = sevts.p.JointsChanged(joints_to_be_removed)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def rename_action_point_cb(req: srpc.p.RenameActionPointRequest, ui: WsClient) -> None:
+async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -389,7 +396,10 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPointRequest, ui: WsCli
     ap.name = req.args.new_name
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionPointChanged(EventType.UPDATE_BASE, data=ap)))
+
+    evt = sevts.p.ActionPointChanged(ap)
+    evt.change_type = Event.Type.UPDATE_BASE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
@@ -418,7 +428,7 @@ def detect_ap_loop(ap: common.BareActionPoint, new_parent_id: str) -> None:
 
 @scene_needed
 @project_needed
-async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParentRequest, ui: WsClient) -> None:
+async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -456,7 +466,9 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParentReque
     Can't send orientation changes and then ActionPointChanged/UPDATE_BASE (or vice versa)
     because UI would display orientations wrongly (for a short moment).
     """
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionPointChanged(EventType.UPDATE, data=ap)))
+    evt = sevts.p.ActionPointChanged(ap)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
@@ -478,14 +490,19 @@ async def update_ap_position(ap: common.BareActionPoint, position: common.Positi
 
         assert not joints.is_valid
 
-        asyncio.ensure_future(notif.broadcast_event(sevts.p.JointsChanged(EventType.UPDATE, ap.id, data=joints)))
+        evt = sevts.p.JointsChanged(joints)
+        evt.change_type = Event.Type.UPDATE
+        evt.parent_id = ap.id
+        asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionPointChanged(EventType.UPDATE_BASE, data=ap)))
+    ap_evt = sevts.p.ActionPointChanged(ap)
+    ap_evt.change_type = Event.Type.UPDATE_BASE
+    asyncio.ensure_future(notif.broadcast_event(ap_evt))
 
 
 @scene_needed
 @project_needed
-async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPositionRequest, ui: WsClient) -> None:
+async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     await update_ap_position(glob.PROJECT.bare_action_point(req.args.action_point_id), req.args.new_position)
@@ -493,7 +510,7 @@ async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPositionR
 
 @scene_needed
 @project_needed
-async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingRobotRequest, ui: WsClient) -> None:
+async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingRobot.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -510,7 +527,7 @@ async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingR
 
 @scene_needed
 @project_needed
-async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientationRequest, ui: WsClient) -> None:
+async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.Request, ui: WsClient) -> None:
     """Adds orientation and joints to the action point.
 
     :param req:
@@ -528,13 +545,17 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientationR
 
     orientation = common.NamedOrientation(common.uid(), req.args.name, req.args.orientation)
     glob.PROJECT.upsert_orientation(ap.id, orientation)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.OrientationChanged(EventType.ADD, ap.id, data=orientation)))
+
+    evt = sevts.p.OrientationChanged(orientation)
+    evt.change_type = Event.Type.ADD
+    evt.parent_id = ap.id
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrientationRequest, ui: WsClient) -> None:
+async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrientation.Request, ui: WsClient) -> None:
     """Updates orientation of the action point.
 
     :param req:
@@ -548,14 +569,17 @@ async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrient
     orientation.orientation = req.args.orientation
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.OrientationChanged(EventType.UPDATE, data=orientation)))
+
+    evt = sevts.p.OrientationChanged(orientation)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
 async def add_action_point_orientation_using_robot_cb(
-    req: srpc.p.AddActionPointOrientationUsingRobotRequest, ui: WsClient
+    req: srpc.p.AddActionPointOrientationUsingRobot.Request, ui: WsClient
 ) -> None:
     """Adds orientation and joints to the action point.
 
@@ -579,14 +603,18 @@ async def add_action_point_orientation_using_robot_cb(
 
     orientation = common.NamedOrientation(common.uid(), req.args.name, new_pose.orientation)
     glob.PROJECT.upsert_orientation(ap.id, orientation)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.OrientationChanged(EventType.ADD, ap.id, data=orientation)))
+
+    evt = sevts.p.OrientationChanged(orientation)
+    evt.change_type = Event.Type.ADD
+    evt.parent_id = ap.id
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
 async def update_action_point_orientation_using_robot_cb(
-    req: srpc.p.UpdateActionPointOrientationUsingRobotRequest, ui: WsClient
+    req: srpc.p.UpdateActionPointOrientationUsingRobot.Request, ui: WsClient
 ) -> None:
     """Updates orientation and joint of the action point.
 
@@ -607,13 +635,16 @@ async def update_action_point_orientation_using_robot_cb(
     ori.orientation = new_pose.orientation
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.OrientationChanged(EventType.UPDATE, data=ori)))
+
+    evt = sevts.p.OrientationChanged(ori)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrientationRequest, ui: WsClient) -> None:
+async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrientation.Request, ui: WsClient) -> None:
     """Removes orientation.
 
     :param req:
@@ -634,13 +665,16 @@ async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrient
         return None
 
     glob.PROJECT.remove_orientation(req.args.orientation_id)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.OrientationChanged(EventType.REMOVE, data=orientation)))
+
+    evt = sevts.p.OrientationChanged(orientation)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
-async def open_project_cb(req: srpc.p.OpenProjectRequest, ui: WsClient) -> None:
+async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
+    if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
         raise Arcor2Exception("Can't open project while package runs.")
 
     # TODO validate using project_problems?
@@ -650,7 +684,7 @@ async def open_project_cb(req: srpc.p.OpenProjectRequest, ui: WsClient) -> None:
     assert glob.PROJECT
 
     asyncio.ensure_future(
-        notif.broadcast_event(sevts.p.OpenProject(data=sevts.p.OpenProjectData(glob.SCENE.scene, glob.PROJECT.project)))
+        notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
     )
 
     return None
@@ -658,7 +692,7 @@ async def open_project_cb(req: srpc.p.OpenProjectRequest, ui: WsClient) -> None:
 
 @scene_needed
 @project_needed
-async def save_project_cb(req: srpc.p.SaveProjectRequest, ui: WsClient) -> None:
+async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -669,9 +703,9 @@ async def save_project_cb(req: srpc.p.SaveProjectRequest, ui: WsClient) -> None:
 
 
 @no_project
-async def new_project_cb(req: srpc.p.NewProjectRequest, ui: WsClient) -> None:
+async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
-    if glob.PACKAGE_STATE.state in (common.PackageStateEnum.PAUSED, common.PackageStateEnum.RUNNING):
+    if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
         raise Arcor2Exception("Can't create project while package runs.")
 
     unique_name(req.args.name, (await project_names()))
@@ -700,25 +734,23 @@ async def new_project_cb(req: srpc.p.NewProjectRequest, ui: WsClient) -> None:
     assert glob.SCENE
 
     asyncio.ensure_future(
-        notif.broadcast_event(sevts.p.OpenProject(data=sevts.p.OpenProjectData(glob.SCENE.scene, glob.PROJECT.project)))
+        notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
     )
     return None
 
 
 async def notify_project_closed(project_id: str) -> None:
 
+    proj_list = sevts.c.ShowMainScreen.Data.WhatEnum.ProjectsList
+
     await notif.broadcast_event(sevts.p.ProjectClosed())
-    glob.MAIN_SCREEN = sevts.c.ShowMainScreenData(sevts.c.ShowMainScreenData.WhatEnum.ProjectsList)
-    await notif.broadcast_event(
-        sevts.c.ShowMainScreenEvent(
-            data=sevts.c.ShowMainScreenData(sevts.c.ShowMainScreenData.WhatEnum.ProjectsList, project_id)
-        )
-    )
+    glob.MAIN_SCREEN = sevts.c.ShowMainScreen.Data(proj_list)
+    await notif.broadcast_event(sevts.c.ShowMainScreen(sevts.c.ShowMainScreen.Data(proj_list, project_id)))
 
 
 @scene_needed
 @project_needed
-async def close_project_cb(req: srpc.p.CloseProjectRequest, ui: WsClient) -> None:
+async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -755,7 +787,7 @@ def check_ap_parent(parent: Optional[str]) -> None:
 
 @scene_needed
 @project_needed
-async def add_action_point_cb(req: srpc.p.AddActionPointRequest, ui: WsClient) -> None:
+async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -770,13 +802,16 @@ async def add_action_point_cb(req: srpc.p.AddActionPointRequest, ui: WsClient) -
         return None
 
     ap = glob.PROJECT.upsert_action_point(common.uid(), req.args.name, req.args.position, req.args.parent)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionPointChanged(EventType.ADD, data=ap)))
+
+    evt = sevts.p.ActionPointChanged(ap)
+    evt.change_type = Event.Type.ADD
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def remove_action_point_cb(req: srpc.p.RemoveActionPointRequest, ui: WsClient) -> None:
+async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -827,13 +862,16 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPointRequest, ui: WsCli
         return None
 
     glob.PROJECT.remove_action_point(req.args.id)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionPointChanged(EventType.REMOVE, data=ap)))
+
+    evt = sevts.p.ActionPointChanged(ap)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def add_action_cb(req: srpc.p.AddActionRequest, ui: WsClient) -> None:
+async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -859,13 +897,17 @@ async def add_action_cb(req: srpc.p.AddActionRequest, ui: WsClient) -> None:
         return None
 
     glob.PROJECT.upsert_action(ap.id, new_action)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionChanged(EventType.ADD, ap.id, data=new_action)))
+
+    evt = sevts.p.ActionChanged(new_action)
+    evt.change_type = Event.Type.ADD
+    evt.parent_id = ap.id
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def update_action_cb(req: srpc.p.UpdateActionRequest, ui: WsClient) -> None:
+async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -891,7 +933,9 @@ async def update_action_cb(req: srpc.p.UpdateActionRequest, ui: WsClient) -> Non
     orig_action.parameters = updated_action.parameters
     glob.PROJECT.update_modified()
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionChanged(EventType.UPDATE, data=updated_action)))
+    evt = sevts.p.ActionChanged(updated_action)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
@@ -922,7 +966,7 @@ def check_action_usage(action: common.Action) -> None:
 
 @scene_needed
 @project_needed
-async def remove_action_cb(req: srpc.p.RemoveActionRequest, ui: WsClient) -> None:
+async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -936,7 +980,9 @@ async def remove_action_cb(req: srpc.p.RemoveActionRequest, ui: WsClient) -> Non
     glob.PROJECT.remove_action(req.args.id)
     remove_prev_result(action.id)
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionChanged(EventType.REMOVE, data=action.bare)))
+    evt = sevts.p.ActionChanged(action.bare)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
@@ -1007,7 +1053,7 @@ def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> No
 
 @scene_needed
 @project_needed
-async def add_logic_item_cb(req: srpc.p.AddLogicItemRequest, ui: WsClient) -> None:
+async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -1024,13 +1070,16 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItemRequest, ui: WsClient) -> No
         return
 
     glob.PROJECT.upsert_logic_item(logic_item)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.LogicItemChanged(EventType.ADD, data=logic_item)))
+
+    evt = sevts.p.LogicItemChanged(logic_item)
+    evt.change_type = Event.Type.ADD
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def update_logic_item_cb(req: srpc.p.UpdateLogicItemRequest, ui: WsClient) -> None:
+async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -1051,13 +1100,16 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItemRequest, ui: WsClient)
         return
 
     glob.PROJECT.upsert_logic_item(updated_logic_item)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.LogicItemChanged(EventType.UPDATE, data=updated_logic_item)))
+
+    evt = sevts.p.LogicItemChanged(updated_logic_item)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def remove_logic_item_cb(req: srpc.p.RemoveLogicItemRequest, ui: WsClient) -> None:
+async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -1066,7 +1118,10 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItemRequest, ui: WsClient)
 
     # TODO is it necessary to check something here?
     glob.PROJECT.remove_logic_item(req.args.logic_item_id)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.LogicItemChanged(EventType.REMOVE, data=logic_item)))
+
+    evt = sevts.p.LogicItemChanged(logic_item)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
@@ -1090,7 +1145,7 @@ def check_constant(constant: common.ProjectConstant) -> None:
 
 @scene_needed
 @project_needed
-async def add_constant_cb(req: srpc.p.AddConstantRequest, ui: WsClient) -> None:
+async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -1102,13 +1157,16 @@ async def add_constant_cb(req: srpc.p.AddConstantRequest, ui: WsClient) -> None:
         return
 
     glob.PROJECT.upsert_constant(const)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectConstantChanged(EventType.ADD, data=const)))
+
+    evt = sevts.p.ProjectConstantChanged(const)
+    evt.change_type = Event.Type.ADD
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def update_constant_cb(req: srpc.p.UpdateConstantRequest, ui: WsClient) -> None:
+async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -1128,13 +1186,16 @@ async def update_constant_cb(req: srpc.p.UpdateConstantRequest, ui: WsClient) ->
         return
 
     glob.PROJECT.upsert_constant(updated_constant)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectConstantChanged(EventType.UPDATE, data=const)))
+
+    evt = sevts.p.ProjectConstantChanged(const)
+    evt.change_type = Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @scene_needed
 @project_needed
-async def remove_constant_cb(req: srpc.p.RemoveConstantRequest, ui: WsClient) -> None:
+async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
     assert glob.SCENE
@@ -1151,20 +1212,26 @@ async def remove_constant_cb(req: srpc.p.RemoveConstantRequest, ui: WsClient) ->
         return
 
     glob.PROJECT.remove_constant(const.id)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectConstantChanged(EventType.REMOVE, data=const)))
+
+    evt = sevts.p.ProjectConstantChanged(const)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @no_project
-async def delete_project_cb(req: srpc.p.DeleteProjectRequest, ui: WsClient) -> None:
+async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> None:
 
     project = UpdateableCachedProject(await storage.get_project(req.args.id))
     await storage.delete_project(req.args.id)
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectChanged(EventType.REMOVE, data=project.bare)))
+
+    evt = sevts.p.ProjectChanged(project.bare)
+    evt.change_type = Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
-async def rename_project_cb(req: srpc.p.RenameProjectRequest, ui: WsClient) -> None:
+async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> None:
 
     unique_name(req.args.new_name, (await project_names()))
 
@@ -1176,11 +1243,13 @@ async def rename_project_cb(req: srpc.p.RenameProjectRequest, ui: WsClient) -> N
         project.name = req.args.new_name
         project.update_modified()
 
-        asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectChanged(EventType.UPDATE_BASE, data=project.bare)))
+        evt = sevts.p.ProjectChanged(project.bare)
+        evt.change_type = Event.Type.UPDATE_BASE
+        asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
-async def copy_project_cb(req: srpc.p.CopyProjectRequest, ui: WsClient) -> None:
+async def copy_project_cb(req: srpc.p.CopyProject.Request, ui: WsClient) -> None:
 
     unique_name(req.args.target_name, (await project_names()))
 
@@ -1190,23 +1259,28 @@ async def copy_project_cb(req: srpc.p.CopyProjectRequest, ui: WsClient) -> None:
     async with managed_project(req.args.source_id, make_copy=True) as project:
 
         project.name = req.args.target_name
-        asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectChanged(EventType.UPDATE_BASE, data=project.bare)))
+
+        evt = sevts.p.ProjectChanged(project.bare)
+        evt.change_type = Event.Type.UPDATE_BASE
+        asyncio.ensure_future(notif.broadcast_event(evt))
 
     return None
 
 
-async def update_project_description_cb(req: srpc.p.UpdateProjectDescriptionRequest, ui: WsClient) -> None:
+async def update_project_description_cb(req: srpc.p.UpdateProjectDescription.Request, ui: WsClient) -> None:
 
     async with managed_project(req.args.project_id) as project:
 
         project.desc = req.args.new_description
         project.update_modified()
 
-        asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectChanged(EventType.UPDATE_BASE, data=project.bare)))
+        evt = sevts.p.ProjectChanged(project.bare)
+        evt.change_type = Event.Type.UPDATE_BASE
+        asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
-async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogicRequest, ui: WsClient) -> None:
+async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogic.Request, ui: WsClient) -> None:
 
     async with managed_project(req.args.project_id) as project:
 
@@ -1221,12 +1295,15 @@ async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogicRequest, 
 
         project.has_logic = req.args.new_has_logic
         project.update_modified()
-        asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectChanged(EventType.UPDATE_BASE, data=project.bare)))
+
+        evt = sevts.p.ProjectChanged(project.bare)
+        evt.change_type = Event.Type.UPDATE_BASE
+        asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
 @project_needed
-async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJointsRequest, ui: WsClient) -> None:
+async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -1238,13 +1315,16 @@ async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJointsReque
 
     joints.name = req.args.new_name
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.JointsChanged(EventType.UPDATE_BASE, data=joints)))
+
+    evt = sevts.p.JointsChanged(joints)
+    evt.change_type = Event.Type.UPDATE_BASE
+    asyncio.ensure_future(notif.broadcast_event(evt))
 
     return None
 
 
 @project_needed
-async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrientationRequest, ui: WsClient) -> None:
+async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrientation.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -1256,13 +1336,16 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
 
     ori.name = req.args.new_name
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.OrientationChanged(EventType.UPDATE_BASE, data=ori)))
+
+    evt = sevts.p.OrientationChanged(ori)
+    evt.change_type = Event.Type.UPDATE_BASE
+    asyncio.ensure_future(notif.broadcast_event(evt))
 
     return None
 
 
 @project_needed
-async def rename_action_cb(req: srpc.p.RenameActionRequest, ui: WsClient) -> None:
+async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
 
@@ -1275,6 +1358,9 @@ async def rename_action_cb(req: srpc.p.RenameActionRequest, ui: WsClient) -> Non
     act.name = req.args.new_name
 
     glob.PROJECT.update_modified()
-    asyncio.ensure_future(notif.broadcast_event(sevts.p.ActionChanged(EventType.UPDATE_BASE, data=act)))
+
+    evt = sevts.p.ActionChanged(act)
+    evt.change_type = Event.Type.UPDATE_BASE
+    asyncio.ensure_future(notif.broadcast_event(evt))
 
     return None

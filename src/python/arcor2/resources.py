@@ -15,9 +15,8 @@ from arcor2 import transformations as tr
 from arcor2.action import patch_object_actions, print_event
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import scene_service
-from arcor2.data.common import CurrentAction, Project, Scene
-from arcor2.data.events import CurrentActionEvent, PackageInfoEvent
-from arcor2.data.execution import PackageInfo
+from arcor2.data.common import Project, Scene
+from arcor2.data.events import CurrentAction, PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception, ResourcesException
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
@@ -49,8 +48,7 @@ class IntResources:
 
         package_id = os.path.basename(os.getcwd())
         package_meta = package.read_package_meta(package_id)
-        package_info_event = PackageInfoEvent()
-        package_info_event.data = PackageInfo(package_id, package_meta.name, scene, project)
+        package_info_event = PackageInfo(PackageInfo.Data(package_id, package_meta.name, scene, project))
 
         for scene_obj in self.scene.objects:
 
@@ -128,7 +126,7 @@ class IntResources:
         executed."""
         # TODO to be used for parameters that are result of previous action(s)
         # ...there is no need to send parameters that are already in the project
-        print_event(CurrentActionEvent(data=CurrentAction(action_id)))
+        print_event(CurrentAction(CurrentAction.Data(action_id)))
 
     def parameters(self, action_id: str) -> Dict[str, Any]:
 
