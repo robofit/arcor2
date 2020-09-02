@@ -12,11 +12,10 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2.cached import UpdateableCachedProject, UpdateableCachedScene
-from arcor2.data.common import ActionState, CurrentAction, PackageState
-from arcor2.data.execution import PackageInfo
+from arcor2.data import events
 from arcor2.object_types.abstract import Generic
 from arcor2_arserver.object_types.utils import ObjectTypeDict
-from arcor2_arserver_data.events.common import ShowMainScreenData
+from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_build_data import PORT as BUILD_PORT
 from arcor2_execution_data import PORT as EXE_PORT
 
@@ -31,7 +30,7 @@ PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 SCENE: Optional[UpdateableCachedScene] = None
 PROJECT: Optional[UpdateableCachedProject] = None
 
-MAIN_SCREEN: Optional[ShowMainScreenData] = ShowMainScreenData(ShowMainScreenData.WhatEnum.ScenesList)
+MAIN_SCREEN: Optional[ShowMainScreen.Data] = ShowMainScreen.Data(ShowMainScreen.Data.WhatEnum.ScenesList)
 
 INTERFACES: Set[WsClient] = set()
 
@@ -42,10 +41,10 @@ SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
 RUNNING_ACTION: Optional[str] = None  # ID of an action that is being executed during project editing
 RUNNING_ACTION_PARAMS: Optional[Dict[str, Any]] = None
 
-PACKAGE_STATE = PackageState()
-PACKAGE_INFO: Optional[PackageInfo] = None
-ACTION_STATE: Optional[ActionState] = None
-CURRENT_ACTION: Optional[CurrentAction] = None
+PACKAGE_STATE = events.PackageState.Data()
+PACKAGE_INFO: Optional[events.PackageInfo.Data] = None
+ACTION_STATE: Optional[events.ActionState.Data] = None
+CURRENT_ACTION: Optional[events.CurrentAction.Data] = None
 TEMPORARY_PACKAGE: bool = False
 
 RegisteredUiDict = DefaultDict[str, Set[WsClient]]

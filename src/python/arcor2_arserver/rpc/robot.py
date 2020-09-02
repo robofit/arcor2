@@ -28,15 +28,13 @@ async def robot_joints_event(robot_id: str) -> None:
 
     global ROBOT_JOINTS_TASKS
 
-    glob.logger.info(f"Sending '{sevts.r.RobotJointsEvent.__name__}' for robot '{robot_id}' started.")
+    glob.logger.info(f"Sending '{sevts.r.RobotJoints.__name__}' for robot '{robot_id}' started.")
     while glob.SCENE and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]:
 
         start = time.monotonic()
 
-        evt = sevts.r.RobotJointsEvent()
-
         try:
-            evt.data = sevts.r.RobotJointsData(robot_id, (await robot.get_robot_joints(robot_id)))
+            evt = sevts.r.RobotJoints(sevts.r.RobotJoints.Data(robot_id, (await robot.get_robot_joints(robot_id))))
         except Arcor2Exception as e:
             glob.logger.error(f"Failed to get joints for {robot_id}. {e.message}")
             break
@@ -54,26 +52,25 @@ async def robot_joints_event(robot_id: str) -> None:
     # TODO notify UIs that registration was cancelled
     del glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]
 
-    glob.logger.info(f"Sending '{sevts.r.RobotJointsEvent.__name__}' for robot '{robot_id}' stopped.")
+    glob.logger.info(f"Sending '{sevts.r.RobotJoints.__name__}' for robot '{robot_id}' stopped.")
 
 
-async def eef_pose(robot_id: str, eef_id: str) -> sevts.r.EefPose:
+async def eef_pose(robot_id: str, eef_id: str) -> sevts.r.RobotEef.Data.EefPose:
 
-    return sevts.r.EefPose(eef_id, (await robot.get_end_effector_pose(robot_id, eef_id)))
+    return sevts.r.RobotEef.Data.EefPose(eef_id, (await robot.get_end_effector_pose(robot_id, eef_id)))
 
 
 async def robot_eef_pose_event(robot_id: str) -> None:
 
     global EEF_POSE_TASKS
 
-    glob.logger.info(f"Sending '{sevts.r.RobotEefEvent.__name__}' for robot '{robot_id}' started.")
+    glob.logger.info(f"Sending '{sevts.r.RobotEef.__name__}' for robot '{robot_id}' started.")
 
     while glob.SCENE and glob.ROBOT_EEF_REGISTERED_UIS[robot_id]:
 
         start = time.monotonic()
 
-        evt = sevts.r.RobotEefEvent()
-        evt.data = sevts.r.RobotEefData(robot_id)
+        evt = sevts.r.RobotEef(sevts.r.RobotEef.Data(robot_id))
 
         try:
             evt.data.end_effectors = await asyncio.gather(
@@ -96,52 +93,52 @@ async def robot_eef_pose_event(robot_id: str) -> None:
     # TODO notify UIs that registration was cancelled
     del glob.ROBOT_EEF_REGISTERED_UIS[robot_id]
 
-    glob.logger.info(f"Sending '{sevts.r.RobotEefEvent.__name__}' for robot '{robot_id}' stopped.")
+    glob.logger.info(f"Sending '{sevts.r.RobotEef.__name__}' for robot '{robot_id}' stopped.")
 
 
-async def get_robot_meta_cb(req: srpc.r.GetRobotMetaRequest, ui: WsClient) -> srpc.r.GetRobotMetaResponse:
+async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: WsClient) -> srpc.r.GetRobotMeta.Response:
 
-    return srpc.r.GetRobotMetaResponse(
+    return srpc.r.GetRobotMeta.Response(
         data=[obj.robot_meta for obj in glob.OBJECT_TYPES.values() if obj.robot_meta is not None]
     )
 
 
 @scene_needed
-async def get_robot_joints_cb(req: srpc.r.GetRobotJointsRequest, ui: WsClient) -> srpc.r.GetRobotJointsResponse:
+async def get_robot_joints_cb(req: srpc.r.GetRobotJoints.Request, ui: WsClient) -> srpc.r.GetRobotJoints.Response:
 
-    return srpc.r.GetRobotJointsResponse(data=await robot.get_robot_joints(req.args.robot_id))
+    return srpc.r.GetRobotJoints.Response(data=await robot.get_robot_joints(req.args.robot_id))
 
 
 @scene_needed
 async def get_end_effector_pose_cb(
-    req: srpc.r.GetEndEffectorPoseRequest, ui: WsClient
-) -> srpc.r.GetEndEffectorPoseResponse:
+    req: srpc.r.GetEndEffectorPose.Request, ui: WsClient
+) -> srpc.r.GetEndEffectorPose.Response:
 
-    return srpc.r.GetEndEffectorPoseResponse(
+    return srpc.r.GetEndEffectorPose.Response(
         data=await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id)
     )
 
 
 @scene_needed
-async def get_end_effectors_cb(req: srpc.r.GetEndEffectorsRequest, ui: WsClient) -> srpc.r.GetEndEffectorsResponse:
+async def get_end_effectors_cb(req: srpc.r.GetEndEffectors.Request, ui: WsClient) -> srpc.r.GetEndEffectors.Response:
 
-    return srpc.r.GetEndEffectorsResponse(data=await robot.get_end_effectors(req.args.robot_id))
-
-
-@scene_needed
-async def get_grippers_cb(req: srpc.r.GetGrippersRequest, ui: WsClient) -> srpc.r.GetGrippersResponse:
-
-    return srpc.r.GetGrippersResponse(data=await robot.get_grippers(req.args.robot_id))
+    return srpc.r.GetEndEffectors.Response(data=await robot.get_end_effectors(req.args.robot_id))
 
 
 @scene_needed
-async def get_suctions_cb(req: srpc.r.GetSuctionsRequest, ui: WsClient) -> srpc.r.GetSuctionsResponse:
+async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: WsClient) -> srpc.r.GetGrippers.Response:
 
-    return srpc.r.GetSuctionsResponse(data=await robot.get_suctions(req.args.robot_id))
+    return srpc.r.GetGrippers.Response(data=await robot.get_grippers(req.args.robot_id))
+
+
+@scene_needed
+async def get_suctions_cb(req: srpc.r.GetSuctions.Request, ui: WsClient) -> srpc.r.GetSuctions.Response:
+
+    return srpc.r.GetSuctions.Response(data=await robot.get_suctions(req.args.robot_id))
 
 
 async def register(
-    req: srpc.r.RegisterForRobotEventRequest,
+    req: srpc.r.RegisterForRobotEvent.Request,
     ui: WsClient,
     tasks: TaskDict,
     reg_uis: glob.RegisteredUiDict,
@@ -173,14 +170,14 @@ async def register(
 
 
 @scene_needed
-async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEventRequest, ui: WsClient) -> None:
+async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request, ui: WsClient) -> None:
 
     # check if robot exists
     await osa.get_robot_instance(req.args.robot_id)
 
-    if req.args.what == srpc.r.RegisterEnum.JOINTS:
+    if req.args.what == req.args.RegisterEnum.JOINTS:
         await register(req, ui, ROBOT_JOINTS_TASKS, glob.ROBOT_JOINTS_REGISTERED_UIS, robot_joints_event)
-    elif req.args.what == srpc.r.RegisterEnum.EEF_POSE:
+    elif req.args.what == req.args.RegisterEnum.EEF_POSE:
 
         if not (await robot.get_end_effectors(req.args.robot_id)):
             raise Arcor2Exception("Robot does not have any end effector.")
@@ -204,7 +201,7 @@ async def check_feature(robot_id: str, feature_name: str) -> None:
 
 
 @scene_needed
-async def move_to_pose_cb(req: srpc.r.MoveToPoseRequest, ui: WsClient) -> None:
+async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
 
     await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
@@ -228,7 +225,7 @@ async def move_to_pose_cb(req: srpc.r.MoveToPoseRequest, ui: WsClient) -> None:
 
 
 @scene_needed
-async def move_to_joints_cb(req: srpc.r.MoveToJointsRequest, ui: WsClient) -> None:
+async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> None:
 
     await check_feature(req.args.robot_id, Robot.move_to_joints.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
@@ -236,7 +233,7 @@ async def move_to_joints_cb(req: srpc.r.MoveToJointsRequest, ui: WsClient) -> No
 
 
 @scene_needed
-async def stop_robot_cb(req: srpc.r.StopRobotRequest, ui: WsClient) -> None:
+async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
 
     await check_feature(req.args.robot_id, Robot.stop.__name__)
     await robot.stop(req.args.robot_id)
@@ -244,7 +241,7 @@ async def stop_robot_cb(req: srpc.r.StopRobotRequest, ui: WsClient) -> None:
 
 @scene_needed
 @project_needed
-async def move_to_action_point_cb(req: srpc.r.MoveToActionPointRequest, ui: WsClient) -> None:
+async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsClient) -> None:
 
     await robot.check_robot_before_move(req.args.robot_id)
 

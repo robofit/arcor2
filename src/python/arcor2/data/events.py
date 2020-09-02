@@ -1,24 +1,10 @@
-# -*- coding: utf-8 -*-
-
-import re
 from dataclasses import dataclass, field
-from typing import Optional
+from enum import Enum
+from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import common, execution
-
-
-def wo_suffix(name: str) -> str:
-    return re.sub("Event$", "", name)
-
-
-class EventType(common.StrEnum):
-
-    ADD: str = "add"
-    UPDATE: str = "update"
-    REMOVE: str = "remove"
-    UPDATE_BASE: str = "update_base"
+from arcor2.data import common, object_type
 
 
 """
@@ -30,28 +16,35 @@ Common stuff
 
 @dataclass
 class Event(JsonSchemaMixin):
+    class Type(common.StrEnum):
+        ADD: str = "add"
+        UPDATE: str = "update"
+        REMOVE: str = "remove"
+        UPDATE_BASE: str = "update_base"
 
-    event: str = field(default="", init=False)
-    change_type: Optional[EventType] = None
-    parent_id: Optional[str] = None
+    event: str = field(init=False)
+    change_type: Optional[Type] = field(init=False)
+    parent_id: Optional[str] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.event = self.__class__.__name__
+        self.change_type = None
+        self.parent_id = None
 
 
 @dataclass
-class NotificationEventData(JsonSchemaMixin):
-    class NotificationLevel(common.StrEnum):
-        INFO: str = "Info"
-        WARN: str = "Warn"
-        ERROR: str = "Error"
+class Notification(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        class Level(common.StrEnum):
+            INFO: str = "Info"
+            WARN: str = "Warn"
+            ERROR: str = "Error"
 
-    message: str
-    level: NotificationLevel
+        message: str
+        level: Level
 
-
-@dataclass
-class NotificationEvent(Event):
-
-    data: Optional[NotificationEventData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Optional[Data] = None
 
 
 """
@@ -62,55 +55,79 @@ Project execution
 
 
 @dataclass
-class ProjectExceptionEventData(JsonSchemaMixin):
+class ProjectException(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        message: str = field(default_factory=str)
+        type: str = field(default_factory=str)
+        handled: bool = False
 
-    message: str = field(default_factory=str)
-    type: str = field(default_factory=str)
-    handled: bool = False
-
-
-@dataclass
-class ProjectExceptionEvent(Event):
-
-    data: ProjectExceptionEventData = field(default_factory=ProjectExceptionEventData)
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class CurrentActionEvent(Event):
+class CurrentAction(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        action_id: str = ""
+        args: List[common.ActionParameter] = field(default_factory=list)
 
-    data: common.CurrentAction = field(default_factory=common.CurrentAction)
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class PackageStateEvent(Event):
-
-    data: common.PackageState = field(default_factory=common.PackageState)
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class PackageInfoEvent(Event):
+class PackageState(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        class StateEnum(Enum):
+            RUNNING: str = "running"
+            STOPPED: str = "stopped"
+            PAUSED: str = "paused"
+            UNDEFINED: str = "undefined"
 
-    data: Optional[execution.PackageInfo] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        state: StateEnum = StateEnum.UNDEFINED
+        package_id: Optional[str] = None
+
+    RUN_STATES = (Data.StateEnum.PAUSED, Data.StateEnum.RUNNING)
+
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class ActionStateEvent(Event):
+class PackageInfo(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        package_id: str
+        package_name: str
+        scene: common.Scene
+        project: common.Project
+        collision_models: object_type.CollisionModels = field(default_factory=object_type.CollisionModels)
 
-    data: common.ActionState = field(default_factory=common.ActionState)
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class ActionState(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        class StateEnum(Enum):
+            BEFORE: str = "before"
+            AFTER: str = "after"
+
+        object_id: str
+        method: str
+        where: StateEnum = StateEnum.BEFORE
+
+    data: Data

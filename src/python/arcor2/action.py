@@ -3,8 +3,7 @@ import sys
 from functools import wraps
 from typing import Any, Callable, Type, TypeVar, Union, cast
 
-from arcor2.data.common import ActionState, ActionStateEnum, PackageState, PackageStateEnum
-from arcor2.data.events import ActionStateEvent, Event, PackageStateEvent
+from arcor2.data.events import ActionState, Event, PackageState
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import iterate_over_actions
 
@@ -54,18 +53,18 @@ except ImportError:
         return None
 
 
-def handle_action(inst: Generic, f: Callable[..., Any], where: ActionStateEnum) -> None:
+def handle_action(inst: Generic, f: Callable[..., Any], where: ActionState.Data.StateEnum) -> None:
 
-    print_event(ActionStateEvent(data=ActionState(inst.id, f.__name__, where)))
+    print_event(ActionState(ActionState.Data(inst.id, f.__name__, where)))
 
     ctrl_cmd = read_stdin()
 
     if ctrl_cmd == "p":
-        print_event(PackageStateEvent(data=PackageState(PackageStateEnum.PAUSED)))
+        print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
         while True:
             ctrl_cmd = read_stdin(0.1)
             if ctrl_cmd == "r":
-                print_event(PackageStateEvent(data=PackageState(PackageStateEnum.RUNNING)))
+                print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
                 break
 
 
@@ -89,7 +88,7 @@ def action(f: F) -> F:
             args = (args[0],)
 
         if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
-            handle_action(args[0], f, ActionStateEnum.BEFORE)
+            handle_action(args[0], f, ActionState.Data.StateEnum.BEFORE)
 
         if wrapper.__action__.composite:  # type: ignore # TODO and not step_into
             action.inside_composite = f  # type: ignore
@@ -100,7 +99,7 @@ def action(f: F) -> F:
             action.inside_composite = None  # type: ignore
 
         if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
-            handle_action(args[0], f, ActionStateEnum.AFTER)
+            handle_action(args[0], f, ActionState.Data.StateEnum.AFTER)
 
         return res
 

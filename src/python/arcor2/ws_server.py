@@ -2,25 +2,27 @@ import asyncio
 import json
 import time
 from collections import deque
-from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Type, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
 
 import websockets
 from aiologger.levels import LogLevel  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.data.events import Event
-from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
-from arcor2.data.rpc.common import Request, Response
+from arcor2.data.rpc.common import RPC
 from arcor2.exceptions import Arcor2Exception
 
-ReqT = TypeVar("ReqT", bound=Request)
-RespT = TypeVar("RespT", bound=Response)
+RPCT = TypeVar("RPCT", bound=RPC)
+ReqT = TypeVar("ReqT", bound=RPC.Request)
+RespT = TypeVar("RespT", bound=RPC.Response)
 
 RPC_CB = Callable[[ReqT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, Optional[RespT]]]
-RPC_DICT_TYPE = Dict[Type[ReqT], RPC_CB]
+RPC_DICT_TYPE = Dict[str, Tuple[Type[RPC], RPC_CB]]
 
 EventT = TypeVar("EventT", bound=Event)
-EVENT_DICT_TYPE = Dict[Type[EventT], Callable[[EventT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, None]]]
+EVENT_DICT_TYPE = Dict[
+    str, Tuple[Type[EventT], Callable[[EventT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, None]]]
+]
 
 
 async def send_json_to_client(client: websockets.WebSocketServerProtocol, data: str) -> None:
@@ -67,36 +69,33 @@ async def server(
 
             if "request" in data:  # ...then it is RPC
 
+                req_type = data["request"]
+
                 try:
-                    req_cls, resp_cls = RPC_MAPPING[data["request"]]
+                    rpc_cls, rpc_cb = rpc_dict[req_type]
                 except KeyError:
                     logger.error(f"Unknown RPC request: {data}.")
                     continue
 
-                if req_cls not in rpc_dict:
-                    logger.debug(f"Ignoring RPC request: {data}.")
-                    continue
+                assert req_type == rpc_cls.__name__
 
                 try:
-                    req = req_cls.from_dict(data)
+                    req = rpc_cls.Request.from_dict(data)
                 except ValidationError as e:
                     logger.error(f"Invalid RPC: {data}, error: {e}")
                     continue
 
                 try:
-                    resp = await rpc_dict[req_cls](req, client)
+                    resp = await rpc_cb(req, client)
                 except Arcor2Exception as e:
                     logger.debug(e, exc_info=True)
-                    resp = resp_cls()
-                    resp.result = False
-                    resp.messages = [e.message]
-
-                if resp is None:  # default response
-                    resp = resp_cls()
+                    resp = rpc_cls.Response(req.id, False, [e.message])
                 else:
-                    assert isinstance(resp, resp_cls)
-
-                resp.id = req.id
+                    if resp is None:  # default response
+                        resp = rpc_cls.Response(req.id, True)
+                    else:
+                        assert isinstance(resp, rpc_cls.Response)
+                        resp.id = req.id
 
                 await asyncio.wait([client.send(resp.to_json())])
 
@@ -132,13 +131,9 @@ async def server(
             elif "event" in data:  # ...event from UI
 
                 try:
-                    event_cls = EVENT_MAPPING[data["event"]]
+                    event_cls, event_cb = event_dict[data["event"]]
                 except KeyError as e:
                     logger.error(f"Unknown event type: {e}.")
-                    continue
-
-                if event_cls not in event_dict:
-                    logger.debug(f"Ignoring event: {data}.")
                     continue
 
                 try:
@@ -147,7 +142,7 @@ async def server(
                     logger.error(f"Invalid event: {data}, error: {e}")
                     continue
 
-                await event_dict[event_cls](event, client)
+                await event_cb(event, client)
 
             else:
                 logger.error(f"unsupported format of message: {data}")

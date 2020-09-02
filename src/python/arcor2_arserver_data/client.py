@@ -5,13 +5,12 @@ import logging
 import time
 import uuid
 from queue import Empty, Queue
-from typing import Optional, Type, TypeVar
+from typing import Dict, Optional, Type, TypeVar
 
 import websocket  # type: ignore
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.data import events, rpc
-from arcor2.data.helpers import EVENT_MAPPING
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver_data import rpc as srpc
 
@@ -20,7 +19,7 @@ class ARServerClientException(Arcor2Exception):
     pass
 
 
-RR = TypeVar("RR", bound=rpc.common.Response)
+RR = TypeVar("RR", bound=rpc.common.RPC.Response)
 
 
 def uid() -> int:
@@ -35,11 +34,20 @@ class ARServer:
     Response.
     """
 
-    def __init__(self, ws_connection_str: str = "ws://0.0.0.0:6789", timeout: float = 3.0):
+    def __init__(
+        self,
+        ws_connection_str: str = "ws://0.0.0.0:6789",
+        timeout: float = 3.0,
+        event_mapping: Optional[Dict[str, Type[events.Event]]] = None,
+    ):
 
         self._ws = websocket.WebSocket()
         self._logger = logging.getLogger(__name__)
         self._event_queue: Queue[events.Event] = Queue()
+        if event_mapping is None:
+            event_mapping = {}
+
+        self.event_mapping = event_mapping
 
         start_time = time.monotonic()
         while time.monotonic() < start_time + timeout:
@@ -54,20 +62,23 @@ class ARServer:
 
         self._ws.settimeout(timeout)
 
-        system_info = self._call_rpc(srpc.c.SystemInfoRequest(uid()), srpc.c.SystemInfoResponse).data
+        system_info = self._call_rpc(srpc.c.SystemInfo.Request(uid()), srpc.c.SystemInfo.Response).data
+
+        if system_info is None:
+            raise ARServerClientException("Failed to get SystemInfo.")
 
         self._logger.info(f"Connected to server version {system_info.version}.")
 
         self._supported_rpcs = system_info.supported_rpc_requests
 
-    def call_rpc(self, req: rpc.common.Request, resp_type: Type[RR]) -> RR:
+    def call_rpc(self, req: rpc.common.RPC.Request, resp_type: Type[RR]) -> RR:
 
         if req.request not in self._supported_rpcs:
             raise ARServerClientException(f"{req.request} RPC not supported by the server.")
 
         return self._call_rpc(req, resp_type)
 
-    def _call_rpc(self, req: rpc.common.Request, resp_type: Type[RR]) -> RR:
+    def _call_rpc(self, req: rpc.common.RPC.Request, resp_type: Type[RR]) -> RR:
 
         self._ws.send(req.to_json())
 
@@ -81,7 +92,7 @@ class ARServer:
             if "response" in recv_dict:
                 break
             elif "event" in recv_dict:
-                self._event_queue.put(EVENT_MAPPING[recv_dict["event"]].from_dict(recv_dict))
+                self._event_queue.put(self.event_mapping[recv_dict["event"]].from_dict(recv_dict))
 
         try:
             resp = resp_type.from_dict(recv_dict)
@@ -110,7 +121,7 @@ class ARServer:
 
             if "event" not in recv_dict:
                 raise ARServerClientException(f"Expected event, got: {recv_dict}")
-            evt = EVENT_MAPPING[recv_dict["event"]].from_dict(recv_dict)
+            evt = self.event_mapping[recv_dict["event"]].from_dict(recv_dict)
 
         if drop_everything_until and not isinstance(evt, drop_everything_until):
             return self.get_event(drop_everything_until)

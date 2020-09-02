@@ -50,7 +50,7 @@ def clean_up_after_focus(obj_id: str) -> None:
 
 @scene_needed
 @no_project
-async def focus_object_start_cb(req: srpc.o.FocusObjectStartRequest, ui: WsClient) -> None:
+async def focus_object_start_cb(req: srpc.o.FocusObjectStart.Request, ui: WsClient) -> None:
 
     obj_id = req.args.object_id
 
@@ -87,7 +87,7 @@ async def focus_object_start_cb(req: srpc.o.FocusObjectStartRequest, ui: WsClien
 
 
 @no_project
-async def focus_object_cb(req: srpc.o.FocusObjectRequest, ui: WsClient) -> srpc.o.FocusObjectResponse:
+async def focus_object_cb(req: srpc.o.FocusObject.Request, ui: WsClient) -> srpc.o.FocusObject.Response:
 
     obj_id = req.args.object_id
     pt_idx = req.args.point_idx
@@ -116,14 +116,14 @@ async def focus_object_cb(req: srpc.o.FocusObjectRequest, ui: WsClient) -> srpc.
 
     FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(robot_id, end_effector)
 
-    r = srpc.o.FocusObjectResponse()
-    r.data.finished_indexes = list(FOCUS_OBJECT[obj_id].keys())
+    r = srpc.o.FocusObject.Response()
+    r.data = r.Data(finished_indexes=list(FOCUS_OBJECT[obj_id].keys()))
     return r
 
 
 @scene_needed
 @no_project
-async def focus_object_done_cb(req: srpc.o.FocusObjectDoneRequest, ui: WsClient) -> None:
+async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient) -> None:
 
     obj_id = req.args.id
 
@@ -175,14 +175,16 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDoneRequest, ui: WsClient)
 
     clean_up_after_focus(obj_id)
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.s.SceneObjectChanged(events.EventType.UPDATE, data=obj)))
+    evt = sevts.s.SceneObjectChanged(obj)
+    evt.change_type = events.Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
     asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
     asyncio.ensure_future(set_object_pose(obj_inst, new_pose))
 
     return None
 
 
-async def new_object_type_cb(req: srpc.o.NewObjectTypeRequest, ui: WsClient) -> None:
+async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) -> None:
 
     meta = req.args
 
@@ -249,20 +251,22 @@ async def new_object_type_cb(req: srpc.o.NewObjectTypeRequest, ui: WsClient) -> 
     glob.OBJECT_TYPES[meta.type] = ObjectTypeData(meta, type_def, actions, ast)
     add_ancestor_actions(meta.type, glob.OBJECT_TYPES)
 
-    asyncio.ensure_future(notif.broadcast_event(sevts.o.ChangedObjectTypesEvent(events.EventType.ADD, data=[meta])))
+    evt = sevts.o.ChangedObjectTypes([meta])
+    evt.change_type = events.Event.Type.ADD
+    asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 
 
-async def get_object_actions_cb(req: srpc.o.GetActionsRequest, ui: WsClient) -> srpc.o.GetActionsResponse:
+async def get_object_actions_cb(req: srpc.o.GetActions.Request, ui: WsClient) -> srpc.o.GetActions.Response:
 
     try:
-        return srpc.o.GetActionsResponse(data=list(glob.OBJECT_TYPES[req.args.type].actions.values()))
+        return srpc.o.GetActions.Response(data=list(glob.OBJECT_TYPES[req.args.type].actions.values()))
     except KeyError:
         raise Arcor2Exception(f"Unknown object type: '{req.args.type}'.")
 
 
-async def get_object_types_cb(req: srpc.o.GetObjectTypesRequest, ui: WsClient) -> srpc.o.GetObjectTypesResponse:
-    return srpc.o.GetObjectTypesResponse(data=[obj.meta for obj in glob.OBJECT_TYPES.values()])
+async def get_object_types_cb(req: srpc.o.GetObjectTypes.Request, ui: WsClient) -> srpc.o.GetObjectTypes.Response:
+    return srpc.o.GetObjectTypes.Response(data=[obj.meta for obj in glob.OBJECT_TYPES.values()])
 
 
 def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
@@ -271,7 +275,7 @@ def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
         raise Arcor2Exception(f"Object type used in scene '{scene.name}'.")
 
 
-async def delete_object_type_cb(req: srpc.o.DeleteObjectTypeRequest, ui: WsClient) -> None:
+async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClient) -> None:
 
     try:
         obj_type = glob.OBJECT_TYPES[req.args.id]
@@ -304,6 +308,7 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectTypeRequest, ui: WsClien
             glob.logger.error(e.message)
 
     del glob.OBJECT_TYPES[req.args.id]
-    asyncio.ensure_future(
-        notif.broadcast_event(sevts.o.ChangedObjectTypesEvent(events.EventType.REMOVE, data=[obj_type.meta]))
-    )
+
+    evt = sevts.o.ChangedObjectTypes([obj_type.meta])
+    evt.change_type = events.Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))

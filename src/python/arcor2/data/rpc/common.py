@@ -1,35 +1,38 @@
-import re
 from dataclasses import dataclass, field
 from typing import List, NamedTuple, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 
-"""
-mypy does not recognize __qualname__ so far: https://github.com/python/mypy/issues/6473
-flake8 sucks here as well: https://bugs.launchpad.net/pyflakes/+bug/1648651
-TODO: remove type: ignore once it is fixed
-"""
+class Arcor2Mixin(JsonSchemaMixin):
+    @classmethod
+    def get_qualname(cls) -> str:
+        return cls.__qualname__.split(".")[0]
 
 
-def wo_suffix(name: str) -> str:
-    return re.sub("Request$", "", name)
+class RPC:
+    """Base class for all RPCs."""
 
+    @dataclass
+    class Request(Arcor2Mixin):  # TODO from_dict -> check that request key is == to qualname
 
-@dataclass
-class Request(JsonSchemaMixin):
+        id: int
+        request: str = field(init=False)
 
-    id: int
-    request: str
+        def __post_init__(self) -> None:
+            self.request = self.get_qualname()
 
+    @dataclass
+    class Response(Arcor2Mixin):
 
-@dataclass
-class Response(JsonSchemaMixin):
+        id: int = 0
+        response: str = field(init=False)
+        result: bool = True
+        messages: Optional[List[str]] = None
+        # TODO define data here somehow? And check that if result==True there are some data
 
-    response: str = ""
-    id: int = 0
-    result: bool = True
-    messages: Optional[List[str]] = None
+        def __post_init__(self) -> None:
+            self.response = self.get_qualname()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -62,20 +65,15 @@ class RobotArg(JsonSchemaMixin):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class VersionRequest(Request):
+class Version(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    @dataclass
+    class Response(RPC.Response):
+        @dataclass
+        class Data(JsonSchemaMixin):
+            version: str = ""
 
-
-@dataclass
-class VersionData(JsonSchemaMixin):
-
-    version: str = ""
-
-
-@dataclass
-class VersionResponse(Response):
-
-    data: VersionData = field(default_factory=VersionData)
-    response: str = field(default=VersionRequest.request, init=False)
+        data: Optional[Data] = None

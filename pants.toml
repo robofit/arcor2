@@ -33,7 +33,8 @@ extra_requirements.add = [
   "flake8-annotations-coverage",
   "flake8-pytest-style",
   "flake8-bugbear",
-  "flake8-pantsbuild"
+  "flake8-pantsbuild",
+  "vulture"
 ]
 
 [mypy]

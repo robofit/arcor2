@@ -1,50 +1,41 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.rpc.common import Request, Response, wo_suffix
+from arcor2.data.rpc.common import RPC
 
 
-@dataclass
-class BuildProjectArgs(JsonSchemaMixin):
+class BuildProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        """Calls Build service to generate execution package and uploads it to
+        the Execution service."""
 
-    project_id: str
-    package_name: str
+        @dataclass
+        class Args(JsonSchemaMixin):
+            project_id: str
+            package_name: str
 
+        args: Args
 
-@dataclass
-class BuildProjectRequest(Request):
-    """Calls Build service to generate execution package and uploads it to the
-    Execution service."""
+    @dataclass
+    class Response(RPC.Response):
+        @dataclass
+        class Data(JsonSchemaMixin):
+            package_id: str
 
-    args: BuildProjectArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class BuildProjectData(JsonSchemaMixin):
-
-    package_id: str
-
-
-@dataclass
-class BuildProjectResponse(Response):
-
-    data: Optional[BuildProjectData] = None
-    response: str = field(default=BuildProjectRequest.request, init=False)
+        data: Optional[Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class TemporaryPackageRequest(Request):
+class TemporaryPackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class TemporaryPackageResponse(Response):
-
-    response: str = field(default=TemporaryPackageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
