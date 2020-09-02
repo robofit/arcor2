@@ -1,26 +1,22 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common
-from arcor2.data.events import Event, wo_suffix
+from arcor2.data.events import Event
 
 
 @dataclass
-class ShowMainScreenData(JsonSchemaMixin):
-    class WhatEnum(common.StrEnum):
+class ShowMainScreen(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        class WhatEnum(common.StrEnum):
+            ScenesList: str = "ScenesList"
+            ProjectsList: str = "ProjectsList"
+            PackagesList: str = "PackagesList"
 
-        ScenesList: str = "ScenesList"
-        ProjectsList: str = "ProjectsList"
-        PackagesList: str = "PackagesList"
+        what: WhatEnum
+        highlight: Optional[str] = None
 
-    what: WhatEnum
-    highlight: Optional[str] = None
-
-
-@dataclass
-class ShowMainScreenEvent(Event):
-
-    data: Optional[ShowMainScreenData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data

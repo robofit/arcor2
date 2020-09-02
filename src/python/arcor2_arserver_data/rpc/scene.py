@@ -5,7 +5,7 @@ from typing import List, Optional, Set
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdDesc, Parameter, Pose
-from arcor2.data.rpc.common import IdArgs, Request, Response, wo_suffix
+from arcor2.data.rpc.common import RPC, IdArgs
 
 
 @dataclass
@@ -18,302 +18,247 @@ class RenameArgs(JsonSchemaMixin):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class SceneObjectUsageRequest(Request):
+class SceneObjectUsage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs = field(metadata=dict(description="ID could be object or service."))
 
-    args: IdArgs = field(metadata=dict(description="ID could be object or service."))
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class SceneObjectUsageResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=SceneObjectUsageRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class AddObjectToSceneRequestArgs(JsonSchemaMixin):
+class AddObjectToScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            name: str
+            type: str
+            pose: Optional[Pose] = None
+            settings: List[Parameter] = field(default_factory=list)
 
-    name: str
-    type: str
-    pose: Optional[Pose] = None
-    settings: List[Parameter] = field(default_factory=list)
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class AddObjectToSceneRequest(Request):
-
-    args: AddObjectToSceneRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddObjectToSceneResponse(Response):
-
-    response: str = field(default=AddObjectToSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveFromSceneArgs(IdArgs):
+class RemoveFromScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(IdArgs):
+            force: bool = False
 
-    force: bool = False
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class RemoveFromSceneRequest(Request):
-
-    args: RemoveFromSceneArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RemoveFromSceneResponse(Response):
-    response: str = field(default=RemoveFromSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class SaveSceneRequest(Request):
+class SaveScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class SaveSceneResponse(Response):
-
-    response: str = field(default=SaveSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class OpenSceneRequest(Request):
+class OpenScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: IdArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: IdArgs
 
-
-@dataclass
-class OpenSceneResponse(Response):
-
-    response: str = field(default=OpenSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ListScenesRequest(Request):
+class ListScenes(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    @dataclass
+    class Response(RPC.Response):
+        @dataclass
+        class Data(IdDesc):
+            modified: Optional[datetime] = None
 
-
-@dataclass
-class ListScenesResponseData(IdDesc):
-
-    modified: Optional[datetime] = None
-
-
-@dataclass
-class ListScenesResponse(Response):
-
-    data: List[ListScenesResponseData] = field(default_factory=list)
-    response: str = field(default=ListScenesRequest.request, init=False)
+        data: Optional[List[Data]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class NewSceneRequestArgs(JsonSchemaMixin):
+class NewScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            name: str
+            desc: str = field(default_factory=str)
 
-    name: str
-    desc: str = field(default_factory=str)
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class NewSceneRequest(Request):
-
-    args: NewSceneRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class NewSceneResponse(Response):
-
-    response: str = field(default=NewSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class CloseSceneRequestArgs(JsonSchemaMixin):
+class CloseScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            force: bool = False
 
-    force: bool = False
+        args: Args = field(default_factory=Args)
+        dry_run: bool = False
 
-
-@dataclass
-class CloseSceneRequest(Request):
-
-    args: CloseSceneRequestArgs = field(default_factory=CloseSceneRequestArgs)
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class CloseSceneResponse(Response):
-
-    response: str = field(default=CloseSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateObjectPoseRequestArgs(JsonSchemaMixin):
+class UpdateObjectPose(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            object_id: str
+            pose: Pose
 
-    object_id: str
-    pose: Pose
+        args: Args
 
-
-@dataclass
-class UpdateObjectPoseRequest(Request):
-
-    args: UpdateObjectPoseRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateObjectPoseResponse(Response):
-
-    response: str = field(default=UpdateObjectPoseRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenameObjectRequest(Request):
+class RenameObject(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: RenameArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: RenameArgs
+        dry_run: bool = False
 
-
-@dataclass
-class RenameObjectResponse(Response):
-
-    response: str = field(default=RenameObjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenameSceneRequest(Request):
+class RenameScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: RenameArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: RenameArgs
+        dry_run: bool = False
 
-
-@dataclass
-class RenameSceneResponse(Response):
-
-    response: str = field(default=RenameSceneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class DeleteSceneRequest(Request):
+class DeleteScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: IdArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: IdArgs
+        dry_run: bool = False
 
+    @dataclass
+    class Response(RPC.Response):
 
-@dataclass
-class DeleteSceneResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=DeleteSceneRequest.request, init=False)
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ProjectsWithSceneRequest(Request):
+class ProjectsWithScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: IdArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: IdArgs
 
+    @dataclass
+    class Response(RPC.Response):
 
-@dataclass
-class ProjectsWithSceneResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=ProjectsWithSceneRequest.request, init=False)
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateSceneDescriptionArgs(JsonSchemaMixin):
+class UpdateSceneDescription(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            scene_id: str
+            new_description: str
 
-    scene_id: str
-    new_description: str
+        args: Args
 
-
-@dataclass
-class UpdateSceneDescriptionRequest(Request):
-
-    args: UpdateSceneDescriptionArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateSceneDescriptionResponse(Response):
-
-    response: str = field(default=UpdateSceneDescriptionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class CopySceneArgs(JsonSchemaMixin):
+class CopyScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            source_id: str
+            target_name: str
 
-    source_id: str
-    target_name: str
+        args: Args
 
+    @dataclass
+    class Response(RPC.Response):
 
-@dataclass
-class CopySceneRequest(Request):
-
-    args: CopySceneArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class CopySceneResponse(Response):
-
-    data: str = ""
-    response: str = field(default=CopySceneRequest.request, init=False)
+        data: Optional[str] = None

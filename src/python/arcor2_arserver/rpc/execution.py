@@ -9,7 +9,7 @@ from arcor2_arserver.execution import build_and_upload_package, run_temp_package
 from arcor2_arserver_data import rpc
 
 
-async def build_project_cb(req: rpc.b.BuildProjectRequest, ui: WsClient) -> rpc.b.BuildProjectResponse:
+async def build_project_cb(req: rpc.b.BuildProject.Request, ui: WsClient) -> rpc.b.BuildProject.Response:
     """Builds project and uploads resulting package to the execution unit.
 
     :param req:
@@ -19,13 +19,13 @@ async def build_project_cb(req: rpc.b.BuildProjectRequest, ui: WsClient) -> rpc.
 
     package_id = await build_and_upload_package(req.args.project_id, req.args.package_name)
 
-    resp = rpc.b.BuildProjectResponse()
-    resp.data = rpc.b.BuildProjectData(package_id)
+    resp = rpc.b.BuildProject.Response()
+    resp.data = resp.Data(package_id)
     return resp
 
 
 @decorators.project_needed
-async def temporary_package_cb(req: rpc.b.TemporaryPackageRequest, ui: WsClient) -> None:
+async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
 

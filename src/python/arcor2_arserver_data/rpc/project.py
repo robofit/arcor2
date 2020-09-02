@@ -5,885 +5,709 @@ from typing import List, Optional
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import ActionParameter, Flow, IdDesc, Joint, Orientation, Position, ProjectLogicIf
-from arcor2.data.rpc.common import IdArgs, Request, Response, RobotArg, wo_suffix
+from arcor2.data.rpc.common import RPC, IdArgs, RobotArg
 
 
-@dataclass
-class NewProjectRequestArgs(JsonSchemaMixin):
+class NewProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            scene_id: str
+            name: str
+            desc: str = field(default_factory=str)
+            has_logic: bool = True
 
-    scene_id: str
-    name: str
-    desc: str = field(default_factory=str)
-    has_logic: bool = True
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class NewProjectRequest(Request):
-
-    args: NewProjectRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class NewProjectResponse(Response):
-
-    response: str = field(default=NewProjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class CloseProjectRequestArgs(JsonSchemaMixin):
+class CloseProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            force: bool = False
 
-    force: bool = False
+        args: Args = field(default_factory=Args)
+        dry_run: bool = False
 
-
-@dataclass
-class CloseProjectRequest(Request):
-
-    args: CloseProjectRequestArgs = field(default_factory=CloseProjectRequestArgs)
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class CloseProjectResponse(Response):
-
-    response: str = field(default=CloseProjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class SaveProjectRequest(Request):
+class SaveProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class SaveProjectResponse(Response):
-
-    response: str = field(default=SaveProjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class OpenProjectRequest(Request):
+class OpenProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs
 
-    args: IdArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class OpenProjectResponse(Response):
-
-    response: str = field(default=OpenProjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ListProjectsResponseData(IdDesc):
+class ListProjects(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    scene_id: str = field(default_factory=str)
-    valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
-    executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
-    problems: List[str] = field(default_factory=list)
-    modified: Optional[datetime] = None
+    @dataclass
+    class Response(RPC.Response):
+        @dataclass
+        class Data(IdDesc):
+            scene_id: str
+            valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
+            executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
+            problems: List[str] = field(default_factory=list)
+            modified: Optional[datetime] = None
 
-
-@dataclass
-class ListProjectsRequest(Request):
-
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class ListProjectsResponse(Response):
-
-    data: List[ListProjectsResponseData] = field(default_factory=list)
-    response: str = field(default=ListProjectsRequest.request, init=False)
+        data: Optional[List[Data]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ExecuteActionArgs(JsonSchemaMixin):
+class ExecuteAction(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_id: str = field(metadata=dict(description="ID of the action to be executed."))
 
-    action_id: str = field(metadata=dict(description="ID of the action to be executed."))
+        args: Args
 
-
-@dataclass
-class ExecuteActionRequest(Request):
-
-    args: ExecuteActionArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class ExecuteActionResponse(Response):
-
-    response: str = field(default=ExecuteActionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class CancelActionRequest(Request):
+class CancelAction(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class CancelActionResponse(Response):
-
-    response: str = field(default=CancelActionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class AddActionPointArgs(JsonSchemaMixin):
+class AddActionPoint(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            name: str
+            position: Position
+            parent: Optional[str] = None
 
-    name: str
-    position: Position
-    parent: Optional[str] = None
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class AddActionPointRequest(Request):
-
-    args: AddActionPointArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddActionPointResponse(Response):
-
-    response: str = field(default=AddActionPointRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveActionPointRequest(Request):
+class RemoveActionPoint(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: IdArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: IdArgs
+        dry_run: bool = False
 
-
-@dataclass
-class RemoveActionPointResponse(Response):
-
-    response: str = field(default=RemoveActionPointRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class AddActionPointJointsUsingRobotRequestArgs(JsonSchemaMixin):
+class AddActionPointJointsUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            robot_id: str
+            name: str = "default"
 
-    action_point_id: str
-    robot_id: str
-    name: str = "default"
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class AddActionPointJointsUsingRobotRequest(Request):
-
-    args: AddActionPointJointsUsingRobotRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddActionPointJointsUsingRobotResponse(Response):
-
-    response: str = field(default=AddActionPointJointsUsingRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenameActionPointRequestArgs(JsonSchemaMixin):
+class RenameActionPoint(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            new_name: str
 
-    action_point_id: str
-    new_name: str
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class RenameActionPointRequest(Request):
-
-    args: RenameActionPointRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RenameActionPointResponse(Response):
-
-    response: str = field(default=RenameActionPointRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointParentRequestArgs(JsonSchemaMixin):
+class UpdateActionPointParent(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            new_parent_id: str
 
-    action_point_id: str
-    new_parent_id: str
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class UpdateActionPointParentRequest(Request):
-
-    args: UpdateActionPointParentRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointParentResponse(Response):
-
-    response: str = field(default=UpdateActionPointParentRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointPositionRequestArgs(JsonSchemaMixin):
+class UpdateActionPointPosition(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            new_position: Position
 
-    action_point_id: str
-    new_position: Position
+        args: Args
 
-
-@dataclass
-class UpdateActionPointPositionRequest(Request):
-
-    args: UpdateActionPointPositionRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointPositionResponse(Response):
-
-    response: str = field(default=UpdateActionPointPositionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointUsingRobotRequestArgs(JsonSchemaMixin):
+class UpdateActionPointUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            robot: RobotArg
 
-    action_point_id: str
-    robot: RobotArg
+        args: Args
 
-
-@dataclass
-class UpdateActionPointUsingRobotRequest(Request):
-
-    args: UpdateActionPointUsingRobotRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointUsingRobotResponse(Response):
-
-    response: str = field(default=UpdateActionPointUsingRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class AddActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
+class AddActionPointOrientationUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            robot: RobotArg
+            name: str = "default"
 
-    action_point_id: str
-    robot: RobotArg
-    name: str = "default"
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class AddActionPointOrientationUsingRobotRequest(Request):
-
-    args: AddActionPointOrientationUsingRobotRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddActionPointOrientationUsingRobotResponse(Response):
-
-    response: str = field(default=AddActionPointOrientationUsingRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointOrientationUsingRobotRequestArgs(JsonSchemaMixin):
+class UpdateActionPointOrientationUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            orientation_id: str
+            robot: RobotArg
 
-    orientation_id: str
-    robot: RobotArg
+        args: Args
 
-
-@dataclass
-class UpdateActionPointOrientationUsingRobotRequest(Request):
-
-    args: UpdateActionPointOrientationUsingRobotRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointOrientationUsingRobotResponse(Response):
-
-    response: str = field(default=UpdateActionPointOrientationUsingRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class AddActionPointOrientationRequestArgs(JsonSchemaMixin):
+class AddActionPointOrientation(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            orientation: Orientation
+            name: str = "default"
 
-    action_point_id: str
-    orientation: Orientation
-    name: str = "default"
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class AddActionPointOrientationRequest(Request):
-
-    args: AddActionPointOrientationRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddActionPointOrientationResponse(Response):
-
-    response: str = field(default=AddActionPointOrientationRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointOrientationRequestArgs(JsonSchemaMixin):
+class UpdateActionPointOrientation(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            orientation_id: str
+            orientation: Orientation
 
-    orientation_id: str
-    orientation: Orientation
+        args: Args
 
-
-@dataclass
-class UpdateActionPointOrientationRequest(Request):
-
-    args: UpdateActionPointOrientationRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointOrientationResponse(Response):
-
-    response: str = field(default=UpdateActionPointOrientationRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveActionPointOrientationRequestArgs(JsonSchemaMixin):
-    orientation_id: str
+class RemoveActionPointOrientation(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            orientation_id: str
 
+        args: Args
+        dry_run: bool = False
 
-@dataclass
-class RemoveActionPointOrientationRequest(Request):
-    args: RemoveActionPointOrientationRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RemoveActionPointOrientationResponse(Response):
-    response: str = field(default=RemoveActionPointOrientationRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class AddActionRequestArgs(JsonSchemaMixin):
-
-    action_point_id: str
-    name: str
-    type: str
-    parameters: List[ActionParameter] = field(default_factory=list)
-    flows: List[Flow] = field(default_factory=list)
-
-
-@dataclass
-class AddActionRequest(Request):
-
-    args: AddActionRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddActionResponse(Response):
-
-    response: str = field(default=AddActionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionRequestArgs(JsonSchemaMixin):
+class AddAction(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_point_id: str
+            name: str
+            type: str
+            parameters: List[ActionParameter] = field(default_factory=list)
+            flows: List[Flow] = field(default_factory=list)
 
-    action_id: str
-    parameters: Optional[List[ActionParameter]] = None
-    flows: Optional[List[Flow]] = None
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class UpdateActionRequest(Request):
-
-    args: UpdateActionRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionResponse(Response):
-
-    response: str = field(default=UpdateActionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveActionRequest(Request):
+class UpdateAction(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_id: str
+            parameters: Optional[List[ActionParameter]] = None
+            flows: Optional[List[Flow]] = None
 
-    args: IdArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class RemoveActionResponse(Response):
-
-    response: str = field(default=RemoveActionRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class AddLogicItemArgs(JsonSchemaMixin):
-
-    start: str
-    end: str
-    condition: Optional[ProjectLogicIf] = None
-
-
-@dataclass
-class AddLogicItemRequest(Request):
-
-    args: AddLogicItemArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddLogicItemResponse(Response):
-
-    response: str = field(default=AddLogicItemRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateLogicItemArgs(JsonSchemaMixin):
+class RemoveAction(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    logic_item_id: str
-    start: str
-    end: str
-    condition: Optional[ProjectLogicIf] = None
+        args: IdArgs
+        dry_run: bool = False
 
-
-@dataclass
-class UpdateLogicItemRequest(Request):
-
-    args: UpdateLogicItemArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateLogicItemResponse(Response):
-
-    response: str = field(default=UpdateLogicItemRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveLogicItemArgs(JsonSchemaMixin):
+class AddLogicItem(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            start: str
+            end: str
+            condition: Optional[ProjectLogicIf] = None
 
-    logic_item_id: str
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class RemoveLogicItemRequest(Request):
-
-    args: RemoveLogicItemArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RemoveLogicItemResponse(Response):
-
-    response: str = field(default=RemoveLogicItemRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointJointsRequestArgs(JsonSchemaMixin):
+class UpdateLogicItem(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            logic_item_id: str
+            start: str
+            end: str
+            condition: Optional[ProjectLogicIf] = None
 
-    joints_id: str = "default"
-    joints: List[Joint] = field(default_factory=list)
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class UpdateActionPointJointsRequest(Request):
-
-    args: UpdateActionPointJointsRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointJointsResponse(Response):
-
-    response: str = field(default=UpdateActionPointJointsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateActionPointJointsUsingRobotRequestArgs(JsonSchemaMixin):
+class RemoveLogicItem(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            logic_item_id: str
 
-    joints_id: str = "default"
+        args: Args
 
-
-@dataclass
-class UpdateActionPointJointsUsingRobotRequest(Request):
-
-    args: UpdateActionPointJointsUsingRobotRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateActionPointJointsUsingRobotResponse(Response):
-
-    response: str = field(default=UpdateActionPointJointsUsingRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveActionPointJointsRequestArgs(JsonSchemaMixin):
+class UpdateActionPointJoints(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            joints_id: str
+            joints: List[Joint]
 
-    joints_id: str
+        args: Args
 
-
-@dataclass
-class RemoveActionPointJointsRequest(Request):
-
-    args: RemoveActionPointJointsRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RemoveActionPointJointsResponse(Response):
-
-    response: str = field(default=RemoveActionPointJointsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class DeleteProjectRequest(Request):
+class UpdateActionPointJointsUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            joints_id: str = "default"
 
-    args: IdArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: Args
 
-
-@dataclass
-class DeleteProjectResponse(Response):
-
-    response: str = field(default=DeleteProjectRequest.request, init=False)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
-class RenameProjectRequestArgs(JsonSchemaMixin):
-
-    project_id: str
-    new_name: str
-
-
-@dataclass
-class RenameProjectRequest(Request):
-
-    args: RenameProjectRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RenameProjectResponse(Response):
-
-    response: str = field(default=RenameProjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class CopyProjectRequestArgs(JsonSchemaMixin):
+class RemoveActionPointJoints(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            joints_id: str
 
-    source_id: str
-    target_name: str
+        args: Args
 
-
-@dataclass
-class CopyProjectRequest(Request):
-
-    args: CopyProjectRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class CopyProjectResponse(Response):
-
-    response: str = field(default=CopyProjectRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateProjectDescriptionRequestArgs(JsonSchemaMixin):
+class DeleteProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs
 
-    project_id: str
-    new_description: str
-
-
-@dataclass
-class UpdateProjectDescriptionRequest(Request):
-
-    args: UpdateProjectDescriptionRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateProjectDescriptionResponse(Response):
-
-    response: str = field(default=UpdateProjectDescriptionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateProjectHasLogicRequestArgs(JsonSchemaMixin):
+class RenameProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            project_id: str
+            new_name: str
 
-    project_id: str
-    new_has_logic: bool
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class UpdateProjectHasLogicRequest(Request):
-
-    args: UpdateProjectHasLogicRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateProjectHasLogicResponse(Response):
-
-    response: str = field(default=UpdateProjectHasLogicRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenameActionPointJointsRequestArgs(JsonSchemaMixin):
+class CopyProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            source_id: str
+            target_name: str
 
-    joints_id: str
-    new_name: str
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class RenameActionPointJointsRequest(Request):
-
-    args: RenameActionPointJointsRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RenameActionPointJointsResponse(Response):
-
-    response: str = field(default=RenameActionPointJointsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenameActionPointOrientationRequestArgs(JsonSchemaMixin):
+class UpdateProjectDescription(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            project_id: str
+            new_description: str
 
-    orientation_id: str
-    new_name: str
+        args: Args
 
-
-@dataclass
-class RenameActionPointOrientationRequest(Request):
-
-    args: RenameActionPointOrientationRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RenameActionPointOrientationResponse(Response):
-
-    response: str = field(default=RenameActionPointOrientationRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RenameActionRequestArgs(JsonSchemaMixin):
+class UpdateProjectHasLogic(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            project_id: str
+            new_has_logic: bool
 
-    action_id: str
-    new_name: str
+        args: Args
 
-
-@dataclass
-class RenameActionRequest(Request):
-
-    args: RenameActionRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RenameActionResponse(Response):
-
-    response: str = field(default=RenameActionRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class AddConstantRequestArgs(JsonSchemaMixin):
+class RenameActionPointJoints(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            joints_id: str
+            new_name: str
 
-    name: str
-    type: str
-    value: str
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class AddConstantRequest(Request):
-
-    args: AddConstantRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class AddConstantResponse(Response):
-
-    response: str = field(default=AddConstantRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class UpdateConstantRequestArgs(JsonSchemaMixin):
+class RenameActionPointOrientation(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            orientation_id: str
+            new_name: str
 
-    constant_id: str
-    name: Optional[str] = None
-    value: Optional[str] = None
+        args: Args
+        dry_run: bool = False
 
-
-@dataclass
-class UpdateConstantRequest(Request):
-
-    args: UpdateConstantRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateConstantResponse(Response):
-
-    response: str = field(default=UpdateConstantRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveConstantRequestArgs(JsonSchemaMixin):
+class RenameAction(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            action_id: str
+            new_name: str
 
-    constant_id: str
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
-@dataclass
-class RemoveConstantRequest(Request):
-
-    args: RemoveConstantRequestArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+# ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class RemoveConstantResponse(Response):
+class AddConstant(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            name: str
+            type: str
+            value: str
 
-    response: str = field(default=RemoveConstantRequest.request, init=False)
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class UpdateConstant(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            constant_id: str
+            name: Optional[str] = None
+            value: Optional[str] = None
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class RemoveConstant(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            constant_id: str
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass

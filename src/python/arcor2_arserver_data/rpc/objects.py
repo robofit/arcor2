@@ -1,211 +1,173 @@
 from dataclasses import dataclass, field
-from typing import List, Set
+from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdValue, StrEnum
 from arcor2.data.object_type import MeshList
-from arcor2.data.rpc.common import IdArgs, Request, Response, RobotArg, TypeArgs, wo_suffix
+from arcor2.data.rpc.common import RPC, IdArgs, RobotArg, TypeArgs
 from arcor2_arserver_data.objects import ObjectActions, ObjectTypeMeta
 
 
-@dataclass
-class ActionParamValuesArgs(JsonSchemaMixin):
+class ActionParamValues(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str = field(metadata=dict(description="Object or service id."))
+            param_id: str
+            parent_params: List[IdValue] = field(default_factory=list)
 
-    id: str = field(metadata=dict(description="Object or service id."))
-    param_id: str
-    parent_params: List[IdValue] = field(default_factory=list)
+        args: Args
 
+    @dataclass
+    class Response(RPC.Response):
 
-@dataclass
-class ActionParamValuesRequest(Request):
-
-    args: ActionParamValuesArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class ActionParamValuesResponse(Response):
-
-    data: Set[str] = field(default_factory=set)  # TODO what about other (possible) types?
-    response: str = field(default=ActionParamValuesRequest.request, init=False)
+        data: Optional[Set[str]] = None  # TODO what about other (possible) types than 'str'?
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetObjectTypesRequest(Request):
+class GetObjectTypes(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetObjectTypesResponse(Response):
-
-    data: List[ObjectTypeMeta] = field(default_factory=list)
-    response: str = field(default=GetObjectTypesRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[List[ObjectTypeMeta]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class DeleteObjectTypeRequest(Request):
+class DeleteObjectType(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: IdArgs
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: IdArgs
+        dry_run: bool = False
 
-
-@dataclass
-class DeleteObjectTypeResponse(Response):
-
-    response: str = field(default=DeleteObjectTypeRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetActionsRequest(Request):
+class GetActions(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: TypeArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: TypeArgs
 
+    @dataclass
+    class Response(RPC.Response):
 
-@dataclass
-class GetActionsResponse(Response):
-
-    data: ObjectActions = field(default_factory=list)
-    response: str = field(default=GetActionsRequest.request, init=False)
+        data: Optional[ObjectActions] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class NewObjectTypeRequest(Request):
+class NewObjectType(RPC):
+    @dataclass
+    class Request(RPC.Request):
 
-    args: ObjectTypeMeta
-    dry_run: bool = False
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+        args: ObjectTypeMeta
+        dry_run: bool = False
 
-
-@dataclass
-class NewObjectTypeResponse(Response):
-
-    response: str = field(default=NewObjectTypeRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class FocusObjectStartRequestArgs(JsonSchemaMixin):
+class FocusObjectStart(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            object_id: str
+            robot: RobotArg
 
-    object_id: str
-    robot: RobotArg
+        args: Args
 
-
-@dataclass
-class FocusObjectStartRequest(Request):
-
-    args: FocusObjectStartRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class FocusObjectStartResponse(Response):
-
-    response: str = field(default=FocusObjectStartRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class FocusObjectRequestArgs(JsonSchemaMixin):
+class FocusObject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            object_id: str
+            point_idx: int
 
-    object_id: str
-    point_idx: int
+        args: Args
 
+    @dataclass
+    class Response(RPC.Response):
+        @dataclass
+        class Data(JsonSchemaMixin):
+            finished_indexes: List[int]
 
-@dataclass
-class FocusObjectRequest(Request):
-
-    args: FocusObjectRequestArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class FocusObjectResponseData(JsonSchemaMixin):
-
-    finished_indexes: List[int] = field(default_factory=list)
-
-
-@dataclass
-class FocusObjectResponse(Response):
-
-    data: FocusObjectResponseData = field(default_factory=FocusObjectResponseData)
-    response: str = field(default=FocusObjectRequest.request, init=False)
+        data: Optional[Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class FocusObjectDoneRequest(Request):
+class FocusObjectDone(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs
 
-    args: IdArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class FocusObjectDoneResponse(Response):
-
-    data: FocusObjectResponseData = field(default_factory=FocusObjectResponseData)
-    response: str = field(default=FocusObjectDoneRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[FocusObject.Response.Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class PivotEnum(StrEnum):
-    TOP: str = "top"
-    MIDDLE: str = "middle"
-    BOTTOM: str = "bottom"
+class UpdateObjectPoseUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(IdArgs):
+            class PivotEnum(StrEnum):
+                TOP: str = "top"
+                MIDDLE: str = "middle"
+                BOTTOM: str = "bottom"
 
+            robot: RobotArg
+            pivot: PivotEnum = PivotEnum.MIDDLE
 
-@dataclass
-class UpdateObjectPoseUsingRobotArgs(IdArgs):
+        args: Args
 
-    robot: RobotArg
-    pivot: PivotEnum = PivotEnum.MIDDLE
-
-
-@dataclass
-class UpdateObjectPoseUsingRobotRequest(Request):
-
-    args: UpdateObjectPoseUsingRobotArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class UpdateObjectPoseUsingRobotResponse(Response):
-
-    response: str = field(default=UpdateObjectPoseUsingRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class ListMeshesRequest(Request):
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+class ListMeshes(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-
-@dataclass
-class ListMeshesResponse(Response):
-    data: MeshList = field(default_factory=list)
-    response: str = field(default=ListMeshesRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[MeshList] = None

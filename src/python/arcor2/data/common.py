@@ -441,49 +441,13 @@ class ProjectSources(JsonSchemaMixin):
 class IdDesc(JsonSchemaMixin):
     id: str
     name: str
-    desc: Optional[str] = None
+    desc: Optional[str]
 
 
 @dataclass
 class IdDescList(JsonSchemaMixin):
 
     items: List[IdDesc] = field(default_factory=list)
-
-
-class PackageStateEnum(Enum):
-
-    RUNNING: str = "running"
-    STOPPED: str = "stopped"
-    PAUSED: str = "paused"
-    UNDEFINED: str = "undefined"
-
-
-class ActionStateEnum(Enum):
-
-    BEFORE: str = "before"
-    AFTER: str = "after"
-
-
-@dataclass
-class ActionState(JsonSchemaMixin):
-
-    object_id: str = ""
-    method: str = ""
-    where: ActionStateEnum = ActionStateEnum.BEFORE
-
-
-@dataclass
-class PackageState(JsonSchemaMixin):
-
-    state: PackageStateEnum = PackageStateEnum.UNDEFINED
-    package_id: Optional[str] = None
-
-
-@dataclass
-class CurrentAction(JsonSchemaMixin):
-
-    action_id: str = ""
-    args: List[ActionParameter] = field(default_factory=list)
 
 
 @dataclass

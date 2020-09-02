@@ -1,262 +1,205 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import Joint, Orientation, Pose, Position, StrEnum
-from arcor2.data.rpc.common import Request, Response, wo_suffix
+from arcor2.data.rpc.common import RPC
 from arcor2_arserver_data.robot import RobotMeta
 
 
-@dataclass
-class GetRobotMetaRequest(Request):
+class GetRobotMeta(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
 
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetRobotMetaResponse(Response):
-
-    data: List[RobotMeta] = field(default_factory=list)
-    response: str = field(default=GetRobotMetaRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[List[RobotMeta]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetRobotJointsArgs(JsonSchemaMixin):
+class GetRobotJoints(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
 
-    robot_id: str
+        args: Args
 
-
-@dataclass
-class GetRobotJointsRequest(Request):
-
-    args: GetRobotJointsArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetRobotJointsResponse(Response):
-
-    data: List[Joint] = field(default_factory=list)
-    response: str = field(default=GetRobotJointsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[List[Joint]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetEndEffectorPoseArgs(JsonSchemaMixin):
+class GetEndEffectorPose(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            end_effector_id: str
 
-    robot_id: str
-    end_effector_id: str
+        args: Args
 
-
-@dataclass
-class GetEndEffectorPoseRequest(Request):
-
-    args: GetEndEffectorPoseArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetEndEffectorPoseResponse(Response):
-
-    data: Pose = field(default_factory=Pose)
-    response: str = field(default=GetEndEffectorPoseRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Pose] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetEndEffectorsArgs(JsonSchemaMixin):
+class GetEndEffectors(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
 
-    robot_id: str
+        args: Args
 
-
-@dataclass
-class GetEndEffectorsRequest(Request):
-
-    args: GetEndEffectorsArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetEndEffectorsResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=GetEndEffectorsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetGrippersArgs(JsonSchemaMixin):
+class GetGrippers(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
 
-    robot_id: str
+        args: Args
 
-
-@dataclass
-class GetGrippersRequest(Request):
-
-    args: GetGrippersArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetGrippersResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=GetGrippersRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class GetSuctionsArgs(JsonSchemaMixin):
+class GetSuctions(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
 
-    robot_id: str
+        args: Args
 
-
-@dataclass
-class GetSuctionsRequest(Request):
-
-    args: GetSuctionsArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class GetSuctionsResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=GetSuctionsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class RegisterEnum(StrEnum):
+class RegisterForRobotEvent(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            class RegisterEnum(StrEnum):
+                EEF_POSE: str = "eef_pose"
+                JOINTS: str = "joints"
 
-    EEF_POSE: str = "eef_pose"
-    JOINTS: str = "joints"
+            robot_id: str
+            what: RegisterEnum
+            send: bool
 
+        args: Args
 
-@dataclass
-class RegisterForRobotEventArgs(JsonSchemaMixin):
-
-    robot_id: str
-    what: RegisterEnum
-    send: bool
-
-
-@dataclass
-class RegisterForRobotEventRequest(Request):
-
-    args: RegisterForRobotEventArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class RegisterForRobotEventResponse(Response):
-
-    data: Set[str] = field(default_factory=set)
-    response: str = field(default=RegisterForRobotEventRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class MoveToPoseArgs(JsonSchemaMixin):
+class MoveToPose(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            end_effector_id: str
+            speed: float
+            position: Optional[Position]
+            orientation: Optional[Orientation]
 
-    robot_id: str
-    end_effector_id: str
-    speed: float
-    position: Optional[Position]
-    orientation: Optional[Orientation]
+        args: Args
 
-
-@dataclass
-class MoveToPoseRequest(Request):
-
-    args: MoveToPoseArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class MoveToPoseResponse(Response):
-    response: str = field(default=MoveToPoseRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class StopRobotArgs(JsonSchemaMixin):
+class StopRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
 
-    robot_id: str
+        args: Args
 
-
-@dataclass
-class StopRobotRequest(Request):
-
-    args: StopRobotArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class StopRobotResponse(Response):
-    response: str = field(default=StopRobotRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class MoveToJointsArgs(JsonSchemaMixin):
+class MoveToJoints(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            speed: float
+            joints: List[Joint]
 
-    robot_id: str
-    speed: float
-    joints: List[Joint]
+        args: Args
 
-
-@dataclass
-class MoveToJointsRequest(Request):
-
-    args: MoveToJointsArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class MoveToJointsResponse(Response):
-    response: str = field(default=MoveToJointsRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@dataclass
-class MoveToActionPointArgs(JsonSchemaMixin):
+class MoveToActionPoint(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            speed: float
+            end_effector_id: Optional[str] = None
+            orientation_id: Optional[str] = None
+            joints_id: Optional[str] = None
 
-    robot_id: str
-    speed: float
-    end_effector_id: Optional[str] = None
-    orientation_id: Optional[str] = None
-    joints_id: Optional[str] = None
+        args: Args
 
-
-@dataclass
-class MoveToActionPointRequest(Request):
-
-    args: MoveToActionPointArgs
-    request: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class MoveToActionPointResponse(Response):
-    response: str = field(default=MoveToActionPointRequest.request, init=False)
+    @dataclass
+    class Response(RPC.Response):
+        pass

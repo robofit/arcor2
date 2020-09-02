@@ -14,7 +14,7 @@ from typing import Any, Callable, Tuple, Type, TypeVar
 import semver  # type: ignore
 from aiologger.formatters.base import Formatter  # type: ignore
 
-from arcor2.data.events import ProjectExceptionEvent, ProjectExceptionEventData
+from arcor2.data.events import ProjectException
 from arcor2.exceptions import Arcor2Exception
 
 LOG_FORMAT = "%(name)s - %(levelname)-8s: %(message)s"
@@ -110,9 +110,9 @@ def format_stacktrace() -> str:
 def print_exception(e: Exception) -> None:
 
     if isinstance(e, Arcor2Exception):
-        pee = ProjectExceptionEvent(data=ProjectExceptionEventData(e.message, e.__class__.__name__, True))
+        pee = ProjectException(ProjectException.Data(e.message, e.__class__.__name__, True))
     else:
-        pee = ProjectExceptionEvent(data=ProjectExceptionEventData(str(e), e.__class__.__name__))
+        pee = ProjectException(ProjectException.Data(str(e), e.__class__.__name__))
 
     print(pee.to_json())
     sys.stdout.flush()

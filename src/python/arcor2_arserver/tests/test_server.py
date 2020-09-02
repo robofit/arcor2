@@ -9,7 +9,7 @@ import pytest  # type: ignore
 from arcor2.clients import persistent_storage
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
-from arcor2.data.events import Event, EventType
+from arcor2.data.events import Event
 from arcor2.data.rpc.common import IdArgs
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.time_actions import TimeActions
@@ -102,12 +102,12 @@ def wait_for_event(ars: ARServer, evt_type: Type[E]) -> E:
 @pytest.fixture()
 def scene(ars: ARServer) -> common.Scene:
 
-    assert isinstance(ars.get_event(), events.c.ShowMainScreenEvent)
+    assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
     test = "Test scene"
 
     assert ars.call_rpc(
-        rpc.s.NewSceneRequest(uid(), rpc.s.NewSceneRequestArgs(test, test)), rpc.s.NewSceneResponse
+        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args(test, test)), rpc.s.NewScene.Response
     ).result
 
     scene_evt = event(ars, events.s.OpenScene)
@@ -116,11 +116,11 @@ def scene(ars: ARServer) -> common.Scene:
     test_type = "TestType"
 
     assert ars.call_rpc(
-        rpc.o.NewObjectTypeRequest(uid(), objects.ObjectTypeMeta(test_type, base=Generic.__name__)),
-        rpc.o.NewObjectTypeResponse,
+        rpc.o.NewObjectType.Request(uid(), objects.ObjectTypeMeta(test_type, base=Generic.__name__)),
+        rpc.o.NewObjectType.Response,
     ).result
 
-    tt_evt = event(ars, events.o.ChangedObjectTypesEvent)
+    tt_evt = event(ars, events.o.ChangedObjectTypes)
 
     assert len(tt_evt.data) == 1
     assert not tt_evt.data[0].has_pose
@@ -128,8 +128,8 @@ def scene(ars: ARServer) -> common.Scene:
     assert tt_evt.data[0].base == Generic.__name__
 
     assert ars.call_rpc(
-        rpc.s.AddObjectToSceneRequest(uid(), rpc.s.AddObjectToSceneRequestArgs("test_type", test_type)),
-        rpc.s.AddObjectToSceneResponse,
+        rpc.s.AddObjectToScene.Request(uid(), rpc.s.AddObjectToScene.Request.Args("test_type", test_type)),
+        rpc.s.AddObjectToScene.Response,
     ).result
 
     event(ars, events.s.SceneObjectChanged)
@@ -137,28 +137,28 @@ def scene(ars: ARServer) -> common.Scene:
     test_type_with_pose = "TestTypeWithPose"
 
     assert ars.call_rpc(
-        rpc.o.NewObjectTypeRequest(uid(), objects.ObjectTypeMeta(test_type_with_pose, base=GenericWithPose.__name__)),
-        rpc.o.NewObjectTypeResponse,
+        rpc.o.NewObjectType.Request(uid(), objects.ObjectTypeMeta(test_type_with_pose, base=GenericWithPose.__name__)),
+        rpc.o.NewObjectType.Response,
     ).result
 
-    ttwp_evt = event(ars, events.o.ChangedObjectTypesEvent)
+    ttwp_evt = event(ars, events.o.ChangedObjectTypes)
     assert len(ttwp_evt.data) == 1
     assert ttwp_evt.data[0].has_pose
     assert ttwp_evt.data[0].type == test_type_with_pose
     assert ttwp_evt.data[0].base == GenericWithPose.__name__
 
     assert ars.call_rpc(
-        rpc.s.AddObjectToSceneRequest(uid(), rpc.s.AddObjectToSceneRequestArgs("test_type_with_pose", test_type)),
-        rpc.s.AddObjectToSceneResponse,
+        rpc.s.AddObjectToScene.Request(uid(), rpc.s.AddObjectToScene.Request.Args("test_type_with_pose", test_type)),
+        rpc.s.AddObjectToScene.Response,
     ).result
 
     event(ars, events.s.SceneObjectChanged)
 
-    assert ars.call_rpc(rpc.s.SaveSceneRequest(uid()), rpc.s.SaveSceneResponse).result
+    assert ars.call_rpc(rpc.s.SaveScene.Request(uid()), rpc.s.SaveScene.Response).result
     event(ars, events.s.SceneSaved)
-    assert ars.call_rpc(rpc.s.CloseSceneRequest(uid()), rpc.s.CloseSceneResponse).result
+    assert ars.call_rpc(rpc.s.CloseScene.Request(uid()), rpc.s.CloseScene.Response).result
     event(ars, events.s.SceneClosed)
-    event(ars, events.c.ShowMainScreenEvent)
+    event(ars, events.c.ShowMainScreen)
 
     return scene_evt.data.scene
 
@@ -169,17 +169,17 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     test = "Test"
 
     # initial event
-    show_main_screen_event = event(ars, events.c.ShowMainScreenEvent)
+    show_main_screen_event = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event.data
-    assert show_main_screen_event.data.what == events.c.ShowMainScreenData.WhatEnum.ScenesList
+    assert show_main_screen_event.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
 
     # first, there are no scenes
-    scenes = ars.call_rpc(rpc.s.ListScenesRequest(uid()), rpc.s.ListScenesResponse)
+    scenes = ars.call_rpc(rpc.s.ListScenes.Request(uid()), rpc.s.ListScenes.Response)
     assert scenes.result
     assert not scenes.data
 
     assert ars.call_rpc(
-        rpc.s.NewSceneRequest(uid(), rpc.s.NewSceneRequestArgs(test, test)), rpc.s.NewSceneResponse
+        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args(test, test)), rpc.s.NewScene.Response
     ).result
 
     open_scene_event = event(ars, events.s.OpenScene)
@@ -194,75 +194,76 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
 
     # attempt to create a new scene while scene is open should fail
     assert not ars.call_rpc(
-        rpc.s.NewSceneRequest(uid(), rpc.s.NewSceneRequestArgs(test, test)), rpc.s.NewSceneResponse
+        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args(test, test)), rpc.s.NewScene.Response
     ).result
 
-    assert ars.call_rpc(rpc.s.SaveSceneRequest(uid()), rpc.s.SaveSceneResponse).result
+    assert ars.call_rpc(rpc.s.SaveScene.Request(uid()), rpc.s.SaveScene.Response).result
 
     event(ars, events.s.SceneSaved)
 
-    assert ars.call_rpc(rpc.s.CloseSceneRequest(uid()), rpc.s.CloseSceneResponse).result
+    assert ars.call_rpc(rpc.s.CloseScene.Request(uid()), rpc.s.CloseScene.Response).result
 
     event(ars, events.s.SceneClosed)
 
-    show_main_screen_event_2 = event(ars, events.c.ShowMainScreenEvent)
+    show_main_screen_event_2 = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event_2.data
-    assert show_main_screen_event_2.data.what == events.c.ShowMainScreenData.WhatEnum.ScenesList
+    assert show_main_screen_event_2.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
     assert show_main_screen_event_2.data.highlight == scene_id
 
     # attempt to open non-existent scene
     assert not ars.call_rpc(
-        rpc.s.OpenSceneRequest(uid(), IdArgs("some-random-nonsense")), rpc.s.OpenSceneResponse
+        rpc.s.OpenScene.Request(uid(), IdArgs("some-random-nonsense")), rpc.s.OpenScene.Response
     ).result
 
-    list_of_scenes = ars.call_rpc(rpc.s.ListScenesRequest(uid()), rpc.s.ListScenesResponse)
+    list_of_scenes = ars.call_rpc(rpc.s.ListScenes.Request(uid()), rpc.s.ListScenes.Response)
     assert list_of_scenes.result
+    assert list_of_scenes.data
     assert len(list_of_scenes.data) == 1
     assert list_of_scenes.data[0].id == scene_id
 
     # open previously saved scene
-    assert ars.call_rpc(rpc.s.OpenSceneRequest(uid(), IdArgs(scene_id)), rpc.s.OpenSceneResponse).result
+    assert ars.call_rpc(rpc.s.OpenScene.Request(uid(), IdArgs(scene_id)), rpc.s.OpenScene.Response).result
 
     open_scene_event_2 = event(ars, events.s.OpenScene)
     assert open_scene_event_2.data
     assert open_scene_event_2.data.scene.id == scene_id
 
-    assert ars.call_rpc(rpc.s.CloseSceneRequest(uid()), rpc.s.CloseSceneResponse).result
+    assert ars.call_rpc(rpc.s.CloseScene.Request(uid()), rpc.s.CloseScene.Response).result
     event(ars, events.s.SceneClosed)
 
-    show_main_screen_event_3 = event(ars, events.c.ShowMainScreenEvent)
+    show_main_screen_event_3 = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event_3.data
-    assert show_main_screen_event_3.data.what == events.c.ShowMainScreenData.WhatEnum.ScenesList
+    assert show_main_screen_event_3.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
     assert show_main_screen_event_3.data.highlight == scene_id
 
     with ARServer(WS_CONNECTION_STR) as ars_2:
 
-        smse = event(ars_2, events.c.ShowMainScreenEvent)
+        smse = event(ars_2, events.c.ShowMainScreen)
         assert smse.data
-        assert smse.data.what == events.c.ShowMainScreenData.WhatEnum.ScenesList
+        assert smse.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
         assert smse.data.highlight is None
 
-    assert ars.call_rpc(rpc.s.DeleteSceneRequest(uid(), IdArgs(scene_id)), rpc.s.DeleteSceneResponse).result
+    assert ars.call_rpc(rpc.s.DeleteScene.Request(uid(), IdArgs(scene_id)), rpc.s.DeleteScene.Response).result
 
     scene_changed_evt = event(ars, events.s.SceneChanged)
     assert scene_changed_evt.data
     assert scene_changed_evt.data.id == scene_id
-    assert scene_changed_evt.change_type == EventType.REMOVE
+    assert scene_changed_evt.change_type == Event.Type.REMOVE
 
-    list_of_scenes_2 = ars.call_rpc(rpc.s.ListScenesRequest(uid()), rpc.s.ListScenesResponse)
+    list_of_scenes_2 = ars.call_rpc(rpc.s.ListScenes.Request(uid()), rpc.s.ListScenes.Response)
     assert list_of_scenes_2.result
     assert not list_of_scenes_2.data
 
 
 def save_project(ars: ARServer) -> None:
 
-    assert ars.call_rpc(rpc.p.SaveProjectRequest(uid()), rpc.p.SaveProjectResponse).result
+    assert ars.call_rpc(rpc.p.SaveProject.Request(uid()), rpc.p.SaveProject.Response).result
     event(ars, events.p.ProjectSaved)
 
 
 def close_project(ars: ARServer) -> None:
 
-    assert ars.call_rpc(rpc.p.CloseProjectRequest(uid()), rpc.p.CloseProjectResponse).result
+    assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
     event(ars, events.p.ProjectClosed)
 
 
@@ -270,7 +271,7 @@ def close_project(ars: ARServer) -> None:
 def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.Scene) -> None:
 
     # first, there are no projects
-    projects = ars.call_rpc(rpc.p.ListProjectsRequest(uid()), rpc.p.ListProjectsResponse)
+    projects = ars.call_rpc(rpc.p.ListProjects.Request(uid()), rpc.p.ListProjects.Response)
     assert projects.result
     assert not projects.data
 
@@ -278,18 +279,19 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
 
     # attempt to use non-existent scene_id
     assert not ars.call_rpc(
-        rpc.p.NewProjectRequest(uid(), rpc.p.NewProjectRequestArgs("some non-sense string", project_name)),
-        rpc.p.NewProjectResponse,
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args("some non-sense string", project_name)),
+        rpc.p.NewProject.Response,
     ).result
 
     # attempt to open non-existent project
     assert not ars.call_rpc(
-        rpc.p.OpenProjectRequest(uid(), IdArgs("some-random-nonsense")), rpc.p.OpenProjectResponse
+        rpc.p.OpenProject.Request(uid(), IdArgs("some-random-nonsense")), rpc.p.OpenProject.Response
     ).result
 
     # correct scene_id
     assert ars.call_rpc(
-        rpc.p.NewProjectRequest(uid(), rpc.p.NewProjectRequestArgs(scene.id, project_name)), rpc.p.NewProjectResponse
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, project_name)),
+        rpc.p.NewProject.Response,
     ).result
 
     open_project_evt = event(ars, events.p.OpenProject)
@@ -308,48 +310,49 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
 
     # attempt to create project while another project is opened
     assert not ars.call_rpc(
-        rpc.p.NewProjectRequest(uid(), rpc.p.NewProjectRequestArgs("some non-sense string", "blah")),
-        rpc.p.NewProjectResponse,
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args("some non-sense string", "blah")),
+        rpc.p.NewProject.Response,
     ).result
 
     save_project(ars)
     close_project(ars)
 
-    show_main_screen_event = event(ars, events.c.ShowMainScreenEvent)
+    show_main_screen_event = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event.data
-    assert show_main_screen_event.data.what == events.c.ShowMainScreenData.WhatEnum.ProjectsList
+    assert show_main_screen_event.data.what == events.c.ShowMainScreen.Data.WhatEnum.ProjectsList
     assert show_main_screen_event.data.highlight == project_id
 
-    list_of_projects = ars.call_rpc(rpc.p.ListProjectsRequest(uid()), rpc.p.ListProjectsResponse)
+    list_of_projects = ars.call_rpc(rpc.p.ListProjects.Request(uid()), rpc.p.ListProjects.Response)
     assert list_of_projects.result
+    assert list_of_projects.data
     assert len(list_of_projects.data) == 1
     assert list_of_projects.data[0].id == project_id
 
     with ARServer(WS_CONNECTION_STR) as ars_2:
 
-        smse = event(ars_2, events.c.ShowMainScreenEvent)
+        smse = event(ars_2, events.c.ShowMainScreen)
         assert smse.data
-        assert smse.data.what == events.c.ShowMainScreenData.WhatEnum.ProjectsList
+        assert smse.data.what == events.c.ShowMainScreen.Data.WhatEnum.ProjectsList
         assert smse.data.highlight is None
 
     # it should not be possible to delete scene used by a project
-    assert not ars.call_rpc(rpc.s.DeleteSceneRequest(uid(), IdArgs(scene.id)), rpc.s.DeleteSceneResponse).result
+    assert not ars.call_rpc(rpc.s.DeleteScene.Request(uid(), IdArgs(scene.id)), rpc.s.DeleteScene.Response).result
 
-    assert ars.call_rpc(rpc.p.DeleteProjectRequest(uid(), IdArgs(project_id)), rpc.p.DeleteProjectResponse).result
+    assert ars.call_rpc(rpc.p.DeleteProject.Request(uid(), IdArgs(project_id)), rpc.p.DeleteProject.Response).result
 
     project_changed_evt = event(ars, events.p.ProjectChanged)
     assert project_changed_evt.data
     assert project_changed_evt.data.id == project_id
-    assert project_changed_evt.change_type == EventType.REMOVE
+    assert project_changed_evt.change_type == Event.Type.REMOVE
 
-    assert ars.call_rpc(rpc.s.DeleteSceneRequest(uid(), IdArgs(scene.id)), rpc.s.DeleteSceneResponse).result
+    assert ars.call_rpc(rpc.s.DeleteScene.Request(uid(), IdArgs(scene.id)), rpc.s.DeleteScene.Response).result
 
     scene_changed_evt = event(ars, events.s.SceneChanged)
     assert scene_changed_evt.data
     assert scene_changed_evt.data.id == scene.id
-    assert scene_changed_evt.change_type == EventType.REMOVE
+    assert scene_changed_evt.change_type == Event.Type.REMOVE
 
-    list_of_projects_2 = ars.call_rpc(rpc.p.ListProjectsRequest(uid()), rpc.p.ListProjectsResponse)
+    list_of_projects_2 = ars.call_rpc(rpc.p.ListProjects.Request(uid()), rpc.p.ListProjects.Response)
     assert list_of_projects_2.result
     assert not list_of_projects_2.data
 
@@ -358,7 +361,8 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
 def test_project_ap_rpcs(start_processes: None, ars: ARServer, scene: common.Scene) -> None:
 
     assert ars.call_rpc(
-        rpc.p.NewProjectRequest(uid(), rpc.p.NewProjectRequestArgs(scene.id, "Project name")), rpc.p.NewProjectResponse
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
+        rpc.p.NewProject.Response,
     ).result
 
     event(ars, events.p.OpenProject)
@@ -369,7 +373,7 @@ def test_project_ap_rpcs(start_processes: None, ars: ARServer, scene: common.Sce
 def add_logic_item(ars: ARServer, start: str, end: str) -> common.LogicItem:
 
     assert ars.call_rpc(
-        rpc.p.AddLogicItemRequest(uid(), rpc.p.AddLogicItemArgs(start, end)), rpc.p.AddLogicItemResponse
+        rpc.p.AddLogicItem.Request(uid(), rpc.p.AddLogicItem.Request.Args(start, end)), rpc.p.AddLogicItem.Response
     ).result
 
     evt = event(ars, events.p.LogicItemChanged)
@@ -380,10 +384,10 @@ def add_logic_item(ars: ARServer, start: str, end: str) -> common.LogicItem:
 @pytest.mark.skip(reason="Integration tests are temporarily disabled.")
 def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
-    event(ars, events.c.ShowMainScreenEvent)
+    event(ars, events.c.ShowMainScreen)
 
     assert ars.call_rpc(
-        rpc.s.NewSceneRequest(uid(), rpc.s.NewSceneRequestArgs("Test scene")), rpc.s.NewSceneResponse
+        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args("Test scene")), rpc.s.NewScene.Response
     ).result
 
     scene_data = event(ars, events.s.OpenScene).data
@@ -391,32 +395,35 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     scene = scene_data.scene
 
     assert ars.call_rpc(
-        rpc.s.AddObjectToSceneRequest(uid(), rpc.s.AddObjectToSceneRequestArgs("time_actions", TimeActions.__name__)),
-        rpc.s.AddObjectToSceneResponse,
+        rpc.s.AddObjectToScene.Request(
+            uid(), rpc.s.AddObjectToScene.Request.Args("time_actions", TimeActions.__name__)
+        ),
+        rpc.s.AddObjectToScene.Response,
     ).result
 
     obj = event(ars, events.s.SceneObjectChanged).data
     assert obj
 
     assert ars.call_rpc(
-        rpc.p.NewProjectRequest(uid(), rpc.p.NewProjectRequestArgs(scene.id, "Project name")), rpc.p.NewProjectResponse
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
+        rpc.p.NewProject.Response,
     ).result
 
     proj = event(ars, events.p.OpenProject).data
     assert proj
 
     assert ars.call_rpc(
-        rpc.p.AddActionPointRequest(uid(), rpc.p.AddActionPointArgs("ap1", common.Position())),
-        rpc.p.AddActionPointResponse,
+        rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap1", common.Position())),
+        rpc.p.AddActionPoint.Response,
     ).result
 
     ap = event(ars, events.p.ActionPointChanged).data
     assert ap is not None
 
     assert ars.call_rpc(
-        rpc.p.AddActionRequest(
+        rpc.p.AddAction.Request(
             uid(),
-            rpc.p.AddActionRequestArgs(
+            rpc.p.AddAction.Request.Args(
                 ap.id,
                 "test_action",
                 f"{obj.id}/{TimeActions.sleep.__name__}",
@@ -424,7 +431,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
                 [common.Flow()],
             ),
         ),
-        rpc.p.AddActionResponse,
+        rpc.p.AddAction.Response,
     ).result
 
     action = event(ars, events.p.ActionChanged).data
@@ -441,28 +448,30 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     close_project(ars)
 
-    event(ars, events.c.ShowMainScreenEvent)
+    event(ars, events.c.ShowMainScreen)
 
     assert ars.call_rpc(
-        rpc.b.BuildProjectRequest(uid(), rpc.b.BuildProjectArgs(proj.project.id, "Package name")),
-        rpc.b.BuildProjectResponse,
+        rpc.b.BuildProject.Request(uid(), rpc.b.BuildProject.Request.Args(proj.project.id, "Package name")),
+        rpc.b.BuildProject.Response,
     ).result
 
     package = event(ars, eevents.PackageChanged).data
     assert package is not None
 
-    assert ars.call_rpc(erpc.RunPackageRequest(uid(), erpc.RunPackageArgs(package.id)), erpc.RunPackageResponse).result
+    assert ars.call_rpc(
+        erpc.RunPackage.Request(uid(), erpc.RunPackage.Request.Args(package.id)), erpc.RunPackage.Response
+    ).result
 
-    ps = event(ars, arcor2_events.PackageStateEvent).data
+    ps = event(ars, arcor2_events.PackageState).data
     assert ps
     assert ps.package_id == package.id
     assert ps.state == ps.state.RUNNING
 
-    pi = event(ars, arcor2_events.PackageInfoEvent).data
+    pi = event(ars, arcor2_events.PackageInfo).data
     assert pi
     assert pi.package_id == package.id
 
-    act_in = event(ars, arcor2_events.CurrentActionEvent).data
+    act_in = event(ars, arcor2_events.CurrentAction).data
     assert act_in
     assert act_in.action_id == action.id
     # assert len(act_in.args) == 1
@@ -470,26 +479,26 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     # assert act_in.args[0].type == "double"
     # assert act_in.args[0].value == "0.1"
 
-    act_state_before = event(ars, arcor2_events.ActionStateEvent).data
+    act_state_before = event(ars, arcor2_events.ActionState).data
     assert act_state_before
     assert act_state_before.method == TimeActions.sleep.__name__
     assert act_state_before.where == act_state_before.where.BEFORE
 
-    act_state_after = event(ars, arcor2_events.ActionStateEvent).data
+    act_state_after = event(ars, arcor2_events.ActionState).data
     assert act_state_after
     assert act_state_after.method == TimeActions.sleep.__name__
     assert act_state_after.where == act_state_after.where.AFTER
 
     # TODO pause, resume
 
-    assert ars.call_rpc(erpc.StopPackageRequest(uid()), erpc.StopPackageResponse).result
+    assert ars.call_rpc(erpc.StopPackage.Request(uid()), erpc.StopPackage.Response).result
 
-    ps2 = wait_for_event(ars, arcor2_events.PackageStateEvent).data
+    ps2 = wait_for_event(ars, arcor2_events.PackageState).data
     assert ps2
     assert ps2.package_id == package.id
     assert ps2.state == ps.state.STOPPED
 
-    show_main_screen_event = event(ars, events.c.ShowMainScreenEvent)
+    show_main_screen_event = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event.data
-    assert show_main_screen_event.data.what == events.c.ShowMainScreenData.WhatEnum.PackagesList
+    assert show_main_screen_event.data.what == events.c.ShowMainScreen.Data.WhatEnum.PackagesList
     assert show_main_screen_event.data.highlight == package.id

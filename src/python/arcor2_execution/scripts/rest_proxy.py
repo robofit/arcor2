@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 import argparse
 import base64
@@ -13,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
 
 import websocket  # type: ignore
 from apispec import APISpec  # type: ignore
@@ -26,12 +25,11 @@ from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
 import arcor2_execution
-from arcor2.data import common
+from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
-from arcor2.data.events import PackageInfoEvent, PackageStateEvent, ProjectExceptionEvent
-from arcor2.data.execution import PackageInfo
-from arcor2.data.helpers import EVENT_MAPPING, RPC_MAPPING
+from arcor2.data.events import PackageInfo, PackageState, ProjectException
 from arcor2.package import PROJECT_PATH
+from arcor2_execution_data import EVENTS, EXPOSED_RPCS
 from arcor2_execution_data import PORT as MANAGER_PORT
 from arcor2_execution_data import rpc
 
@@ -83,8 +81,8 @@ CORS(app)
 ws: Optional[websocket.WebSocket] = None
 
 if TYPE_CHECKING:
-    ReqQueue = Queue[arcor2_rpc.common.Request]  # this is only processed by mypy
-    RespQueue = Queue[arcor2_rpc.common.Response]
+    ReqQueue = Queue[arcor2_rpc.common.RPC.Request]  # this is only processed by mypy
+    RespQueue = Queue[arcor2_rpc.common.RPC.Response]
 else:
     ReqQueue = Queue  # this is not seen by mypy but will be executed at runtime.
     RespQueue = Queue
@@ -93,17 +91,20 @@ else:
 rpc_request_queue: ReqQueue = ReqQueue()
 rpc_responses: Dict[int, RespQueue] = {}
 
-package_state: Optional[common.PackageState] = None
-package_info: Optional[PackageInfo] = None
+package_state: Optional[PackageState.Data] = None
+package_info: Optional[PackageInfo.Data] = None
 exception_message: Optional[str] = None
 
 
-def ws_thread() -> None:  # TODO use (refactored) arserver client?
+def ws_thread() -> None:  # TODO use (refactored) arserver client
 
     global package_info
     global package_state
     global exception_message
     assert ws
+
+    event_mapping: Dict[str, Type[events.Event]] = {evt.__name__: evt for evt in EVENTS}
+    rpc_mapping: Dict[str, Type[arcor2_rpc.common.RPC]] = {rpc.__name__: rpc for rpc in EXPOSED_RPCS}
 
     while True:
 
@@ -111,25 +112,25 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client?
 
         if "event" in data:
 
-            evt = EVENT_MAPPING[data["event"]].from_dict(data)
+            evt = event_mapping[data["event"]].from_dict(data)
 
-            if isinstance(evt, PackageInfoEvent):
+            if isinstance(evt, PackageInfo):
                 package_info = evt.data
-            elif isinstance(evt, PackageStateEvent):
+            elif isinstance(evt, PackageState):
                 package_state = evt.data
 
-                if package_state.state == common.PackageStateEnum.RUNNING:
+                if package_state.state == PackageState.Data.StateEnum.RUNNING:
                     exception_message = None
 
-            elif isinstance(evt, ProjectExceptionEvent):
+            elif isinstance(evt, ProjectException):
                 exception_message = evt.data.message
 
         elif "response" in data:
-            resp = RPC_MAPPING[data["response"]][1].from_dict(data)
+            resp = rpc_mapping[data["response"]].Response.from_dict(data)
             rpc_responses[resp.id].put(resp)
 
 
-def call_rpc(req: arcor2_rpc.common.Request) -> arcor2_rpc.common.Response:
+def call_rpc(req: arcor2_rpc.common.RPC.Request) -> arcor2_rpc.common.RPC.Response:
 
     assert req.id not in rpc_responses
     assert ws
@@ -201,7 +202,7 @@ def put_package(packageId: str) -> RespT:  # noqa
             b64_bytes = base64.b64encode(zip_file.read())
             b64_str = b64_bytes.decode()
 
-    resp = call_rpc(rpc.UploadPackageRequest(id=get_id(), args=rpc.UploadPackageArgs(packageId, b64_str)))
+    resp = call_rpc(rpc.UploadPackage.Request(id=get_id(), args=rpc.UploadPackage.Request.Args(packageId, b64_str)))
 
     if resp.result:
         return "ok", 200
@@ -269,8 +270,8 @@ def get_packages() -> RespT:
                   $ref: SummaryPackage
     """
 
-    resp = call_rpc(rpc.ListPackagesRequest(id=get_id()))
-    assert isinstance(resp, rpc.ListPackagesResponse)
+    resp = call_rpc(rpc.ListPackages.Request(id=get_id()))
+    assert isinstance(resp, rpc.ListPackages.Response)
 
     ret: List[Dict] = []
 
@@ -313,7 +314,7 @@ def delete_package(packageId: str) -> RespT:  # noqa
                     type: string
     """
 
-    resp = call_rpc(rpc.DeletePackageRequest(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
+    resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
 
     if resp.result:
         return "ok", 200
@@ -349,7 +350,7 @@ def package_start(packageId: str) -> RespT:  # noqa
                     type: string
     """
 
-    resp = call_rpc(rpc.RunPackageRequest(id=get_id(), args=rpc.RunPackageArgs(id=packageId)))
+    resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
 
     if resp.result:
         return "ok", 200
@@ -378,7 +379,7 @@ def packages_stop() -> RespT:
                     type: string
     """
 
-    resp = call_rpc(rpc.StopPackageRequest(id=get_id()))
+    resp = call_rpc(rpc.StopPackage.Request(id=get_id()))
 
     if resp.result:
         return "ok", 200
@@ -407,7 +408,7 @@ def packages_pause() -> RespT:
                     type: string
     """
 
-    resp = call_rpc(rpc.PausePackageRequest(id=get_id()))
+    resp = call_rpc(rpc.PausePackage.Request(id=get_id()))
 
     if resp.result:
         return "ok", 200
@@ -436,7 +437,7 @@ def packages_resume() -> RespT:
                     type: string
     """
 
-    resp = call_rpc(rpc.ResumePackageRequest(id=get_id()))
+    resp = call_rpc(rpc.ResumePackage.Request(id=get_id()))
 
     if resp.result:
         return "ok", 200
@@ -463,13 +464,13 @@ def packages_executioninfo() -> RespT:
             description: No project running
     """
 
-    if package_state is None or package_state.state == common.PackageStateEnum.UNDEFINED:
+    if package_state is None or package_state.state == PackageState.Data.StateEnum.UNDEFINED:
         ret = ExecutionInfo(ExecutionState.Undefined)
-    elif package_state.state == common.PackageStateEnum.RUNNING:
+    elif package_state.state == PackageState.Data.StateEnum.RUNNING:
         ret = ExecutionInfo(ExecutionState.Running, package_state.package_id)
-    elif package_state.state == common.PackageStateEnum.PAUSED:
+    elif package_state.state == PackageState.Data.StateEnum.PAUSED:
         ret = ExecutionInfo(ExecutionState.Paused, package_state.package_id)
-    elif package_state.state == common.PackageStateEnum.STOPPED:
+    elif package_state.state == PackageState.Data.StateEnum.STOPPED:
 
         if exception_message:
             ret = ExecutionInfo(ExecutionState.Faulted, package_state.package_id, exception_message)

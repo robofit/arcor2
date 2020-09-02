@@ -4,122 +4,94 @@ from typing import List, Optional
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common
-from arcor2.data.events import Event, wo_suffix
+from arcor2.data.events import Event
 
 
 @dataclass
-class RobotJointsData(JsonSchemaMixin):
+class RobotJoints(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        robot_id: str
+        joints: List[common.Joint]
 
-    robot_id: str
-    joints: List[common.Joint]
-
-
-@dataclass
-class RobotJointsEvent(Event):
-
-    data: Optional[RobotJointsData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 @dataclass
-class EefPose(JsonSchemaMixin):
+class RobotEef(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        @dataclass
+        class EefPose(JsonSchemaMixin):
+            end_effector_id: str
+            pose: common.Pose
 
-    end_effector_id: str
-    pose: common.Pose
+        robot_id: str
+        end_effectors: List[EefPose] = field(default_factory=list)
 
-
-@dataclass
-class RobotEefData(JsonSchemaMixin):
-
-    robot_id: str
-    end_effectors: List[EefPose] = field(default_factory=list)
-
-
-@dataclass
-class RobotEefEvent(Event):
-
-    data: Optional[RobotEefData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class MoveEventType(common.StrEnum):
-    START: str = "start"
-    END: str = "end"
-    FAILED: str = "failed"
-
-
 @dataclass
 class RobotMoveToData(JsonSchemaMixin):
+    class MoveEventType(common.StrEnum):
+        START: str = "start"
+        END: str = "end"
+        FAILED: str = "failed"
 
     move_event_type: MoveEventType
     robot_id: str
 
 
 @dataclass
-class RobotMoveToPoseData(RobotMoveToData):
+class RobotMoveToPose(Event):
+    @dataclass
+    class Data(RobotMoveToData):
+        end_effector_id: str
+        target_pose: common.Pose
+        message: Optional[str] = None
 
-    end_effector_id: str
-    target_pose: common.Pose
-    message: Optional[str] = None
-
-
-@dataclass
-class RobotMoveToPoseEvent(Event):
-
-    data: Optional[RobotMoveToPoseData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class RobotMoveToJointsData(RobotMoveToData):
+class RobotMoveToJoints(Event):
+    @dataclass
+    class Data(RobotMoveToData):
+        target_joints: List[common.Joint]
+        message: Optional[str] = None
 
-    target_joints: List[common.Joint]
-    message: Optional[str] = None
-
-
-@dataclass
-class RobotMoveToJointsEvent(Event):
-
-    data: Optional[RobotMoveToJointsData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class RobotMoveToActionPointOrientationData(RobotMoveToData):
+class RobotMoveToActionPointOrientation(Event):
+    @dataclass
+    class Data(RobotMoveToData):
+        end_effector_id: str
+        orientation_id: str
+        message: Optional[str] = None
 
-    end_effector_id: str
-    orientation_id: str
-    message: Optional[str] = None
-
-
-@dataclass
-class RobotMoveToActionPointOrientationEvent(Event):
-
-    data: Optional[RobotMoveToActionPointOrientationData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 @dataclass
-class RobotMoveToActionPointJointsData(RobotMoveToData):
+class RobotMoveToActionPointJoints(Event):
+    @dataclass
+    class Data(RobotMoveToData):
+        joints_id: str
+        message: Optional[str] = None
 
-    joints_id: str
-    message: Optional[str] = None
-
-
-@dataclass
-class RobotMoveToActionPointJointsEvent(Event):
-
-    data: Optional[RobotMoveToActionPointJointsData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data

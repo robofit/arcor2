@@ -1,82 +1,62 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common
-from arcor2.data.events import Event, wo_suffix
+from arcor2.data.events import Event
 
 
 @dataclass
 class ProjectChanged(Event):
 
-    data: Optional[common.BareProject] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
-
-
-@dataclass
-class OpenProjectData(JsonSchemaMixin):
-
-    scene: common.Scene
-    project: common.Project
+    data: common.BareProject
 
 
 @dataclass
 class OpenProject(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        scene: common.Scene
+        project: common.Project
 
-    data: Optional[OpenProjectData] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: Data
 
 
 @dataclass
 class ProjectSaved(Event):
-
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    pass
 
 
 @dataclass
 class ProjectClosed(Event):
-
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    pass
 
 
 @dataclass
 class ActionPointChanged(Event):
-
-    data: Optional[common.BareActionPoint] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.BareActionPoint
 
 
 @dataclass
 class ActionChanged(Event):
-
-    data: Optional[common.BareAction] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.BareAction
 
 
 @dataclass
 class LogicItemChanged(Event):
-
-    data: Optional[common.LogicItem] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.LogicItem
 
 
 @dataclass
 class ProjectConstantChanged(Event):
-
-    data: Optional[common.ProjectConstant] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.ProjectConstant
 
 
 @dataclass
 class OrientationChanged(Event):
-
-    data: Optional[common.NamedOrientation] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.NamedOrientation
 
 
 @dataclass
 class JointsChanged(Event):
-
-    data: Optional[common.ProjectRobotJoints] = None
-    event: str = field(default=wo_suffix(__qualname__), init=False)  # type: ignore  # noqa: F821
+    data: common.ProjectRobotJoints

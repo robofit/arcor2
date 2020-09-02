@@ -1,4 +1,5 @@
 import os
+import stat
 import sys
 from datetime import datetime, timezone
 
@@ -36,3 +37,8 @@ def write_package_meta(package_id: str, meta: PackageMeta) -> None:
 
     with open(get_package_meta_path(package_id), "w") as pkg_file:
         pkg_file.write(meta.to_json())
+
+
+def make_executable(path_to_file: str) -> None:
+    st = os.stat(path_to_file)
+    os.chmod(path_to_file, st.st_mode | stat.S_IEXEC)
