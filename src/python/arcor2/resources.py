@@ -163,7 +163,7 @@ class ResourcesBase(IntResources):
                 data_dict = json.loads(scene_file.read())
                 data_dict = convert_keys(data_dict, hlp.camel_case_to_snake_case)
 
-                return cls.from_dict(data_dict)
+                return cls.from_dict(data_dict)  # type: ignore # TODO remove once pants/mypy works properly
 
         except JsonSchemaValidationError as e:
             raise ResourcesException(f"Invalid project/scene: {e}")
