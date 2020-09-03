@@ -1,0 +1,56 @@
+[GLOBAL]
+pants_version = "2.0.0a1"
+colors = true
+
+backend_packages.add = [
+  "pants.backend.python",
+  "pants.backend.python.lint.black",
+  "pants.backend.python.lint.flake8",
+  "pants.backend.python.typecheck.mypy",
+  "pants.backend.python.lint.isort",
+  "pants.backend.python.lint.docformatter"
+]
+
+build_file_prelude_globs = [
+  "pants-plugins/macros.py",
+]
+
+pythonpath = ["%(buildroot)s/pants-plugins"]
+
+[source]
+root_patterns = [
+  '/src/python'
+]
+
+[python-setup]
+interpreter_constraints = [">=3.8"]
+requirement_constraints = "3rdparty/constraints.txt"
+
+[flake8]
+config = ".flake8"
+extra_requirements.add = [
+  "flake8-tidy-imports",
+  "flake8-annotations-coverage",
+  "flake8-pytest-style",
+  "flake8-bugbear",
+  "flake8-pantsbuild",
+  "vulture"
+]
+
+[mypy]
+config = "mypy.ini"
+
+[pytest]
+pytest_plugins.add = [
+  "pytest-repeat",
+  "pytest-randomly"
+]
+
+[black]
+config = "pyproject.toml"
+
+[isort]
+config = [".isort.cfg"]
+
+[python-infer]
+imports = true
