@@ -176,7 +176,7 @@ def put_returning_list(
     d = []
     for dd in ret:
         try:
-            d.append(data_cls.from_dict(dd))
+            d.append(data_cls.from_dict(dd))  # type: ignore # TODO remove once pants/mypy works properly
         except ValidationError as e:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{ret}".')
             raise RestException("Invalid data.", str(e)) from e
@@ -265,7 +265,7 @@ def get_list(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None
 
     for val in data:
         try:
-            ret.append(data_cls.from_dict(val))
+            ret.append(data_cls.from_dict(val))  # type: ignore # TODO remove once pants/mypy works properly
         except ValidationError as e:
             print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
             raise RestException("Invalid data.", str(e)) from e
@@ -294,7 +294,7 @@ def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, par
     assert isinstance(data, dict)
 
     try:
-        return data_cls.from_dict(data)
+        return data_cls.from_dict(data)  # type: ignore # TODO remove once pants/mypy works properly
     except ValidationError as e:
         raise RestException("Invalid data.", str(e)) from e
 
