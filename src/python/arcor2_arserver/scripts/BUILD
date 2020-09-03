@@ -1,6 +1,7 @@
 python_binary(
     name = "arserver",
     sources = ["arserver.py"],
+    dependencies = ["3rdparty:PyYAML", "3rdparty:Flask"],
     entry_point = "arcor2_arserver.scripts.arserver"
 )
 
