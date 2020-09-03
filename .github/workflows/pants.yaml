@@ -1,10 +1,6 @@
 name: Pants
 
 on:
-  push:
-    branches:
-      - master
-      - devel
   pull_request:
     branches:
       - master
@@ -30,9 +26,9 @@ jobs:
     - name: Lint
       run: |
         ./pants lint ::
-    - name: Lint
-        run: |
-          ./pants typecheck ::
+    - name: Typecheck
+      run: |
+        ./pants typecheck ::
     - name: Test
       run: |
         ./pants test ::
