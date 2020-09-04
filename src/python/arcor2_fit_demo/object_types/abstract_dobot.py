@@ -65,7 +65,11 @@ class AbstractDobot(Robot):
 
     def alarms_to_exception(self) -> None:
 
-        alarms = self._dobot.get_alarms()
+        try:
+            alarms = self._dobot.get_alarms()
+        except dobot.DobotException as e:
+            raise DobotException("Failed to get alarms.") from e
+
         if alarms:
             raise DobotException(f"Alarm(s): {','.join([alarm.name for alarm in alarms])}.")
 
@@ -92,7 +96,10 @@ class AbstractDobot(Robot):
         if self.settings.simulator:
             return tr.make_pose_abs(self.pose, self._ee_pose)
 
-        pos = self._dobot.get_pose().position  # in mm
+        try:
+            pos = self._dobot.get_pose().position  # in mm
+        except dobot.DobotException as e:
+            raise DobotException("Failed to get pose.") from e
 
         p = Pose()
         p.position.x = pos.x / 1000.0
@@ -111,15 +118,17 @@ class AbstractDobot(Robot):
     def home(self):
         """Run the homing procedure."""
 
-        self._dobot.clear_alarms()
-
         with self._move_lock:
 
             if self.settings.simulator:
                 time.sleep(2.0)
                 return
 
-            self._dobot.wait_for_cmd(self._dobot.home())
+            try:
+                self._dobot.clear_alarms()
+                self._dobot.wait_for_cmd(self._dobot.home())
+            except dobot.DobotException as e:
+                raise DobotException("Homing failed.") from e
 
         self.alarms_to_exception()
 
@@ -136,8 +145,6 @@ class AbstractDobot(Robot):
         assert 0.0 <= velocity <= 100.0
         assert 0.0 <= acceleration <= 100.0
 
-        self._dobot.clear_alarms()
-
         with self._move_lock:
 
             rp = tr.make_pose_rel(self.pose, pose)
@@ -147,29 +154,39 @@ class AbstractDobot(Robot):
                 self._ee_pose = rp
                 return
 
-            rotation = quaternion.as_euler_angles(rp.orientation.as_quaternion())[2]
-            self._dobot.speed(velocity, acceleration)
-            self._dobot.wait_for_cmd(
-                self._dobot.move_to(
-                    rp.position.x * 1000.0,
-                    rp.position.y * 1000.0,
-                    rp.position.z * 1000.0,
-                    rotation,
-                    MOVE_TYPE_MAPPING[move_type],
+            try:
+                self._dobot.clear_alarms()
+                rotation = quaternion.as_euler_angles(rp.orientation.as_quaternion())[2]
+                self._dobot.speed(velocity, acceleration)
+                self._dobot.wait_for_cmd(
+                    self._dobot.move_to(
+                        rp.position.x * 1000.0,
+                        rp.position.y * 1000.0,
+                        rp.position.z * 1000.0,
+                        rotation,
+                        MOVE_TYPE_MAPPING[move_type],
+                    )
                 )
-            )
+            except dobot.DobotException as e:
+                raise DobotException("Move failed.") from e
 
         self.alarms_to_exception()
 
     def suck(self) -> None:
 
         if not self.settings.simulator:
-            self._dobot.wait_for_cmd(self._dobot.suck(True))
+            try:
+                self._dobot.wait_for_cmd(self._dobot.suck(True))
+            except dobot.DobotException as e:
+                raise DobotException("Suck failed.") from e
 
     def release(self) -> None:
 
         if not self.settings.simulator:
-            self._dobot.wait_for_cmd(self._dobot.suck(False))
+            try:
+                self._dobot.wait_for_cmd(self._dobot.suck(False))
+            except dobot.DobotException as e:
+                raise DobotException("Release failed.") from e
 
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
