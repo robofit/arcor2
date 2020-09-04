@@ -1,12 +1,12 @@
 dataclasses==0.6
-horast==0.4.0
+dataclasses-jsonschema[fast-validation] @ git+https://github.com/zdenekm/dataclasses-jsonschema.git@issue-126
+horast @ git+https://github.com/mbdevpl/horast.git@issue_3
 typed-ast==1.4.1
 autopep8==1.5.4
 typed-astunparse==2.1.4
 static-typing==0.2.7
 websockets==8.1
 aiologger==0.5.0
-dataclasses-jsonschema[fast-validation]==2.12.0
 requests==2.24.0
 Cython==0.29.21
 numpy-quaternion==2020.5.19.15.27.24
@@ -27,3 +27,4 @@ flask-swagger-ui==3.25.0
 lru-dict==1.1.6
 flask_cors==3.0.8
 opencv-contrib-python==4.4.0.42
+pydobot @ git+https://github.com/zdenekm/pydobot
