@@ -175,9 +175,22 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     make_executable(script_path)
     check_script(script_path)
 
+    # this is necessary in order to make PEX embedded modules available to subprocess
+    pypath = ":".join(sys.path)
+
+    # create a temp copy of the env variables
+    myenv = os.environ.copy()
+
+    # set PYTHONPATH to match this scripts sys.path
+    myenv["PYTHONPATH"] = pypath
+
     logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(
-        script_path, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT
+        script_path,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        env=myenv,
     )
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
