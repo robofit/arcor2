@@ -421,9 +421,9 @@ def get_box(id: str) -> RespT:
         return "Not found", 404
 
 
-@app.route("/models/box", methods=["PUT"])
+@app.route("/models/cylinder", methods=["PUT"])
 def put_cylinder() -> RespT:
-    """Add or update box.
+    """Add or update cylinder.
     ---
     put:
         tags:
@@ -446,7 +446,7 @@ def put_cylinder() -> RespT:
 
 @app.route("/models/<string:id>/cylinder", methods=["GET"])
 def get_cylinder(id: str) -> RespT:
-    """Add or update box.
+    """Add or update cylinder.
     ---
     get:
         tags:
