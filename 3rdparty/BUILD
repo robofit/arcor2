@@ -4,6 +4,7 @@ python_requirements(
             "PyYAML": ["yaml"],
             "Pillow": ["PIL"],
             "lru-dict": ["lru"],
-            "opencv-contrib-python": ["cv2"]
+            "opencv-contrib-python": ["cv2"],
+            "websocket-client": ["websocket"]
           }
 )
