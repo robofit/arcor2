@@ -17,7 +17,11 @@ python_distribution(
         name="arcor2_fit_demo",
         version="0.1.0",
         description="ARCOR2 - Augmented Reality Collaborative Robot."
-    )
+    ).with_binaries(
+        {
+            "arcor2_fit_demo_upload_objects": "src/python/arcor2_fit_demo/scripts:upload"
+            }
+        )
 )
 
 resources(
