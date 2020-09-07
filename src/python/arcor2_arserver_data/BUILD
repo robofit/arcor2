@@ -14,7 +14,6 @@ python_distribution(
     ],
     provides=arcor2_setup_py(
         name="arcor2_arserver_data",
-        version="0.8.0",
         description="ARCOR2 - Augmented Reality Collaborative Robot."
     )
 )
