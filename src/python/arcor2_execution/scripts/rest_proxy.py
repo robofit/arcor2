@@ -24,7 +24,6 @@ from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
-import arcor2_execution
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import PackageInfo, PackageState, ProjectException
@@ -70,7 +69,7 @@ class ExecutionInfo(JsonSchemaMixin):
 # Create an APISpec
 spec = APISpec(
     title=SERVICE_NAME,
-    version=arcor2_execution.version(),
+    version="0.3.0",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
