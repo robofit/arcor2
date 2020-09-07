@@ -30,7 +30,7 @@ from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import ActionState, CurrentAction, Event, PackageInfo, PackageState, ProjectException
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import aiologger_formatter
-from arcor2.package import PROJECT_PATH, make_executable, read_package_meta, write_package_meta
+from arcor2.package import PROJECT_PATH, read_package_meta, write_package_meta
 from arcor2_execution_data import EVENTS, PORT, events, rpc
 from arcor2_execution_data.common import PackageSummary
 
@@ -171,8 +171,6 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
         raise Arcor2Exception("Not found.")
 
     script_path = os.path.join(package_path, MAIN_SCRIPT_NAME)
-
-    make_executable(script_path)
     check_script(script_path)
 
     # this is necessary in order to make PEX embedded modules available to subprocess
@@ -186,6 +184,7 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
 
     logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(
+        "python",
         script_path,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
