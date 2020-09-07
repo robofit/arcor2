@@ -12,7 +12,6 @@ python_distribution(
     ],
     provides=arcor2_setup_py(
         name="arcor2_mocks",
-        version="0.8.0",
         description="ARCOR2 integration for Kinali services."
     ).with_binaries(
         {
