@@ -18,8 +18,7 @@ python_distribution(
     ],
     provides=arcor2_setup_py(
         name="arcor2",
-        description="ARCOR2 - Augmented Reality Collaborative Robot.",
-        version="0.8.0"
+        description="ARCOR2 - Augmented Reality Collaborative Robot."
     ).with_binaries(
         {
             "arcor2_upload_builtin_objects": "src/python/arcor2/scripts:upload_builtin_objects"
