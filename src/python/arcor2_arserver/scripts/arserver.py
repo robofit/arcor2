@@ -11,7 +11,7 @@ import os
 import shutil
 import sys
 import uuid
-from typing import Dict, Type, get_type_hints
+from typing import Dict, List, Type, get_type_hints
 
 import websockets
 from aiologger.levels import LogLevel  # type: ignore
@@ -26,12 +26,12 @@ import arcor2_execution_data
 from arcor2 import action as action_mod
 from arcor2 import ws_server
 from arcor2.data import compile_json_schemas, events, rpc
-from arcor2.data.utils import generate_swagger
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2_arserver import events as server_events
 from arcor2_arserver import execution as exe
 from arcor2_arserver import globals as glob
+from arcor2_arserver import models
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
@@ -247,15 +247,25 @@ async def aio_main() -> None:
     await asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages), _initialize_server())
 
 
-def swagger_models() -> None:
+def print_openapi_models() -> None:
 
-    modules = []
+    modules = [arcor2_execution_data.events, events]
 
-    for package in (srpc, evts, arcor2_execution_data.events, arcor2_execution_data.rpc):
-        for _, mod in inspect.getmembers(package, inspect.ismodule):
-            modules.append(mod)
+    for _, mod in inspect.getmembers(evts, inspect.ismodule):
+        modules.append(mod)
 
-    print(generate_swagger("ARCOR2 ARServer", arcor2_arserver.version(), modules))
+    event_types: List[Type[events.Event]] = []
+
+    for mod in modules:
+        for _, cls in inspect.getmembers(mod, inspect.isclass):
+            if issubclass(cls, events.Event):
+                event_types.append(cls)
+
+    print(
+        models.generate_openapi(
+            "ARCOR2 ARServer", arcor2_arserver.version(), [v[0] for k, v in RPC_DICT.items()], event_types
+        )
+    )
 
 
 def main() -> None:
@@ -282,12 +292,12 @@ def main() -> None:
     parser.add_argument(
         "-a", "--asyncio_debug", help="Turn on asyncio debug mode.", action="store_const", const=True, default=False
     )
-    parser.add_argument("--swagger", action="store_true", help="Prints swagger models and exits.")
+    parser.add_argument("--openapi", action="store_true", help="Prints OpenAPI models and exits.")
 
     args = parser.parse_args()
 
-    if args.swagger:
-        swagger_models()
+    if args.openapi:
+        print_openapi_models()
         return
 
     glob.logger.level = args.debug
