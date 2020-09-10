@@ -5,6 +5,7 @@ python_requirements(
             "Pillow": ["PIL"],
             "lru-dict": ["lru"],
             "opencv-contrib-python": ["cv2"],
-            "websocket-client": ["websocket"]
+            "websocket-client": ["websocket"],
+            "pyhumps": ["humps"]
           }
 )

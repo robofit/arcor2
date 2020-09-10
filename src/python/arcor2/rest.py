@@ -3,12 +3,12 @@ import io
 import json
 from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
 
+import humps
 import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError  # type: ignore
 
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import camel_case_to_snake_case, snake_case_to_camel_case
 
 
 class RestException(Arcor2Exception):
@@ -54,22 +54,6 @@ def handle_exceptions(
 CK = TypeVar("CK", Dict[Any, Any], List[Any])
 
 
-def convert_keys(d: CK, func: Callable[[str], str]) -> CK:
-
-    if isinstance(d, dict):
-        new_dict = {}
-        for k, v in d.items():
-            new_dict[func(k)] = convert_keys(v, func)
-        return new_dict
-    elif isinstance(d, list):
-        new_list: List[Any] = []
-        for dd in d:
-            new_list.append(convert_keys(dd, func))
-        return new_list
-
-    return d
-
-
 def handle_response(resp: requests.Response) -> None:
     try:
         resp.raise_for_status()
@@ -98,21 +82,22 @@ def _send(
     if data and files:
         raise RestException("Can't send data and files at the same time.")
 
-    if data:
-        if isinstance(data, list):
-            d = []
-            for dd in data:
-                if isinstance(dd, str):
-                    d.append(dd)  # type: ignore
-                else:
-                    d.append(convert_keys(dd.to_dict(), snake_case_to_camel_case))  # type: ignore
-        else:
-            d = convert_keys(data.to_dict(), snake_case_to_camel_case)  # type: ignore
+    if isinstance(data, JsonSchemaMixin):
+        d = humps.camelize(data.to_dict())
+    elif isinstance(data, list):
+        d = []
+        for dd in data:
+            if isinstance(dd, JsonSchemaMixin):
+                d.append(humps.camelize(dd.to_dict()))
+            else:
+                d.append(dd)
+    elif data is not None:
+        raise RestException("Unsupported type of data.")
     else:
-        d = {}  # type: ignore
+        d = {}
 
     if params:
-        params = convert_keys(params, snake_case_to_camel_case)  # type: ignore
+        params = humps.camelize(params)
     else:
         params = {}
 
@@ -130,7 +115,7 @@ def _send(
         return None
 
     try:
-        return convert_keys(json.loads(resp.text), camel_case_to_snake_case)
+        return humps.decamelize(json.loads(resp.text))
     except (json.JSONDecodeError, TypeError) as e:
         raise RestException("Invalid JSON.", str(e)) from e
 
@@ -201,7 +186,7 @@ def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDic
     if not isinstance(data, (list, dict)):
         raise RestException("Invalid data, not list or dict.")
 
-    return convert_keys(data, camel_case_to_snake_case)  # type: ignore # probably mypy bug?
+    return humps.decamelize(data)
 
 
 def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> requests.Response:
@@ -212,7 +197,7 @@ def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: Para
         body_dict = body.to_dict()
 
     if params:
-        params = convert_keys(params, snake_case_to_camel_case)  # type: ignore
+        params = humps.camelize(params)
     else:
         params = {}
 

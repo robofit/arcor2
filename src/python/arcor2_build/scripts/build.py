@@ -9,6 +9,7 @@ import tempfile
 from datetime import datetime, timezone
 from typing import Set, Tuple, Union
 
+import humps
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from flask import Flask, Response, request, send_file
@@ -20,7 +21,7 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
-from arcor2.helpers import camel_case_to_snake_case, logger_formatter
+from arcor2.helpers import logger_formatter
 from arcor2.object_types.utils import base_from_source, built_in_types_names
 from arcor2.package import make_executable
 from arcor2.source import SourceException
@@ -60,7 +61,7 @@ def get_base(object_types: Set[str], obj_type: ObjectType, ot_path: str) -> None
 
         base_obj_type = ps.get_object_type(base)
 
-        with open(os.path.join(ot_path, camel_case_to_snake_case(base_obj_type.id)) + ".py", "w") as obj_file:
+        with open(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", "w") as obj_file:
             obj_file.write(base_obj_type.source)
 
         object_types.add(base)
@@ -111,11 +112,11 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                     obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})  # type: ignore
 
                     with open(
-                        os.path.join(data_path, "models", camel_case_to_snake_case(obj_type.id) + ".json"), "w"
+                        os.path.join(data_path, "models", humps.depascalize(obj_type.id) + ".json"), "w"
                     ) as model_file:
                         model_file.write(obj_model.to_json())
 
-                with open(os.path.join(ot_path, camel_case_to_snake_case(obj_type.id)) + ".py", "w") as obj_file:
+                with open(os.path.join(ot_path, humps.depascalize(obj_type.id)) + ".py", "w") as obj_file:
                     obj_file.write(obj_type.source)
 
                 # handle inheritance
