@@ -6,6 +6,7 @@ import json
 import os
 from typing import Any, Dict, Optional, Type, TypeVar
 
+import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
@@ -23,7 +24,6 @@ from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
-from arcor2.rest import convert_keys
 
 
 class IntResources:
@@ -53,12 +53,10 @@ class IntResources:
         for scene_obj in self.scene.objects:
 
             if scene_obj.type in built_in:
-                module = importlib.import_module(
-                    arcor2.object_types.__name__ + "." + hlp.camel_case_to_snake_case(scene_obj.type)
-                )
+                module = importlib.import_module(arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj.type))
             else:
                 module = importlib.import_module(
-                    ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." + hlp.camel_case_to_snake_case(scene_obj.type)
+                    ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj.type)
                 )
 
             cls = getattr(module, scene_obj.type)
@@ -159,11 +157,7 @@ class ResourcesBase(IntResources):
         try:
 
             with open(os.path.join("data", file_name + ".json")) as scene_file:
-
-                data_dict = json.loads(scene_file.read())
-                data_dict = convert_keys(data_dict, hlp.camel_case_to_snake_case)
-
-                return cls.from_dict(data_dict)  # type: ignore # TODO remove once pants/mypy works properly
+                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))
 
         except JsonSchemaValidationError as e:
             raise ResourcesException(f"Invalid project/scene: {e}")
@@ -184,9 +178,7 @@ class ResourcesBase(IntResources):
                 continue
 
             try:
-                models[obj.type] = self.read_project_data(
-                    "models/" + hlp.camel_case_to_snake_case(obj.type), ObjectModel
-                ).model()
+                models[obj.type] = self.read_project_data("models/" + humps.depascalize(obj.type), ObjectModel).model()
             except IOError:
                 models[obj.type] = None
 

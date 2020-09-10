@@ -2,13 +2,13 @@ import abc
 import json
 from typing import Any, Callable, Dict, Type
 
+import humps
 from typed_ast import ast3 as ast
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import ActionParameter
 from arcor2.data.object_type import ParameterMeta
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types.abstract import Generic
 
 TypesDict = Dict[str, Type[Generic]]
@@ -31,7 +31,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def type_name(cls) -> str:
         """Returns parameter type as string used in JSON."""
-        return camel_case_to_snake_case(cls.type().__name__)
+        return humps.depascalize(cls.type().__name__)
 
     @classmethod
     def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
