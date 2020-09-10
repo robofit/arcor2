@@ -1,9 +1,9 @@
 import os
 
+import humps
 from typed_ast.ast3 import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
 
 import arcor2.object_types
-from arcor2.helpers import camel_case_to_snake_case
 from arcor2.object_types.utils import built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.utils import find_function, find_raises, get_name
@@ -31,7 +31,7 @@ def new_object_type(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> AST:
     if parent.type in built_in_types_names():
         import_from = arcor2.object_types.abstract.__name__
     else:
-        import_from = f".{camel_case_to_snake_case(parent.type)}"
+        import_from = f".{humps.depascalize(parent.type)}"
 
     tree.body.append(ImportFrom(module=import_from, names=[alias(name=parent.type, asname=None)], level=0))
 

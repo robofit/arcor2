@@ -124,18 +124,18 @@ def get_calibration() -> Tuple[Response, int]:
 
     """
 
-    file = request.files["Image"]
+    file = request.files["image"]
     file_name = secure_filename(file.filename)
 
     camera_matrix = [
-        [float(request.args["Fx"]), 0.00000, float(request.args["Cx"])],
-        [0.00000, float(request.args["Fy"]), float(request.args["Cy"])],
+        [float(request.args["fx"]), 0.00000, float(request.args["cx"])],
+        [0.00000, float(request.args["fy"]), float(request.args["cy"])],
         [0.00000, 0.00000, 1],
     ]
 
-    dist_matrix = [float(val) for val in request.args.getlist("DistCoefs")]
-    poses = get_poses(camera_matrix, dist_matrix, file_name, float(request.args["MarkerSize"]))
-    pose = poses[int(request.args["MarkerId"])]
+    dist_matrix = [float(val) for val in request.args.getlist("distCoefs")]
+    poses = get_poses(camera_matrix, dist_matrix, file_name, float(request.args["markerSize"]))
+    pose = poses[int(request.args["markerId"])]
 
     return jsonify(pose.to_dict()), 200
 

@@ -1,16 +1,17 @@
 from typing import Set
 
+import humps
 from typed_ast.ast3 import Module, Pass
 
 import arcor2.object_types
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import camel_case_to_snake_case
+from arcor2.helpers import is_valid_identifier
 from arcor2.logic import ActionCacheTuple
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.utils import add_import, append_method_call, get_name_attr, tree_to_str
-from arcor2_build.source.object_types import fix_object_name, object_instance_from_res
+from arcor2_build.source.object_types import object_instance_from_res
 from arcor2_build.source.utils import clean, empty_script_tree, main_loop_body
 
 
@@ -24,7 +25,7 @@ def program_src(project: CProject, scene: CScene, built_in_objects: Set[str], ad
         if obj.type in built_in_objects:
             add_import(tree, arcor2.object_types.__name__, obj.type, try_to_import=False)
         else:
-            add_import(tree, "object_types." + camel_case_to_snake_case(obj.type), obj.type, try_to_import=False)
+            add_import(tree, "object_types." + humps.depascalize(obj.type), obj.type, try_to_import=False)
 
         object_instance_from_res(tree, obj.name, obj.id, obj.type)
 
@@ -69,9 +70,9 @@ def add_logic_to_loop(tree: Module, scene: CScene, project: CProject) -> None:
         ac_obj, ac_type = act.type.split("/")
 
         # for scene objects, convert ID to name
-        try:
-            ac_obj = scene.object(ac_obj).name
-        except Arcor2Exception:
-            pass
+        ac_obj = scene.object(ac_obj).name
 
-        append_method_call(loop, fix_object_name(ac_obj), ac_type, [get_name_attr("res", clean(act.name))], [])
+        if not is_valid_identifier(ac_obj):
+            raise Arcor2Exception(f"Object name {ac_obj} is not a valid identifier.")
+
+        append_method_call(loop, ac_obj, ac_type, [get_name_attr("res", clean(act.name))], [])
