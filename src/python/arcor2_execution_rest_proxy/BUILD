@@ -5,17 +5,17 @@ python_library(
 )
 
 python_distribution(
-    name="arcor2_execution_dist",
+    name="arcor2_execution_rest_proxy_dist",
     dependencies=[
-        ":arcor2_execution",
+        ":arcor2_execution_rest_proxy",
         ":py.typed"
     ],
     provides=arcor2_setup_py(
-        name="arcor2_execution",
-        description="ARCOR2 - Augmented Reality Collaborative Robot."
+        name="arcor2_execution_rest_proxy",
+        description="REST Proxy for ARCOR2 Execution service."
     ).with_binaries(
         {
-            "arcor2_execution": "src/python/arcor2_execution/scripts:execution"
+            "arcor2_execution_rest_proxy": "src/python/arcor2_execution_rest_proxy/scripts:rest_proxy"
             }
         )
 )

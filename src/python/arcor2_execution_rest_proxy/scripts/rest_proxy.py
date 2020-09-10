@@ -7,6 +7,7 @@ import os
 import shutil
 import tempfile
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -22,6 +23,7 @@ from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request, send_file
 from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
 
 from arcor2.data import events
@@ -34,6 +36,9 @@ from arcor2_execution_data import rpc
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
+
+DB_PATH = os.getenv("ARCOR2_EXECUTION_PROXY_DB_PATH", "/tmp")  # should be directory where DBs can be stored
+TOKENS_DB_PATH = os.path.join(DB_PATH, "tokens")
 
 
 RespT = Union[Response, Tuple[str, int]]
@@ -66,6 +71,14 @@ class ExecutionInfo(JsonSchemaMixin):
     exceptionMessage: Optional[str] = None
 
 
+@dataclass
+class Token(JsonSchemaMixin):
+
+    id: str
+    name: str
+    access: bool = False
+
+
 # Create an APISpec
 spec = APISpec(
     title=SERVICE_NAME,
@@ -93,6 +106,15 @@ rpc_responses: Dict[int, RespQueue] = {}
 package_state: Optional[PackageState.Data] = None
 package_info: Optional[PackageInfo.Data] = None
 exception_message: Optional[str] = None
+
+
+@contextmanager
+def tokens_db():
+    """This is a wrapper for SqliteDict enabling one to change all settings at
+    one place."""
+
+    with SqliteDict(TOKENS_DB_PATH, autocommit=True, encode=json.dumps, decode=json.loads) as tokens:
+        yield tokens
 
 
 def ws_thread() -> None:  # TODO use (refactored) arserver client
@@ -147,6 +169,162 @@ def get_id() -> int:
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == "zip"
+
+
+@app.route("/tokens/create", methods=["POST"])
+def post_token() -> RespT:  # noqa
+    """post_token
+    ---
+    post:
+        description: Creates a token with the given name.
+        tags:
+           - Tokens
+        parameters:
+            - in: query
+              name: name
+              schema:
+                type: string
+              required: true
+              description: The name of the token.
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: Token
+    """
+
+    token = Token(uuid.uuid4().hex, request.args["name"])
+    token_dict = token.to_dict()
+    with tokens_db() as tokens:
+        tokens[token.id] = token_dict
+
+    return jsonify(token_dict), 200
+
+
+@app.route("/tokens", methods=["GET"])
+def get_tokens() -> RespT:
+    """Get all known tokens.
+    ---
+    get:
+      description: Tokens.
+      tags:
+        - Tokens
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: Token
+    """
+
+    with tokens_db() as tokens:
+        return jsonify(list(tokens.values())), 200
+
+
+@app.route("/tokens/<string:tokenId>", methods=["DELETE"])
+def delete_token(tokenId: str) -> RespT:  # noqa
+    """Delete token.
+    ---
+    delete:
+      description: Remove given token from known tokens.
+      tags:
+        - Tokens
+      parameters:
+        - in: path
+          name: tokenId
+          schema:
+            type: string
+          required: true
+          description: unique ID
+      responses:
+        200:
+          description: Ok
+    """
+
+    with tokens_db() as tokens:
+        try:
+            del tokens[tokenId]
+        except KeyError:
+            return "Token not found", 404
+
+    return "ok", 200
+
+
+@app.route("/tokens/<string:tokenId>/access", methods=["PUT"])
+def put_token_access(tokenId: str) -> RespT:  # noqa
+    """put_token_access
+    ---
+    put:
+        description: Sets execution access rights for given token.
+        tags:
+           - Tokens
+        parameters:
+            - in: path
+              name: tokenId
+              schema:
+                type: string
+              required: true
+              description: Token Id to have access value changed.
+            - in: query
+              name: newAccess
+              schema:
+                type: boolean
+              required: true
+              description: New token access value.
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: boolean
+    """
+
+    with tokens_db() as tokens:
+        try:
+            token = Token.from_dict(tokens[tokenId])
+        except KeyError:
+            return "Token not found", 404
+        print(request.args["newAccess"])
+        token.access = request.args["newAccess"] == "true"
+        tokens[tokenId] = token.to_dict()
+
+    return "ok", 200
+
+
+@app.route("/tokens/<string:tokenId>/access", methods=["GET"])
+def get_token_access(tokenId: str) -> RespT:  # noqa
+    """get_token_access
+    ---
+    get:
+        description: Gets execution access rights for given token.
+        tags:
+           - Tokens
+        parameters:
+            - in: path
+              name: tokenId
+              schema:
+                type: string
+              required: true
+              description: Token Id to have access value changed.
+        responses:
+            200:
+              description: Ok
+    """
+
+    with tokens_db() as tokens:
+        try:
+            token = Token.from_dict(tokens[tokenId])
+        except KeyError:
+            return "Token not found", 404
+        return jsonify(token.access), 200
 
 
 @app.route("/packages/<string:packageId>", methods=["PUT"])
@@ -488,6 +666,7 @@ def get_swagger() -> str:
 
 spec.components.schema(SummaryPackage.__name__, schema=SummaryPackage)
 spec.components.schema(ExecutionInfo.__name__, schema=ExecutionInfo)
+spec.components.schema(Token.__name__, schema=Token)
 
 
 with app.test_request_context():
@@ -500,6 +679,12 @@ with app.test_request_context():
     spec.path(view=packages_pause)
     spec.path(view=packages_resume)
     spec.path(view=packages_executioninfo)
+
+    spec.path(view=post_token)
+    spec.path(view=get_tokens)
+    spec.path(view=get_token_access)
+    spec.path(view=put_token_access)
+    spec.path(view=delete_token)
 
 
 def main() -> None:
