@@ -1,0 +1,525 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Execution Web API Reference",
+    "description": "",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/packages/{packageId}": {
+      "put": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Adds the execution package.",
+        "operationId": "PutPackage",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "description": "Unique package Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "required": [
+                  "executionPackage"
+                ],
+                "type": "object",
+                "properties": {
+                  "executionPackage": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              },
+              "encoding": {
+                "executionPackage": {
+                  "style": "form"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Deletes execution package.",
+        "operationId": "DeletePackage",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "description": "Unique package Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Gets the execution package with the specified ID.",
+        "operationId": "GetPackage",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "description": "Unique package Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/packages/{packageId}/start": {
+      "put": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Starts execution of the package.",
+        "operationId": "StartPackage",
+        "parameters": [
+          {
+            "name": "packageId",
+            "in": "path",
+            "description": "Unique package Id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Server Error"
+          }
+        }
+      }
+    },
+    "/packages/stop": {
+      "put": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Stops execution of the running package.",
+        "operationId": "StopPackage",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/packages/executioninfo": {
+      "get": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Gets information about execution.",
+        "operationId": "GetExecutionInfo",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionInfo"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionInfo"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/packages/pause": {
+      "put": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Pause the execution of the running package.",
+        "operationId": "PausePackage",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/packages/resume": {
+      "put": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Resumes the execution of the running package.",
+        "operationId": "ResumePackage",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/packages": {
+      "get": {
+        "tags": [
+          "Packages"
+        ],
+        "summary": "Gets summary for all stored execution packages.",
+        "operationId": "GetSummaryPackages",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SummaryPackage"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SummaryPackage"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SummaryPackage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tokens/{tokenId}/access": {
+      "get": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Gets execution access rights for the given token.",
+        "operationId": "GetAccess",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "in": "path",
+            "description": "Token Id to be checked.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "True if the given token has access rights, otherwise false.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Sets execution access rights for given token.",
+        "operationId": "SetAccess",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "in": "path",
+            "description": "Token Id to have access value changed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "newAccess",
+            "in": "query",
+            "description": "New token access value.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "500": {
+            "description": "Server Error"
+          }
+        }
+      }
+    },
+    "/tokens/{tokenId}": {
+      "delete": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Remove given token from known tokens.",
+        "operationId": "RemoveToken",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "in": "path",
+            "description": "Token Id to be removed.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/tokens/create": {
+      "post": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Creates a token with the given name.",
+        "operationId": "CreateToken",
+        "parameters": [
+          {
+            "name": "Name",
+            "in": "query",
+            "description": "The name of the token.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Created token with requested name and execution access rights set to false.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server Error"
+          }
+        }
+      }
+    },
+    "/tokens": {
+      "get": {
+        "tags": [
+          "Tokens"
+        ],
+        "summary": "Get all known tokens.",
+        "operationId": "GetTokens",
+        "responses": {
+          "200": {
+            "description": "Array of all knows tokens.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Token"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Token"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Token"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ExecutionState": {
+        "enum": [
+          "Undefined",
+          "Running",
+          "Completed",
+          "Faulted",
+          "Paused"
+        ],
+        "type": "string",
+        "description": "Represents the state of package execution."
+      },
+      "ExecutionInfo": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ExecutionState"
+              }
+            ],
+            "description": "Gets or sets the state of package execution."
+          },
+          "activePackageId": {
+            "type": "string",
+            "description": "Gets or sets active package unique identification.",
+            "nullable": true
+          },
+          "exceptionMessage": {
+            "type": "string",
+            "description": "Gets or sets the exception which could be thrown in case of task failure.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Stores information about package execution."
+      },
+      "SummaryPackage": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Gets or sets package Id."
+          },
+          "created": {
+            "type": "string",
+            "description": "Gets or sets date-time of package creation.\r\n<br />\r\nFormat example: \"2020-02-13T12:59:23.278160Z\"",
+            "nullable": true
+          },
+          "executed": {
+            "type": "string",
+            "description": "Gets or sets date-time of package last run.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Gets or sets name of execution package.",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "description": "Gets or sets project id associated with execution package.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Describes execution package."
+      },
+      "Token": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Gets or sets the unique identification of the token.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Gets or sets the name of the token.",
+            "nullable": true
+          },
+          "access": {
+            "type": "boolean",
+            "description": "Gets or sets the execution access rights."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Describes Token."
+      }
+    }
+  }
+}
