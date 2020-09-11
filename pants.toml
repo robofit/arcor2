@@ -2,6 +2,10 @@
 pants_version = "2.0.0a2"
 colors = true
 
+plugins = [
+  "packaging==20.4",
+]
+
 backend_packages.add = [
   "pants.backend.python",
   "pants.backend.python.lint.black",
