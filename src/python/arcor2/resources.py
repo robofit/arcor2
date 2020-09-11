@@ -157,7 +157,7 @@ class ResourcesBase(IntResources):
         try:
 
             with open(os.path.join("data", file_name + ".json")) as scene_file:
-                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))
+                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))  # type: ignore
 
         except JsonSchemaValidationError as e:
             raise ResourcesException(f"Invalid project/scene: {e}")
