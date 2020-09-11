@@ -336,7 +336,8 @@ async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Requ
     if {joint.name for joint in req.args.joints} != {joint.name for joint in robot_joints.joints}:
         raise Arcor2Exception("Joint names does not match the robot.")
 
-    robot_joints.joints = await get_robot_joints(robot_joints.robot_id)
+    # TODO maybe joints values should be normalized? To <0, 2pi> or to <-pi, pi>?
+    robot_joints.joints = req.args.joints
     robot_joints.is_valid = True
     glob.PROJECT.update_modified()
 
