@@ -71,7 +71,7 @@ def is_valid_identifier(value: str) -> bool:
     :return:
     """
 
-    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_pascalcase(value)
+    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_snakecase(value)
 
 
 def is_valid_type(value: str) -> bool:
