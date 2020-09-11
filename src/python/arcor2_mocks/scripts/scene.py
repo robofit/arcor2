@@ -5,6 +5,7 @@ import json
 import uuid
 from typing import Dict, Tuple, Union, cast
 
+import humps
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from dataclasses_jsonschema.apispec import DataclassesPlugin
@@ -13,8 +14,6 @@ from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 from arcor2.data import common, object_type, scene
-from arcor2.helpers import camel_case_to_snake_case
-from arcor2.rest import convert_keys
 from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 
 # Create an APISpec
@@ -76,7 +75,7 @@ def put_box() -> RespT:
               description: Ok
     """
 
-    args = convert_keys(request.args.to_dict(), camel_case_to_snake_case)
+    args = humps.decamelize(request.args.to_dict())
     box = object_type.Box(args["box_id"], float(args["size_x"]), float(args["size_y"]), float(args["size_z"]))
     collision_objects[box.id] = box
     return "ok", 200
@@ -110,7 +109,7 @@ def put_sphere() -> RespT:
               description: Ok
     """
 
-    args = convert_keys(request.args.to_dict(), camel_case_to_snake_case)
+    args = humps.decamelize(request.args.to_dict())
     sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
     collision_objects[sphere.id] = sphere
     return "ok", 200
@@ -149,7 +148,7 @@ def put_cylinder() -> RespT:
               description: Ok
     """
 
-    args = convert_keys(request.args.to_dict(), camel_case_to_snake_case)
+    args = humps.decamelize(request.args.to_dict())
     cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
     collision_objects[cylinder.id] = cylinder
     return "ok", 200
@@ -200,7 +199,7 @@ def put_mesh() -> RespT:
               description: Ok
     """
 
-    args = convert_keys(request.args.to_dict(), camel_case_to_snake_case)
+    args = humps.decamelize(request.args.to_dict())
     mesh = object_type.Mesh(args["mesh_id"], args["uri"])
     collision_objects[mesh.id] = mesh
     return "ok", 200

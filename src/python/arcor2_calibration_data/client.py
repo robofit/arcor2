@@ -16,8 +16,8 @@ def get_marker_pose(camera: CameraParameters, base64_encoded_image: str) -> Pose
 
     params_dict = camera.to_dict()
 
-    params_dict["markerSize"] = ARCOR2_CALIBRATION_MARKER_SIZE
-    params_dict["markerId"] = ARCOR2_CALIBRATION_MARKER_ID
+    params_dict["marker_size"] = ARCOR2_CALIBRATION_MARKER_SIZE
+    params_dict["marker_id"] = ARCOR2_CALIBRATION_MARKER_ID
 
     with io.BytesIO(base64.b64decode(base64_encoded_image.encode())) as image:
-        return rest.put(f"{ARCOR2_CALIBRATION_URL}/calibration", None, params_dict, Pose, {"Image": image.getvalue()})
+        return rest.put(f"{ARCOR2_CALIBRATION_URL}/calibration", None, params_dict, Pose, {"image": image.getvalue()})

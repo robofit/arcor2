@@ -15,8 +15,7 @@ python_distribution(
         description="ARCOR2 - Augmented Reality Collaborative Robot."
     ).with_binaries(
         {
-            "arcor2_execution": "src/python/arcor2_execution/scripts:execution",
-            "arcor2_execution_rest_proxy": "src/python/arcor2_execution/scripts:rest_proxy"
+            "arcor2_execution": "src/python/arcor2_execution/scripts:execution"
             }
         )
 )

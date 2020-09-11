@@ -28,3 +28,5 @@ lru-dict==1.1.6
 flask_cors==3.0.8
 opencv-contrib-python==4.4.0.42
 pydobot @ git+https://github.com/zdenekm/pydobot
+pyhumps==1.6.1
+sqlitedict==1.7.0

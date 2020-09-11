@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import datetime
 
 import pytest  # type: ignore
@@ -27,27 +25,6 @@ def test_import_cls_invalid() -> None:
     with pytest.raises(hlp.ImportClsException):
 
         mod, cls = hlp.import_cls("Generic")
-
-
-@pytest.mark.parametrize(
-    ("input", "output"),
-    [
-        ("CamelCaseStr", "camel_case_str"),
-        ("camelCaseStr", "camel_case_str"),
-        ("camel_case_str", "camel_case_str"),
-        ("Camel", "camel"),
-    ],
-)
-def test_camel_case_to_snake_case(input, output) -> None:
-    assert hlp.camel_case_to_snake_case(input) == output
-
-
-@pytest.mark.parametrize(
-    ("input", "output"),
-    [("snake_case_str", "SnakeCaseStr"), ("SnakeCaseStr", "SnakeCaseStr"), ("snake", "Snake"), ("abc", "Abc")],
-)
-def test_snake_case_to_camel_case(input, output) -> None:
-    assert hlp.snake_case_to_camel_case(input) == output
 
 
 @pytest.mark.parametrize(

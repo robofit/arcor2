@@ -3,7 +3,6 @@ import importlib
 import keyword
 import logging
 import os
-import re
 import sys
 import time
 import traceback
@@ -11,6 +10,7 @@ from threading import Lock
 from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
 
+import humps
 import semver  # type: ignore
 from aiologger.formatters.base import Formatter  # type: ignore
 
@@ -71,7 +71,7 @@ def is_valid_identifier(value: str) -> bool:
     :return:
     """
 
-    return value.isidentifier() and not keyword.iskeyword(value) and value == camel_case_to_snake_case(value)
+    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_snakecase(value)
 
 
 def is_valid_type(value: str) -> bool:
@@ -82,22 +82,7 @@ def is_valid_type(value: str) -> bool:
     :return:
     """
 
-    return value.isidentifier() and not keyword.iskeyword(value) and value == snake_case_to_camel_case(value)
-
-
-_first_cap_re = re.compile("(.)([A-Z][a-z]+)")
-_all_cap_re = re.compile("([a-z0-9])([A-Z])")
-
-
-def camel_case_to_snake_case(camel_str: str) -> str:
-
-    s1 = _first_cap_re.sub(r"\1_\2", camel_str)
-    return _all_cap_re.sub(r"\1_\2", s1).lower()
-
-
-def snake_case_to_camel_case(snake_str: str) -> str:
-
-    return re.sub(r"(?:^|_)(.)", lambda m: m.group(1).upper(), snake_str)
+    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_pascalcase(value)
 
 
 def format_stacktrace() -> str:
@@ -144,7 +129,7 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     if path not in sys.path:
         sys.path.append(path)
 
-    type_file = camel_case_to_snake_case(type_name)
+    type_file = humps.depascalize(type_name)
     full_path = os.path.join(path, module_name, type_file)
 
     with open(f"{full_path}.py", "w") as file:

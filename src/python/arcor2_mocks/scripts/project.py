@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Tuple, Union, cast
 
+import humps
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from dataclasses_jsonschema.apispec import DataclassesPlugin
@@ -14,8 +15,6 @@ from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 
 from arcor2.data import common, object_type
-from arcor2.helpers import camel_case_to_snake_case
-from arcor2.rest import convert_keys
 from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
 # Create an APISpec
@@ -64,7 +63,7 @@ def put_project() -> RespT:
               description: Ok
     """
 
-    project = common.Project.from_dict(convert_keys(request.json, camel_case_to_snake_case))
+    project = common.Project.from_dict(humps.decamelize(request.json))
     project.modified = datetime.now(tz=timezone.utc)
     project.int_modified = None
     PROJECTS[project.id] = project
@@ -172,7 +171,7 @@ def put_scene() -> RespT:
               description: Ok
     """
 
-    scene = common.Scene.from_dict(convert_keys(request.json, camel_case_to_snake_case))
+    scene = common.Scene.from_dict(humps.decamelize(request.json))
     scene.modified = datetime.now(tz=timezone.utc)
     scene.int_modified = None
     SCENES[scene.id] = scene
@@ -280,7 +279,7 @@ def put_object_type() -> RespT:
               description: Ok
     """
 
-    obj_type = object_type.ObjectType.from_dict(convert_keys(request.json, camel_case_to_snake_case))
+    obj_type = object_type.ObjectType.from_dict(humps.decamelize(request.json))
     OBJECT_TYPES[obj_type.id] = obj_type
     return "ok", 200
 
@@ -386,7 +385,7 @@ def put_box() -> RespT:
               description: Ok
     """
 
-    box = object_type.Box.from_dict(convert_keys(request.json, camel_case_to_snake_case))
+    box = object_type.Box.from_dict(humps.decamelize(request.json))
     BOXES[box.id] = box
     return "ok", 200
 
@@ -439,7 +438,7 @@ def put_cylinder() -> RespT:
               description: Ok
     """
 
-    cylinder = object_type.Cylinder.from_dict(convert_keys(request.json, camel_case_to_snake_case))
+    cylinder = object_type.Cylinder.from_dict(humps.decamelize(request.json))
     CYLINDERS[cylinder.id] = cylinder
     return "ok", 200
 
@@ -492,7 +491,7 @@ def put_sphere() -> RespT:
               description: Ok
     """
 
-    sphere = object_type.Sphere.from_dict(convert_keys(request.json, camel_case_to_snake_case))
+    sphere = object_type.Sphere.from_dict(humps.decamelize(request.json))
     SPHERES[sphere.id] = sphere
     return "ok", 200
 
