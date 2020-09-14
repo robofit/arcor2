@@ -1,0 +1,32 @@
+dataclasses==0.6
+dataclasses-jsonschema[fast-validation] @ git+https://github.com/zdenekm/dataclasses-jsonschema.git@issue-126
+horast @ git+https://github.com/mbdevpl/horast.git@issue_3
+typed-ast==1.4.1
+autopep8==1.5.4
+typed-astunparse==2.1.4
+static-typing==0.2.7
+websockets==8.1
+aiologger==0.5.0
+requests==2.24.0
+Cython==0.29.21
+numpy-quaternion==2020.5.19.15.27.24
+websocket-client==0.57.0
+PyYAML==5.3.1
+Pillow==7.2.0
+aiorun==2020.6.1
+typing-inspect==0.6.0
+semver==2.10.2
+pytest==6.0.1
+pytest-repeat==0.8.0
+pytest-randomly==3.4.1
+openapi-spec-validator==0.2.9
+apispec==3.3.1
+apispec-webframeworks==0.5.2
+Flask==1.1.2
+flask-swagger-ui==3.25.0
+lru-dict==1.1.6
+flask_cors==3.0.8
+opencv-contrib-python==4.4.0.42
+pydobot @ git+https://github.com/zdenekm/pydobot
+pyhumps==1.6.1
+sqlitedict==1.7.0

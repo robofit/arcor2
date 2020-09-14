@@ -1,0 +1,6 @@
+[GLOBAL]
+pantsd = false
+process_execution_local_parallelism = 2
+
+[python-setup]
+resolver_jobs = 1
