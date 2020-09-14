@@ -55,7 +55,7 @@ def start_processes() -> Iterator[None]:
 
         for cmd in (
             "./src.python.arcor2_mocks.scripts/mock_project.pex",
-            "src.python.arcor2_mocks.scripts/mock_scene.pex",
+            "./src.python.arcor2_mocks.scripts/mock_scene.pex",
             "./src.python.arcor2_execution.scripts/execution.pex",
             "./src.python.arcor2_build.scripts/build.pex",
         ):
@@ -404,7 +404,6 @@ def add_logic_item(ars: ARServer, start: str, end: str) -> common.LogicItem:
     return evt.data
 
 
-@pytest.mark.skip(reason="Test has to be fixed.")
 def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     event(ars, events.c.ShowMainScreen)
