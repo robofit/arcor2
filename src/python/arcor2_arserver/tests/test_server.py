@@ -1,8 +1,8 @@
+import inspect
 import logging
 import os
 import subprocess as sp
 import tempfile
-import inspect
 from typing import Dict, Iterator, Tuple, Type, TypeVar
 
 import pytest  # type: ignore
@@ -16,7 +16,8 @@ from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.time_actions import TimeActions
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, uid
-from arcor2_execution_data import events as eevents, EVENTS as EXE_EVENTS
+from arcor2_execution_data import EVENTS as EXE_EVENTS
+from arcor2_execution_data import events as eevents
 from arcor2_execution_data import rpc as erpc
 from arcor2_mocks import PROJECT_PORT, SCENE_PORT
 
@@ -52,12 +53,19 @@ def start_processes() -> Iterator[None]:
 
         processes = []
 
-        for cmd in ("./src.python.arcor2_mocks.scripts/mock_project.pex", "src.python.arcor2_mocks.scripts/mock_scene.pex", "./src.python.arcor2_execution.scripts/execution.pex", "./src.python.arcor2_build.scripts/build.pex"):
+        for cmd in (
+            "./src.python.arcor2_mocks.scripts/mock_project.pex",
+            "src.python.arcor2_mocks.scripts/mock_scene.pex",
+            "./src.python.arcor2_execution.scripts/execution.pex",
+            "./src.python.arcor2_build.scripts/build.pex",
+        ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):
-            upload = sp.Popen("./src.python.arcor2.scripts/upload_builtin_objects.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT)
+            upload = sp.Popen(
+                "./src.python.arcor2.scripts/upload_builtin_objects.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT
+            )
             ret = upload.communicate()
             if upload.returncode == 0:
                 log_proc_output(ret)
@@ -65,7 +73,9 @@ def start_processes() -> Iterator[None]:
         else:
             raise Exception("Failed to upload objects.")
 
-        processes.append(sp.Popen("./src.python.arcor2_arserver.scripts/arserver.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
+        processes.append(
+            sp.Popen("./src.python.arcor2_arserver.scripts/arserver.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT)
+        )
 
         yield None
 
@@ -86,6 +96,7 @@ for mod in modules:
     for _, cls in inspect.getmembers(mod, inspect.isclass):
         if issubclass(cls, Event):
             event_mapping[cls.__name__] = cls
+
 
 @pytest.fixture()
 def ars() -> Iterator[ARServer]:
