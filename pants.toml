@@ -51,7 +51,9 @@ version = "mypy==0.782"
 [pytest]
 pytest_plugins.add = [
   "pytest-repeat",
-  "pytest-randomly"
+  "pytest-randomly",
+  "pytest-icdiff",
+  "pygments"
 ]
 
 [black]
