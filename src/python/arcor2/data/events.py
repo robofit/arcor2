@@ -6,7 +6,6 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common, object_type
 
-
 """
 ------------------------------------------------------------------------------------------------------------------------
 Common stuff

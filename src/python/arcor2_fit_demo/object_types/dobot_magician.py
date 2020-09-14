@@ -1,7 +1,5 @@
-import os
 from typing import List
 
-import arcor2_fit_demo
 from arcor2.data.common import Joint, StrEnum
 
 from .abstract_dobot import AbstractDobot

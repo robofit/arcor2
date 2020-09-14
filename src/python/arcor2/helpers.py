@@ -11,8 +11,8 @@ from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
 
 import humps
-from packaging.version import parse, LegacyVersion
 from aiologger.formatters.base import Formatter  # type: ignore
+from packaging.version import parse
 
 from arcor2.data.events import ProjectException
 from arcor2.exceptions import Arcor2Exception
