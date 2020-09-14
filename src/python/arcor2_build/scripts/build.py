@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shutil
+import stat
 import tempfile
 from datetime import datetime, timezone
 from typing import Set, Tuple, Union
@@ -23,7 +24,6 @@ from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
 from arcor2.helpers import logger_formatter
 from arcor2.object_types.utils import base_from_source, built_in_types_names
-from arcor2.package import make_executable
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
@@ -48,6 +48,11 @@ app = Flask(__name__)
 CORS(app)
 
 RETURN_TYPE = Union[Tuple[str, int], Response]
+
+
+def make_executable(path_to_file: str) -> None:
+    st = os.stat(path_to_file)
+    os.chmod(path_to_file, st.st_mode | stat.S_IEXEC)
 
 
 def get_base(object_types: Set[str], obj_type: ObjectType, ot_path: str) -> None:
