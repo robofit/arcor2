@@ -11,8 +11,8 @@ from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
 
 import humps
-import semver  # type: ignore
 from aiologger.formatters.base import Formatter  # type: ignore
+from packaging.version import parse
 
 from arcor2.data.events import ProjectException
 from arcor2.exceptions import Arcor2Exception
@@ -154,8 +154,8 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
 def check_compatibility(my_version: str, their_version: str) -> None:
 
     try:
-        mv = semver.VersionInfo.parse(my_version)
-        tv = semver.VersionInfo.parse(their_version)
+        mv = parse(my_version)
+        tv = parse(their_version)
     except ValueError as e:
         raise Arcor2Exception from e
 

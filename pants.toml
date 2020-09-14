@@ -1,6 +1,8 @@
 [GLOBAL]
-pants_version = "2.0.0a2"
+pants_version = "2.0.0a3"
 colors = true
+pants_distdir_legacy_paths = false
+
 
 plugins = [
   "packaging==20.4",
@@ -44,6 +46,7 @@ extra_requirements.add = [
 
 [mypy]
 config = "mypy.ini"
+version = "mypy==0.782"
 
 [pytest]
 pytest_plugins.add = [

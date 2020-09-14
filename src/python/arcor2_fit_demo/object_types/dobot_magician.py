@@ -1,7 +1,5 @@
-import os
 from typing import List
 
-import arcor2_fit_demo
 from arcor2.data.common import Joint, StrEnum
 
 from .abstract_dobot import AbstractDobot
@@ -19,7 +17,7 @@ class Joints(StrEnum):
 class DobotMagician(AbstractDobot):
 
     _ABSTRACT = False
-    urdf_package_path = os.path.join(os.path.dirname(arcor2_fit_demo.__file__), "data", "dobot-magician.zip")
+    # urdf_package_path = os.path.join(os.path.dirname(arcor2_fit_demo.__file__), "data", "dobot-magician.zip")
 
     def robot_joints(self) -> List[Joint]:
 
