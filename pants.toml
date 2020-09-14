@@ -46,6 +46,7 @@ extra_requirements.add = [
 
 [mypy]
 config = "mypy.ini"
+version = "mypy==0.782"
 
 [pytest]
 pytest_plugins.add = [
