@@ -2,7 +2,8 @@ import logging
 import os
 import subprocess as sp
 import tempfile
-from typing import Iterator, Tuple, Type, TypeVar
+import inspect
+from typing import Dict, Iterator, Tuple, Type, TypeVar
 
 import pytest  # type: ignore
 
@@ -15,7 +16,7 @@ from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.time_actions import TimeActions
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, uid
-from arcor2_execution_data import events as eevents
+from arcor2_execution_data import events as eevents, EVENTS as EXE_EVENTS
 from arcor2_execution_data import rpc as erpc
 from arcor2_mocks import PROJECT_PORT, SCENE_PORT
 
@@ -51,12 +52,12 @@ def start_processes() -> Iterator[None]:
 
         processes = []
 
-        for cmd in ("arcor2_project_mock", "arcor2_scene_mock", "arcor2_execution", "arcor2_build"):
+        for cmd in ("./src.python.arcor2_mocks.scripts/mock_project.pex", "src.python.arcor2_mocks.scripts/mock_scene.pex", "./src.python.arcor2_execution.scripts/execution.pex", "./src.python.arcor2_build.scripts/build.pex"):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):
-            upload = sp.Popen("arcor2_upload_builtin_objects", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT)
+            upload = sp.Popen("./src.python.arcor2.scripts/upload_builtin_objects.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT)
             ret = upload.communicate()
             if upload.returncode == 0:
                 log_proc_output(ret)
@@ -64,7 +65,7 @@ def start_processes() -> Iterator[None]:
         else:
             raise Exception("Failed to upload objects.")
 
-        processes.append(sp.Popen("arcor2_server", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
+        processes.append(sp.Popen("./src.python.arcor2_arserver.scripts/arserver.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
 
         yield None
 
@@ -73,10 +74,23 @@ def start_processes() -> Iterator[None]:
 
 WS_CONNECTION_STR = "ws://0.0.0.0:6789"
 
+# TODO refactor this into _data packages
+event_mapping: Dict[str, Type[Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
+
+modules = []
+
+for _, mod in inspect.getmembers(events, inspect.ismodule):
+    modules.append(mod)
+
+for mod in modules:
+    for _, cls in inspect.getmembers(mod, inspect.isclass):
+        if issubclass(cls, Event):
+            event_mapping[cls.__name__] = cls
 
 @pytest.fixture()
 def ars() -> Iterator[ARServer]:
-    with ARServer(WS_CONNECTION_STR, timeout=10) as ws:
+
+    with ARServer(WS_CONNECTION_STR, timeout=10, event_mapping=event_mapping) as ws:
         yield ws
 
 
@@ -87,7 +101,7 @@ def event(ars: ARServer, evt_type: Type[E]) -> E:
 
     evt = ars.get_event()
     assert isinstance(evt, evt_type)
-    assert evt.event == evt_type.event  # type: ignore  # TODO investigate why mypy complains here
+    assert evt.event == evt_type.__name__
     return evt
 
 
@@ -95,7 +109,7 @@ def wait_for_event(ars: ARServer, evt_type: Type[E]) -> E:
 
     evt = ars.get_event(drop_everything_until=evt_type)
     assert isinstance(evt, evt_type)
-    assert evt.event == evt_type.event  # type: ignore  # TODO investigate why mypy complains here
+    assert evt.event == evt_type.__name__
     return evt
 
 
@@ -163,7 +177,6 @@ def scene(ars: ARServer) -> common.Scene:
     return scene_evt.data.scene
 
 
-@pytest.mark.skip(reason="Integration tests are temporarily disabled.")
 def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
 
     test = "Test"
@@ -236,7 +249,7 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     assert show_main_screen_event_3.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
     assert show_main_screen_event_3.data.highlight == scene_id
 
-    with ARServer(WS_CONNECTION_STR) as ars_2:
+    with ARServer(WS_CONNECTION_STR, timeout=10, event_mapping=event_mapping) as ars_2:
 
         smse = event(ars_2, events.c.ShowMainScreen)
         assert smse.data
@@ -267,7 +280,6 @@ def close_project(ars: ARServer) -> None:
     event(ars, events.p.ProjectClosed)
 
 
-@pytest.mark.skip(reason="Integration tests are temporarily disabled.")
 def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.Scene) -> None:
 
     # first, there are no projects
@@ -328,7 +340,7 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
     assert len(list_of_projects.data) == 1
     assert list_of_projects.data[0].id == project_id
 
-    with ARServer(WS_CONNECTION_STR) as ars_2:
+    with ARServer(WS_CONNECTION_STR, timeout=10, event_mapping=event_mapping) as ars_2:
 
         smse = event(ars_2, events.c.ShowMainScreen)
         assert smse.data
@@ -381,7 +393,7 @@ def add_logic_item(ars: ARServer, start: str, end: str) -> common.LogicItem:
     return evt.data
 
 
-@pytest.mark.skip(reason="Integration tests are temporarily disabled.")
+@pytest.mark.skip(reason="Test has to be fixed.")
 def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     event(ars, events.c.ShowMainScreen)
