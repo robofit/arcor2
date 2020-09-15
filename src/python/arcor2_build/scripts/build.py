@@ -22,13 +22,13 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
-from arcor2.helpers import logger_formatter
+from arcor2.helpers import logger_formatter, port_from_url
 from arcor2.object_types.utils import base_from_source, built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
 from arcor2_build.source.utils import derived_resources_class, global_action_points_class, global_actions_class
-from arcor2_build_data import PORT, SERVICE_NAME
+from arcor2_build_data import SERVICE_NAME, URL
 
 logger = logging.getLogger("build")
 ch = logging.StreamHandler()
@@ -275,7 +275,7 @@ def main() -> None:
     # Register blueprint at URL
     app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-    app.run(host="0.0.0.0", port=PORT)
+    app.run(host="0.0.0.0", port=port_from_url(URL))
 
 
 if __name__ == "__main__":
