@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import tempfile
+import time
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -129,7 +130,7 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
 
     while True:
 
-        data = json.loads(ws.recv())
+        data = json.loads(ws.recv())  # TODO handle WebSocketConnectionClosedException
 
         if "event" in data:
 
@@ -157,7 +158,9 @@ def call_rpc(req: arcor2_rpc.common.RPC.Request) -> arcor2_rpc.common.RPC.Respon
     assert ws
 
     rpc_responses[req.id] = RespQueue(maxsize=1)
-    ws.send(req.to_json())
+
+    ws.send(req.to_json())  # TODO handle WebSocketConnectionClosedException
+
     resp = rpc_responses[req.id].get()
     del rpc_responses[req.id]
     return resp
@@ -561,7 +564,7 @@ def packages_stop() -> RespT:
     if resp.result:
         return "ok", 200
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 403
 
 
 @app.route("/packages/pause", methods=["PUT"])
@@ -590,7 +593,7 @@ def packages_pause() -> RespT:
     if resp.result:
         return "ok", 200
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 403
 
 
 @app.route("/packages/resume", methods=["PUT"])
@@ -698,7 +701,14 @@ def main() -> None:
         return
 
     global ws
-    ws = websocket.create_connection(EXE_URL, enable_multithread=True)
+
+    while True:
+        try:
+            ws = websocket.create_connection(EXE_URL, enable_multithread=True)
+            break
+        except ConnectionRefusedError:
+            print("Connecting to the Execution service...")
+            time.sleep(1.0)
 
     thread = Thread(target=ws_thread, daemon=True)
     thread.start()
