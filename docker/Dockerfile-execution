@@ -1,6 +1,16 @@
 ARG version=latest
 FROM arcor2/arcor2_base:$version
 
-RUN ln -s /root/arcor2/docker/start-execution.sh /start.sh
 
-EXPOSE 5009
+RUN cd ~/arcor2 \
+	&& ./pants binary src/python/arcor2_execution/scripts:execution
+
+FROM arcor2/arcor2_dist_base:$version
+
+RUN mkdir -p /root/project 
+
+COPY --from=0 /root/arcor2/dist/src.python.arcor2_execution.scripts/execution.pex /root/execution.pex
+
+COPY docker/start-execution.sh ./start.sh
+
+expose 5009

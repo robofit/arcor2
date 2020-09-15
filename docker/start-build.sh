@@ -1,3 +1,5 @@
 #!/bin/bash  
 
-arcor2_build
+cd /root
+./build.pex
+
