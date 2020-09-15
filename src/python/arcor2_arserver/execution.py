@@ -17,6 +17,8 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver_data import events as sevts
+from arcor2_build_data import URL as BUILD_URL
+from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc as erpc
 
 if TYPE_CHECKING:
@@ -79,7 +81,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
 
         await hlp.run_in_executor(
             rest.download,
-            f"{glob.BUILDER_URL}/project/{project_id}/publish",
+            f"{BUILD_URL}/project/{project_id}/publish",
             path,
             None,
             {"package_name": package_name},
@@ -120,7 +122,7 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
 
         try:
 
-            async with websockets.connect(glob.MANAGER_URL) as manager_client:
+            async with websockets.connect(EXE_URL) as manager_client:
 
                 glob.logger.info("Connected to manager.")
 
