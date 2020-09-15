@@ -10,8 +10,6 @@ from arcor2.parameter_plugins.relative_pose import RelativePose
 
 from .kinali_abstract_robot import KinaliAbstractRobot
 
-rest.TIMEOUT = (3.05, 5 * 60)  # calls to robot move actions may take long time so longer timeout is needed here
-
 # mypy work-around by GvR (https://github.com/python/mypy/issues/5107#issuecomment-529372406)
 if TYPE_CHECKING:
     F = TypeVar("F", bound=Callable)
