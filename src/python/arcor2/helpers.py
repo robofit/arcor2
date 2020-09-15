@@ -12,7 +12,7 @@ from typing import Any, Callable, Tuple, Type, TypeVar
 
 import humps
 from aiologger.formatters.base import Formatter  # type: ignore
-from packaging.version import parse
+from packaging.version import Version, parse
 
 from arcor2.data.events import ProjectException
 from arcor2.exceptions import Arcor2Exception
@@ -159,8 +159,14 @@ def check_compatibility(my_version: str, their_version: str) -> None:
     except ValueError as e:
         raise Arcor2Exception from e
 
+    if not isinstance(mv, Version):
+        raise Arcor2Exception(f"{my_version} is not a proper version.")
+
+    if not isinstance(tv, Version):
+        raise Arcor2Exception(f"{their_version} is not a proper version.")
+
     if mv.major != tv.major:
-        raise Arcor2Exception("Different major varsion.")
+        raise Arcor2Exception("Different major version.")
 
     if mv.major == 0:
         if mv.minor != tv.minor:
@@ -186,3 +192,8 @@ class NonBlockingLock:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self._lock.release()
         return None
+
+
+def port_from_url(url: str) -> int:
+
+    return int(url.strip().split(":")[-1])
