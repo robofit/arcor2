@@ -6,6 +6,7 @@
 So far, it is necessary to initialize Scene service (0.1.0) separately - for instance using Swagger UI.
 """
 
+from arcor2 import rest
 from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Pose, ProjectRobotJoints, uid
 from arcor2.data.object_type import Box
@@ -19,6 +20,8 @@ from arcor2_kinali.object_types.statistic import Statistic
 
 
 def main() -> None:
+
+    rest.TIMEOUT = (3.05, 8 * 60 * 60)  # workaround for long timeouts for Interaction service / Robot
 
     aubo = KinaliRobot(uid(), "Whatever", Pose(), KinaliRobotSettings("http://127.0.0.1:13000", "aubo"))
     simatic = KinaliRobot(uid(), "Whatever", Pose(), KinaliRobotSettings("http://127.0.0.1:13001", "simatic"))
