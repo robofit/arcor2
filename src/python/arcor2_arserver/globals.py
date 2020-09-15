@@ -16,14 +16,9 @@ from arcor2.data import events
 from arcor2.object_types.abstract import Generic
 from arcor2_arserver.object_types.utils import ObjectTypeDict
 from arcor2_arserver_data.events.common import ShowMainScreen
-from arcor2_build_data import PORT as BUILD_PORT
-from arcor2_execution_data import PORT as EXE_PORT
 
 logger = Logger.with_default_handlers(name="server", formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
 VERBOSE: bool = False
-
-MANAGER_URL = os.getenv("ARCOR2_EXECUTION_URL", f"ws://0.0.0.0:{EXE_PORT}")
-BUILDER_URL = os.getenv("ARCOR2_BUILDER_URL", f"http://0.0.0.0:{BUILD_PORT}")
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
 

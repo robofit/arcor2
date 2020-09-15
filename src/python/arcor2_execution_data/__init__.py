@@ -1,3 +1,4 @@
+import os
 from typing import Tuple, Type
 
 from arcor2 import package_version
@@ -5,7 +6,7 @@ from arcor2.data import events as arcor2_events
 from arcor2.data.rpc.common import RPC, Version
 from arcor2_execution_data import events, rpc
 
-PORT = 6790
+URL = os.getenv("ARCOR2_EXECUTION_URL", "ws://0.0.0.0:6790")
 
 # RPCs that should be exposed to end clients (e.g. ARServer exposes those to AREditor).
 EXPOSED_RPCS: Tuple[Type[RPC], ...] = (
