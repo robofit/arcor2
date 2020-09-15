@@ -1,0 +1,16 @@
+ARG version=latest
+FROM arcor2/arcor2_base:$version
+
+
+RUN cd ~/arcor2 \
+	&& ./pants binary src/python/arcor2_mocks/scripts:mock_project \
+	&& ./pants binary src/python/arcor2_mocks/scripts:mock_scene
+
+FROM arcor2/arcor2_dist_base:$version
+
+COPY --from=0 /root/arcor2/dist/src.python.arcor2_mocks.scripts/mock_project.pex /root/mock_project.pex
+COPY --from=0 /root/arcor2/dist/src.python.arcor2_mocks.scripts/mock_scene.pex /root/mock_scene.pex
+
+COPY docker/start-mocks.sh ./start.sh
+
+expose 6789

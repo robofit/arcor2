@@ -1,0 +1,18 @@
+ARG version=latest
+FROM arcor2/arcor2_base:$version
+
+
+RUN cd ~/arcor2 \
+	&& ./pants binary src/python/arcor2_execution_rest_proxy/scripts:execution_rest_proxy
+
+FROM arcor2/arcor2_dist_base:$version
+
+RUN mkdir -p /root/tokens \
+	&& mkdir -p /root/project
+
+COPY --from=0 /root/arcor2/dist/src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /root/execution_rest_proxy.pex
+
+COPY docker/start-execution-proxy.sh ./start.sh
+
+expose 5009
+
