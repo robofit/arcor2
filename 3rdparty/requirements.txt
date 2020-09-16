@@ -26,6 +26,6 @@ flask-swagger-ui==3.25.0
 lru-dict==1.1.6
 flask_cors==3.0.8
 opencv-contrib-python==4.4.0.42
-pydobot @ git+https://github.com/zdenekm/pydobot
+pydobot @ git+https://github.com/zdenekm/pydobot@092fd085b994784a3412a162d93244f868df6add
 pyhumps==1.6.1
 sqlitedict==1.7.0
