@@ -14,9 +14,9 @@ from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
 from werkzeug.utils import secure_filename
 
+import arcor2_calibration
 from arcor2.data.common import Pose
 from arcor2.helpers import logger_formatter
-from arcor2_calibration import version
 from arcor2_calibration.calibration import get_poses
 
 logger = logging.getLogger("calibration")
@@ -28,7 +28,7 @@ logger.addHandler(ch)
 # Create an APISpec
 spec = APISpec(
     title=SERVICE_NAME,
-    version=version(),
+    version=arcor2_calibration.version(),
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
