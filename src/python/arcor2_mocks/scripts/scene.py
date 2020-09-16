@@ -18,8 +18,8 @@ from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 
 # Create an APISpec
 spec = APISpec(
-    title=SCENE_SERVICE_NAME,
-    version=version(),
+    title=f"{SCENE_SERVICE_NAME} ({version()})",
+    version="0.1.1",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
