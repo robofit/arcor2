@@ -3,7 +3,7 @@ import collections.abc as collections_abc
 import copy
 import inspect
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Set
+from typing import Any, AsyncGenerator, Dict, Optional, Set
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -15,35 +15,27 @@ from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
 from arcor2.object_types.abstract import Robot
-from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
+from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
+from arcor2_arserver import project
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.helpers import unique_name
 from arcor2_arserver.project import (
     check_action_params,
     check_flows,
+    close_project,
     find_object_action,
     open_project,
     project_names,
     project_problems,
 )
 from arcor2_arserver.robot import get_end_effector_pose, get_robot_joints
-from arcor2_arserver.scene import clear_scene, get_instance, open_scene
+from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, open_scene
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
-
-PREV_RESULTS: Dict[str, List[Any]] = {}
-
-
-def remove_prev_result(action_id: str) -> None:
-
-    try:
-        del PREV_RESULTS[action_id]
-    except KeyError:
-        pass
 
 
 @asynccontextmanager
@@ -113,46 +105,14 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
     glob.RUNNING_ACTION_PARAMS = None
 
 
-async def execute_action(action_method: Callable, params: Dict[str, Any]) -> None:
-
-    assert glob.RUNNING_ACTION
-
-    await notif.broadcast_event(sevts.a.ActionExecution(sevts.a.ActionExecution.Data(glob.RUNNING_ACTION)))
-
-    evt = sevts.a.ActionResult(sevts.a.ActionResult.Data(glob.RUNNING_ACTION))
-
-    try:
-        action_result = await hlp.run_in_executor(action_method, *params.values())
-    except Arcor2Exception as e:
-        glob.logger.error(e)
-        evt.data.error = e.message
-    except (AttributeError, TypeError) as e:
-        glob.logger.error(e)
-        evt.data.error = str(e)
-    else:
-        if action_result is not None:
-            PREV_RESULTS[glob.RUNNING_ACTION] = action_result
-            try:
-                evt.data.result = TYPE_TO_PLUGIN[type(action_result)].value_to_json(action_result)
-            except KeyError:
-                # TODO temporal workaround for unsupported types
-                evt.data.result = str(action_result)
-
-    if glob.RUNNING_ACTION is None:
-        # action was cancelled, do not send any event
-        return
-
-    await notif.broadcast_event(evt)
-    glob.RUNNING_ACTION = None
-    glob.RUNNING_ACTION_PARAMS = None
-
-
 @scene_needed
 @project_needed
 async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
     assert glob.PROJECT
+
+    ensure_scene_started()
 
     if glob.RUNNING_ACTION:
         raise Arcor2Exception(
@@ -171,7 +131,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
 
             parsed_link = param.parse_link()
             try:
-                results = PREV_RESULTS[parsed_link.action_id]
+                results = project.PREV_RESULTS[parsed_link.action_id]
             except KeyError:
                 prev_action = glob.PROJECT.action(parsed_link.action_id)
                 raise Arcor2Exception(f"Action '{prev_action.name}' has to be executed first.")
@@ -217,7 +177,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
     glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
 
     # schedule execution and return success
-    asyncio.ensure_future(execute_action(getattr(obj, action_name), params))
+    asyncio.ensure_future(project.execute_action(getattr(obj, action_name), params))
     return None
 
 
@@ -281,6 +241,8 @@ async def add_action_point_joints_using_robot_cb(
     req: srpc.p.AddActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
 
+    ensure_scene_started()
+
     assert glob.SCENE
     assert glob.PROJECT
 
@@ -308,6 +270,8 @@ async def add_action_point_joints_using_robot_cb(
 async def update_action_point_joints_using_robot_cb(
     req: srpc.p.UpdateActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
+
+    ensure_scene_started()
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -513,6 +477,8 @@ async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.
 @project_needed
 async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingRobot.Request, ui: WsClient) -> None:
 
+    ensure_scene_started()
+
     assert glob.SCENE
     assert glob.PROJECT
 
@@ -588,6 +554,8 @@ async def add_action_point_orientation_using_robot_cb(
     :return:
     """
 
+    ensure_scene_started()
+
     assert glob.SCENE
     assert glob.PROJECT
 
@@ -622,6 +590,8 @@ async def update_action_point_orientation_using_robot_cb(
     :param req:
     :return:
     """
+
+    ensure_scene_started()
 
     assert glob.SCENE
     assert glob.PROJECT
@@ -727,7 +697,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
         await open_scene(req.args.scene_id)
 
-    PREV_RESULTS.clear()
+    project.PREV_RESULTS.clear()
     glob.PROJECT = UpdateableCachedProject(
         common.Project(common.uid(), req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
     )
@@ -740,18 +710,11 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
     return None
 
 
-async def notify_project_closed(project_id: str) -> None:
-
-    proj_list = sevts.c.ShowMainScreen.Data.WhatEnum.ProjectsList
-
-    await notif.broadcast_event(sevts.p.ProjectClosed())
-    glob.MAIN_SCREEN = sevts.c.ShowMainScreen.Data(proj_list)
-    await notif.broadcast_event(sevts.c.ShowMainScreen(sevts.c.ShowMainScreen.Data(proj_list, project_id)))
-
-
 @scene_needed
 @project_needed
 async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> None:
+
+    can_modify_scene()
 
     assert glob.PROJECT
 
@@ -761,13 +724,7 @@ async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> No
     if req.dry_run:
         return None
 
-    project_id = glob.PROJECT.project.id
-
-    glob.PROJECT = None
-    await clear_scene()
-    PREV_RESULTS.clear()
-    asyncio.ensure_future(notify_project_closed(project_id))
-
+    await close_project()
     return None
 
 
@@ -979,7 +936,7 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
         return None
 
     glob.PROJECT.remove_action(req.args.id)
-    remove_prev_result(action.id)
+    project.remove_prev_result(action.id)
 
     evt = sevts.p.ActionChanged(action.bare)
     evt.change_type = Event.Type.REMOVE

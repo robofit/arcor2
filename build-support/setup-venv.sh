@@ -2,7 +2,7 @@
 
 set -e
 
-PYTHON_BIN=python3
+PYTHON_BIN=python3  # TODO use python3.8
 VIRTUALENV=build-support/.venv
 PIP="${VIRTUALENV}/bin/pip"
 

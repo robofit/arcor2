@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import cast
+from typing import Set, cast
 
 from arcor2 import rest
 from arcor2.data.common import Pose
@@ -9,7 +9,7 @@ from arcor2.object_types.abstract import Robot, Settings
 @dataclass
 class KinaliRobotSettings(Settings):
     url: str
-    robot_id: str
+    configuration_id: str
 
 
 class KinaliAbstractRobot(Robot):
@@ -22,18 +22,18 @@ class KinaliAbstractRobot(Robot):
 
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: KinaliRobotSettings) -> None:
         super(KinaliAbstractRobot, self).__init__(obj_id, name, pose, settings)
-        self._create()
+        rest.put(f"{self.settings.url}/system/set", params={"configId": self.settings.configuration_id, "id": self.id})
 
     @property
     def settings(self) -> KinaliRobotSettings:
         return cast(KinaliRobotSettings, super(KinaliAbstractRobot, self).settings)
 
-    def _robot_id(self) -> str:
-        return rest.get_primitive(f"{self.settings.url}/systems/robotId", str)
+    def configurations(self) -> Set[str]:
+        return set(rest.get_list_primitive(f"{self.settings.url}/configurations", str))
 
-    def _create(self):
-        # if self._robot_id() != self.settings.robot_id:
-        rest.put(f"{self.settings.url}/systems/robotId", params={"robot_id": self.settings.robot_id})
+    def cleanup(self) -> None:
+        super(KinaliAbstractRobot, self).cleanup()
+        rest.put(f"{self.settings.url}/system/reset")
 
 
 __all__ = [KinaliRobotSettings.__name__, KinaliAbstractRobot.__name__]

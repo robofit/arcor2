@@ -385,7 +385,8 @@ def put_box() -> RespT:
               description: Ok
     """
 
-    box = object_type.Box.from_dict(humps.decamelize(request.json))
+    # box = object_type.Box.from_dict(humps.decamelize(request.json))  # TODO disabled because of bug in pyhumps
+    box = object_type.Box(request.json["id"], request.json["sizeX"], request.json["sizeY"], request.json["sizeZ"])
     BOXES[box.id] = box
     return "ok", 200
 
