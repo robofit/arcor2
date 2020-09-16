@@ -19,8 +19,8 @@ from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
 # Create an APISpec
 spec = APISpec(
-    title=PROJECT_SERVICE_NAME,
-    version=version(),
+    title=f"{PROJECT_SERVICE_NAME} ({version()})",
+    version="0.4.0",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
