@@ -8,7 +8,8 @@ python_distribution(
     name="arcor2_calibration_dist",
     dependencies=[
         ":arcor2_calibration",
-        ":py.typed"
+        ":py.typed",
+        "src/python/arcor2_calibration/scripts:calibration"  # TODO why is this necessary?
     ],
     provides=arcor2_setup_py(
         name="arcor2_calibration",
