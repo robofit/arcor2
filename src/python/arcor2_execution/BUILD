@@ -9,7 +9,8 @@ python_distribution(
     name="arcor2_execution_dist",
     dependencies=[
         ":arcor2_execution",
-        ":py.typed"
+        ":py.typed",
+        "src/python/arcor2_execution/scripts:execution"  # TODO why is this necessary?
     ],
     provides=arcor2_setup_py(
         name="arcor2_execution",

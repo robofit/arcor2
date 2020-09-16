@@ -15,7 +15,9 @@ python_distribution(
         ":py.typed",
         "src/python/arcor2_arserver/clients",
         "src/python/arcor2_arserver/object_types",
-        "src/python/arcor2_arserver/rpc"
+        "src/python/arcor2_arserver/rpc",
+        "src/python/arcor2_arserver/scripts:arserver",  # TODO why is this necessary?
+        "src/python/arcor2_arserver/scripts:broadcaster"  # TODO why is this necessary?
     ],
     provides=arcor2_setup_py(
         name="arcor2_arserver",
