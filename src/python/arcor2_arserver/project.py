@@ -1,25 +1,84 @@
 import asyncio
-from typing import AsyncIterator, Dict, List, Set, Union
+from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
-from arcor2.parameter_plugins import PARAM_PLUGINS
+from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.scene import clear_scene, open_scene
+from arcor2_arserver.scene import open_scene
+from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
+from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import ProjectClosed
 from arcor2_arserver_data.objects import ObjectAction
 
+PREV_RESULTS: Dict[str, List[Any]] = {}
 
-async def close_project(do_cleanup: bool = True) -> None:
 
+def remove_prev_result(action_id: str) -> None:
+
+    try:
+        del PREV_RESULTS[action_id]
+    except KeyError:
+        pass
+
+
+async def notify_project_closed(project_id: str) -> None:
+
+    proj_list = ShowMainScreen.Data.WhatEnum.ProjectsList
+
+    await notif.broadcast_event(ProjectClosed())
+    glob.MAIN_SCREEN = ShowMainScreen.Data(proj_list)
+    await notif.broadcast_event(ShowMainScreen(ShowMainScreen.Data(proj_list, project_id)))
+
+
+async def close_project() -> None:
+
+    assert glob.PROJECT
+
+    project_id = glob.PROJECT.project.id
+    glob.SCENE = None
     glob.PROJECT = None
-    await clear_scene(do_cleanup)
-    asyncio.ensure_future(notif.broadcast_event(ProjectClosed()))
+    PREV_RESULTS.clear()
+    asyncio.ensure_future(notify_project_closed(project_id))
+
+
+async def execute_action(action_method: Callable, params: Dict[str, Any]) -> None:
+
+    assert glob.RUNNING_ACTION
+
+    await notif.broadcast_event(ActionExecution(ActionExecution.Data(glob.RUNNING_ACTION)))
+
+    evt = ActionResult(ActionResult.Data(glob.RUNNING_ACTION))
+
+    try:
+        action_result = await hlp.run_in_executor(action_method, *params.values())
+    except Arcor2Exception as e:
+        glob.logger.error(e)
+        evt.data.error = e.message
+    except (AttributeError, TypeError) as e:
+        glob.logger.error(e)
+        evt.data.error = str(e)
+    else:
+        if action_result is not None:
+            PREV_RESULTS[glob.RUNNING_ACTION] = action_result
+            try:
+                evt.data.result = TYPE_TO_PLUGIN[type(action_result)].value_to_json(action_result)
+            except KeyError:
+                # TODO temporal workaround for unsupported types
+                evt.data.result = str(action_result)
+
+    if glob.RUNNING_ACTION is None:
+        # action was cancelled, do not send any event
+        return
+
+    await notif.broadcast_event(evt)
+    glob.RUNNING_ACTION = None
+    glob.RUNNING_ACTION_PARAMS = None
 
 
 def check_action_params(
@@ -318,7 +377,7 @@ async def open_project(project_id: str) -> None:
         if glob.SCENE.id != project.scene_id:
             raise Arcor2Exception("Required project is associated to another scene.")
     else:
-        await open_scene(project.scene_id, object_overrides=project.overrides)
+        await open_scene(project.scene_id)
 
     assert glob.SCENE
     for ap in project.action_points_with_parent:
@@ -326,7 +385,7 @@ async def open_project(project_id: str) -> None:
         assert ap.parent
 
         if ap.parent not in glob.SCENE.object_ids | project.action_points_ids:
-            await clear_scene()
+            glob.SCENE = None
             raise Arcor2Exception(f"Action point's {ap.name} parent not available.")
 
     glob.PROJECT = project

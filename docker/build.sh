@@ -1,6 +1,6 @@
 #!/bin/bash
 #VERSION=`python3 ../setup.py --version`
-VERSION='0.8.0rc1'
+VERSION='0.8.0rc3'
 docker build -f Dockerfile-dist-base -t arcor2/arcor2_dist_base:$VERSION  ../ --build-arg version=$VERSION
 docker build -f Dockerfile-arserver -t arcor2/arcor2_arserver:$VERSION  ../ --build-arg version=$VERSION
 docker build -f Dockerfile-build -t arcor2/arcor2_build:$VERSION --build-arg version=$VERSION ../

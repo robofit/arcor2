@@ -17,7 +17,6 @@ from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import GenericWithPose
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
@@ -32,12 +31,15 @@ from arcor2_arserver.project import (
 from arcor2_arserver.robot import get_end_effector_pose
 from arcor2_arserver.scene import (
     add_object_to_scene,
-    clear_scene,
+    can_modify_scene,
     get_instance,
+    get_scene_state,
+    notify_scene_closed,
     open_scene,
     scene_names,
     scenes,
-    set_object_pose,
+    start_scene,
+    stop_scene,
 )
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
@@ -97,17 +99,6 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
     return None
 
 
-async def notify_scene_closed(scene_id: str) -> None:
-
-    await notif.broadcast_event(sevts.s.SceneClosed())
-    glob.MAIN_SCREEN = sevts.c.ShowMainScreen.Data(sevts.c.ShowMainScreen.Data.WhatEnum.ScenesList)
-    await notif.broadcast_event(
-        sevts.c.ShowMainScreen(
-            data=sevts.c.ShowMainScreen.Data(sevts.c.ShowMainScreen.Data.WhatEnum.ScenesList, scene_id)
-        )
-    )
-
-
 @scene_needed
 @no_project
 async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
@@ -122,12 +113,13 @@ async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
     if not req.args.force and glob.SCENE.has_changes():
         raise Arcor2Exception("Scene has unsaved changes.")
 
+    can_modify_scene()  # can't close scene while started
+
     if req.dry_run:
         return None
 
     scene_id = glob.SCENE.id
-
-    await clear_scene()
+    glob.SCENE = None
     OBJECTS_WITH_UPDATED_POSE.clear()
     asyncio.ensure_future(notify_scene_closed(scene_id))
 
@@ -175,6 +167,8 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
 async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsClient) -> None:
 
     assert glob.SCENE
+
+    can_modify_scene()
 
     obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose, req.args.settings)
 
@@ -260,20 +254,20 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
 
     assert glob.SCENE
 
+    can_modify_scene()
+
     if not req.args.force and {proj.name async for proj in projects_using_object(glob.SCENE.id, req.args.id)}:
         raise Arcor2Exception("Can't remove object that is used in project(s).")
 
     if req.dry_run:
         return None
 
-    if req.args.id not in glob.SCENE_OBJECT_INSTANCES:
+    if req.args.id not in glob.SCENE.object_ids:
         raise Arcor2Exception("Unknown id.")
 
     obj = glob.SCENE.object(req.args.id)
     glob.SCENE.delete_object(req.args.id)
-    obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
 
-    del glob.SCENE_OBJECT_INSTANCES[req.args.id]
     if req.args.id in OBJECTS_WITH_UPDATED_POSE:
         OBJECTS_WITH_UPDATED_POSE.remove(req.args.id)
 
@@ -282,7 +276,6 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
     asyncio.ensure_future(notif.broadcast_event(evt))
 
     asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
-    asyncio.ensure_future(hlp.run_in_executor(obj_inst.cleanup))
     return None
 
 
@@ -295,6 +288,8 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     :return:
     """
 
+    can_modify_scene()
+
     assert glob.SCENE
 
     if req.args.id == req.args.robot.robot_id:
@@ -302,13 +297,16 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
 
     scene_object = glob.SCENE.object(req.args.id)
 
-    obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.id]
+    obj_type = glob.OBJECT_TYPES[scene_object.type]
 
-    if not isinstance(obj_inst, GenericWithPose):
+    if not obj_type.meta.has_pose:
         raise Arcor2Exception("Object without pose.")
 
-    if obj_inst.collision_model:
-        if isinstance(obj_inst.collision_model, object_type.Mesh) and req.args.pivot != req.args.PivotEnum.MIDDLE:
+    object_model = obj_type.meta.object_model
+
+    if object_model:
+        collision_model = object_model.model()
+        if isinstance(collision_model, object_type.Mesh) and req.args.pivot != req.args.PivotEnum.MIDDLE:
             raise Arcor2Exception("Only middle pivot point is supported for objects with mesh collision model.")
     elif req.args.pivot != req.args.PivotEnum.MIDDLE:
         raise Arcor2Exception("Only middle pivot point is supported for objects without collision model.")
@@ -317,22 +315,23 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
 
     position_delta = common.Position()
 
-    if obj_inst.collision_model:
-        if isinstance(obj_inst.collision_model, object_type.Box):
+    if object_model:
+        collision_model = object_model.model()
+        if isinstance(collision_model, object_type.Box):
             if req.args.pivot == req.args.PivotEnum.TOP:
-                position_delta.z -= obj_inst.collision_model.size_z / 2
+                position_delta.z -= collision_model.size_z / 2
             elif req.args.pivot == req.args.PivotEnum.BOTTOM:
-                position_delta.z += obj_inst.collision_model.size_z / 2
-        elif isinstance(obj_inst.collision_model, object_type.Cylinder):
+                position_delta.z += collision_model.size_z / 2
+        elif isinstance(collision_model, object_type.Cylinder):
             if req.args.pivot == req.args.PivotEnum.TOP:
-                position_delta.z -= obj_inst.collision_model.height / 2
+                position_delta.z -= collision_model.height / 2
             elif req.args.pivot == req.args.PivotEnum.BOTTOM:
-                position_delta.z += obj_inst.collision_model.height / 2
-        elif isinstance(obj_inst.collision_model, object_type.Sphere):
+                position_delta.z += collision_model.height / 2
+        elif isinstance(collision_model, object_type.Sphere):
             if req.args.pivot == req.args.PivotEnum.TOP:
-                position_delta.z -= obj_inst.collision_model.radius / 2
+                position_delta.z -= collision_model.radius / 2
             elif req.args.pivot == req.args.PivotEnum.BOTTOM:
-                position_delta.z += obj_inst.collision_model.radius / 2
+                position_delta.z += collision_model.radius / 2
 
     position_delta = position_delta.rotated(new_pose.orientation)
 
@@ -353,7 +352,6 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     asyncio.ensure_future(notif.broadcast_event(evt))
 
     OBJECTS_WITH_UPDATED_POSE.add(scene_object.id)
-    asyncio.ensure_future(set_object_pose(obj_inst, scene_object.pose))
 
     return None
 
@@ -361,6 +359,8 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
 @scene_needed
 @no_project
 async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClient) -> None:
+
+    can_modify_scene()
 
     assert glob.SCENE
 
@@ -371,9 +371,6 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
 
     obj.pose = req.args.pose
 
-    obj_inst = glob.SCENE_OBJECT_INSTANCES[req.args.object_id]
-    assert isinstance(obj_inst, GenericWithPose)
-
     glob.SCENE.update_modified()
 
     evt = sevts.s.SceneObjectChanged(obj)
@@ -381,7 +378,6 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
     asyncio.ensure_future(notif.broadcast_event(evt))
 
     OBJECTS_WITH_UPDATED_POSE.add(obj.id)
-    asyncio.ensure_future(set_object_pose(obj_inst, obj.pose))
 
     return None
 
@@ -495,3 +491,27 @@ async def calibration_cb(req: srpc.c.Calibration.Request, ui: WsClient) -> srpc.
     return srpc.c.Calibration.Response(
         data=await hlp.run_in_executor(calibration.get_marker_pose, req.args.camera_parameters, req.args.image)
     )
+
+
+async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
+
+    if get_scene_state() != sevts.s.SceneState.Data.StateEnum.Stopped:
+        raise Arcor2Exception("Scene not stopped.")
+
+    if req.dry_run:
+        return
+
+    asyncio.ensure_future(start_scene())
+
+
+async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
+
+    # TODO it should not be possible to stop scene while some action runs
+
+    if get_scene_state() != sevts.s.SceneState.Data.StateEnum.Started:
+        raise Arcor2Exception("Scene not started.")
+
+    if req.dry_run:
+        return
+
+    asyncio.ensure_future(stop_scene())

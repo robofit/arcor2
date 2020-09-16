@@ -6,7 +6,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata
 
-from .kinali_abstract_object import KinaliAbstractObject
+from .kinali_simple_object import KinaliSimpleObject
 
 
 @dataclass
@@ -16,8 +16,8 @@ class StatisticValue(JsonSchemaMixin):
     created: int
 
 
-class Statistic(KinaliAbstractObject):
-    """Statistic Web API Reference."""
+class Statistic(KinaliSimpleObject):
+    """Statistic Web API Reference (0.3.0)."""
 
     _ABSTRACT = False
 

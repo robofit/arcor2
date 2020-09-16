@@ -6,7 +6,7 @@ from arcor2_kinali.object_types.kinali_abstract_object import KinaliAbstractObje
 
 
 class Barcode(KinaliAbstractObject):
-    """REST interface to the barcode service."""
+    """REST interface to the barcode service (0.3.0)."""
 
     _ABSTRACT = False
 
@@ -17,14 +17,13 @@ class Barcode(KinaliAbstractObject):
         """
         return rest.get_list_primitive(f"{self.settings.url}/scanners", str)
 
-    def scan(self, scanner_id: str) -> str:
-        """Gets scan.
+    def scan(self) -> str:
+        """Gets scan from active scanner.
 
-        :param scanner_id:
         :return:
         """
 
-        return rest.get_primitive(f"{self.settings.url}/scanners/{scanner_id}/scan", str)
+        return rest.get_primitive(f"{self.settings.url}/scanner/scan", str)
 
     active_scanners.__action__ = ActionMetadata(blocking=True)  # type: ignore
     scan.__action__ = ActionMetadata(blocking=True)  # type: ignore

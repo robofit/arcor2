@@ -27,7 +27,7 @@ from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import ObjectTypeData, add_ancestor_actions, object_actions
 from arcor2_arserver.project import scene_object_pose_updated
 from arcor2_arserver.robot import get_end_effector_pose
-from arcor2_arserver.scene import scenes, set_object_pose
+from arcor2_arserver.scene import ensure_scene_started, scenes, set_object_pose
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 
@@ -51,6 +51,8 @@ def clean_up_after_focus(obj_id: str) -> None:
 @scene_needed
 @no_project
 async def focus_object_start_cb(req: srpc.o.FocusObjectStart.Request, ui: WsClient) -> None:
+
+    ensure_scene_started()
 
     obj_id = req.args.object_id
 

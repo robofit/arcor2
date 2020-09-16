@@ -25,6 +25,18 @@ async def focus(mfa: MeshFocusAction) -> Pose:
     return await run_in_executor(scene_service.focus, mfa)
 
 
+async def start() -> None:
+    await run_in_executor(scene_service.start)
+
+
+async def stop() -> None:
+    await run_in_executor(scene_service.stop)
+
+
+async def started() -> bool:
+    return await run_in_executor(scene_service.started)
+
+
 async def delete_all_collisions() -> None:
     await asyncio.gather(*[delete_collision_id(coll_id) for coll_id in await collision_ids()])
 
@@ -36,4 +48,7 @@ __all__ = [
     focus.__name__,
     delete_all_collisions.__name__,
     SceneServiceException.__name__,
+    start.__name__,
+    stop.__name__,
+    started.__name__,
 ]
