@@ -1,13 +1,13 @@
 def arcor2_setup_py(**kwargs):
 
     if "license" not in kwargs:
-        kwargs["license"] = "LGPL",
+        kwargs["license"] = "LGPL"
 
     if "author" not in kwargs:
-        kwargs["author"] = "Robo@FIT",
+        kwargs["author"] = "Robo@FIT"
 
     if "author_email" not in kwargs:
-        kwargs["author_email"] = "imaterna@fit.vut.cz",
+        kwargs["author_email"] = "imaterna@fit.vut.cz"
 
     if "classifiers" not in kwargs:
         kwargs["classifiers"] = [
