@@ -16,6 +16,7 @@ from queue import Queue
 from threading import Thread
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
 
+import arcor2_execution_rest_proxy
 import websocket  # type: ignore
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
@@ -82,7 +83,7 @@ class Token(JsonSchemaMixin):
 
 # Create an APISpec
 spec = APISpec(
-    title=SERVICE_NAME,
+    title=f"{SERVICE_NAME} ({arcor2_execution_rest_proxy.version()})",
     version="0.3.0",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
