@@ -172,26 +172,8 @@ class AbstractDobot(Robot):
 
         self.alarms_to_exception()
 
-    def suck(self) -> None:
-
-        if not self.settings.simulator:
-            try:
-                self._dobot.wait_for_cmd(self._dobot.suck(True))
-            except dobot.DobotException as e:
-                raise DobotException("Suck failed.") from e
-
-    def release(self) -> None:
-
-        if not self.settings.simulator:
-            try:
-                self._dobot.wait_for_cmd(self._dobot.suck(False))
-            except dobot.DobotException as e:
-                raise DobotException("Release failed.") from e
-
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    release.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
 
 AbstractDobot.DYNAMIC_PARAMS = {
