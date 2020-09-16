@@ -8,7 +8,9 @@ python_distribution(
     name="arcor2_mocks_dist",
     dependencies=[
         ":arcor2_mocks",
-        ":py.typed"
+        ":py.typed",
+        "src/python/arcor2_mocks/scripts:mock_project",  # TODO why is this necessary?
+        "src/python/arcor2_mocks/scripts:mock_scene"  # TODO why is this necessary?
     ],
     provides=arcor2_setup_py(
         name="arcor2_mocks",
