@@ -1,8 +1,11 @@
+import time
 from typing import List
 
-from arcor2.data.common import Joint, StrEnum
+from pydobot import dobot  # type: ignore
 
-from .abstract_dobot import AbstractDobot
+from arcor2.data.common import ActionMetadata, Joint, StrEnum
+
+from .abstract_dobot import AbstractDobot, DobotException
 
 
 class Joints(StrEnum):
@@ -30,3 +33,36 @@ class DobotM1(AbstractDobot):
             Joint(Joints.J3, joints.j3),
             Joint(Joints.J4, joints.j4),
         ]
+
+    def suck(self) -> None:
+
+        if self.settings.simulator:
+            return
+
+        try:
+            self._dobot.set_io(17, False)  # suck
+            self._dobot.set_io(18, False)  # on
+        except dobot.DobotException as e:
+            raise DobotException("Suck failed.") from e
+
+    def release(self, blow_out_sec: float = 0.1) -> None:
+
+        assert 0.0 <= blow_out_sec <= 60.0
+
+        if self.settings.simulator:
+            time.sleep(blow_out_sec)
+            return
+
+        try:
+            if blow_out_sec > 0:
+                self._dobot.set_io(17, True)  # blow
+                self._dobot.set_io(18, False)  # on
+                time.sleep(blow_out_sec)
+
+            self._dobot.set_io(18, True)  # off
+
+        except dobot.DobotException as e:
+            raise DobotException("Release failed.") from e
+
+    suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    release.__action__ = ActionMetadata(blocking=True)  # type: ignore
