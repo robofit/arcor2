@@ -1,0 +1,22 @@
+ARG version=0.8.0rc2
+FROM arcor2/arcor2_base:$version
+
+
+RUN cd ~/arcor2 \
+	&& ./pants setup-py :: 
+
+RUN cd ~/arcor2/dist \
+	&& pip install -e ./arcor2-`cat ../src/python/arcor2/VERSION` \
+    && pip install -e ./arcor2_calibration_data-`cat ../src/python/arcor2_calibration_data/VERSION` \
+	&& pip install -e ./arcor2_arserver_data-`cat ../src/python/arcor2/VERSION` \
+	&& pip install -e ./arcor2_build_data-`cat ../src/python/arcor2_build_data/VERSION` \
+	&& pip install -e ./arcor2_execution_data-`cat ../src/python/arcor2_execution_data/VERSION` \
+	&& pip install -e ./arcor2_arserver-`cat ../src/python/arcor2_arserver/VERSION` \
+	&& pip install -e ./arcor2_build-`cat ../src/python/arcor2_build/VERSION` \
+	&& pip install -e ./arcor2_calibration-`cat ../src/python/arcor2_calibration/VERSION` \
+	&& pip install -e ./arcor2_execution-`cat ../src/python/arcor2_execution/VERSION` \
+	&& pip install -e ./arcor2_execution_rest_proxy-`cat ../src/python/arcor2_execution_rest_proxy/VERSION` \
+	&& pip install -e ./arcor2_fit_demo-`cat ../src/python/arcor2_fit_demo/VERSION` \
+	&& pip install -e ./arcor2_kinali-`cat ../src/python/arcor2_kinali/VERSION` \
+	&& pip install -e ./arcor2_mocks-`cat ../src/python/arcor2_mocks/VERSION` 
+
