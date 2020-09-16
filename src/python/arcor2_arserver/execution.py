@@ -84,7 +84,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             f"{BUILD_URL}/project/{project_id}/publish",
             path,
             None,
-            {"package_name": package_name},
+            {"packageName": package_name},
         )
 
         with open(path, "rb") as zip_file:
