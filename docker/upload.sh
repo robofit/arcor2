@@ -7,3 +7,4 @@ docker image push arcor2/arcor2_execution:$VERSION
 docker image push arcor2/arcor2_execution_proxy:$VERSION
 docker image push arcor2/arcor2_build:$VERSION
 docker image push arcor2/arcor2_mocks:$VERSION
+docker image push arcor2/arcor2_devel:$VERSION
