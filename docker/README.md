@@ -30,13 +30,13 @@ This document describes resources needed for building and running docker images 
  - clone this repo to your computer
  - run in /arcor2/ folder
  - **Base image** 
- 	 - *docker build . -f docker/Dockerfile-base -t arcor2/arcor2_base:\$(cat arcor2/VERSION)*
+ 	 - *docker build . -f docker/Dockerfile-base -t arcor2/arcor2_base:VERSION
  - **Arserver**
-	 - *docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat arcor2/VERSION) --build-arg version=\$(cat arcor2/VERSION)*
+	 - *docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat arcor2/VERSION) --build-arg version=VERSION
  - **Build**
-	 - *docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat arcor2/VERSION) --build-arg version=$(cat arcor2/VERSION)*
+	 - *docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat arcor2/VERSION) --build-arg version=VERSION
  - **Execution**
-	 - *docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat arcor2/VERSION) --build-arg version=\$(cat arcor2/VERSION)*
+	 - *docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat arcor2/VERSION) --build-arg version=VERSION
  - ... and so on. Or run build.sh script
 
 ## Releasing a new version
