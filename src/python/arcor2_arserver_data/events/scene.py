@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -33,3 +34,19 @@ class SceneClosed(Event):
 @dataclass
 class SceneObjectChanged(Event):
     data: common.SceneObject
+
+
+@dataclass
+class SceneState(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        class StateEnum(common.StrEnum):
+            Stopped: str = "stopped"
+            Starting: str = "starting"
+            Started: str = "started"
+            Stopping: str = "stopping"
+
+        state: StateEnum
+        message: Optional[str] = None
+
+    data: Data

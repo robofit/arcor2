@@ -1,6 +1,6 @@
 #!/bin/bash 
 #VERSION=`python3 ../setup.py --version`
-VERSION='0.8.0rc2'
+VERSION='0.8.0rc3'
 #docker image push arcor2/arcor2_base:$VERSION
 docker image push arcor2/arcor2_arserver:$VERSION
 docker image push arcor2/arcor2_execution:$VERSION

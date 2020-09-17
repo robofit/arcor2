@@ -2,6 +2,8 @@
 
 import argparse
 import json
+import random
+import time
 import uuid
 from typing import Dict, Tuple, Union, cast
 
@@ -19,7 +21,7 @@ from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 # Create an APISpec
 spec = APISpec(
     title=f"{SCENE_SERVICE_NAME} ({version()})",
-    version="0.1.1",
+    version="0.2.0",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
@@ -35,6 +37,7 @@ def get_id() -> int:
 RespT = Union[Response, Tuple[str, int]]
 
 collision_objects: Dict[str, object_type.Models] = {}
+started: bool = False
 
 
 @app.route("/collisions/box", methods=["PUT"])
@@ -75,8 +78,13 @@ def put_box() -> RespT:
               description: Ok
     """
 
-    args = humps.decamelize(request.args.to_dict())
-    box = object_type.Box(args["box_id"], float(args["size_x"]), float(args["size_y"]), float(args["size_z"]))
+    # TODO workarounded because of bug in pyhumps
+    # args = humps.decamelize(request.args.to_dict())
+    # box = object_type.Box(args["box_id"], float(args["size_x"]), float(args["size_y"]), float(args["size_z"]))
+
+    args = request.args.to_dict()
+    box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
+
     collision_objects[box.id] = box
     return "ok", 200
 
@@ -280,6 +288,27 @@ def put_focus() -> RespT:
     return cast(Response, jsonify(common.Pose().to_json()))
 
 
+@app.route("/system/start", methods=["PUT"])
+def put_start() -> RespT:
+    global started
+    time.sleep(random.uniform(0.5, 5.0))
+    started = True
+    return "ok", 200
+
+
+@app.route("/system/stop", methods=["PUT"])
+def put_stop() -> RespT:
+    global started
+    time.sleep(random.uniform(0.5, 5.0))
+    started = False
+    return "ok", 200
+
+
+@app.route("/system/started", methods=["GET"])
+def get_started() -> RespT:
+    return cast(Response, jsonify(started))
+
+
 @app.route("/swagger/api/swagger.json", methods=["GET"])
 def get_swagger() -> str:
     return json.dumps(spec.to_dict())
@@ -302,6 +331,9 @@ with app.test_request_context():
     spec.path(view=put_cylinder)
     spec.path(view=delete_collision)
     spec.path(view=get_collisions)
+    spec.path(view=put_start)
+    spec.path(view=put_stop)
+    spec.path(view=get_started)
 
 
 def main() -> None:

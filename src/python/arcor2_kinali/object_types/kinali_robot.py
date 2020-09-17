@@ -24,7 +24,6 @@ else:
 
 class MoveTypeEnum(StrEnum):
 
-    AVOID_COLLISIONS: str = "AvoidCollisions"
     LINE: str = "Line"
     SIMPLE: str = "Simple"
 
@@ -46,88 +45,93 @@ class MoveRelativeJointsParameters(JsonSchemaMixin):
 
 
 class KinaliRobot(KinaliAbstractRobot):
-    """REST interface to the robot service."""
+    """REST interface to the robot service (0.7.0)."""
 
     _ABSTRACT = False
 
     def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
-
-        with self._move_lock:
-
-            rest.put(
-                f"{self.settings.url}/endeffectors/{end_effector_id}/move",
-                target_pose,
-                {"moveType": MoveTypeEnum.AVOID_COLLISIONS.value, "speed": speed},
-            )
+        self.move(end_effector_id, target_pose, MoveTypeEnum.SIMPLE, speed, safe=True)
 
     def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+        self.set_joints(ProjectRobotJoints("", "", "", target_joints), MoveTypeEnum.SIMPLE, speed, safe=True)
 
-        with self._move_lock:
-
-            rest.put(
-                f"{self.settings.url}/joints",
-                target_joints,
-                {"moveType": MoveTypeEnum.AVOID_COLLISIONS.value, "speed": speed},
-            )
-
-    def stop(self) -> None:
-        rest.put(f"{self.settings.url}/stop")
-
-    def robot_joints(self) -> List[Joint]:
-        return rest.get_list(f"{self.settings.url}/joints", Joint)
+    # --- EndEffectors Controller --------------------------------------------------------------------------------------
 
     @lru_cache()
     def get_end_effectors_ids(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/endeffectors"))
+        return set(rest.get_data(f"{self.settings.url}/endEffectors"))
 
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
-        return rest.get(f"{self.settings.url}/endeffectors/{end_effector_id}/pose", Pose)
+        return rest.get(f"{self.settings.url}/endEffectors/{end_effector_id}/pose", Pose)
 
-    def move(self, end_effector_id: str, pose: Pose, move_type: MoveTypeEnum, speed: float = 0.5) -> None:
+    def move(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        move_type: MoveTypeEnum,
+        speed: float = 0.5,
+        acceleration: float = 0.5,
+        safe: bool = True,
+    ) -> None:
         """Moves the robot's end-effector to a specific pose.
 
-        :param robot_id: Unique robot id.
         :param end_effector_id: Unique end-effector id.
         :param pose: Target pose.
         :param move_type: Type of move.
         :param speed: Speed of move.
+        :param acceleration: Acceleration of move.
+        :param safe: When true, robot will consider its environment and avoid collisions.
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
+        assert 0.0 <= acceleration <= 1.0
+
+        if safe:
+            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveCollideLess"
+        else:
+            url = f"{self.settings.url}/endEffectors/{end_effector_id}/move"
+
+        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
 
         with self._move_lock:
-
-            rest.put(
-                f"{self.settings.url}/endeffectors/{end_effector_id}/move",
-                pose,
-                {"moveType": move_type.value, "speed": speed},
-            )
+            rest.put(url, pose, params)
 
     def move_relative(
-        self, end_effector_id: str, pose: Pose, rel_pose: RelativePose, move_type: MoveTypeEnum, speed: float = 0.5
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        rel_pose: RelativePose,
+        move_type: MoveTypeEnum,
+        speed: float = 0.5,
+        acceleration: float = 0.5,
+        safe: bool = True,
     ) -> None:
         """Moves the robot's end-effector to a specific pose.
 
-        :param robot_id: Unique robot id.
         :param end_effector_id: Unique end-effector id.
         :param pose: Target pose.
         :param rel_pose: Relative pose.
         :param move_type: Type of move.
         :param speed: Speed of move.
+        :param acceleration: Acceleration of move.
+        :param safe: When true, robot will consider its environment and avoid collisions.
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
+        assert 0.0 <= acceleration <= 1.0
+
+        if safe:
+            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveCollideLessRelative"
+        else:
+            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveRelative"
+
+        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
+        body = MoveRelativeParameters(pose, rel_pose.position, rel_pose.orientation)
 
         with self._move_lock:
-
-            body = MoveRelativeParameters(pose, rel_pose.position, rel_pose.orientation)
-            rest.put(
-                f"{self.settings.url}/endeffectors/{end_effector_id}/moveRelative",
-                body,
-                {"moveType": move_type.value, "speed": speed},
-            )
+            rest.put(url, body, params)
 
     def move_relative_joints(
         self,
@@ -136,6 +140,8 @@ class KinaliRobot(KinaliAbstractRobot):
         rel_pose: RelativePose,
         move_type: MoveTypeEnum,
         speed: float = 0.5,
+        acceleration: float = 0.5,
+        safe: bool = True,
     ) -> None:
         """Moves the robot's end-effector relatively to specific joint values.
 
@@ -145,46 +151,45 @@ class KinaliRobot(KinaliAbstractRobot):
         :param rel_pose: Relative pose.
         :param move_type: Type of move.
         :param speed: Speed of move.
+        :param acceleration: Acceleration of move.
+        :param safe: When true, robot will consider its environment and avoid collisions.
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
+        assert 0.0 <= acceleration <= 1.0
+
+        if safe:
+            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveJointsCollideLessRelative"
+        else:
+            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveJointsRelative"
+
+        body = MoveRelativeJointsParameters(joints.joints, rel_pose.position, rel_pose.orientation)
+        params = {"moveType": move_type.value, "speed": speed}
 
         with self._move_lock:
+            rest.put(url, body, params)
 
-            body = MoveRelativeJointsParameters(joints.joints, rel_pose.position, rel_pose.orientation)
-            rest.put(
-                f"{self.settings.url}/endeffectors/{end_effector_id}/moveRelativeJoints",
-                body,
-                {"moveType": move_type.value, "speed": speed},
-            )
+    def link(self, end_effector_id: str, collision_id: str) -> None:
+        """Links collision object to end effector.
 
-    def set_joints(self, joints: ProjectRobotJoints, move_type: MoveTypeEnum, speed: float = 0.5) -> None:
+        :param end_effector_id: Unique end-effector id.
+        :param collision_id: Unique id of collision
+        :return:
+        """
 
-        assert 0.0 <= speed <= 1.0
-        # assert robot_id == joints.robot_id
+        rest.put(f"{self.settings.url}/endEffectors/{end_effector_id}/link", params={"collisionId": collision_id})
 
-        with self._move_lock:
-            rest.put(f"{self.settings.url}/joints", joints.joints, {"moveType": move_type.value, "speed": speed})
+    def unlink(self, end_effector_id: str) -> None:
+        """Unlinks collision object from end effector.
 
-    @lru_cache()
-    def inputs(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/inputs"))
+        :param end_effector_id: Unique end-effector id.
+        :return:
+        """
 
-    @lru_cache()
-    def outputs(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/outputs"))
+        rest.put(f"{self.settings.url}/endEffectors/{end_effector_id}/unlink")
 
-    def get_input(self, input_id: str) -> float:
-        return rest.get_primitive(f"{self.settings.url}/inputs/{input_id}", float)
-
-    def set_output(self, output_id: str, value: float) -> None:
-
-        assert 0.0 <= value <= 1.0
-        rest.put(f"{self.settings.url}/outputs/{output_id}", params={"value": value})
-
-    def get_output(self, output_id: str) -> float:
-        return rest.get_primitive(f"{self.settings.url}/outputs/{output_id}", float)
+    # --- Grippers Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()
     def grippers(self) -> Set[str]:
@@ -214,6 +219,65 @@ class KinaliRobot(KinaliAbstractRobot):
 
     def is_item_gripped(self, gripper_id: str) -> bool:
         return rest.get_primitive(f"{self.settings.url}/grippers/{gripper_id}/gripped", bool)
+
+    # --- IOs Controller -----------------------------------------------------------------------------------------------
+
+    @lru_cache()
+    def inputs(self) -> Set[str]:
+        return set(rest.get_data(f"{self.settings.url}/inputs"))
+
+    @lru_cache()
+    def outputs(self) -> Set[str]:
+        return set(rest.get_data(f"{self.settings.url}/outputs"))
+
+    def get_input(self, input_id: str) -> float:
+        return rest.get_primitive(f"{self.settings.url}/inputs/{input_id}", float)
+
+    def set_output(self, output_id: str, value: float) -> None:
+
+        assert 0.0 <= value <= 1.0
+        rest.put(f"{self.settings.url}/outputs/{output_id}", params={"value": value})
+
+    def get_output(self, output_id: str) -> float:
+        return rest.get_primitive(f"{self.settings.url}/outputs/{output_id}", float)
+
+    # --- Joints Controller --------------------------------------------------------------------------------------------
+
+    def set_joints(
+        self,
+        joints: ProjectRobotJoints,
+        move_type: MoveTypeEnum,
+        speed: float = 0.5,
+        acceleration: float = 0.5,
+        safe: bool = True,
+    ) -> None:
+
+        assert 0.0 <= speed <= 1.0
+        assert 0.0 <= acceleration <= 1.0
+
+        if safe:
+            url = f"{self.settings.url}/jointsCollideLess"
+        else:
+            url = f"{self.settings.url}/joints"
+
+        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
+
+        with self._move_lock:
+            rest.put(url, joints.joints, params)
+
+    def robot_joints(self) -> List[Joint]:
+        return rest.get_list(f"{self.settings.url}/joints", Joint)
+
+    # --- Robot Controller ---------------------------------------------------------------------------------------------
+
+    @lru_cache()
+    def moves(self) -> Set[str]:
+        return set(rest.get_list_primitive(f"{self.settings.url}/moves", str))
+
+    def stop(self) -> None:
+        rest.put(f"{self.settings.url}/stop")
+
+    # --- Suctions Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()
     def suctions(self) -> Set[str]:
