@@ -27,17 +27,19 @@ This document describes resources needed for building and running docker images 
 		 - the -E parameter is needed for passing environment variables to the docker-compose context
 
 ## Building images
- - clone this repo to your computer
- - run in /arcor2/ folder
+ - Clone this repo to your computer. First build base image and dist base image, then any other image you want. 
+ - Run in /arcor2/ folder
  - **Base image** 
  	 - *docker build . -f docker/Dockerfile-base -t arcor2/arcor2_base:VERSION
+ - **Dist base image** 
+ 	 - *docker build . -f docker/Dockerfile-dist-base -t arcor2/arcor2_dist_base:VERSION
  - **Arserver**
 	 - *docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat arcor2/VERSION) --build-arg version=VERSION
  - **Build**
 	 - *docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat arcor2/VERSION) --build-arg version=VERSION
  - **Execution**
 	 - *docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat arcor2/VERSION) --build-arg version=VERSION
- - ... and so on. Or run build.sh script
+ - ...and so on. Or run build.sh script
 
 ## Releasing a new version
 
