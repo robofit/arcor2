@@ -195,10 +195,10 @@ def project_publish(project_id: str) -> RETURN_TYPE:
           required: true
           description: unique ID
         - in: query
-          name: PackageName
+          name: packageName
           schema:
             type: string
-            default: Package
+            default: N/A
           required: false
           description: Package name
       responses:
@@ -216,7 +216,7 @@ def project_publish(project_id: str) -> RETURN_TYPE:
             description: Project invalid.
     """
 
-    return _publish(project_id, request.args.get("PackageName", default="N/A"))
+    return _publish(project_id, request.args.get("packageName", default="N/A"))
 
 
 @app.route("/project/<string:project_id>/script", methods=["PUT"])

@@ -38,7 +38,7 @@ async def run_temp_package(package_id: str) -> None:
     project_id = glob.PROJECT.id
     glob.TEMPORARY_PACKAGE = True
 
-    await project.close_project(do_cleanup=False)
+    await project.close_project()
     req = erpc.RunPackage.Request
     exe_req = req(uuid.uuid4().int, args=req.Args(package_id, cleanup_after_run=False))
     exe_resp = await manager_request(exe_req)
@@ -84,7 +84,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             f"{BUILD_URL}/project/{project_id}/publish",
             path,
             None,
-            {"package_name": package_name},
+            {"packageName": package_name},
         )
 
         with open(path, "rb") as zip_file:

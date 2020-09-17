@@ -28,11 +28,11 @@ class SearchOutput(JsonSchemaMixin):
 @dataclass
 class GripperSetup(JsonSchemaMixin):
 
-    pick_pose: Pose
     pick_speed: float
     pre_pick_opening: float
-    pick_grip: float
+    pick_opening: float
     pick_force: float
+    pick_pose: Pose
 
 
 @dataclass
@@ -63,6 +63,12 @@ class LogLevel(StrEnum):
 
 
 @dataclass
+class PickArgs(JsonSchemaMixin):
+
+    pick_pose: Pose
+
+
+@dataclass
 class SearchLogLevel(JsonSchemaMixin):
 
     level: LogLevel
@@ -77,9 +83,11 @@ class SearchEngineParameters(JsonSchemaMixin):
 
 
 class Search(KinaliAbstractObject):
-    """REST interface to the search service."""
+    """REST interface to the search service (0.5.0)."""
 
     _ABSTRACT = False
+
+    # --- Capture Controller -------------------------------------------------------------------------------------------
 
     def grab_image(self) -> None:
         """Grabs image and stores to internal cache.
@@ -103,52 +111,60 @@ class Search(KinaliAbstractObject):
         """
         return rest.get(f"{self.settings.url}/capture/pose", Pose)
 
-    def put_suction_configuration(self, item_id: str, tool_id: str, poses: List[Pose]) -> None:
-        """Adds or updates suction pick configuration.
+    # --- Pick Controller ----------------------------------------------------------------------------------------------
+
+    def upsert_pick_args(self, item_id: str, suction_id: str, poses: List[PickArgs]) -> None:
+        """Adds or updates arguments required for pick given item with given
+        suction.
 
         :param item_id:
-        :param tool_id:
+        :param suction_id:
         :param poses:
         :return:
         """
-        rest.put(f"{self.settings.url}/pick/suctions", poses, {"item_id": item_id, "tool_id": tool_id})
+        rest.put(f"{self.settings.url}/pick/suctions", poses, {"itemId": item_id, "suctionId": suction_id})
 
-    def get_pick_poses_for_suction(self, item_id: str, tool_id: str, pose: Pose) -> List[Pose]:
-        """Gets pick poses for specific suction and item.
+    def compute_pick_args(self, item_id: str, suction_id: str, pose: Pose) -> List[PickArgs]:
+        """Computes pick arguments for given suction, item and item pose.
 
         :param item_id:
-        :param tool_id:
+        :param suction_id:
         :param pose:
         :return:
         """
-
-        return rest.get_list(
-            f"{self.settings.url}/pick/suctions/poses", Pose, pose, params={"item_id": item_id, "tool_id": tool_id}
+        return rest.put_returning_list(
+            f"{self.settings.url}/pick/suctions/compute", pose, {"itemId": item_id, "suctionId": suction_id}, PickArgs
         )
 
-    def put_gripper_configuration(self, item_id: str, tool_id: str, gripper_setup: List[GripperSetup]) -> None:
-        """Adds or updates gripper definitions for tool and item.
+    def upsert_gripper_args(self, item_id: str, gripper_id: str, gripper_setup: List[GripperSetup]) -> None:
+        """Adds or updates arguments required for pick given item with given
+        gripper.
 
         :param item_id:
-        :param tool_id:
+        :param gripper_id:
         :param gripper_setup:
         :return:
         """
 
-        rest.put(f"{self.settings.url}/pick/grippers", gripper_setup, {"item_id": item_id, "tool_id": tool_id})
+        rest.put(f"{self.settings.url}/pick/grippers", gripper_setup, {"itemId": item_id, "gripperId": gripper_id})
 
-    def get_pick_poses_for_gripper(self, item_id: str, tool_id: str, pose: Pose) -> List[GripperSetup]:
+    def compute_gripper_args(self, item_id: str, gripper_id: str, pose: Pose) -> List[GripperSetup]:
         """Gets pick poses for specific tool and item.
 
         :param item_id:
-        :param tool_id:
+        :param gripper_id:
         :param pose:
         :return:
         """
 
         return rest.get_list(
-            f"{self.settings.url}/pick/grippers/setup", GripperSetup, pose, {"item_id": item_id, "tool_id": tool_id}
+            f"{self.settings.url}/pick/grippers/compute",
+            GripperSetup,
+            pose,
+            {"itemId": item_id, "gripperId": gripper_id},
         )
+
+    # --- Search Controller --------------------------------------------------------------------------------------------
 
     def search(self) -> SearchOutput:
         """Searches items based on search engine configuration and images
@@ -178,6 +194,12 @@ class Search(KinaliAbstractObject):
     grab_image.__action__ = ActionMetadata(blocking=True)  # type: ignore
     get_image.__action__ = ActionMetadata(blocking=True)  # type: ignore
     get_pose.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_pick_poses_for_suction.__action__ = ActionMetadata(blocking=True)  # type: ignore
+
+    upsert_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    compute_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    upsert_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    compute_gripper_args
+
     search.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    set_search_parameters.__action__ = ActionMetadata(blocking=True)  # type: ignore
     visualization.__action__ = ActionMetadata(blocking=True)  # type: ignore

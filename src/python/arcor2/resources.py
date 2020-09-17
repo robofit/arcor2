@@ -44,6 +44,9 @@ class IntResources:
 
         built_in = built_in_types_names()
 
+        if scene_service.started():
+            raise ResourcesException("Scene already started.")
+
         scene_service.delete_all_collisions()
 
         package_id = os.path.basename(os.getcwd())
@@ -92,6 +95,8 @@ class IntResources:
             elif isinstance(model, Mesh):
                 package_info_event.data.collision_models.meshes.append(model)
 
+        scene_service.start()
+
         print_event(package_info_event)
 
     def make_all_poses_absolute(self) -> None:
@@ -113,6 +118,9 @@ class IntResources:
 
         if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
             hlp.print_exception(ex_type(ex_value))
+
+        scene_service.stop()
+        scene_service.delete_all_collisions()
 
         for obj in self.objects.values():
             obj.cleanup()

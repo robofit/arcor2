@@ -6,7 +6,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, StrEnum
 
-from .kinali_abstract_object import KinaliAbstractObject
+from .kinali_simple_object import KinaliSimpleObject
 
 
 class NotificationLevelEnum(StrEnum):
@@ -32,10 +32,12 @@ class NotificationValue(JsonSchemaMixin):
     created: int
 
 
-class Interaction(KinaliAbstractObject):
-    """REST interface to the barcode service."""
+class Interaction(KinaliSimpleObject):
+    """REST interface to the Interaction service (0.1.1)."""
 
     _ABSTRACT = False
+
+    # --- Dialog Controller --------------------------------------------------------------------------------------------
 
     def add_dialog(self, title: str, content: str, options: List[str]) -> None:
         """Logs value with the specified group and name.
@@ -64,6 +66,8 @@ class Interaction(KinaliAbstractObject):
         """
 
         rest.put(f"{self.settings.url}/dialog/resolve", params={"option": option})
+
+    # --- Notification Controller --------------------------------------------------------------------------------------
 
     def add_notification(self, message: str, level: NotificationLevelEnum) -> None:
         """Logs value with the specified group and name.

@@ -262,3 +262,29 @@ class CopyScene(RPC):
     class Response(RPC.Response):
 
         data: Optional[str] = None
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class StartScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class StopScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
