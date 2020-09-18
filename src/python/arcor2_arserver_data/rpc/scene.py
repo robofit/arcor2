@@ -39,7 +39,7 @@ class AddObjectToScene(RPC):
             name: str
             type: str
             pose: Optional[Pose] = None
-            settings: List[Parameter] = field(default_factory=list)
+            parameters: List[Parameter] = field(default_factory=list)
 
         args: Args
         dry_run: bool = False
