@@ -68,7 +68,7 @@ class IntResources:
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
-            settings = settings_from_params(cls, scene_obj.settings, self.project.overrides.get(scene_obj.id, None))
+            settings = settings_from_params(cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None))
 
             if issubclass(cls, Robot):
                 self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose, settings)

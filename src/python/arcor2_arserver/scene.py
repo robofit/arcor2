@@ -92,7 +92,7 @@ def check_object(obj: SceneObject, new_one: bool = False) -> None:
     if obj_type.meta.disabled:
         raise Arcor2Exception("Object type disabled.")
 
-    if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in obj.settings}:
+    if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in obj.parameters}:
         raise Arcor2Exception("Some required parameter is missing.")
 
     # TODO check whether object needs parent and if so, if the parent is in scene and parent_id is set
@@ -145,7 +145,7 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
     # settings -> dataclass
     assert obj_type.type_def
-    settings = settings_from_params(obj_type.type_def, obj.settings, overrides)
+    settings = settings_from_params(obj_type.type_def, obj.parameters, overrides)
 
     assert obj_type.type_def is not None
 

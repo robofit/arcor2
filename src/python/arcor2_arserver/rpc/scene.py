@@ -170,7 +170,7 @@ async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsCli
 
     can_modify_scene()
 
-    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose, req.args.settings)
+    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose, req.args.parameters)
 
     await add_object_to_scene(obj, dry_run=req.dry_run)
 
