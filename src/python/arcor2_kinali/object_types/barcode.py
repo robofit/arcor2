@@ -2,7 +2,8 @@ from typing import List
 
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata
-from arcor2_kinali.object_types.kinali_abstract_object import KinaliAbstractObject
+
+from .kinali_abstract_object import KinaliAbstractObject
 
 
 class Barcode(KinaliAbstractObject):
