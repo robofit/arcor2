@@ -278,6 +278,14 @@ def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, par
 
     assert isinstance(data, dict)
 
+    # TODO temporary workaround for bug in humps
+    from arcor2.data.object_type import Box
+
+    if data_cls is Box:
+        data["size_x"] = data["sizex"]
+        data["size_y"] = data["sizey"]
+        data["size_z"] = data["sizez"]
+
     try:
         return data_cls.from_dict(data)  # type: ignore # TODO remove once pants/mypy works properly
     except ValidationError as e:
