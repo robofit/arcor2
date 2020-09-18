@@ -1,8 +1,4 @@
-import requests
-import json
-from typing import Union
-
-from packaging.version import parse, LegacyVersion, Version
+from packaging.version import parse, LegacyVersion
 
 from pants.backend.python.goals.setup_py import SetupKwargsRequest
 from pants.engine.target import Target
@@ -40,7 +36,7 @@ def rules():
 @rule
 async def setup_kwargs_plugin(request: CustomSetupKwargsRequest) -> SetupKwargs:
 
-    digest_contents = await Get(
+    version_digest_contents = await Get(
         DigestContents,
         PathGlobs(
             [f"{request.target.address.spec_path}/VERSION"],
@@ -48,7 +44,7 @@ async def setup_kwargs_plugin(request: CustomSetupKwargsRequest) -> SetupKwargs:
             glob_match_error_behavior=GlobMatchErrorBehavior.error,
         ),
     )
-    version = digest_contents[0].content.decode().strip()
+    version = version_digest_contents[0].content.decode().strip()
 
     package_name = remove_suffix(request.target.address.target_name, "_dist")  # TODO this is hacky / fragile
 
@@ -56,7 +52,32 @@ async def setup_kwargs_plugin(request: CustomSetupKwargsRequest) -> SetupKwargs:
     if isinstance(local_version, LegacyVersion):
         raise ValueError(f"Version {local_version} of {package_name} is not valid.")
 
+    desc_digest_contents = await Get(
+        DigestContents,
+        PathGlobs(
+            [f"{request.target.address.spec_path}/README.md"],
+            description_of_origin="`setup_py()` plugin",
+            glob_match_error_behavior=GlobMatchErrorBehavior.error,
+        ),
+    )
+    long_description = desc_digest_contents[0].content.decode().strip()
+
+    changelog_digest_contents = await Get(
+        DigestContents,
+        PathGlobs(
+            [f"{request.target.address.spec_path}/CHANGELOG.md"],
+            description_of_origin="`setup_py()` plugin",
+            glob_match_error_behavior=GlobMatchErrorBehavior.error,
+        ),
+    )
+    changelog = changelog_digest_contents[0].content.decode().strip()
+
     return SetupKwargs(
-        {**request.explicit_kwargs, "version": version},
+        {
+            **request.explicit_kwargs,
+            "version": version,
+            "long_description": f"{long_description}\n{changelog}",
+            "long_description_content_type": "text/markdown"
+         },
         address=request.target.address
     )
