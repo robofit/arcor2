@@ -20,24 +20,24 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None) -> None:
 
     path = inspect.getfile(type_def)
 
+    try:
+        check_object_type(type_def)
+    except Arcor2Exception as e:
+        print(e)
+        raise UploadException(f"There is something wrong with source code of '{type_def.__name__}'.")
+
     with open(path, "r") as source_file:
 
         source = source_file.read()
 
-        try:
-            check_object_type(type_def)
-        except Arcor2Exception as e:
-            print(e)
-            raise UploadException(f"There is something wrong with source code of '{type_def.__name__}'.")
+    obj_type = ObjectType(id=type_def.__name__, source=source, desc=type_def.description())
 
-        obj_type = ObjectType(id=type_def.__name__, source=source, desc=type_def.description())
+    if model:
+        obj_type.model = model.metamodel()
+        storage.put_model(model)
 
-        if model:
-            obj_type.model = model.metamodel()
-            storage.put_model(model)
-
-        print(f"Storing '{obj_type.id}'...")
-        storage.update_object_type(obj_type)
+    print(f"Storing '{obj_type.id}'...")
+    storage.update_object_type(obj_type)
 
 
 def upload(module_cls: str, model: Optional[Models] = None) -> None:
