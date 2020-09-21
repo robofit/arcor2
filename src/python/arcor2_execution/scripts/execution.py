@@ -322,8 +322,11 @@ async def get_summary(path: str) -> PackageSummary:
 
         return PackageSummary(package_dir, "N/A", datetime.fromtimestamp(0, tz=timezone.utc), package_meta)
 
-    assert project.modified
-    return PackageSummary(package_dir, project.id, project.modified, package_meta)
+    modified = project.modified
+    if not modified:
+        modified = datetime.fromtimestamp(0, tz=timezone.utc)
+
+    return PackageSummary(package_dir, project.id, modified, package_meta)
 
 
 async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.ListPackages.Response:
