@@ -123,7 +123,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         self._move_lock = NonBlockingLock()
 
     robot_type = RobotType.ARTICULATED
-    urdf_package_path: Optional[str] = None
+    urdf_package_name: Optional[str] = None
 
     @property
     def move_in_progress(self) -> bool:

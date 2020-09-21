@@ -81,3 +81,9 @@ async def delete_scene(scene_id: str) -> None:
 
 async def delete_project(project_id: str) -> None:
     await run_in_executor(persistent_storage.delete_project, project_id)
+
+
+async def save_mesh_file(mesh_id: str, path: str) -> None:
+    """Saves mesh file to a given path."""
+
+    await run_in_executor(persistent_storage.save_mesh_file, mesh_id, path)

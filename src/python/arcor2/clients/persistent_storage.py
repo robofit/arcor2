@@ -116,3 +116,10 @@ def delete_scene(scene_id: str) -> None:
 @rest.handle_exceptions(PersistentStorageException)
 def delete_project(project_id: str) -> None:
     rest.delete(f"{URL}/project/{project_id}")
+
+
+@rest.handle_exceptions(PersistentStorageException)
+def save_mesh_file(mesh_id: str, path: str) -> None:
+    """Saves mesh file to a given path."""
+
+    rest.download(f"{URL}/models/{mesh_id}/mesh/file", path)
