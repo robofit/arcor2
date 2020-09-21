@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import shutil
+import os
 from typing import Optional, Type
 
 from arcor2 import helpers as hlp
 from arcor2.action import patch_object_actions
+from arcor2.clients import aio_persistent_storage as ps
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
@@ -46,15 +47,17 @@ def valid_object_types() -> ObjectTypeDict:
     return {obj_type: obj for obj_type, obj in glob.OBJECT_TYPES.items() if not obj.meta.disabled}
 
 
-def handle_robot_urdf(robot: Type[Robot]) -> None:
+async def handle_robot_urdf(robot: Type[Robot]) -> None:
 
-    if not robot.urdf_package_path:
+    if not robot.urdf_package_name:
         return
 
+    file_path = os.path.join(settings.URDF_PATH, robot.urdf_package_name)
+
     try:
-        shutil.copy(robot.urdf_package_path, settings.URDF_PATH)
-    except FileNotFoundError as e:
-        glob.logger.error(f"Failed to copy URDF archive for {robot.__name__}: {e}.")
+        await ps.save_mesh_file(robot.urdf_package_name, file_path)
+    except Arcor2Exception:
+        glob.logger.exception(f"Failed to download URDF for {robot.__name__}.")
 
 
 async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
@@ -137,7 +140,7 @@ async def get_object_types() -> None:
 
         if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
             await get_robot_meta(obj_type)
-            asyncio.ensure_future(hlp.run_in_executor(handle_robot_urdf, obj_type.type_def))
+            asyncio.ensure_future(handle_robot_urdf(obj_type.type_def))
 
 
 async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Robot:
