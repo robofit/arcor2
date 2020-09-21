@@ -153,7 +153,6 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
         if issubclass(obj_type.type_def, Robot):
             assert obj.pose is not None
-            # TODO RPC should return here (instantiation could take long time) -> events
             glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
                 obj_type.type_def, obj.id, obj.name, obj.pose, settings
             )
@@ -163,14 +162,12 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
             if obj_type.meta.object_model:
                 coll_model = obj_type.meta.object_model.model()
 
-            # TODO RPC should return here (instantiation could take long time) -> events
             glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
                 obj_type.type_def, obj.id, obj.name, obj.pose, coll_model, settings
             )
 
         elif issubclass(obj_type.type_def, Generic):
             assert obj.pose is None
-            # TODO RPC should return here (instantiation could take long time) -> events
             glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
                 obj_type.type_def, obj.id, obj.name, settings
             )
