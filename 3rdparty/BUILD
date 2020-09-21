@@ -6,6 +6,9 @@ python_requirements(
             "lru-dict": ["lru"],
             "opencv-contrib-python": ["cv2"],
             "websocket-client": ["websocket"],
-            "pyhumps": ["humps"]
+            "pyhumps": ["humps"],
+            "dataclasses-jsonschema-rereleased": ["dataclasses_jsonschema"],
+            "horast-rereleased": ["horast"],
+            "pydobot2": ["pydobot"]
           }
 )

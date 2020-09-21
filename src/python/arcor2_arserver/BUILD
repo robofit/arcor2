@@ -4,7 +4,7 @@ python_library(
         "src/python/arcor2_execution_data/events.py",  # TODO why is this needed?
         "src/python/arcor2_execution_data/rpc.py",  # TODO why is this needed?
         "src/python/arcor2_calibration_data/client.py",  # TODO why is this needed?
-        "3rdparty:pydobot"  # TODO temporary solution - will be removed later
+        "3rdparty:pydobot2"  # TODO temporary solution - will be removed later
     ]
 )
 
