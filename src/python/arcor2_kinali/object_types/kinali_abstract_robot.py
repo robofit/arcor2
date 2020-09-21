@@ -22,7 +22,9 @@ class KinaliAbstractRobot(Robot):
 
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: KinaliRobotSettings) -> None:
         super(KinaliAbstractRobot, self).__init__(obj_id, name, pose, settings)
-        rest.put(f"{self.settings.url}/system/set", params={"configId": self.settings.configuration_id, "id": self.id})
+        rest.put(
+            f"{self.settings.url}/system/set", pose, params={"configId": self.settings.configuration_id, "id": self.id}
+        )
 
     @property
     def settings(self) -> KinaliRobotSettings:

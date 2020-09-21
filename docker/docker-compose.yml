@@ -19,18 +19,13 @@ services:
           - testitoff-statistic-network 
           - testitoff-interaction-network
     environment:
-      - REST_ROBOT_SERVICE_URL=http://testitoff-robot-webapi:13000 
-      - SEARCH_SERVICE_URL=http://testitoff-search-webapi:12000
       # - ARCOR2_PERSISTENT_STORAGE_URL=http://mocks:5012
       - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
       # - ARCOR2_SCENE_SERVICE_URL=http://mocks:5013
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
-      - BARCODE_SERVICE_URL=http://testitoff-barcode-webapi:14000
-      - STATISTIC_SERVICE_URL=http://testitoff-statistic-webapi:16000
       - ARCOR2_DATA_PATH=/root/data
-      - INTERACTION_SERVICE_URL=http://testitoff-interaction-webapi:17000
 
   mocks:
     image: arcor2/arcor2_mocks:${ARCOR2_VERSION:?ARCOR2_VERSION env variable not set}
@@ -64,19 +59,14 @@ services:
           - testitoff-statistic-network           
           - testitoff-interaction-network
     environment:
-      - REST_ROBOT_SERVICE_URL=http://testitoff-robot-webapi:13000 
-      - SEARCH_SERVICE_URL=http://testitoff-search-webapi:12000
-      - BARCODE_SERVICE_URL=http://testitoff-barcode-webapi:14000
-      - STATISTIC_SERVICE_URL=http://testitoff-statistic-webapi:16000
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
-      - INTERACTION_SERVICE_URL=http://testitoff-interaction-webapi:17000
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
         - execution:/root/project
 
   execution-proxy:
     image: arcor2/arcor2_execution_proxy:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
-    container_name: execution-proxy    
+    container_name: execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
       - ARCOR2_EXECUTION_URL=ws://execution:6790
@@ -87,7 +77,7 @@ services:
     ports:
       - "5009:5009"
     networks:
-      - testitoff-robot-network          
+      - testitoff-robot-network
     depends_on:
       - execution
 
@@ -217,8 +207,6 @@ services:
             - "27017"
         ports:
             - "16017:27017"
-
-
 
   project:
     image: registry.gitlab.com/kinalisoft/test-it-off/project:0.4.0
