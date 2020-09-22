@@ -13,6 +13,7 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import robot
 from arcor2_arserver.decorators import project_needed, scene_needed
+from arcor2_arserver.scene import ensure_scene_started, scene_started
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 
@@ -29,7 +30,7 @@ async def robot_joints_event(robot_id: str) -> None:
     global ROBOT_JOINTS_TASKS
 
     glob.logger.info(f"Sending '{sevts.r.RobotJoints.__name__}' for robot '{robot_id}' started.")
-    while glob.SCENE and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]:
+    while scene_started() and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_id]:
 
         start = time.monotonic()
 
@@ -66,7 +67,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
 
     glob.logger.info(f"Sending '{sevts.r.RobotEef.__name__}' for robot '{robot_id}' started.")
 
-    while glob.SCENE and glob.ROBOT_EEF_REGISTERED_UIS[robot_id]:
+    while scene_started() and glob.ROBOT_EEF_REGISTERED_UIS[robot_id]:
 
         start = time.monotonic()
 
@@ -106,6 +107,7 @@ async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: WsClient) -> s
 @scene_needed
 async def get_robot_joints_cb(req: srpc.r.GetRobotJoints.Request, ui: WsClient) -> srpc.r.GetRobotJoints.Response:
 
+    ensure_scene_started()
     return srpc.r.GetRobotJoints.Response(data=await robot.get_robot_joints(req.args.robot_id))
 
 
@@ -114,6 +116,7 @@ async def get_end_effector_pose_cb(
     req: srpc.r.GetEndEffectorPose.Request, ui: WsClient
 ) -> srpc.r.GetEndEffectorPose.Response:
 
+    ensure_scene_started()
     return srpc.r.GetEndEffectorPose.Response(
         data=await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id)
     )
@@ -122,18 +125,21 @@ async def get_end_effector_pose_cb(
 @scene_needed
 async def get_end_effectors_cb(req: srpc.r.GetEndEffectors.Request, ui: WsClient) -> srpc.r.GetEndEffectors.Response:
 
+    ensure_scene_started()
     return srpc.r.GetEndEffectors.Response(data=await robot.get_end_effectors(req.args.robot_id))
 
 
 @scene_needed
 async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: WsClient) -> srpc.r.GetGrippers.Response:
 
+    ensure_scene_started()
     return srpc.r.GetGrippers.Response(data=await robot.get_grippers(req.args.robot_id))
 
 
 @scene_needed
 async def get_suctions_cb(req: srpc.r.GetSuctions.Request, ui: WsClient) -> srpc.r.GetSuctions.Response:
 
+    ensure_scene_started()
     return srpc.r.GetSuctions.Response(data=await robot.get_suctions(req.args.robot_id))
 
 
@@ -172,6 +178,8 @@ async def register(
 @scene_needed
 async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request, ui: WsClient) -> None:
 
+    ensure_scene_started()
+
     # check if robot exists
     await osa.get_robot_instance(req.args.robot_id)
 
@@ -203,6 +211,7 @@ async def check_feature(robot_id: str, feature_name: str) -> None:
 @scene_needed
 async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
 
+    ensure_scene_started()
     await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
 
@@ -227,6 +236,7 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
 @scene_needed
 async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> None:
 
+    ensure_scene_started()
     await check_feature(req.args.robot_id, Robot.move_to_joints.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
     asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, req.args.joints, req.args.speed))
@@ -235,6 +245,7 @@ async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> N
 @scene_needed
 async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
 
+    ensure_scene_started()
     await check_feature(req.args.robot_id, Robot.stop.__name__)
     await robot.stop(req.args.robot_id)
 
@@ -243,6 +254,7 @@ async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
 @project_needed
 async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsClient) -> None:
 
+    ensure_scene_started()
     await robot.check_robot_before_move(req.args.robot_id)
 
     assert glob.SCENE

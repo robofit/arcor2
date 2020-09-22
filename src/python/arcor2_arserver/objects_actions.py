@@ -32,8 +32,10 @@ from arcor2_arserver_data.objects import ObjectTypeMeta
 
 def get_obj_type_name(object_id: str) -> str:
 
+    assert glob.SCENE
+
     try:
-        return glob.SCENE_OBJECT_INSTANCES[object_id].__class__.__name__
+        return glob.SCENE.object(object_id).type
     except KeyError:
         raise Arcor2Exception("Unknown object id.")
 

@@ -41,6 +41,10 @@ def get_scene_state() -> SceneState.Data.StateEnum:
     return _scene_state
 
 
+def scene_started() -> bool:
+    return _scene_state == SceneState.Data.StateEnum.Stopped
+
+
 def can_modify_scene() -> None:
     """Raises exception if modifications to scene/project are not possible."""
 
@@ -53,10 +57,6 @@ def ensure_scene_started() -> None:
 
     if _scene_state != SceneState.Data.StateEnum.Started:
         raise Arcor2Exception("Scene not started.")
-
-
-def instances_names() -> Set[str]:
-    return {obj.name for obj in glob.SCENE_OBJECT_INSTANCES.values()}
 
 
 async def scenes() -> AsyncIterator[CachedScene]:

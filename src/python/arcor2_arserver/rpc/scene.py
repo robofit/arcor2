@@ -32,6 +32,7 @@ from arcor2_arserver.robot import get_end_effector_pose
 from arcor2_arserver.scene import (
     add_object_to_scene,
     can_modify_scene,
+    ensure_scene_started,
     get_instance,
     get_scene_state,
     notify_scene_closed,
@@ -214,6 +215,8 @@ async def scene_object_usage_request_cb(
 async def action_param_values_cb(
     req: srpc.o.ActionParamValues.Request, ui: WsClient
 ) -> srpc.o.ActionParamValues.Response:
+
+    ensure_scene_started()
 
     inst = get_instance(req.args.id)
 
