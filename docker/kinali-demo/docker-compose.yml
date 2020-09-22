@@ -45,10 +45,6 @@ services:
       - "5008:5008"
     networks:           
       - testitoff-robot-network
-      - testitoff-barcode-network
-      - testitoff-search-network
-      - testitoff-statistic-network 
-      - testitoff-interaction-network
   execution:
     image: arcor2/arcor2_execution:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
     container_name: execution

@@ -1,6 +1,7 @@
 ARG version=latest
 FROM arcor2/arcor2_base:$version
 
+COPY . /root/arcor2/
 
 RUN cd ~/arcor2 \
 	&& ./pants binary src/python/arcor2_arserver/scripts:arserver

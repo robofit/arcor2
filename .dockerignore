@@ -1,2 +1,3 @@
-Dockerfile
-docker/docker-compose.yml
+docker/build.sh
+docker/upload.sh
+docker/*/*
