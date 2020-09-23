@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - master
-      - devel
 
 jobs:
   build:
@@ -16,6 +15,8 @@ jobs:
         python-version: [3.8]
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
@@ -25,10 +26,10 @@ jobs:
         ./pants --version
     - name: Lint
       run: |
-        ./pants lint ::
+        ./pants --changed-since=origin/master lint
     - name: Typecheck
       run: |
-        ./pants typecheck ::
+        ./pants typecheck --changed-since=origin/master --changed-dependees=transitive
     - name: Test
       run: |
-        ./pants test ::
+        ./pants --changed-since=origin/master --changed-dependees=transitive test
