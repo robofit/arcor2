@@ -75,11 +75,11 @@ Use arcor2_upload_kinali or arcor2_upload_fit_demo image to upload all object ty
  - **Dist base image** 
  	 - docker build . -f docker/Dockerfile-dist-base -t arcor2/arcor2_dist_base:VERSION
  - **Arserver**
-	 - docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat arcor2/VERSION) --build-arg version=VERSION
+	 - docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat ../src/python/arcor2_arserver/VERSION) --build-arg version=VERSION
  - **Build**
-	 - docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat arcor2/VERSION) --build-arg version=VERSION
+	 - docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat ../src/python/arcor2_build/VERSION) --build-arg version=VERSION
  - **Execution**
-	 - docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat arcor2/VERSION) --build-arg version=VERSION
+	 - docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat ../src/python/arcor2_execution/VERSION) --build-arg version=VERSION
  - ...and so on. Or run build.sh script
 
 ## Releasing a new version
