@@ -237,6 +237,12 @@ async def start_scene() -> None:
 
     await set_scene_state(SceneState.Data.StateEnum.Starting)
 
+    try:
+        await scene_srv.stop()
+    except Arcor2Exception:
+        await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
+        return
+
     object_overrides: Dict[str, List[Parameter]] = {}
 
     if glob.PROJECT:
