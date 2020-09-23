@@ -3,6 +3,58 @@
 
 This document describes resources needed for building and running docker images with arcor2
 
+## Running in docker:
+
+Select one of the docker-compose files in respective folders (currently fit-demo and kinali-demo) and runs following commands in the folder.
+
+### Prerequisites:
+
+- docker
+- docker-compose
+
+
+### Run system 
+#### Windows
+
+Always use explicit version of all services, never use latest!
+
+```bash
+$env:ARCOR2_VERSION="version"
+$env:ARCOR2_BUILD_VERSION="version"
+$env:ARCOR2_EXECUTION_VERSION="version"
+docker-compose up
+```
+
+For persistent variables, use this:
+
+```bash
+[Environment]::SetEnvironmentVariable("ARCOR2_VERSION", "version", "User")
+[Environment]::SetEnvironmentVariable("ARCOR2_BUILD_VERSION", "version", "User")
+[Environment]::SetEnvironmentVariable("ARCOR2_EXECUTION_VERSION", "version", "User")
+```
+Restart powershell or open new window.
+```
+docker-compose up
+```
+
+
+#### Linux
+
+Always use explicit version of all services, never use latest!
+
+```bash
+export ARCOR2_VERSION=version
+export ARCOR2_BUILD_VERSION=version
+export ARCOR2_EXECUTION_VERSION=version
+sudo -E docker-compose up
+```
+
+For persistent variables put the three exports to the \~/.bashrc file
+
+## Uploading object_types to project service
+Use arcor2_upload_kinali or arcor2_upload_fit_demo image to upload all object types in the corresponding demo to project service. For more information see README.md in the demo folder (fit-demo and kinali-demo).
+
+
 ## Dockerfiles
 
  - **Dockerfile-base** - base image for building process
@@ -15,30 +67,19 @@ This document describes resources needed for building and running docker images 
  - **Dockerfile-mocks** - image with scene and project mockups
  - **Dockerfile-upload-kinali** - image for uploading of kinali object types to project service 
 
-## Docker compose files
-
- - **docker-compose.yml** 
-	 - Basic way to run any version of arcor2
-	 - Desired version is set using the ARCOR2_VERSION environment variable
-		 - *export ARCOR2_VERSION=\$(cat arcor2/VERSION)* for latest available stable version
-		 - *export ARCOR2_VERSION=latest* for latest available build
-		 - *export ARCOR2_VERSION=0.1.2* for specific version
-	 - run with:  *sudo -E docker-compose up*
-		 - the -E parameter is needed for passing environment variables to the docker-compose context
-
 ## Building images
  - Clone this repo to your computer. First build base image and dist base image, then any other image you want. 
  - Run in /arcor2/ folder
  - **Base image** 
- 	 - *docker build . -f docker/Dockerfile-base -t arcor2/arcor2_base:VERSION
+ 	 - docker build . -f docker/Dockerfile-base -t arcor2/arcor2_base:VERSION
  - **Dist base image** 
- 	 - *docker build . -f docker/Dockerfile-dist-base -t arcor2/arcor2_dist_base:VERSION
+ 	 - docker build . -f docker/Dockerfile-dist-base -t arcor2/arcor2_dist_base:VERSION
  - **Arserver**
-	 - *docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat arcor2/VERSION) --build-arg version=VERSION
+	 - docker build . -f docker/Dockerfile-arserver -t arcor2/arcor2_arserver :\$(cat arcor2/VERSION) --build-arg version=VERSION
  - **Build**
-	 - *docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat arcor2/VERSION) --build-arg version=VERSION
+	 - docker build . -f docker/Dockerfile-build -t arcor2/arcor2_build:\$(cat arcor2/VERSION) --build-arg version=VERSION
  - **Execution**
-	 - *docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat arcor2/VERSION) --build-arg version=VERSION
+	 - docker build . -f docker/Dockerfile-execution -t arcor2/arcor2_execution :\$(cat arcor2/VERSION) --build-arg version=VERSION
  - ...and so on. Or run build.sh script
 
 ## Releasing a new version
