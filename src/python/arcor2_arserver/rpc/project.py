@@ -171,6 +171,9 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
     if not hasattr(obj, action_name):
         raise Arcor2Exception("Internal error: object does not have the requested method.")
 
+    if req.dry_run:
+        return
+
     glob.RUNNING_ACTION = action.id
     glob.RUNNING_ACTION_PARAMS = params
 
