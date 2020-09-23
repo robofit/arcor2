@@ -102,6 +102,7 @@ class ExecuteAction(RPC):
             action_id: str = field(metadata=dict(description="ID of the action to be executed."))
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
