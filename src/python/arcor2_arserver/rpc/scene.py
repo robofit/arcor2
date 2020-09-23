@@ -291,9 +291,9 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     :return:
     """
 
-    can_modify_scene()
-
     assert glob.SCENE
+
+    ensure_scene_started()
 
     if req.args.id == req.args.robot.robot_id:
         raise Arcor2Exception("Robot cannot update its own pose.")
