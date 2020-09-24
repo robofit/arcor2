@@ -44,8 +44,8 @@ class IntResources:
 
         built_in = built_in_types_names()
 
-        if scene_service.started():
-            raise ResourcesException("Scene already started.")
+        # workaround for possible 'An item with the same key has already been added.' problem
+        scene_service.stop()
 
         scene_service.delete_all_collisions()
 
