@@ -42,7 +42,7 @@ def get_scene_state() -> SceneState.Data.StateEnum:
 
 
 def scene_started() -> bool:
-    return _scene_state == SceneState.Data.StateEnum.Stopped
+    return _scene_state == SceneState.Data.StateEnum.Started
 
 
 def can_modify_scene() -> None:
@@ -273,3 +273,5 @@ async def start_scene() -> None:
         return
 
     await set_scene_state(SceneState.Data.StateEnum.Started)
+    assert scene_started()
+    assert await scene_srv.started()
