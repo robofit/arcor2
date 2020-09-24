@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, Iterator, List, Optional, Set, Tuple, ValuesView
@@ -78,6 +79,9 @@ class CachedScene:
 
 
 class UpdateableCachedScene(CachedScene):
+    def __init__(self, scene: cmn.Scene):
+        super(UpdateableCachedScene, self).__init__(copy.deepcopy(scene))
+
     def update_modified(self) -> None:
         self.int_modified = datetime.now(tz=timezone.utc)
 
@@ -372,6 +376,9 @@ class CachedProject:
 
 
 class UpdateableCachedProject(CachedProject):
+    def __init__(self, project: cmn.Project):
+        super(UpdateableCachedProject, self).__init__(copy.deepcopy(project))
+
     def update_modified(self) -> None:
         self._int_modified = datetime.now(tz=timezone.utc)
 
