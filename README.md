@@ -80,33 +80,33 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
  
 ### arcor2_arserver
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
 
  
 ### arcor2_arserver_data
 
 [README](src/python/arcor2_arserver_data/README.md) | [CHANGELOG](src/python/arcor2_arserver_data/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
 
 
 ### arcor2_build
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
 
 ### arcor2_build_data
 
 [README](src/python/arcor2_build_data/README.md) | [CHANGELOG](src/python/arcor2_build_data/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
 
 ### arcor2_calibration
 
@@ -119,29 +119,31 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
  
 ### arcor2_execution_data
 
 [README](src/python/arcor2_execution_data/README.md) | [CHANGELOG](src/python/arcor2_execution_data/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
  
 ### arcor2_execution_rest_proxy
 
 [README](src/python/arcor2_execution_rest_proxy/README.md) | [CHANGELOG](src/python/arcor2_execution_rest_proxy/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
  
 ### arcor2_fit_demo
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
+- 2020-09-24: [0.2.0](link_to_tag) ([docker](), [pypi]()).
+
 ### arcor2_kinali
 
 [README](src/python/arcor2_kinali/README.md) | [CHANGELOG](src/python/arcor2_kinali/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
  
  ### arcor2_mocks
 
