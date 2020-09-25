@@ -20,4 +20,6 @@ def arcor2_setup_py(**kwargs):
                 "Topic :: Scientific/Engineering"
             ]
 
+    kwargs["python_requires"] = "==3.8.*"  # we support only Python 3.8
+
     return setup_py(**kwargs)
