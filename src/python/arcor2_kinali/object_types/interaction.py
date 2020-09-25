@@ -39,27 +39,30 @@ class Interaction(KinaliSimpleObject):
 
     # --- Dialog Controller --------------------------------------------------------------------------------------------
 
-    def add_dialog(self, title: str, content: str, options: List[str]) -> None:
-        """Logs value with the specified group and name.
+    def add_dialog(self, title: str, content: str, options: List[str]) -> str:
+        """Creates dialog, block until operator selects one of the options.
 
-        :param title:
-        :param content:
-        :param options:
+        :param title: Dialog title
+        :param content: Dialog content
+        :param options: Dialog options.
         :return:
         """
 
-        rest.put(f"{self.settings.url}/dialog", params={"title": title, "content": content}, data=options)
+        return rest.put_returning_primitive(
+            f"{self.settings.url}/dialog", str, params={"title": title, "content": content}, data=options
+        )
 
     def get_dialog(self) -> DialogValue:
-        """Gets names of all tracked values stored in given group.
+        """Returns active dialog (title and options) or error if no dialog is
+        active.
 
         :return:
         """
 
         return rest.get(f"{self.settings.url}/dialog", DialogValue)
 
-    def add_dialog_resolve(self, option: str) -> None:
-        """Logs value with the specified group and name.
+    def resolve_dialog(self, option: str) -> None:
+        """Resolves current dialog using one of the options.
 
         :param option:
         :return:
@@ -70,7 +73,7 @@ class Interaction(KinaliSimpleObject):
     # --- Notification Controller --------------------------------------------------------------------------------------
 
     def add_notification(self, message: str, level: NotificationLevelEnum) -> None:
-        """Logs value with the specified group and name.
+        """Creates notification.
 
         :param message:
         :param level:
@@ -80,26 +83,26 @@ class Interaction(KinaliSimpleObject):
         rest.put(f"{self.settings.url}/notification", params={"message": message, "level": level})
 
     def delete_notifications(self) -> None:
-        """Deletes all tracked values stored in given group.
+        """Clears all notifications.
 
         :return:
         """
 
         rest.delete(f"{self.settings.url}/notifications")
 
-    def get_notifications(self, since_imestamp: int) -> List[NotificationValue]:
-        """Gets names of all tracked values stored in given group.
+    def get_notifications(self, since_timestamp: int) -> List[NotificationValue]:
+        """Gets all notifications stored after given timestamp.
 
-        :param since_imestamp:
+        :param since_timestamp: UNIX timestamp in nanoseconds, after which created notifications are returned.
         :return:
         """
         return rest.get_list(
-            f"{self.settings.url}/notifications", NotificationValue, params={"since_imestamp": since_imestamp}
+            f"{self.settings.url}/notifications", NotificationValue, params={"sinceTimestamp": since_timestamp}
         )
 
     add_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore
     get_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    add_dialog_resolve.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    resolve_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore
     add_notification.__action__ = ActionMetadata(blocking=True)  # type: ignore
     delete_notifications.__action__ = ActionMetadata(blocking=True)  # type: ignore
     get_notifications.__action__ = ActionMetadata(blocking=True)  # type: ignore
