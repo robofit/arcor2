@@ -80,37 +80,38 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.8.0) ([pypi](https://pypi.org/project/arcor2/0.8.0/)).
  
 ### arcor2_arserver
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.8.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_arserver/0.8.0/images/sha256-481509404b8903d8a4c8652cb73a31a4fcbb24e4def012a6254da756df6d1e70?context=repo), [pypi](https://pypi.org/project/arcor2-arserver/0.8.0/)).
 
  
 ### arcor2_arserver_data
 
 [README](src/python/arcor2_arserver_data/README.md) | [CHANGELOG](src/python/arcor2_arserver_data/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F0.8.0) ([pypi](https://pypi.org/project/arcor2-arserver-data/0.8.0/)).
 
 
 ### arcor2_build
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.8.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_build/0.8.0/images/sha256-d26ef99e39a263bc7b0f0d1d11c23a1148a8f273ac187193da229947fff7a752?context=repo), [pypi](https://pypi.org/project/arcor2-build/0.8.0/)).
 
 ### arcor2_build_data
 
 [README](src/python/arcor2_build_data/README.md) | [CHANGELOG](src/python/arcor2_build_data/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build_data%2F0.8.0) ([pypi](https://pypi.org/project/arcor2-build-data/0.8.0/)).
 
 ### arcor2_calibration
 
 [README](src/python/arcor2_calibration/README.md) | [CHANGELOG](src/python/arcor2_calibration/CHANGELOG.md)
+
 ### arcor2_calibration_data
 
 [README](src/python/arcor2_calibration_data/README.md) | [CHANGELOG](src/python/arcor2_calibration_data/CHANGELOG.md)
@@ -119,37 +120,37 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.8.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_execution/0.8.0/images/sha256-be37787d97008044f72ac8f1a4ff365da7b0b36069c5b77e5fab2d2c8f2407b3?context=repo), [pypi](https://pypi.org/project/arcor2-execution/0.8.0/)).
  
 ### arcor2_execution_data
 
 [README](src/python/arcor2_execution_data/README.md) | [CHANGELOG](src/python/arcor2_execution_data/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_data%2F0.8.0) ([pypi]https://pypi.org/project/arcor2-execution-data/0.8.0/)).
  
 ### arcor2_execution_rest_proxy
 
 [README](src/python/arcor2_execution_rest_proxy/README.md) | [CHANGELOG](src/python/arcor2_execution_rest_proxy/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F0.8.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_execution_proxy/0.8.0/images/sha256-e24d1334756d6f3c12fa5686cc055a4acbe5e539eaab44565d2edf8db7db2bc2?context=repo), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/0.8.0/)).
  
 ### arcor2_fit_demo
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
-- 2020-09-24: [0.2.0](link_to_tag) ([docker](), [pypi]()).
+- 2020-09-24: [0.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.2.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_upload_fit_demo/0.2.0/images/sha256-e9d5aa80c3ccd073d4aa438a8c38d3aaaf19df020126264c0b75d0f20fe1ef41?context=repo), [pypi](https://pypi.org/project/arcor2-fit-demo/0.2.0/)).
 
 ### arcor2_kinali
 
 [README](src/python/arcor2_kinali/README.md) | [CHANGELOG](src/python/arcor2_kinali/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.8.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_upload_kinali/0.8.0/images/sha256-5f9d0bf5e9f4300cb091e1bc35f185478e4c157f028718c13b2fba21da290fc1?context=repo), [pypi](https://pypi.org/project/arcor2-kinali/0.8.0/)).
  
  ### arcor2_mocks
 
 [README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
 
- - 2020-09-23: [0.8.0](link_to_tag) ([docker](), [pypi]()).
+ - 2020-09-23: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.8.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_mocks/0.8.0/images/sha256-d5d233d35059e3125b9080f073e42cf541a5a9137b777e281c94c2f31da8ea51?context=repo), [pypi](https://pypi.org/project/arcor2-mocks/0.8.0/)).
  
  ## Publications
  
