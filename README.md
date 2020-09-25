@@ -126,7 +126,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution_data/README.md) | [CHANGELOG](src/python/arcor2_execution_data/CHANGELOG.md)
 
- - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_data%2F0.8.0) ([pypi]https://pypi.org/project/arcor2-execution-data/0.8.0/)).
+ - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_data%2F0.8.0) ([pypi](https://pypi.org/project/arcor2-execution-data/0.8.0/)).
  
 ### arcor2_execution_rest_proxy
 
