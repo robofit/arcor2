@@ -10,4 +10,4 @@ FROM arcor2/arcor2_dist_base:$version
 
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_fit_demo.scripts/upload_objects.pex /root/upload_objects.pex
 
-CMD ["python", "/root/upload_objects.pex"] 
+CMD ["python", "/root/upload_objects.pex"]

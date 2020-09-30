@@ -8,7 +8,7 @@ RUN cd ~/arcor2 \
 
 FROM arcor2/arcor2_dist_base:$version
 
-RUN mkdir -p /root/project 
+RUN mkdir -p /root/project
 
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_execution.scripts/execution.pex /root/execution.pex
 
