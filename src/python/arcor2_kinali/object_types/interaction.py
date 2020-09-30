@@ -6,7 +6,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, StrEnum
 
-from .kinali_simple_object import KinaliSimpleObject
+from .abstract_simple import AbstractSimple
 
 
 class NotificationLevelEnum(StrEnum):
@@ -32,7 +32,7 @@ class NotificationValue(JsonSchemaMixin):
     created: int
 
 
-class Interaction(KinaliSimpleObject):
+class Interaction(AbstractSimple):
     """REST interface to the Interaction service (0.1.1)."""
 
     _ABSTRACT = False

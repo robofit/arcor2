@@ -7,7 +7,7 @@ from PIL.Image import Image  # type: ignore
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Pose, StrEnum
 
-from .kinali_abstract_object import KinaliAbstractObject
+from .abstract_with_pose import AbstractWithPose
 
 
 @dataclass
@@ -82,7 +82,7 @@ class SearchEngineParameters(JsonSchemaMixin):
     search_log_level: Optional[SearchLogLevel] = None
 
 
-class Search(KinaliAbstractObject):
+class Search(AbstractWithPose):
     """REST interface to the search service (0.5.0)."""
 
     _ABSTRACT = False
