@@ -8,7 +8,7 @@ from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, ProjectRobotJoints, StrEnum
 from arcor2.parameter_plugins.relative_pose import RelativePose
 
-from .kinali_abstract_robot import KinaliAbstractRobot
+from .abstract_robot import AbstractRobot
 
 # mypy work-around by GvR (https://github.com/python/mypy/issues/5107#issuecomment-529372406)
 if TYPE_CHECKING:
@@ -44,7 +44,7 @@ class MoveRelativeJointsParameters(JsonSchemaMixin):
     orientation: Orientation  # relative orientation
 
 
-class KinaliRobot(KinaliAbstractRobot):
+class KinaliRobot(AbstractRobot):
     """REST interface to the robot service (0.7.0)."""
 
     _ABSTRACT = False

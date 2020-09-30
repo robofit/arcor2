@@ -1,10 +1,10 @@
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata
 
-from .kinali_abstract_object import KinaliAbstractObject
+from .abstract_with_pose import AbstractWithPose
 
 
-class Barcode(KinaliAbstractObject):
+class Barcode(AbstractWithPose):
     """REST interface to the barcode service (0.3.0)."""
 
     _ABSTRACT = False
