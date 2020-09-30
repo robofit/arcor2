@@ -21,6 +21,19 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Pants cache
+      uses: actions/cache@v2
+      env:
+        cache-name: pants-cache
+      with:
+        path: |
+          ~/.cache/pants/setup
+          ~/.cache/pants/named_caches
+          ~/.cache/pants/lmdb_store
+        key: ${{ runner.os }}-build-${{ env.cache-name }}
+    - name: Prune pants cache
+      run: |
+        ./build-support/nuke-cache.sh
     - name: bootstrap
       run: |
         ./pants --version
