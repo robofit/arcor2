@@ -49,6 +49,16 @@ class Box(Model):
     size_y: float
     size_z: float
 
+    def __post_init__(self) -> None:
+
+        dims = [self.size_x, self.size_y, self.size_z]
+
+        if [val for val in dims if val < 0]:
+            raise DataException("Dimensions has to be positive.")
+
+        if len([val for val in dims if val > 0]) < 2:
+            raise DataException("Only one dimension of a box can be zero.")
+
 
 @dataclass
 class Cylinder(Model):
@@ -56,10 +66,20 @@ class Cylinder(Model):
     radius: float
     height: float
 
+    def __post_init__(self) -> None:
+
+        if [val for val in [self.radius, self.height] if val <= 0]:
+            raise DataException("Dimensions has to be positive.")
+
 
 @dataclass
 class Sphere(Model):
     radius: float
+
+    def __post_init__(self) -> None:
+
+        if self.radius <= 0:
+            raise DataException("Radius has to be positive.")
 
 
 @dataclass
@@ -101,6 +121,8 @@ class ObjectModel(JsonSchemaMixin):
     mesh: Optional[Mesh] = None
 
     def model(self) -> Models:
+
+        assert self.type != Model3dType.NONE
         return getattr(self, str(self.type.value).lower())
 
     def __post_init__(self) -> None:

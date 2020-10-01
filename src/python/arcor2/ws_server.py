@@ -84,20 +84,30 @@ async def server(
                 except ValidationError as e:
                     logger.error(f"Invalid RPC: {data}, error: {e}")
                     continue
-
-                try:
-                    resp = await rpc_cb(req, client)
                 except Arcor2Exception as e:
-                    logger.debug(e, exc_info=True)
-                    resp = rpc_cls.Response(req.id, False, [e.message])
-                else:
-                    if resp is None:  # default response
-                        resp = rpc_cls.Response(req.id, True)
-                    else:
-                        assert isinstance(resp, rpc_cls.Response)
-                        resp.id = req.id
+                    # this might happen if e.g. some dataclass does additional validation of values in its __post_init__
+                    try:
+                        await client.send(rpc_cls.Response(data["id"], False, messages=[str(e)]).to_json())
+                        logger.debug(e, exc_info=True)
+                    except KeyError:
+                        pass
+                    continue
 
-                await asyncio.wait([client.send(resp.to_json())])
+                else:
+
+                    try:
+                        resp = await rpc_cb(req, client)
+                    except Arcor2Exception as e:
+                        logger.debug(e, exc_info=True)
+                        resp = rpc_cls.Response(req.id, False, [e.message])
+                    else:
+                        if resp is None:  # default response
+                            resp = rpc_cls.Response(req.id, True)
+                        else:
+                            assert isinstance(resp, rpc_cls.Response)
+                            resp.id = req.id
+
+                await client.send(resp.to_json())
 
                 if logger.level == LogLevel.DEBUG:
 
