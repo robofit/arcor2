@@ -11,6 +11,7 @@ from arcor2.clients import persistent_storage
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.data.events import Event
+from arcor2.data.object_type import Box, Cylinder, Model3dType, ObjectModel, Sphere
 from arcor2.data.rpc.common import IdArgs
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.time_actions import TimeActions
@@ -122,6 +123,40 @@ def wait_for_event(ars: ARServer, evt_type: Type[E]) -> E:
     assert isinstance(evt, evt_type)
     assert evt.event == evt_type.__name__  # type: ignore # TODO figure out why mypy complains
     return evt
+
+
+# TODO find out way how to test invalid models (has to be constructed as a json)
+@pytest.mark.parametrize(
+    "model",
+    [
+        ObjectModel(Model3dType.BOX, box=Box("", 1, 1, 1)),
+        ObjectModel(Model3dType.BOX, box=Box("", 0, 1, 1)),
+        ObjectModel(Model3dType.SPHERE, sphere=Sphere("", 1)),
+        ObjectModel(Model3dType.CYLINDER, cylinder=Cylinder("", 1, 1)),
+    ],
+)
+def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectModel) -> None:
+
+    event(ars, events.c.ShowMainScreen)
+
+    type_name = "TestType"
+
+    model.model().id = type_name
+
+    assert ars.call_rpc(
+        rpc.o.NewObjectType.Request(
+            uid(), objects.ObjectTypeMeta(type_name, base=GenericWithPose.__name__, object_model=model)
+        ),
+        rpc.o.NewObjectType.Response,
+    ).result
+
+    evt = event(ars, events.o.ChangedObjectTypes)
+
+    assert len(evt.data) == 1
+    assert evt.data[0].has_pose
+    assert evt.data[0].type == type_name
+    assert evt.data[0].base == GenericWithPose.__name__
+    assert evt.data[0].object_model == model
 
 
 @pytest.fixture()

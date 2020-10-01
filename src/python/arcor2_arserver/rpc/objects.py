@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-
 import asyncio
 from typing import Dict, List
 
@@ -223,19 +219,23 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
     ast = new_object_type(glob.OBJECT_TYPES[meta.base].meta, meta)
     obj.source = tree_to_str(ast)
 
-    if meta.object_model and meta.object_model.type != Model3dType.MESH:
-        assert meta.type == meta.object_model.model().id
-        await storage.put_model(meta.object_model.model())
+    if meta.object_model:
 
-    # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
-    if meta.object_model and meta.object_model.type == Model3dType.MESH:
-        # ...get whole mesh (focus_points) based on mesh id
-        assert meta.object_model.mesh
-        try:
-            meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
-        except storage.PersistentStorageException as e:
-            glob.logger.error(e)
-            raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
+        if meta.object_model.type == Model3dType.MESH:
+
+            # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
+            # ...get whole mesh (focus_points) based on mesh id
+            assert meta.object_model.mesh
+            try:
+                meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
+            except storage.PersistentStorageException as e:
+                glob.logger.error(e)
+                raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
+
+        else:
+
+            meta.object_model.model().id = meta.type
+            await storage.put_model(meta.object_model.model())
 
     type_def = await hlp.run_in_executor(
         hlp.save_and_import_type_def,
