@@ -8,10 +8,13 @@ services:
       - project
       - build
       - execution
-      - testitoff-robot-webapi
+      - testitoff-scene-webapi
     ports:
       - "6789:6789"
     networks:
+      - testitoff-execution-network
+      - testitoff-scene-network
+      - testitoff-project-network
       - testitoff-robot-network
       - testitoff-search-network
       - testitoff-barcode-network
@@ -27,21 +30,25 @@ services:
   build:
     image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
     container_name: build
+    depends_on:
+      - project
     environment:
       - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
     ports:
       - "5008:5008"
-    networks:           
-      - testitoff-robot-network
+    networks:
+      - testitoff-project-network
   execution:
     image: arcor2/arcor2_execution:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
     container_name: execution
     networks:
-          - testitoff-robot-network
-          - testitoff-search-network
-          - testitoff-barcode-network 
-          - testitoff-statistic-network           
-          - testitoff-interaction-network
+        - testitoff-execution-network
+        - testitoff-scene-network
+        - testitoff-robot-network
+        - testitoff-search-network
+        - testitoff-barcode-network
+        - testitoff-statistic-network
+        - testitoff-interaction-network
     environment:
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_PROJECT_PATH=/root/project
@@ -61,7 +68,7 @@ services:
     ports:
       - "5009:5009"
     networks:
-      - testitoff-robot-network
+      - testitoff-execution-network
     depends_on:
       - execution
 
@@ -75,11 +82,10 @@ services:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000
       ports:
         - "13000:13000"
-      links:
-          - project
       restart: always
       networks:
         - testitoff-robot-network
+        - testitoff-scene-network
   testitoff-robot-mongodb:
       image: mongo:4.2.0-bionic
       container_name: "testitoff-robot-mongodb"
@@ -108,6 +114,7 @@ services:
       restart: always
       networks:
         - testitoff-robot-network
+        - testitoff-scene-network
   testitoff-robotsystem-mongodb:
       image: mongo:4.2.0-bionic
       container_name: "testitoff-robotsystem-mongodb"
@@ -119,6 +126,7 @@ services:
           - testitoff-robotsystem-mongodb:/data/db
       networks:
           - testitoff-robot-network
+          - testitoff-scene-network
       expose:
           - "27017"
       ports:
@@ -126,7 +134,7 @@ services:
 
   
   testitoff-search-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.5.0-beta.7
+      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.5.0
       container_name: "testitoff-search-webapi"
       privileged: true
       restart: always
@@ -136,6 +144,7 @@ services:
         - "12000:12000"
       networks:
         - testitoff-search-network
+        - testitoff-scene-network
 
   testitoff-search-mongodb:
       image: mongo:4.2.0-bionic
@@ -160,7 +169,7 @@ services:
       ports:
           - "15000:15000"
       networks:
-          - testitoff-robot-network
+          - testitoff-scene-network
       environment:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
 
@@ -175,6 +184,7 @@ services:
         - "16000:16000"
       networks:
         - testitoff-statistic-network
+        - testitoff-scene-network
 
   testitoff-statistic-mongodb:
       image: mongo:4.2.0-bionic
@@ -204,7 +214,7 @@ services:
       depends_on:
           - mongodb
       networks:
-        - testitoff-robot-network
+        - testitoff-project-network
 
   mongodb:
       image: mongo:4.2.0-bionic
@@ -217,7 +227,7 @@ services:
       expose:
         - "27017"
       networks:
-        - testitoff-robot-network
+        - testitoff-project-network
 
 
   testitoff-interaction-webapi:
@@ -289,9 +299,11 @@ volumes:
   execution:
 
 networks:
+  testitoff-execution-network:
+  testitoff-scene-network:
+  testitoff-project-network:
   testitoff-robot-network: 
   testitoff-search-network:
   testitoff-barcode-network:
   testitoff-statistic-network:
   testitoff-interaction-network:
-

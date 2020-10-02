@@ -4,20 +4,26 @@ FROM arcor2/arcor2_base:$version
 COPY . /root/arcor2/
 
 RUN cd ~/arcor2 \
-	&& ./pants setup-py :: 
+	&& ./pants setup-py ::
+
+# RUN cd ~/arcor2 \
+#    && ./build-support/setup-venv.sh
+
+# For some reason this does not work, the error is:
+# Error: [Errno 2] No such file or directory: '/root/arcor2/build-support/.venv/bin/python3.8
+# RUN source build-support/.venv/bin/activate
 
 RUN cd ~/arcor2/dist \
-	&& pip install -e ./arcor2-`cat ../src/python/arcor2/VERSION` \
-    && pip install -e ./arcor2_calibration_data-`cat ../src/python/arcor2_calibration_data/VERSION` \
-	&& pip install -e ./arcor2_arserver_data-`cat ../src/python/arcor2/VERSION` \
-	&& pip install -e ./arcor2_build_data-`cat ../src/python/arcor2_build_data/VERSION` \
-	&& pip install -e ./arcor2_execution_data-`cat ../src/python/arcor2_execution_data/VERSION` \
-	&& pip install -e ./arcor2_arserver-`cat ../src/python/arcor2_arserver/VERSION` \
-	&& pip install -e ./arcor2_build-`cat ../src/python/arcor2_build/VERSION` \
-	&& pip install -e ./arcor2_calibration-`cat ../src/python/arcor2_calibration/VERSION` \
-	&& pip install -e ./arcor2_execution-`cat ../src/python/arcor2_execution/VERSION` \
-	&& pip install -e ./arcor2_execution_rest_proxy-`cat ../src/python/arcor2_execution_rest_proxy/VERSION` \
-	&& pip install -e ./arcor2_fit_demo-`cat ../src/python/arcor2_fit_demo/VERSION` \
-	&& pip install -e ./arcor2_kinali-`cat ../src/python/arcor2_kinali/VERSION` \
-	&& pip install -e ./arcor2_mocks-`cat ../src/python/arcor2_mocks/VERSION` 
-
+	&& pip3 install -e ./arcor2-`cat ../src/python/arcor2/VERSION` \
+    && pip3 install -e ./arcor2_calibration_data-`cat ../src/python/arcor2_calibration_data/VERSION` \
+	&& pip3 install -e ./arcor2_arserver_data-`cat ../src/python/arcor2/VERSION` \
+	&& pip3 install -e ./arcor2_build_data-`cat ../src/python/arcor2_build_data/VERSION` \
+	&& pip3 install -e ./arcor2_execution_data-`cat ../src/python/arcor2_execution_data/VERSION` \
+	&& pip3 install -e ./arcor2_arserver-`cat ../src/python/arcor2_arserver/VERSION` \
+	&& pip3 install -e ./arcor2_build-`cat ../src/python/arcor2_build/VERSION` \
+	&& pip3 install -e ./arcor2_calibration-`cat ../src/python/arcor2_calibration/VERSION` \
+	&& pip3 install -e ./arcor2_execution-`cat ../src/python/arcor2_execution/VERSION` \
+	&& pip3 install -e ./arcor2_execution_rest_proxy-`cat ../src/python/arcor2_execution_rest_proxy/VERSION` \
+	&& pip3 install -e ./arcor2_fit_demo-`cat ../src/python/arcor2_fit_demo/VERSION` \
+	&& pip3 install -e ./arcor2_kinali-`cat ../src/python/arcor2_kinali/VERSION` \
+	&& pip3 install -e ./arcor2_mocks-`cat ../src/python/arcor2_mocks/VERSION`

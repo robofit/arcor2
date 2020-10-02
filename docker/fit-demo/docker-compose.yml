@@ -8,60 +8,44 @@ services:
       - project
       - build
       - execution
+      - testitoff-scene-webapi
       # - mocks
     ports:
       - "6789:6789"
       - "6780:8888"
     networks:
           - testitoff-robot-network
+          - testitoff-project-network
+          - testitoff-scene-network
     environment:
-      - REST_ROBOT_SERVICE_URL=http://testitoff-robot-webapi:13000 
-      - SEARCH_SERVICE_URL=http://testitoff-search-webapi:12000
       - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
-      - BARCODE_SERVICE_URL=http://testitoff-barcode-webapi:14000
-      - STATISTIC_SERVICE_URL=http://testitoff-statistic-webapi:16000
-      - ARCOR2_DATA_PATH=/root/data
-      - INTERACTION_SERVICE_URL=http://testitoff-interaction-webapi:17000
 
   build:
     image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
     container_name: build
+    depends_on:
+      - project
     environment:
       - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
     ports:
       - "5008:5008"
     networks:           
-      - testitoff-robot-network
+      - testitoff-project-network
   execution:
     image: arcor2/arcor2_execution:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
     container_name: execution
     networks:
-          - testitoff-robot-network
+      - testitoff-execution-network
+      - testitoff-scene-network
+      - testitoff-robot-network
     environment:
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
         - execution:/root/project
-
-  execution-proxy:
-    image: arcor2/arcor2_execution_proxy:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
-    container_name: execution-proxy    
-    environment:
-      - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
-      - ARCOR2_EXECUTION_URL=ws://execution:6790
-      - ARCOR2_PROJECT_PATH=/root/project
-    volumes:
-      - execution-proxy:/root/tokens
-      - execution:/root/project
-    ports:
-      - "5009:5009"
-    networks:
-      - testitoff-robot-network          
-    depends_on:
-      - execution
 
   testitoff-scene-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.2.0
@@ -70,6 +54,7 @@ services:
       ports:
           - "15000:15000"
       networks:
+          - testitoff-scene-network
           - testitoff-robot-network
       environment:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
@@ -86,6 +71,7 @@ services:
       restart: always
       networks:
         - testitoff-robot-network
+        - testitoff-scene-network
   testitoff-robotsystem-mongodb:
       image: mongo:4.2.0-bionic
       container_name: "testitoff-robotsystem-mongodb"
@@ -97,6 +83,7 @@ services:
           - testitoff-robotsystem-mongodb:/data/db
       networks:
           - testitoff-robot-network
+          - testitoff-scene-network
       expose:
           - "27017"
       ports:
@@ -114,7 +101,7 @@ services:
     depends_on:
         - mongodb
     networks:
-      - testitoff-robot-network
+      - testitoff-project-network
 
   mongodb:
     image: mongo:4.2.0-bionic
@@ -127,16 +114,15 @@ services:
     expose:
       - "27017"
     networks:
-      - testitoff-robot-network
-
-
+      - testitoff-project-network
 
 volumes:
-  mongodb:   
-  execution-proxy:
+  mongodb:
   execution:
   testitoff-robotsystem-mongodb:
 
 networks:
-  testitoff-robot-network: 
-
+  testitoff-robot-network:
+  testitoff-execution-network:
+  testitoff-scene-network:
+  testitoff-project-network:

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 build_base_image () {
-	docker build ../ --no-cache -f Dockerfile-base -t arcor2/arcor2_base:$VERSION
+	docker build ../ -f Dockerfile-base -t arcor2/arcor2_base:$VERSION
 }
 
 build_dist_base_image () {

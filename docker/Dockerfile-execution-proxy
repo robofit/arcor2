@@ -14,6 +14,3 @@ RUN mkdir -p /root/tokens \
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /root/execution_rest_proxy.pex
 
 COPY docker/start-execution-proxy.sh ./start.sh
-
-expose 5009
-

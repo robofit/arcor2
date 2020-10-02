@@ -13,5 +13,3 @@ COPY --from=0 /root/arcor2/dist/src.python.arcor2_mocks.scripts/mock_project.pex
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_mocks.scripts/mock_scene.pex /root/mock_scene.pex
 
 COPY docker/start-mocks.sh ./start.sh
-
-expose 6789
