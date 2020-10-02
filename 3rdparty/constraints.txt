@@ -11,12 +11,14 @@ chardet==3.0.4
 click==7.1.2
 Cython==0.29.21
 dataclasses==0.6
+dataclasses-jsonschema-rereleased[fast-validation]==2.12.2
 fastjsonschema==2.14.5
 Flask==1.1.2
 flask_cors==3.0.8
 flask-swagger-ui==3.25.0
 gitdb==4.0.5
 GitPython==3.1.8
+horast-rereleased==0.4.1
 idna==2.10
 iniconfig==1.0.1
 itsdangerous==1.1.0
@@ -36,9 +38,11 @@ pip==20.2.3
 pluggy==0.13.1
 py==1.9.0
 pycodestyle==2.6.0
+pydobot2==0.1.0
+pyhumps==1.6.1
 pyparsing==2.4.7
 pyrsistent==0.17.3
-pytest==6.0.2
+pytest==6.1.0
 pytest-randomly==3.4.1
 pytest-repeat==0.8.0
 python-dateutil==2.8.1
@@ -48,6 +52,7 @@ setuptools==50.3.0
 six==1.15.0
 smmap==3.0.4
 static-typing==0.2.7
+sqlitedict==1.7.0
 toml==0.10.1
 typed-ast==1.4.1
 typed-astunparse==2.1.4
@@ -59,4 +64,4 @@ websocket-client==0.57.0
 websockets==8.1
 Werkzeug==1.0.1
 wheel==0.35.1
-opencv-contrib-python==4.4.0.42
+opencv-contrib-python==4.4.0.44
