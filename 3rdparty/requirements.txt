@@ -15,7 +15,7 @@ PyYAML==5.3.1
 Pillow==7.2.0
 aiorun==2020.6.1
 typing-inspect==0.6.0
-pytest==6.0.2
+pytest==6.1.0
 pytest-repeat==0.8.0
 pytest-randomly==3.4.1
 openapi-spec-validator==0.2.9
@@ -25,7 +25,7 @@ Flask==1.1.2
 flask-swagger-ui==3.25.0
 lru-dict==1.1.6
 flask_cors==3.0.8
-opencv-contrib-python==4.4.0.42
+opencv-contrib-python==4.4.0.44
 pydobot2==0.1.0
 pyhumps==1.6.1
 sqlitedict==1.7.0

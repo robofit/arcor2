@@ -30,7 +30,7 @@ root_patterns = [
 ]
 
 [python-setup]
-interpreter_constraints = [">=3.8"]
+interpreter_constraints = ["==3.8.*"]
 requirement_constraints = "3rdparty/constraints.txt"
 
 [flake8]
