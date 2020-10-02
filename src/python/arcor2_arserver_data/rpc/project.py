@@ -227,6 +227,7 @@ class UpdateActionPointPosition(RPC):
             new_position: Position
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):

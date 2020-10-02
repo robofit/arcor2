@@ -473,7 +473,13 @@ async def update_ap_position(ap: common.BareActionPoint, position: common.Positi
 async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
-    await update_ap_position(glob.PROJECT.bare_action_point(req.args.action_point_id), req.args.new_position)
+
+    ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
+
+    if req.dry_run:
+        return
+
+    await update_ap_position(ap, req.args.new_position)
 
 
 @scene_needed
