@@ -4,10 +4,9 @@ import argparse
 import json
 import logging
 import os
-import shutil
-import stat
-import tempfile
+import zipfile
 from datetime import datetime, timezone
+from io import BytesIO
 from typing import Set, Tuple, Union
 
 import humps
@@ -50,34 +49,35 @@ CORS(app)
 RETURN_TYPE = Union[Tuple[str, int], Response]
 
 
-def make_executable(path_to_file: str) -> None:
-    st = os.stat(path_to_file)
-    os.chmod(path_to_file, st.st_mode | stat.S_IEXEC)
-
-
-def get_base(object_types: Set[str], obj_type: ObjectType, ot_path: str) -> None:
+def get_base(
+    object_types: Set[str], written_types: Set[str], obj_type: ObjectType, zf: zipfile.ZipFile, ot_path: str
+) -> None:
 
     base = base_from_source(obj_type.source, obj_type.id)
 
     if not base:
         return
 
+    if base in written_types:
+        return
+
     if base not in object_types and base not in built_in_types_names():
 
         base_obj_type = ps.get_object_type(base)
 
-        with open(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", "w") as obj_file:
-            obj_file.write(base_obj_type.source)
-
+        zf.writestr(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", base_obj_type.source)
         object_types.add(base)
+        written_types.add(base)
 
         # try to get base of the base
-        get_base(object_types, base_obj_type, ot_path)
+        get_base(object_types, written_types, base_obj_type, zf, ot_path)
 
 
 def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
-    with tempfile.TemporaryDirectory() as pkg_tmp_dir:
+    mem_zip = BytesIO()
+
+    with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
 
         try:
             project = ps.get_project(project_id)
@@ -85,28 +85,21 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
             scene = ps.get_scene(project.scene_id)
             cached_scene = CachedScene(scene)
 
-            project_dir = os.path.join(pkg_tmp_dir, "arcor2_project")
+            data_path = "data"
+            ot_path = "object_types"
 
-            data_path = os.path.join(project_dir, "data")
-            ot_path = os.path.join(project_dir, "object_types")
-
-            os.makedirs(data_path)
-            os.makedirs(os.path.join(data_path, "models"))
-            os.makedirs(ot_path)
-
-            with open(os.path.join(ot_path, "__init__.py"), "w"):
-                pass
-
-            with open(os.path.join(data_path, "project.json"), "w") as project_file:
-                project_file.write(project.to_json())
-
-            with open(os.path.join(data_path, "scene.json"), "w") as scene_file:
-                scene_file.write(scene.to_json())
+            zf.writestr(os.path.join(ot_path, "__init__.py"), "")
+            zf.writestr(os.path.join(data_path, "project.json"), project.to_json())
+            zf.writestr(os.path.join(data_path, "scene.json"), scene.to_json())
 
             obj_types = set(cached_scene.object_types)
             obj_types_with_models: Set[str] = set()
+            written_types: Set[str] = set()
 
             for scene_obj in scene.objects:
+
+                if scene_obj.type in written_types:
+                    continue
 
                 obj_type = ps.get_object_type(scene_obj.type)
 
@@ -116,69 +109,57 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                     model = ps.get_model(obj_type.model.id, obj_type.model.type)
                     obj_model = ObjectModel(obj_type.model.type, **{model.type().value.lower(): model})  # type: ignore
 
-                    with open(
-                        os.path.join(data_path, "models", humps.depascalize(obj_type.id) + ".json"), "w"
-                    ) as model_file:
-                        model_file.write(obj_model.to_json())
+                    zf.writestr(
+                        os.path.join(data_path, "models", humps.depascalize(obj_type.id) + ".json"), obj_model.to_json()
+                    )
 
-                with open(os.path.join(ot_path, humps.depascalize(obj_type.id)) + ".py", "w") as obj_file:
-                    obj_file.write(obj_type.source)
+                zf.writestr(os.path.join(ot_path, humps.depascalize(obj_type.id)) + ".py", obj_type.source)
+                written_types.add(scene_obj.type)
 
                 # handle inheritance
-                get_base(obj_types, obj_type, ot_path)
+                get_base(obj_types, written_types, obj_type, zf, ot_path)
 
         except ps.PersistentStorageException as e:
             logger.exception("Failed to get something from the project service.")
             return str(e), 404
 
-        script_path = os.path.join(project_dir, "script.py")
+        script_path = "script.py"
 
         try:
 
-            with open(script_path, "w") as script_file:
+            if project.has_logic:
+                zf.writestr(script_path, program_src(cached_project, cached_scene, built_in_types_names(), True))
+            else:
+                try:
+                    script = ps.get_project_sources(project.id).script
 
-                if project.has_logic:
-                    script_file.write(program_src(cached_project, cached_scene, built_in_types_names(), True))
-                else:
+                    # check if it is a valid Python code
                     try:
-                        script = ps.get_project_sources(project.id).script
+                        parse(script)
+                    except SourceException:
+                        logger.exception("Failed to parse code of the uploaded script.")
+                        return "Invalid code.", 501
 
-                        # check if it is a valid Python code
-                        try:
-                            parse(script)
-                        except SourceException:
-                            logger.exception("Failed to parse code of the uploaded script.")
-                            return "Invalid code.", 501
+                    zf.writestr(script_path, script)
 
-                        script_file.write(script)
+                except ps.PersistentStorageException:
 
-                    except ps.PersistentStorageException:
+                    logger.info("Script not found on project service, creating one from scratch.")
 
-                        logger.info("Script not found on project service, creating one from scratch.")
+                    # write script without the main loop
+                    zf.writestr(script_path, program_src(cached_project, cached_scene, built_in_types_names(), False))
 
-                        # write script without the main loop
-                        script_file.write(program_src(cached_project, cached_scene, built_in_types_names(), False))
-
-            with open(os.path.join(project_dir, "resources.py"), "w") as res:
-                res.write(derived_resources_class(cached_project))
-
-            with open(os.path.join(project_dir, "actions.py"), "w") as act:
-                act.write(global_actions_class(cached_project))
-
-            with open(os.path.join(project_dir, "action_points.py"), "w") as aps:
-                aps.write(global_action_points_class(cached_project))
-
-            with open(os.path.join(project_dir, "package.json"), "w") as pkg:
-                pkg.write(PackageMeta(package_name, datetime.now(tz=timezone.utc)).to_json())
+            zf.writestr("resources.py", derived_resources_class(cached_project))
+            zf.writestr("actions.py", global_actions_class(cached_project))
+            zf.writestr("action_points.py", global_action_points_class(cached_project))
+            zf.writestr("package.json", PackageMeta(package_name, datetime.now(tz=timezone.utc)).to_json())
 
         except SourceException as e:
             logger.exception("Failed to generate script.")
             return str(e), 501
 
-        make_executable(script_path)
-        archive_path = os.path.join(pkg_tmp_dir, "arcor2_project")
-        shutil.make_archive(archive_path, "zip", project_dir)
-        return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
+    mem_zip.seek(0)
+    return send_file(mem_zip, as_attachment=True, cache_timeout=0, attachment_filename="arcor2_project.zip")
 
 
 @app.route("/project/<string:project_id>/publish", methods=["GET"])
