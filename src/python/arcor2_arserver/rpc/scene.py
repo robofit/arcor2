@@ -372,6 +372,9 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
     if not obj.pose:
         raise Arcor2Exception("Object without pose.")
 
+    if req.dry_run:
+        return
+
     obj.pose = req.args.pose
 
     glob.SCENE.update_modified()

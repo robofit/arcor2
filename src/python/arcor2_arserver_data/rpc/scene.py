@@ -160,6 +160,7 @@ class UpdateObjectPose(RPC):
             pose: Pose
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
