@@ -6,8 +6,6 @@ COPY . /root/arcor2/
 RUN cd ~/arcor2 \
 	&& ./pants binary src/python/arcor2_arserver/scripts:arserver
 
-
-
 FROM arcor2/arcor2_dist_base:$version
 
 RUN mkdir -p /root/data 
@@ -16,10 +14,6 @@ COPY --from=0 /root/arcor2/dist/src.python.arcor2_arserver.scripts/arserver.pex 
 
 COPY docker/start-arserver.sh ./start.sh
 
-
 RUN mkdir -p ~/project
 ENV PYTHONPATH ~
 ENV ARCOR2_PROJECT_PATH /root/project
-
-
-expose 6789
