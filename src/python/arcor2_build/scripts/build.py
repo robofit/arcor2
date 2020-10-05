@@ -21,6 +21,7 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
+from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import logger_formatter, port_from_url
 from arcor2.object_types.utils import base_from_source, built_in_types_names
 from arcor2.source import SourceException
@@ -30,10 +31,6 @@ from arcor2_build.source.utils import derived_resources_class, global_action_poi
 from arcor2_build_data import SERVICE_NAME, URL
 
 logger = logging.getLogger("build")
-ch = logging.StreamHandler()
-ch.setFormatter(logger_formatter())
-logger.setLevel(logging.INFO)
-logger.addHandler(ch)
 
 # Create an APISpec
 spec = APISpec(
@@ -63,6 +60,7 @@ def get_base(
 
     if base not in object_types and base not in built_in_types_names():
 
+        logger.debug(f"Getting {base} as base of {obj_type.id}.")
         base_obj_type = ps.get_object_type(base)
 
         zf.writestr(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", base_obj_type.source)
@@ -77,9 +75,12 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
     mem_zip = BytesIO()
 
+    logger.debug(f"Generating package {package_name} for project_id: {project_id}.")
+
     with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
 
         try:
+            logger.debug("Getting scene and project.")
             project = ps.get_project(project_id)
             cached_project = CachedProject(project)
             scene = ps.get_scene(project.scene_id)
@@ -101,6 +102,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                 if scene_obj.type in written_types:
                     continue
 
+                logger.debug(f"Getting scene object type {scene_obj.type}.")
                 obj_type = ps.get_object_type(scene_obj.type)
 
                 if obj_type.model and obj_type.id not in obj_types_with_models:
@@ -119,7 +121,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                 # handle inheritance
                 get_base(obj_types, written_types, obj_type, zf, ot_path)
 
-        except ps.PersistentStorageException as e:
+        except Arcor2Exception as e:
             logger.exception("Failed to get something from the project service.")
             return str(e), 404
 
@@ -128,9 +130,11 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
         try:
 
             if project.has_logic:
+                logger.debug("Generating script from project logic.")
                 zf.writestr(script_path, program_src(cached_project, cached_scene, built_in_types_names(), True))
             else:
                 try:
+                    logger.debug("Getting project sources.")
                     script = ps.get_project_sources(project.id).script
 
                     # check if it is a valid Python code
@@ -149,15 +153,25 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
                     # write script without the main loop
                     zf.writestr(script_path, program_src(cached_project, cached_scene, built_in_types_names(), False))
 
+            logger.debug("Generating supplementary files.")
+
+            logger.debug("resources.py")
             zf.writestr("resources.py", derived_resources_class(cached_project))
+
+            logger.debug("actions.py")
             zf.writestr("actions.py", global_actions_class(cached_project))
+
+            logger.debug("action_points.py")
             zf.writestr("action_points.py", global_action_points_class(cached_project))
+
+            logger.debug("package.json")
             zf.writestr("package.json", PackageMeta(package_name, datetime.now(tz=timezone.utc)).to_json())
 
-        except SourceException as e:
+        except Arcor2Exception as e:
             logger.exception("Failed to generate script.")
             return str(e), 501
 
+    logger.debug("Execution package finished.")
     mem_zip.seek(0)
     return send_file(mem_zip, as_attachment=True, cache_timeout=0, attachment_filename="arcor2_project.zip")
 
@@ -241,7 +255,21 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Set logging level to debug.",
+        action="store_const",
+        const=logging.DEBUG,
+        default=logging.INFO,
+    )
+
     args = parser.parse_args()
+
+    ch = logging.StreamHandler()
+    ch.setFormatter(logger_formatter())
+    logger.setLevel(args.debug)
+    logger.addHandler(ch)
 
     if args.swagger:
         print(spec.to_yaml())
