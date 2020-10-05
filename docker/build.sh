@@ -64,12 +64,20 @@ fi
 
 VERSION="$1"
 
+if [ $# -eq 1 ]; then
+	build_base_image
+	exit 0
+fi
+
+
+build_dist_base_image
+
 if [ $2 = 'all' ]; then
     build_all_images
     exit 0
 fi
 
-build_dist_base_image
+
 for var in "$@"
 do
     if [ "$var" = "arserver" ]; then
