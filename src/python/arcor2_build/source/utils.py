@@ -439,15 +439,13 @@ def global_actions_class(project: CachedProject) -> str:
 
 
 def derived_resources_class(project: CachedProject) -> str:
-    # TODO temporary and ugly solution of circular import
-    import arcor2.resources
-    from arcor2.resources import ResourcesBase
 
     tree = Module(body=[])
 
     parameters = [(act.id, clean(act.name)) for act in project.actions]
 
-    add_import(tree, arcor2.resources.__name__, ResourcesBase.__name__)
+    # TODO rather import resources/ResourcesBase and get name from __name__ (but it requires ARCOR2_PROJECT_PATH...)
+    add_import(tree, "arcor2.resources", "ResourcesBase", try_to_import=False)
 
     derived_cls_name = "Resources"
 
@@ -479,7 +477,7 @@ def derived_resources_class(project: CachedProject) -> str:
 
     cls_def = ClassDef(
         name=derived_cls_name,
-        bases=[Name(id=ResourcesBase.__name__, ctx=Load())],
+        bases=[Name(id="ResourcesBase", ctx=Load())],
         keywords=[],
         body=[
             FunctionDef(
