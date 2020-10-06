@@ -1,4 +1,4 @@
 #!/bin/bash  
 
-cd /root
+cd /root || exit
 ./build.pex
