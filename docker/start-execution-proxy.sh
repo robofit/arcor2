@@ -1,4 +1,4 @@
 #!/bin/bash  
 
-cd
+cd || exit
 ./execution_rest_proxy.pex
