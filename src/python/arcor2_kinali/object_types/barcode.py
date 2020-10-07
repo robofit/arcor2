@@ -15,6 +15,6 @@ class Barcode(AbstractWithPose):
         :return:
         """
 
-        return rest.get_primitive(f"{self.settings.url}/scanner/scan", str)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/scanner/scan", return_type=str)
 
     scan.__action__ = ActionMetadata(blocking=True)  # type: ignore

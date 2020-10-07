@@ -1,7 +1,11 @@
 import functools
-import io
 import json
-from typing import Any, Callable, Dict, List, Optional, Sequence, Type, TypeVar, Union, cast
+import logging
+import os
+from enum import Enum
+from functools import partial
+from io import BytesIO
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Type, TypeVar, Union, cast, overload
 
 import humps
 import requests
@@ -9,29 +13,73 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError  # type: ignore
 
 from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import logger_formatter
+
+# typing-related definitions
+DataClass = TypeVar("DataClass", bound=JsonSchemaMixin)
+Primitive = TypeVar("Primitive", str, int, float, bool)
+ReturnValue = Union[None, Primitive, DataClass, BytesIO]
+ReturnType = Union[None, Type[Primitive], Type[DataClass], Type[BytesIO]]
+
+OptBody = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin], Sequence[Primitive]]]
+OptParams = Optional[Dict[str, Primitive]]
+OptFiles = Optional[Dict[str, bytes]]
 
 
 class RestException(Arcor2Exception):
+    """Exception raised by functions in the module."""
+
     pass
 
 
-TIMEOUT = (1.0, 20.0)  # connect, read
+class Method(Enum):
+    """Enumeration of supported HTTP methods."""
 
-HEADERS = {"accept": "application/json", "content-type": "application/json"}
+    GET = partial(requests.get)
+    POST = partial(requests.post)
+    PUT = partial(requests.put)
+    DELETE = partial(requests.delete)
+    PATCH = partial(requests.patch)
 
-T = TypeVar("T", bound=JsonSchemaMixin)
-S = TypeVar("S", str, int, float, bool)
 
-OptionalData = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin], Sequence[S]]]
-ParamsDict = Optional[Dict[str, Any]]
-Files = Optional[Dict[str, bytes]]
+class Timeout(NamedTuple):
+    """The connect timeout is the number of seconds Requests will wait for your
+    client to establish a connection to a remote machine (corresponding to the
+    connect()) call on the socket. It’s a good practice to set connect timeouts
+    to slightly larger than a multiple of 3, which is the default TCP packet
+    retransmission window.
 
-SESSION = requests.session()
+    Once your client has connected to the server and sent the HTTP request,
+    the read timeout is the number of seconds the client will wait for the server
+    to send a response. (Specifically, it’s the number of seconds that the client
+    will wait between bytes sent from the server. In 99.9% of cases, this is
+    the time before the server sends the first byte).
+
+    Source: https://requests.readthedocs.io/en/master/user/advanced/#timeouts
+    """
+
+    connect: float = 3.05
+    read: float = 20.0
+
+
+OptTimeout = Optional[Timeout]
+
+
+# module-level variables
+debug: bool = bool(os.getenv("ARCOR2_REST_DEBUG", False))
+headers = {"accept": "application/json", "content-type": "application/json"}
+session = requests.session()
+logger = logging.getLogger(__name__)
+
+ch = logging.StreamHandler()
+ch.setFormatter(logger_formatter())
+logger.setLevel(logging.DEBUG if debug else logging.INFO)
+logger.addHandler(ch)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def handle_exceptions(
+def handle_exceptions(  # TODO make it more general and refactor it to arcor2/exceptions
     exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None
 ) -> Callable[[F], F]:
     def _handle_exceptions(func: F) -> F:
@@ -51,47 +99,169 @@ def handle_exceptions(
     return _handle_exceptions
 
 
-CK = TypeVar("CK", Dict[Any, Any], List[Any])
+def dataclass_from_json(resp_json: Dict[str, Any], return_type: Type[DataClass]) -> DataClass:
 
-
-def handle_response(resp: requests.Response) -> None:
     try:
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-
-        try:
-            resp_body = json.loads(resp.content)
-        except json.JSONDecodeError:
-            raise RestException(resp.content.decode("utf-8"), str(e)) from e
-
-        try:
-            raise RestException(resp_body["message"], str(e)) from e
-        except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestException(str(resp_body), str(e)) from e
+        return return_type.from_dict(resp_json)
+    except ValidationError as e:
+        logger.debug(f'{return_type.__name__}: validation error "{e}" while parsing "{resp_json}".')
+        raise RestException("Invalid data.", str(e)) from e
 
 
-def _send(
+def primitive_from_json(resp_json: Primitive, return_type: Type[Primitive]) -> Primitive:
+
+    try:
+        return return_type(resp_json)
+    except ValueError as e:
+        logger.debug(f'{return_type.__name__}: error  "{e}" while parsing "{resp_json}".')
+        raise RestException(e) from e
+
+
+# overload for no return
+@overload
+def call(
+    method: Method,
     url: str,
-    op: Callable,
-    data: OptionalData = None,
-    params: ParamsDict = None,
-    get_response=False,
-    files: Files = None,
-) -> Union[None, Dict, List]:
+    *,
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> None:
+    ...
 
-    if data and files:
+
+# single value-returning overloads
+@overload
+def call(
+    method: Method,
+    url: str,
+    *,
+    return_type: Type[Primitive],
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> Primitive:
+    ...
+
+
+@overload
+def call(
+    method: Method,
+    url: str,
+    *,
+    return_type: Type[DataClass],
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> DataClass:
+    ...
+
+
+@overload
+def call(
+    method: Method,
+    url: str,
+    *,
+    return_type: Type[BytesIO],
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> BytesIO:
+    ...
+
+
+# list-returning overloads
+@overload
+def call(
+    method: Method,
+    url: str,
+    *,
+    list_return_type: Type[Primitive],
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> List[Primitive]:
+    ...
+
+
+@overload
+def call(
+    method: Method,
+    url: str,
+    *,
+    list_return_type: Type[DataClass],
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> List[DataClass]:
+    ...
+
+
+@overload
+def call(
+    method: Method,
+    url: str,
+    *,
+    list_return_type: Type[BytesIO],
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> List[BytesIO]:
+    ...
+
+
+def call(
+    method: Method,
+    url: str,
+    *,
+    return_type: ReturnType = None,
+    list_return_type: ReturnType = None,
+    body: OptBody = None,
+    params: OptParams = None,
+    files: OptFiles = None,
+    timeout: OptTimeout = None,
+) -> ReturnValue:
+    """Universal function for calling REST APIs.
+
+    :param method: HTTP method.
+    :param url: Resource address.
+    :param return_type: If set, function will try to return one value of a given type.
+    :param list_return_type: If set, function will try to return list of a given type.
+    :param body: Data to be send in the request body.
+    :param params: Path parameters.
+    :param files: Instead of body, it is possible to send files.
+    :param timeout: Specific timeout for a call.
+    :return: Return value/type is given by return_type/list_return_type. If both are None, nothing will be returned.
+    """
+    logger.debug(f"{method} {url}, body: {body}, params: {params}, files: {files is not None}, timeout: {timeout}")
+
+    if body and files:
         raise RestException("Can't send data and files at the same time.")
 
-    if isinstance(data, JsonSchemaMixin):
-        d = humps.camelize(data.to_dict())
-    elif isinstance(data, list):
+    if return_type and list_return_type:
+        raise RestException("Only one argument from 'return_type' and 'list_return_type' can be used.")
+
+    if return_type is None:
+        return_type = list_return_type
+
+    # prepare data into dict
+    if isinstance(body, JsonSchemaMixin):
+        d = humps.camelize(body.to_dict())
+    elif isinstance(body, list):
         d = []
-        for dd in data:
+        for dd in body:
             if isinstance(dd, JsonSchemaMixin):
                 d.append(humps.camelize(dd.to_dict()))
             else:
                 d.append(dd)
-    elif data is not None:
+    elif body is not None:
         raise RestException("Unsupported type of data.")
     else:
         d = {}
@@ -101,200 +271,102 @@ def _send(
     else:
         params = {}
 
+    if timeout is None:
+        timeout = Timeout()
+
     try:
         if files:
-            resp = op(url, files=files, timeout=TIMEOUT, params=params)
+            resp = method.value(url, files=files, timeout=timeout, params=params)
         else:
-            resp = op(url, data=json.dumps(d), timeout=TIMEOUT, headers=HEADERS, params=params)
+            resp = method.value(url, data=json.dumps(d), timeout=timeout, headers=headers, params=params)
     except requests.exceptions.RequestException as e:
+        logger.debug("Request failed.", exc_info=True)
         raise RestException("Catastrophic system error.", str(e)) from e
 
-    handle_response(resp)
+    _handle_response(resp)
 
-    if not get_response:
+    if return_type is None:
         return None
 
+    if issubclass(return_type, BytesIO):
+
+        if list_return_type:
+            raise NotImplementedError
+
+        return BytesIO(resp.content)
+
     try:
-        return humps.decamelize(json.loads(resp.text))
+        resp_json = humps.decamelize(json.loads(resp.text))
     except (json.JSONDecodeError, TypeError) as e:
-        raise RestException("Invalid JSON.", str(e)) from e
+        logger.debug(f"Got invalid JSON in the response: {resp.text}")
+        raise RestException("Invalid JSON.") from e
+
+    if list_return_type and not isinstance(resp_json, list):
+        logger.debug(f"Expected list of type {return_type}, but got {resp_json}.")
+        raise RestException("Response is not a list.")
+
+    if issubclass(return_type, JsonSchemaMixin):
+
+        if list_return_type:
+            return [dataclass_from_json(item, return_type) for item in resp_json]
+
+        else:
+            assert not isinstance(resp_json, list)
+
+            # TODO temporary workaround for bug in humps (https://github.com/nficano/humps/issues/127)
+            from arcor2.data.object_type import Box
+
+            if return_type is Box:
+                resp_json["size_x"] = resp_json["sizex"]
+                resp_json["size_y"] = resp_json["sizey"]
+                resp_json["size_z"] = resp_json["sizez"]
+
+            return dataclass_from_json(resp_json, return_type)
+
+    else:  # probably a primitive
+
+        if list_return_type:
+            return [primitive_from_json(item, return_type) for item in resp_json]
+        else:
+            assert not isinstance(resp_json, list)
+            return primitive_from_json(resp_json, return_type)
 
 
-def post(url: str, data: JsonSchemaMixin, params: ParamsDict = None) -> None:
-    _send(url, SESSION.post, data, params)
+def _handle_response(resp: requests.Response) -> None:
+    """Raises exception if there is something wrong with the response.
 
-
-def put_returning_primitive(url: str, desired_type: Type[S], data: OptionalData = None, params: ParamsDict = None) -> S:
+    :param resp:
+    :return:
+    """
 
     try:
-        return desired_type(_send(url, SESSION.put, data, params, get_response=True))  # type: ignore
-    except ValueError as e:
-        raise RestException(e) from e
+        resp.raise_for_status()
+    except requests.exceptions.RequestException as e:
 
-
-def put(
-    url: str, data: OptionalData = None, params: ParamsDict = None, data_cls: Type[T] = None, files: Files = None
-) -> T:
-    ret = _send(url, SESSION.put, data, params, get_response=data_cls is not None, files=files)  # type: ignore
-
-    if not data_cls:
-        return None  # type: ignore
-
-    try:
-        return data_cls.from_dict(ret)  # type: ignore
-    except ValidationError as e:
-        print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
-        raise RestException("Invalid data.", str(e)) from e
-
-
-def put_returning_list(
-    url: str, data: OptionalData = None, params: ParamsDict = None, data_cls: Type[T] = None
-) -> List[T]:
-
-    ret = _send(url, SESSION.put, data, params, get_response=data_cls is not None)  # type: ignore
-
-    if not data_cls:
-        return []  # type: ignore
-
-    assert isinstance(ret, list)
-
-    d = []
-    for dd in ret:
         try:
-            d.append(data_cls.from_dict(dd))  # type: ignore # TODO remove once pants/mypy works properly
-        except ValidationError as e:
-            print(f'{data_cls.__name__}: validation error "{e}" while parsing "{ret}".')
-            raise RestException("Invalid data.", str(e)) from e
+            resp_body = json.loads(resp.content)
+        except json.JSONDecodeError:
+            raise RestException(resp.content.decode("utf-8")) from e
 
-    return d
-
-
-def delete(url: str) -> None:
-
-    try:
-        resp = SESSION.delete(url, timeout=TIMEOUT, headers=HEADERS)
-    except requests.exceptions.RequestException as e:
-        raise RestException("Catastrophic system error.", str(e)) from e
-
-    handle_response(resp)
-
-
-def get_data(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> CK:
-
-    data = _get(url, body, params)
-
-    if not isinstance(data, (list, dict)):
-        raise RestException("Invalid data, not list or dict.")
-
-    return humps.decamelize(data)
-
-
-def _get_response(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> requests.Response:
-
-    if body is None:
-        body_dict = {}  # type: ignore
-    else:
-        body_dict = body.to_dict()
-
-    if params:
-        params = humps.camelize(params)
-    else:
-        params = {}
-
-    try:
-        resp = SESSION.get(url, timeout=TIMEOUT, data=body_dict, params=params, allow_redirects=True, headers=HEADERS)
-    except requests.exceptions.RequestException as e:
-        raise RestException("Catastrophic system error.", str(e)) from e
-
-    handle_response(resp)
-
-    return resp
-
-
-def _get(url: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> Any:
-
-    resp = _get_response(url, body, params)
-
-    try:
-        return json.loads(resp.text)
-    except (json.JSONDecodeError, TypeError) as e:
-        raise RestException("Invalid JSON.", str(e)) from e
+        try:
+            raise RestException(resp_body["message"]) from e
+        except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
+            raise RestException(str(resp_body)) from e
 
 
 def get_image(url: str) -> Image.Image:
+    """Shortcut for getting an image."""
 
     # TODO check content type?
     try:
-        return Image.open(io.BytesIO(_get_response(url).content))
+        return Image.open(call(Method.GET, url, return_type=BytesIO))
     except (UnidentifiedImageError, TypeError) as e:
-        raise RestException("Invalid image.", str(e)) from e
+        raise RestException("Invalid image.") from e
 
 
-def get_primitive(
-    url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None
-) -> S:
+def download(url: str, path: str, params: OptParams = None) -> None:
+    """Shortcut for saving a file to disk."""
 
-    value = _get(url, body, params)
-
-    try:
-        return desired_type(value)
-    except ValueError as e:
-        raise RestException("Invalid primitive.", str(e)) from e
-
-
-def get_list(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> List[T]:
-
-    data = get_data(url, body, params)
-
-    ret: List[T] = []
-
-    for val in data:
-        try:
-            ret.append(data_cls.from_dict(val))  # type: ignore # TODO remove once pants/mypy works properly
-        except ValidationError as e:
-            print(f'{data_cls.__name__}: validation error "{e}" while parsing "{data}".')
-            raise RestException("Invalid data.", str(e)) from e
-
-    return ret
-
-
-def get_list_primitive(
-    url: str, desired_type: Type[S], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None
-) -> List[S]:
-
-    data = get_data(url, body, params)
-
-    ret: List[S] = []
-
-    for val in data:
-        ret.append(desired_type(val))
-
-    return ret
-
-
-def get(url: str, data_cls: Type[T], body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> T:
-
-    data = get_data(url, body, params)
-
-    assert isinstance(data, dict)
-
-    # TODO temporary workaround for bug in humps
-    from arcor2.data.object_type import Box
-
-    if data_cls is Box:
-        data["size_x"] = data["sizex"]
-        data["size_y"] = data["sizey"]
-        data["size_z"] = data["sizez"]
-
-    try:
-        return data_cls.from_dict(data)  # type: ignore # TODO remove once pants/mypy works properly
-    except ValidationError as e:
-        raise RestException("Invalid data.", str(e)) from e
-
-
-def download(url: str, path: str, body: Optional[JsonSchemaMixin] = None, params: ParamsDict = None) -> None:
-    # TODO check content type
-
-    r = _get_response(url, body, params)
-    with open(path, "wb") as file:
-        file.write(r.content)
+    with call(Method.GET, url, return_type=BytesIO, params=params) as buff:
+        with open(path, "wb") as file:
+            file.write(buff.getvalue())

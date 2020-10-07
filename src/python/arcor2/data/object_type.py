@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Type, Union
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -93,7 +93,12 @@ MeshList = List[Mesh]
 
 Models = Union[Box, Sphere, Cylinder, Mesh]
 
-MODEL_MAPPING = {Box.type(): Box, Sphere.type(): Sphere, Cylinder.type(): Cylinder, Mesh.type(): Mesh}
+MODEL_MAPPING: Dict[Model3dType, Union[Type[Box], Type[Sphere], Type[Cylinder], Type[Mesh]]] = {
+    Box.type(): Box,
+    Sphere.type(): Sphere,
+    Cylinder.type(): Cylinder,
+    Mesh.type(): Mesh,
+}
 
 
 @dataclass

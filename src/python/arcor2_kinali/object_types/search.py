@@ -94,7 +94,7 @@ class Search(AbstractWithPose):
 
         :return:
         """
-        rest.put(f"{self.settings.url}/capture/grab")
+        rest.call(rest.Method.PUT, f"{self.settings.url}/capture/grab")
 
     def get_image(self) -> Image:
         """Gets RGB image from internal cache, if there is any.
@@ -109,7 +109,7 @@ class Search(AbstractWithPose):
 
         :return:
         """
-        return rest.get(f"{self.settings.url}/capture/pose", Pose)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/capture/pose", return_type=Pose)
 
     # --- Pick Controller ----------------------------------------------------------------------------------------------
 
@@ -122,7 +122,12 @@ class Search(AbstractWithPose):
         :param poses:
         :return:
         """
-        rest.put(f"{self.settings.url}/pick/suctions", poses, {"itemId": item_id, "suctionId": suction_id})
+        rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/pick/suctions",
+            body=poses,
+            params={"itemId": item_id, "suctionId": suction_id},
+        )
 
     def compute_pick_args(self, item_id: str, suction_id: str, pose: Pose) -> List[PickArgs]:
         """Computes pick arguments for given suction, item and item pose.
@@ -132,8 +137,12 @@ class Search(AbstractWithPose):
         :param pose:
         :return:
         """
-        return rest.put_returning_list(
-            f"{self.settings.url}/pick/suctions/compute", pose, {"itemId": item_id, "suctionId": suction_id}, PickArgs
+        return rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/pick/suctions/compute",
+            body=pose,
+            params={"itemId": item_id, "suctionId": suction_id},
+            list_return_type=PickArgs,
         )
 
     def upsert_gripper_args(self, item_id: str, gripper_id: str, gripper_setup: List[GripperSetup]) -> None:
@@ -146,7 +155,12 @@ class Search(AbstractWithPose):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/pick/grippers", gripper_setup, {"itemId": item_id, "gripperId": gripper_id})
+        rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/pick/grippers",
+            body=gripper_setup,
+            params={"itemId": item_id, "gripperId": gripper_id},
+        )
 
     def compute_gripper_args(self, item_id: str, gripper_id: str, pose: Pose) -> List[GripperSetup]:
         """Gets pick poses for specific tool and item.
@@ -157,11 +171,12 @@ class Search(AbstractWithPose):
         :return:
         """
 
-        return rest.get_list(
+        return rest.call(
+            rest.Method.GET,
             f"{self.settings.url}/pick/grippers/compute",
-            GripperSetup,
-            pose,
-            {"itemId": item_id, "gripperId": gripper_id},
+            list_return_type=GripperSetup,
+            body=pose,
+            params={"itemId": item_id, "gripperId": gripper_id},
         )
 
     # --- Search Controller --------------------------------------------------------------------------------------------
@@ -172,7 +187,7 @@ class Search(AbstractWithPose):
 
         :return:
         """
-        return rest.get(f"{self.settings.url}/search", SearchOutput)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/search", return_type=SearchOutput)
 
     def set_search_parameters(self, parameters: SearchEngineParameters) -> None:
         """Sets the search parameters.
@@ -181,7 +196,7 @@ class Search(AbstractWithPose):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/search", parameters)
+        rest.call(rest.Method.PUT, f"{self.settings.url}/search", body=parameters)
 
     def visualization(self) -> Image:
         """Gets RGB visualization from last search run, if there is any.

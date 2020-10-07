@@ -48,8 +48,13 @@ class Interaction(AbstractSimple):
         :return:
         """
 
-        return rest.put_returning_primitive(
-            f"{self.settings.url}/dialog", str, params={"title": title, "content": content}, data=options
+        return rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/dialog",
+            return_type=str,
+            params={"title": title, "content": content},
+            body=options,
+            timeout=rest.Timeout(read=8 * 60 * 60),
         )
 
     def get_dialog(self) -> DialogValue:
@@ -59,7 +64,7 @@ class Interaction(AbstractSimple):
         :return:
         """
 
-        return rest.get(f"{self.settings.url}/dialog", DialogValue)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/dialog", return_type=DialogValue)
 
     def resolve_dialog(self, option: str) -> None:
         """Resolves current dialog using one of the options.
@@ -68,7 +73,7 @@ class Interaction(AbstractSimple):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/dialog/resolve", params={"option": option})
+        rest.call(rest.Method.PUT, f"{self.settings.url}/dialog/resolve", params={"option": option})
 
     # --- Notification Controller --------------------------------------------------------------------------------------
 
@@ -80,7 +85,7 @@ class Interaction(AbstractSimple):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/notification", params={"message": message, "level": level})
+        rest.call(rest.Method.PUT, f"{self.settings.url}/notification", params={"message": message, "level": level})
 
     def delete_notifications(self) -> None:
         """Clears all notifications.
@@ -88,7 +93,7 @@ class Interaction(AbstractSimple):
         :return:
         """
 
-        rest.delete(f"{self.settings.url}/notifications")
+        rest.call(rest.Method.DELETE, f"{self.settings.url}/notifications")
 
     def get_notifications(self, since_timestamp: int) -> List[NotificationValue]:
         """Gets all notifications stored after given timestamp.
@@ -96,8 +101,11 @@ class Interaction(AbstractSimple):
         :param since_timestamp: UNIX timestamp in nanoseconds, after which created notifications are returned.
         :return:
         """
-        return rest.get_list(
-            f"{self.settings.url}/notifications", NotificationValue, params={"sinceTimestamp": since_timestamp}
+        return rest.call(
+            rest.Method.GET,
+            f"{self.settings.url}/notifications",
+            list_return_type=NotificationValue,
+            params={"sinceTimestamp": since_timestamp},
         )
 
     add_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore

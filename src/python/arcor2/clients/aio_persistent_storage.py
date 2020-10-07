@@ -3,7 +3,7 @@ from datetime import datetime
 from arcor2.clients import persistent_storage
 from arcor2.clients.persistent_storage import PersistentStorageException  # noqa
 from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
-from arcor2.data.object_type import Mesh, MeshList, Model3dType, Models, ObjectType
+from arcor2.data.object_type import Mesh, MeshList, Model, Model3dType, ObjectType
 from arcor2.helpers import run_in_executor
 
 
@@ -15,11 +15,11 @@ async def get_meshes() -> MeshList:
     return await run_in_executor(persistent_storage.get_meshes)
 
 
-async def get_model(model_id: str, model_type: Model3dType) -> Models:
+async def get_model(model_id: str, model_type: Model3dType) -> Model:
     return await run_in_executor(persistent_storage.get_model, model_id, model_type)
 
 
-async def put_model(model: Models) -> None:
+async def put_model(model: Model) -> None:
     await run_in_executor(persistent_storage.put_model, model)
 
 
