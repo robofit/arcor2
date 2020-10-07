@@ -59,10 +59,10 @@ class KinaliRobot(AbstractRobot):
 
     @lru_cache()
     def get_end_effectors_ids(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/endEffectors"))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/endEffectors", list_return_type=str))
 
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
-        return rest.get(f"{self.settings.url}/endEffectors/{end_effector_id}/pose", Pose)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/endEffectors/{end_effector_id}/pose", return_type=Pose)
 
     def move(
         self,
@@ -95,7 +95,7 @@ class KinaliRobot(AbstractRobot):
         params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
 
         with self._move_lock:
-            rest.put(url, pose, params)
+            rest.call(rest.Method.PUT, url, body=pose, params=params, timeout=self.move_timeout)
 
     def move_relative(
         self,
@@ -131,7 +131,7 @@ class KinaliRobot(AbstractRobot):
         body = MoveRelativeParameters(pose, rel_pose.position, rel_pose.orientation)
 
         with self._move_lock:
-            rest.put(url, body, params)
+            rest.call(rest.Method.PUT, url, body=body, params=params, timeout=self.move_timeout)
 
     def move_relative_joints(
         self,
@@ -168,7 +168,7 @@ class KinaliRobot(AbstractRobot):
         params = {"moveType": move_type.value, "speed": speed}
 
         with self._move_lock:
-            rest.put(url, body, params)
+            rest.call(rest.Method.PUT, url, body=body, params=params, timeout=self.move_timeout)
 
     def link(self, end_effector_id: str, collision_id: str) -> None:
         """Links collision object to end effector.
@@ -178,7 +178,11 @@ class KinaliRobot(AbstractRobot):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/endEffectors/{end_effector_id}/link", params={"collisionId": collision_id})
+        rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/endEffectors/{end_effector_id}/link",
+            params={"collisionId": collision_id},
+        )
 
     def unlink(self, end_effector_id: str) -> None:
         """Unlinks collision object from end effector.
@@ -187,13 +191,13 @@ class KinaliRobot(AbstractRobot):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/endEffectors/{end_effector_id}/unlink")
+        rest.call(rest.Method.PUT, f"{self.settings.url}/endEffectors/{end_effector_id}/unlink")
 
     # --- Grippers Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()
     def grippers(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/grippers"))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/grippers", list_return_type=str))
 
     def grip(self, gripper_id: str, position: float = 0.0, speed: float = 0.5, force: float = 0.5) -> None:
 
@@ -201,7 +205,8 @@ class KinaliRobot(AbstractRobot):
         assert 0.0 <= speed <= 1.0
         assert 0.0 <= force <= 1.0
 
-        rest.put(
+        rest.call(
+            rest.Method.PUT,
             f"{self.settings.url}/grippers/{gripper_id}/grip",
             params={"position": position, "speed": speed, "force": force},
         )
@@ -211,35 +216,39 @@ class KinaliRobot(AbstractRobot):
         assert 0.0 <= position <= 1.0
         assert 0.0 <= speed <= 1.0
 
-        rest.put(f"{self.settings.url}/grippers/{gripper_id}/opening", params={"position": position, "speed": speed})
+        rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/grippers/{gripper_id}/opening",
+            params={"position": position, "speed": speed},
+        )
 
     def get_gripper_opening(self, gripper_id: str) -> float:
 
-        return rest.get_primitive(f"{self.settings.url}/grippers/{gripper_id}/opening", float)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/grippers/{gripper_id}/opening", return_type=float)
 
     def is_item_gripped(self, gripper_id: str) -> bool:
-        return rest.get_primitive(f"{self.settings.url}/grippers/{gripper_id}/gripped", bool)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/grippers/{gripper_id}/gripped", return_type=bool)
 
     # --- IOs Controller -----------------------------------------------------------------------------------------------
 
     @lru_cache()
     def inputs(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/inputs"))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/inputs", return_type=str))
 
     @lru_cache()
     def outputs(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/outputs"))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/outputs", return_type=str))
 
     def get_input(self, input_id: str) -> float:
-        return rest.get_primitive(f"{self.settings.url}/inputs/{input_id}", float)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/inputs/{input_id}", return_type=float)
 
     def set_output(self, output_id: str, value: float) -> None:
 
         assert 0.0 <= value <= 1.0
-        rest.put(f"{self.settings.url}/outputs/{output_id}", params={"value": value})
+        rest.call(rest.Method.PUT, f"{self.settings.url}/outputs/{output_id}", params={"value": value})
 
     def get_output(self, output_id: str) -> float:
-        return rest.get_primitive(f"{self.settings.url}/outputs/{output_id}", float)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/outputs/{output_id}", return_type=float)
 
     # --- Joints Controller --------------------------------------------------------------------------------------------
 
@@ -263,34 +272,34 @@ class KinaliRobot(AbstractRobot):
         params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
 
         with self._move_lock:
-            rest.put(url, joints.joints, params)
+            rest.call(rest.Method.PUT, url, body=joints.joints, params=params, timeout=self.move_timeout)
 
     def robot_joints(self) -> List[Joint]:
-        return rest.get_list(f"{self.settings.url}/joints", Joint)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
 
     # --- Robot Controller ---------------------------------------------------------------------------------------------
 
     @lru_cache()
     def moves(self) -> Set[str]:
-        return set(rest.get_list_primitive(f"{self.settings.url}/moves", str))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/moves", list_return_type=str))
 
     def stop(self) -> None:
-        rest.put(f"{self.settings.url}/stop")
+        rest.call(rest.Method.PUT, f"{self.settings.url}/stop")
 
     # --- Suctions Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()
     def suctions(self) -> Set[str]:
-        return set(rest.get_data(f"{self.settings.url}/suctions"))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/suctions", return_type=str))
 
     def suck(self, suction_id: str) -> None:
-        rest.put(f"{self.settings.url}/suctions/{suction_id}/suck")
+        rest.call(rest.Method.PUT, f"{self.settings.url}/suctions/{suction_id}/suck")
 
     def release(self, suction_id: str) -> None:
-        rest.put(f"{self.settings.url}/suctions/{suction_id}/release")
+        rest.call(rest.Method.PUT, f"{self.settings.url}/suctions/{suction_id}/release")
 
     def is_item_attached(self, suction_id: str) -> bool:
-        return rest.get_primitive(f"{self.settings.url}/suctions/{suction_id}/attached", bool)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/suctions/{suction_id}/attached", return_type=bool)
 
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move_relative.__action__ = ActionMetadata(blocking=True)  # type: ignore

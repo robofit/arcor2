@@ -83,7 +83,6 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             rest.download,
             f"{BUILD_URL}/project/{project_id}/publish",
             path,
-            None,
             {"packageName": package_name},
         )
 

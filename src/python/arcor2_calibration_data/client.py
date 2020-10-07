@@ -20,4 +20,10 @@ def get_marker_pose(camera: CameraParameters, base64_encoded_image: str) -> Pose
     params_dict["marker_id"] = ARCOR2_CALIBRATION_MARKER_ID
 
     with io.BytesIO(base64.b64decode(base64_encoded_image.encode())) as image:
-        return rest.put(f"{ARCOR2_CALIBRATION_URL}/calibration", None, params_dict, Pose, {"image": image.getvalue()})
+        return rest.call(
+            rest.Method.PUT,
+            f"{ARCOR2_CALIBRATION_URL}/calibration",
+            params=params_dict,
+            return_type=Pose,
+            files={"image": image.getvalue()},
+        )

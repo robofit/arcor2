@@ -27,8 +27,11 @@ class AbstractWithPose(GenericWithPose):
         settings: Optional[Settings] = None,
     ) -> None:
         super(AbstractWithPose, self).__init__(obj_id, name, pose, collision_model, settings)
-        rest.put(
-            f"{self.settings.url}/system/set", pose, params={"configId": self.settings.configuration_id, "id": self.id}
+        rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/system/set",
+            body=pose,
+            params={"configId": self.settings.configuration_id, "id": self.id},
         )
 
     @property
@@ -37,7 +40,7 @@ class AbstractWithPose(GenericWithPose):
 
     def cleanup(self) -> None:
         super(AbstractWithPose, self).cleanup()
-        rest.put(f"{self.settings.url}/system/reset")
+        rest.call(rest.Method.PUT, f"{self.settings.url}/system/reset")
 
 
 __all__ = [

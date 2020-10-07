@@ -52,22 +52,22 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshPa
     if model.type() == Model3dType.MESH and mesh_parameters:
         params.update(mesh_parameters.to_dict())
 
-    rest.put(f"{URL}/collisions/{model.type().value.lower()}", pose, params)
+    rest.call(rest.Method.PUT, f"{URL}/collisions/{model.type().value.lower()}", body=pose, params=params)
 
 
 @rest.handle_exceptions(SceneServiceException)
 def delete_collision_id(collision_id: str) -> None:
-    rest.delete(f"{URL}/collisions/{collision_id}")
+    rest.call(rest.Method.DELETE, f"{URL}/collisions/{collision_id}")
 
 
 @rest.handle_exceptions(SceneServiceException)
 def collision_ids() -> Set[str]:
-    return set(rest.get_list_primitive(f"{URL}/collisions", str))
+    return set(rest.call(rest.Method.GET, f"{URL}/collisions", list_return_type=str))
 
 
 @rest.handle_exceptions(SceneServiceException)
 def focus(mfa: MeshFocusAction) -> Pose:
-    return rest.put(f"{URL}/utils/focus", mfa, data_cls=Pose)
+    return rest.call(rest.Method.PUT, f"{URL}/utils/focus", body=mfa, return_type=Pose)
 
 
 def delete_all_collisions() -> None:
@@ -81,7 +81,7 @@ def start() -> None:
     """To be called after all objects are created."""
 
     global _STARTED
-    rest.put(f"{URL}/system/start")
+    rest.call(rest.Method.PUT, f"{URL}/system/start")
     _STARTED = True
 
 
@@ -90,7 +90,7 @@ def stop() -> None:
     """To be called when project is closed or when main script ends."""
 
     global _STARTED
-    rest.put(f"{URL}/system/stop")
+    rest.call(rest.Method.PUT, f"{URL}/system/stop")
     _STARTED = False
 
 
@@ -102,28 +102,28 @@ def started() -> bool:  # TODO this should rather ask the Scene service
 def transforms() -> Set[str]:
     """Gets available transformations."""
 
-    return set(rest.get_list_primitive(f"{URL}/transforms", str))
+    return set(rest.call(rest.Method.GET, f"{URL}/transforms", list_return_type=str))
 
 
 @rest.handle_exceptions(SceneServiceException)
 def upsert_transform(transform_id: str, parent: str, pose: Pose) -> None:
     """Add or updates transform."""
 
-    rest.put(f"{URL}/transforms", pose, {"transformId": transform_id, "parent": parent})
+    rest.call(rest.Method.PUT, f"{URL}/transforms", body=pose, params={"transformId": transform_id, "parent": parent})
 
 
 @rest.handle_exceptions(SceneServiceException)
 def local_pose(transform_id: str) -> Pose:
     """Gets relative pose to parent."""
 
-    return rest.get(f"{URL}/transforms/{transform_id}/localPose", Pose)
+    return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/localPose", return_type=Pose)
 
 
 @rest.handle_exceptions(SceneServiceException)
 def world_pose(transform_id: str) -> Pose:
     """Gets absolute pose in world space."""
 
-    return rest.get(f"{URL}/transforms/{transform_id}/worldPose", Pose)
+    return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/worldPose", return_type=Pose)
 
 
 __all__ = [

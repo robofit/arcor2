@@ -27,7 +27,7 @@ class Statistic(AbstractSimple):
         :param group_id:
         :return:
         """
-        return rest.get_list_primitive(f"{self.settings.url}/values/{group_id}", str)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/values/{group_id}", list_return_type=str)
 
     def add_value(self, group_id: str, name: str, value: float) -> None:
         """Logs value with the specified group and name.
@@ -38,7 +38,9 @@ class Statistic(AbstractSimple):
         :return:
         """
 
-        rest.put(f"{self.settings.url}/values", params={"group_id": group_id, "name": name, "value": value})
+        rest.call(
+            rest.Method.PUT, f"{self.settings.url}/values", params={"group_id": group_id, "name": name, "value": value}
+        )
 
     def get_groups(self) -> List[str]:
         """Gets Ids of all stored groups.
@@ -47,7 +49,7 @@ class Statistic(AbstractSimple):
         :return:
         """
 
-        return rest.get_list_primitive(f"{self.settings.url}/values", str)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/values", list_return_type=str)
 
     def get_values(self, group_id: str, name: str, since_timestamp: int = 0) -> List[StatisticValue]:
         """Gets tracked values with the specified name. Values are sorted as
@@ -60,8 +62,11 @@ class Statistic(AbstractSimple):
         :return:
         """
 
-        return rest.get_list(
-            f"{self.settings.url}/values/{group_id}/{name}", StatisticValue, params={"since_timestamp": since_timestamp}
+        return rest.call(
+            rest.Method.GET,
+            f"{self.settings.url}/values/{group_id}/{name}",
+            list_return_type=StatisticValue,
+            params={"since_timestamp": since_timestamp},
         )
 
     def delete_group(self, group_id: str) -> None:
@@ -71,7 +76,7 @@ class Statistic(AbstractSimple):
         :return:
         """
 
-        rest.delete(f"{self.settings.url}/values/{group_id}")
+        rest.call(rest.Method.DELETE, f"{self.settings.url}/values/{group_id}")
 
     get_names.__action__ = ActionMetadata(blocking=True)  # type: ignore
     add_value.__action__ = ActionMetadata(blocking=True)  # type: ignore
