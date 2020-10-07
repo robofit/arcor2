@@ -10,6 +10,7 @@ Quick Links:
  - [Terminology](#terminology)
  - [Services](#services)
  - [Development](#development)
+ - [Contributing](#contributing)
  - [Releases](#releases)
  - [Publications](#publications)
 
@@ -59,7 +60,24 @@ Other services as Project and Scene (this repo provides [mocks](src/python/arcor
  
 ## Development
 
-We use [Pants](https://www.pantsbuild.org/docs) to build the sources into Python distribution packages, run tests, etc. Packages do not contain ```setup.py``` file - this is generated during the build process. 
+We use [Pants](https://www.pantsbuild.org/docs) to build the sources into Python distribution packages, run tests, etc. Packages do not contain ```setup.py``` file - this is generated during the build process.
+
+## Contributing
+
+
+ - When making PR, please make sure to rebase your commits first or at least merge last changes from `master` branch.
+ - Ideally, PR should contain only one, clearly focused commit. If you have more commits, please squash them.
+ - We use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+ - We use type annotations and [mypy](https://mypy.readthedocs.io/en/stable/). All code should have type annotations.
+ - If possible, please also add tests with any new code.
+ - If necessary, please do not forget do update also documentation.
+ - Before commit:
+   - run `./pants fmt ::` to get correct formatting.
+   - run `./pants lint ::` to run flake8.
+   - run `./pants tests ::` to run tests.
+   - ...all of those are ran on CI but are much faster on localhost.
+
+Any contribution is welcome!
 
 ### Testing
 
