@@ -1,7 +1,6 @@
 import asyncio
 import importlib
 import keyword
-import logging
 import os
 import sys
 import time
@@ -11,13 +10,10 @@ from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
 
 import humps
-from aiologger.formatters.base import Formatter  # type: ignore
 from packaging.version import Version, parse
 
 from arcor2.data.events import ProjectException
 from arcor2.exceptions import Arcor2Exception
-
-LOG_FORMAT = "%(name)s - %(levelname)-8s: %(message)s"
 
 
 class ImportClsException(Arcor2Exception):
@@ -26,16 +22,6 @@ class ImportClsException(Arcor2Exception):
 
 class TypeDefException(Arcor2Exception):
     pass
-
-
-def aiologger_formatter() -> Formatter:
-
-    return Formatter(LOG_FORMAT)
-
-
-def logger_formatter() -> logging.Formatter:
-
-    return logging.Formatter(LOG_FORMAT)
 
 
 def import_cls(module_cls: str) -> Tuple[ModuleType, Type[Any]]:

@@ -13,7 +13,7 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError  # type: ignore
 
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import logger_formatter
+from arcor2.logging import get_logger
 
 # typing-related definitions
 DataClass = TypeVar("DataClass", bound=JsonSchemaMixin)
@@ -69,12 +69,8 @@ OptTimeout = Optional[Timeout]
 debug: bool = bool(os.getenv("ARCOR2_REST_DEBUG", False))
 headers = {"accept": "application/json", "content-type": "application/json"}
 session = requests.session()
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
 
-ch = logging.StreamHandler()
-ch.setFormatter(logger_formatter())
-logger.setLevel(logging.DEBUG if debug else logging.INFO)
-logger.addHandler(ch)
 
 F = TypeVar("F", bound=Callable[..., Any])
 

@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import logging
 from typing import Tuple
 
 from apispec import APISpec  # type: ignore
@@ -16,14 +15,10 @@ from werkzeug.utils import secure_filename
 
 import arcor2_calibration
 from arcor2.data.common import Pose
-from arcor2.helpers import logger_formatter
+from arcor2.logging import get_logger
 from arcor2_calibration.calibration import get_poses
 
-logger = logging.getLogger("calibration")
-ch = logging.StreamHandler()
-ch.setFormatter(logger_formatter())
-logger.setLevel(logging.INFO)
-logger.addHandler(ch)
+logger = get_logger(__name__)
 
 # Create an APISpec
 spec = APISpec(

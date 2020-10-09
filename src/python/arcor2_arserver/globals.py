@@ -6,18 +6,16 @@ import os
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Optional, Set
 
-from aiologger import Logger  # type: ignore
-from aiologger.levels import LogLevel  # type: ignore
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import helpers as hlp
 from arcor2.cached import UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import events
+from arcor2.logging import get_aiologger
 from arcor2.object_types.abstract import Generic
 from arcor2_arserver.object_types.utils import ObjectTypeDict
 from arcor2_arserver_data.events.common import ShowMainScreen
 
-logger = Logger.with_default_handlers(name="server", formatter=hlp.aiologger_formatter(), level=LogLevel.DEBUG)
+logger = get_aiologger("ARServer")
 VERBOSE: bool = False
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
