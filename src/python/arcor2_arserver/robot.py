@@ -10,8 +10,8 @@ from arcor2.object_types.abstract import Robot
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
+from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import function_implemented
-from arcor2_arserver.object_types.utils import ObjectTypeData
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data.robot import RobotMeta
 

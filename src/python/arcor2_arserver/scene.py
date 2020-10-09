@@ -191,7 +191,7 @@ async def open_scene(scene_id: str) -> None:
             check_object(obj)
     except Arcor2Exception as e:
         glob.SCENE = None
-        raise Arcor2Exception(f"Failed to open scene. {e.message}") from e
+        raise Arcor2Exception(f"Failed to open scene. {str(e)}") from e
 
 
 def get_instance(obj_id: str) -> Generic:

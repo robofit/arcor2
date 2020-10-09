@@ -37,7 +37,7 @@ async def robot_joints_event(robot_id: str) -> None:
         try:
             evt = sevts.r.RobotJoints(sevts.r.RobotJoints.Data(robot_id, (await robot.get_robot_joints(robot_id))))
         except Arcor2Exception as e:
-            glob.logger.error(f"Failed to get joints for {robot_id}. {e.message}")
+            glob.logger.error(f"Failed to get joints for {robot_id}. {str(e)}")
             break
 
         evt_json = evt.to_json()
@@ -78,7 +78,7 @@ async def robot_eef_pose_event(robot_id: str) -> None:
                 *[eef_pose(robot_id, eef_id) for eef_id in (await robot.get_end_effectors(robot_id))]
             )
         except Arcor2Exception as e:
-            glob.logger.error(f"Failed to get eef pose for {robot_id}. {e.message}")
+            glob.logger.error(f"Failed to get eef pose for {robot_id}. {str(e)}")
             break
 
         evt_json = evt.to_json()

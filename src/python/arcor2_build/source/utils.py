@@ -37,6 +37,7 @@ from typed_ast.ast3 import (
 )
 
 import arcor2.data.common
+import arcor2.exceptions.runtime
 from arcor2.cached import CachedProject
 from arcor2.data.common import ActionPoint
 from arcor2.source import SourceException
@@ -139,7 +140,7 @@ def empty_script_tree(add_main_loop: bool = True) -> Module:
         type_ignores=[],
     )
 
-    add_import(tree, "arcor2.helpers", "print_exception")
+    add_import(tree, arcor2.exceptions.runtime.__name__, arcor2.exceptions.runtime.print_exception.__name__)
     add_import(tree, "resources", "Resources", try_to_import=False)
 
     return tree

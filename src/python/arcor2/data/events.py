@@ -57,8 +57,8 @@ Project execution
 class ProjectException(Event):
     @dataclass
     class Data(JsonSchemaMixin):
-        message: str = field(default_factory=str)
-        type: str = field(default_factory=str)
+        message: str
+        type: str
         handled: bool = False
 
     data: Data

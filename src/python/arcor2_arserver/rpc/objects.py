@@ -19,8 +19,9 @@ from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.decorators import no_project, scene_needed
+from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
-from arcor2_arserver.object_types.utils import ObjectTypeData, add_ancestor_actions, object_actions
+from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions
 from arcor2_arserver.project import scene_object_pose_updated
 from arcor2_arserver.robot import get_end_effector_pose
 from arcor2_arserver.scene import ensure_scene_started, scenes, set_object_pose
@@ -228,7 +229,7 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
             assert meta.object_model.mesh
             try:
                 meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
-            except storage.PersistentStorageException as e:
+            except storage.ProjectServiceException as e:
                 glob.logger.error(e)
                 raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
 
@@ -306,8 +307,8 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
     if obj_type.meta.object_model:
         try:
             await storage.delete_model(obj_type.meta.object_model.model().id)
-        except storage.PersistentStorageException as e:
-            glob.logger.error(e.message)
+        except storage.ProjectServiceException as e:
+            glob.logger.error(str(e))
 
     del glob.OBJECT_TYPES[req.args.id]
 

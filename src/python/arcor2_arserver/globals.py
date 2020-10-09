@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-
 import os
 from collections import defaultdict
 from typing import Any, DefaultDict, Dict, Optional, Set
@@ -12,7 +8,7 @@ from arcor2.cached import UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import events
 from arcor2.logging import get_aiologger
 from arcor2.object_types.abstract import Generic
-from arcor2_arserver.object_types.utils import ObjectTypeDict
+from arcor2_arserver.object_types.data import ObjectTypeDict
 from arcor2_arserver_data.events.common import ShowMainScreen
 
 logger = get_aiologger("ARServer")

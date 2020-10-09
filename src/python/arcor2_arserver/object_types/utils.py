@@ -1,7 +1,6 @@
 import copy
 import inspect
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Type, get_type_hints
+from typing import Dict, List, Type, get_type_hints
 
 import typing_inspect  # type: ignore
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -16,30 +15,13 @@ from arcor2.object_types.utils import built_in_types, get_settings_def, iterate_
 from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
 from arcor2.source.utils import SourceException, find_function, parse_def
+from arcor2_arserver import globals as glob
+from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeDict
 from arcor2_arserver_data.objects import ObjectAction, ObjectTypeMeta
-from arcor2_arserver_data.robot import RobotMeta
 
 
 class ObjectTypeException(Arcor2Exception):
     pass
-
-
-@dataclass
-class ObjectTypeData:
-
-    meta: ObjectTypeMeta
-    type_def: Optional[Type[Generic]] = None
-    actions: Dict[str, ObjectAction] = field(default_factory=dict)
-    ast: Optional[AST] = None
-    robot_meta: Optional[RobotMeta] = None
-
-    def __post_init__(self):
-        if not self.meta.disabled:
-            assert self.type_def is not None
-            assert self.ast is not None
-
-
-ObjectTypeDict = Dict[str, ObjectTypeData]
 
 
 def obj_description_from_base(data: ObjectTypeDict, obj_type: ObjectTypeMeta) -> str:
@@ -232,8 +214,8 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
         except Arcor2Exception as e:
             data.disabled = True
-            data.problem = e.message
-            # TODO log exception
+            data.problem = str(e)
+            glob.logger.warn(f"Disabling action {method_name} of  {type_def.__name__}. {str(e)}")
 
         ret[data.name] = data
 

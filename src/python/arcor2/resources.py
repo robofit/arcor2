@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-
-
 import importlib
 import json
 import os
@@ -10,7 +7,6 @@ import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
-from arcor2 import helpers as hlp
 from arcor2 import package
 from arcor2 import transformations as tr
 from arcor2.action import patch_object_actions, print_event
@@ -19,11 +15,16 @@ from arcor2.clients import scene_service
 from arcor2.data.common import Project, Scene
 from arcor2.data.events import CurrentAction, PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
-from arcor2.exceptions import Arcor2Exception, ResourcesException
+from arcor2.exceptions import Arcor2Exception
+from arcor2.exceptions.runtime import print_exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
+
+
+class ResourcesException(Arcor2Exception):
+    pass
 
 
 class IntResources:
@@ -117,7 +118,7 @@ class IntResources:
     def __exit__(self, ex_type, ex_value, traceback) -> bool:
 
         if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
-            hlp.print_exception(ex_type(ex_value))
+            print_exception(ex_type(ex_value))
 
         scene_service.stop()
         scene_service.delete_all_collisions()
