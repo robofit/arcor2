@@ -132,7 +132,14 @@ async def read_proc_stdout() -> None:
         if printed_out:
 
             # TODO remember this (until another package is started) and send it to new clients?
-            await send_to_clients(ProjectException(ProjectException.Data(printed_out[-1].strip())))
+            last_line = printed_out[-1].strip()
+
+            try:
+                exception_type, message = last_line.split(":", 1)
+            except ValueError:
+                exception_type, message = "Unknown", last_line
+
+            await send_to_clients(ProjectException(ProjectException.Data(message, exception_type)))
 
             with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
                 tb_file.write("".join(printed_out))

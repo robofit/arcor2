@@ -9,6 +9,7 @@ from arcor2.data.common import Pose
 from arcor2.data.object_type import Model3dType, Models
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
+from arcor2.exceptions.helpers import handle
 
 URL = os.getenv("ARCOR2_SCENE_SERVICE_URL", "http://0.0.0.0:5013")
 
@@ -28,6 +29,7 @@ class MeshParameters(JsonSchemaMixin):
     transform_id: str = "world"
 
 
+@handle(SceneServiceException, message="Failed to add or update the collision model.")
 def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshParameters] = None) -> None:
     """Adds arbitrary collision model to the collision scene.
 
@@ -55,17 +57,17 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshPa
     rest.call(rest.Method.PUT, f"{URL}/collisions/{model.type().value.lower()}", body=pose, params=params)
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to delete the collision.")
 def delete_collision_id(collision_id: str) -> None:
     rest.call(rest.Method.DELETE, f"{URL}/collisions/{collision_id}")
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to list collisions.")
 def collision_ids() -> Set[str]:
     return set(rest.call(rest.Method.GET, f"{URL}/collisions", list_return_type=str))
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to focus the object.")
 def focus(mfa: MeshFocusAction) -> Pose:
     return rest.call(rest.Method.PUT, f"{URL}/utils/focus", body=mfa, return_type=Pose)
 
@@ -76,7 +78,7 @@ def delete_all_collisions() -> None:
         delete_collision_id(cid)
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to start the scene.")
 def start() -> None:
     """To be called after all objects are created."""
 
@@ -85,7 +87,7 @@ def start() -> None:
     _STARTED = True
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to stop the scene.")
 def stop() -> None:
     """To be called when project is closed or when main script ends."""
 
@@ -98,28 +100,28 @@ def started() -> bool:  # TODO this should rather ask the Scene service
     return _STARTED
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to get transforms.")
 def transforms() -> Set[str]:
     """Gets available transformations."""
 
     return set(rest.call(rest.Method.GET, f"{URL}/transforms", list_return_type=str))
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to add or update the transform.")
 def upsert_transform(transform_id: str, parent: str, pose: Pose) -> None:
     """Add or updates transform."""
 
     rest.call(rest.Method.PUT, f"{URL}/transforms", body=pose, params={"transformId": transform_id, "parent": parent})
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to get the local pose.")
 def local_pose(transform_id: str) -> Pose:
     """Gets relative pose to parent."""
 
     return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/localPose", return_type=Pose)
 
 
-@rest.handle_exceptions(SceneServiceException)
+@handle(SceneServiceException, message="Failed to get the world pose.")
 def world_pose(transform_id: str) -> Pose:
     """Gets absolute pose in world space."""
 

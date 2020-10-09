@@ -1,11 +1,10 @@
-import functools
 import json
 import logging
 import os
 from enum import Enum
 from functools import partial
 from io import BytesIO
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Type, TypeVar, Union, cast, overload
+from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Type, TypeVar, Union, overload
 
 import humps
 import requests
@@ -70,29 +69,6 @@ debug: bool = bool(os.getenv("ARCOR2_REST_DEBUG", False))
 headers = {"accept": "application/json", "content-type": "application/json"}
 session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
-
-
-F = TypeVar("F", bound=Callable[..., Any])
-
-
-def handle_exceptions(  # TODO make it more general and refactor it to arcor2/exceptions
-    exception_type: Type[Arcor2Exception] = Arcor2Exception, message: Optional[str] = None
-) -> Callable[[F], F]:
-    def _handle_exceptions(func: F) -> F:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> Any:
-
-            try:
-                return func(*args, **kwargs)
-            except RestException as e:
-                if message is not None:
-                    raise exception_type(message, str(e)) from e
-                else:
-                    raise exception_type(e.message) from e
-
-        return cast(F, wrapper)
-
-    return _handle_exceptions
 
 
 def dataclass_from_json(resp_json: Dict[str, Any], return_type: Type[DataClass]) -> DataClass:

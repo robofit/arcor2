@@ -18,7 +18,7 @@ from arcor2.clients.aio_persistent_storage import (
     update_object_type,
     update_project_sources,
 )
-from arcor2.clients.persistent_storage import PersistentStorageException
+from arcor2.clients.persistent_storage import ProjectServiceException
 from arcor2.data.common import IdDesc, IdDescList, Project, Scene
 
 """
@@ -132,5 +132,5 @@ __all__ = [
     delete_object_type.__name__,
     delete_scene.__name__,
     delete_project.__name__,
-    PersistentStorageException.__name__,
+    ProjectServiceException.__name__,
 ]

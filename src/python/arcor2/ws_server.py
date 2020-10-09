@@ -99,7 +99,7 @@ async def server(
                         resp = await rpc_cb(req, client)
                     except Arcor2Exception as e:
                         logger.debug(e, exc_info=True)
-                        resp = rpc_cls.Response(req.id, False, [e.message])
+                        resp = rpc_cls.Response(req.id, False, [str(e)])
                     else:
                         if resp is None:  # default response
                             resp = rpc_cls.Response(req.id, True)

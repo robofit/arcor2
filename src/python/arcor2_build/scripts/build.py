@@ -147,7 +147,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
                     zf.writestr(script_path, script)
 
-                except ps.PersistentStorageException:
+                except ps.ProjectServiceException:
 
                     logger.info("Script not found on project service, creating one from scratch.")
 

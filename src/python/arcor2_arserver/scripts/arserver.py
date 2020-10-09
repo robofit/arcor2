@@ -141,8 +141,8 @@ async def _initialize_server() -> None:
         try:
             await storage.initialize_module()
             break
-        except storage.PersistentStorageException as e:
-            print(e.message)
+        except storage.ProjectServiceException as e:
+            print(str(e))
             await asyncio.sleep(1)
 
     await osa.get_object_types()

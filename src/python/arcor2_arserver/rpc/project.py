@@ -206,7 +206,7 @@ async def project_info(
         async with scenes_lock:
             if project.scene_id not in scenes:
                 scenes[project.scene_id] = CachedScene(await storage.get_scene(project.scene_id))
-    except storage.PersistentStorageException:
+    except storage.ProjectServiceException:
         pd.problems.append("Scene does not exist.")
         return pd
 
@@ -220,7 +220,7 @@ async def project_info(
         # TODO call build service!!!
         pd.executable = True
     except Arcor2Exception as e:
-        pd.problems.append(e.message)
+        pd.problems.append(str(e))
 
     return pd
 

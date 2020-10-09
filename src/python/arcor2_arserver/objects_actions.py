@@ -95,7 +95,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
         glob.logger.warning(f"Disabling object type {obj.id}.")
         glob.logger.debug(e, exc_info=True)
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=e.message)
+            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=str(e))
         )
         return
 

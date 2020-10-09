@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from arcor2.clients import persistent_storage
-from arcor2.clients.persistent_storage import PersistentStorageException  # noqa
+from arcor2.clients.persistent_storage import ProjectServiceException  # noqa
 from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
 from arcor2.data.object_type import Mesh, MeshList, Model, Model3dType, ObjectType
 from arcor2.helpers import run_in_executor

@@ -3,8 +3,6 @@ import importlib
 import keyword
 import os
 import sys
-import time
-import traceback
 from threading import Lock
 from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
@@ -12,7 +10,6 @@ from typing import Any, Callable, Tuple, Type, TypeVar
 import humps
 from packaging.version import Version, parse
 
-from arcor2.data.events import ProjectException
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -69,27 +66,6 @@ def is_valid_type(value: str) -> bool:
     """
 
     return value.isidentifier() and not keyword.iskeyword(value) and humps.is_pascalcase(value)
-
-
-def format_stacktrace() -> str:
-    parts = ["Traceback (most recent call last):\n"]
-    parts.extend(traceback.format_stack(limit=25)[:-2])
-    parts.extend(traceback.format_exception(*sys.exc_info())[1:])
-    return "".join(parts)
-
-
-def print_exception(e: Exception) -> None:
-
-    if isinstance(e, Arcor2Exception):
-        pee = ProjectException(ProjectException.Data(e.message, e.__class__.__name__, True))
-    else:
-        pee = ProjectException(ProjectException.Data(str(e), e.__class__.__name__))
-
-    print(pee.to_json())
-    sys.stdout.flush()
-
-    with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
-        tb_file.write(format_stacktrace())
 
 
 S = TypeVar("S")

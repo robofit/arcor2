@@ -57,11 +57,9 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     try:
         action_result = await hlp.run_in_executor(action_method, *params.values())
-    except Arcor2Exception as e:
-        glob.logger.error(e)
-        evt.data.error = e.message
-    except (AttributeError, TypeError) as e:
-        glob.logger.error(e)
+    except (Arcor2Exception, AttributeError, TypeError) as e:
+        glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
+        glob.logger.debug(exc_info=True)
         evt.data.error = str(e)
     else:
         if action_result is not None:
@@ -364,7 +362,7 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
             try:
                 check_action_params(scene, project, action, glob.OBJECT_TYPES[os_type].actions[action_type])
             except Arcor2Exception as e:
-                problems.append(e.message)
+                problems.append(str(e))
 
     return problems
 
