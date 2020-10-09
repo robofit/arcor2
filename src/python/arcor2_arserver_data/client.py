@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import time
 import uuid
 from queue import Empty, Queue
@@ -12,6 +11,7 @@ from dataclasses_jsonschema import ValidationError
 
 from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
+from arcor2.logging import get_logger
 from arcor2_arserver_data import rpc as srpc
 
 
@@ -42,7 +42,7 @@ class ARServer:
     ):
 
         self._ws = websocket.WebSocket()
-        self._logger = logging.getLogger(__name__)
+        self._logger = get_logger(__name__)
         self._event_queue: Queue[events.Event] = Queue()
         if event_mapping is None:
             event_mapping = {}

@@ -22,7 +22,8 @@ from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import logger_formatter, port_from_url
+from arcor2.helpers import port_from_url
+from arcor2.logging import get_logger
 from arcor2.object_types.utils import base_from_source, built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
@@ -30,7 +31,7 @@ from arcor2_build.source.logic import program_src
 from arcor2_build.source.utils import derived_resources_class, global_action_points_class, global_actions_class
 from arcor2_build_data import SERVICE_NAME, URL
 
-logger = logging.getLogger("build")
+logger = get_logger("Build")
 
 # Create an APISpec
 spec = APISpec(
@@ -265,11 +266,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-
-    ch = logging.StreamHandler()
-    ch.setFormatter(logger_formatter())
     logger.setLevel(args.debug)
-    logger.addHandler(ch)
 
     if args.swagger:
         print(spec.to_yaml())

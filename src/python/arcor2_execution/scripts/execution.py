@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from typing import Awaitable, List, Optional, Set, Union
 
 import websockets
-from aiologger import Logger  # type: ignore
 from aiologger.levels import LogLevel  # type: ignore
 from aiorun import run  # type: ignore
 from dataclasses_jsonschema import ValidationError
@@ -29,12 +28,13 @@ from arcor2.data import common, compile_json_schemas
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import ActionState, CurrentAction, Event, PackageInfo, PackageState, ProjectException
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import aiologger_formatter, port_from_url
+from arcor2.helpers import port_from_url
+from arcor2.logging import get_aiologger
 from arcor2.package import PROJECT_PATH, read_package_meta, write_package_meta
 from arcor2_execution_data import EVENTS, URL, events, rpc
 from arcor2_execution_data.common import PackageSummary
 
-logger = Logger.with_default_handlers(name="Execution", formatter=aiologger_formatter())
+logger = get_aiologger("Execution")
 
 PROCESS: Union[asyncio.subprocess.Process, None] = None
 PACKAGE_STATE_EVENT: PackageState = PackageState(PackageState.Data())  # undefined state
