@@ -1,4 +1,4 @@
-python_binary(
+pex_binary(
     name = "arserver",
     sources = ["arserver.py"],
     dependencies = ["3rdparty:PyYAML", "3rdparty:Flask"],
@@ -6,7 +6,7 @@ python_binary(
     zip_safe=False
 )
 
-python_binary(
+pex_binary(
     name = "broadcaster",
     sources = ["broadcaster.py"],
     entry_point = "arcor2_arserver.scripts.broadcaster",
