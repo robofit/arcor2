@@ -22,6 +22,7 @@ services:
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
+      - ARCOR2_DATA_PATH=/root/data
 
   build:
     image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
