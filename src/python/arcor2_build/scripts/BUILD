@@ -1,4 +1,4 @@
-python_binary(
+pex_binary(
     name = "build",
     sources = ["build.py"],
     dependencies = ["3rdparty:PyYAML"],

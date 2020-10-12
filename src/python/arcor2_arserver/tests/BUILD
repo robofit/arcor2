@@ -1,5 +1,5 @@
 python_tests(
-    runtime_binary_dependencies = [
+    runtime_package_dependencies = [
         "src/python/arcor2/scripts:upload_builtin_objects",
         "src/python/arcor2_mocks/scripts:mock_project",
         "src/python/arcor2_mocks/scripts:mock_scene",

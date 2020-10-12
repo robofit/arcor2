@@ -1,4 +1,4 @@
-python_binary(
+pex_binary(
     name = "mock_project",
     sources = ["project.py"],
     dependencies = ["3rdparty:PyYAML"],
@@ -6,7 +6,7 @@ python_binary(
     zip_safe=False
 )
 
-python_binary(
+pex_binary(
     name = "mock_scene",
     sources = ["scene.py"],
     dependencies = ["3rdparty:PyYAML"],
