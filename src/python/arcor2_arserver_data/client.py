@@ -58,7 +58,7 @@ class ARServer:
                 time.sleep(0.25)
 
         if not self._ws.connected:
-            raise ARServerClientException("Failed to connect.")
+            raise ARServerClientException(f"Failed to connect to '{ws_connection_str}'.")
 
         self._ws.settimeout(timeout)
 

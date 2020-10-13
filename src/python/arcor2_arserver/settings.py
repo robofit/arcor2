@@ -9,5 +9,5 @@ except KeyError:
 
 URDF_PATH = os.path.join(DATA_PATH, "urdf")
 
-OBJECT_TYPE_PATH = tempfile.gettempdir()
+OBJECT_TYPE_PATH = tempfile.mkdtemp()
 OBJECT_TYPE_MODULE = "arcor2_object_types"

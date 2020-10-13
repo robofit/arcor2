@@ -37,4 +37,4 @@ def version() -> str:
     return package_version(__name__)
 
 
-__all__ = [events.__name__, rpc.__name__, "PORT", version.__name__]
+__all__ = [events.__name__, rpc.__name__, version.__name__]
