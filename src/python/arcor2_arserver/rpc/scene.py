@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import asyncio
 import copy
 import functools
@@ -32,6 +29,7 @@ from arcor2_arserver.robot import get_end_effector_pose
 from arcor2_arserver.scene import (
     add_object_to_scene,
     can_modify_scene,
+    check_object_parameters,
     ensure_scene_started,
     get_instance,
     get_scene_state,
@@ -182,6 +180,35 @@ async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsCli
 
     evt = sevts.s.SceneObjectChanged(obj)
     evt.change_type = Event.Type.ADD
+    asyncio.ensure_future(notif.broadcast_event(evt))
+    return None
+
+
+@scene_needed
+@no_project
+async def update_object_parameters_cb(req: srpc.s.UpdateObjectParameters.Request, ui: WsClient) -> None:
+
+    assert glob.SCENE
+
+    can_modify_scene()
+
+    obj = glob.SCENE.object(req.args.id)
+
+    if obj.type not in glob.OBJECT_TYPES:
+        raise Arcor2Exception("Unknown object type.")
+
+    obj_type = glob.OBJECT_TYPES[obj.type]
+
+    check_object_parameters(obj_type, req.args.parameters)
+
+    if req.dry_run:
+        return None
+
+    obj.parameters = req.args.parameters
+    glob.SCENE.update_modified()
+
+    evt = sevts.s.SceneObjectChanged(obj)
+    evt.change_type = Event.Type.UPDATE
     asyncio.ensure_future(notif.broadcast_event(evt))
     return None
 

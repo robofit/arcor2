@@ -3,7 +3,7 @@ from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdValue, StrEnum
+from arcor2.data.common import IdValue, Parameter, StrEnum
 from arcor2.data.object_type import MeshList
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg, TypeArgs
 from arcor2_arserver_data.objects import ObjectActions, ObjectTypeMeta
@@ -171,3 +171,60 @@ class ListMeshes(RPC):
     @dataclass
     class Response(RPC.Response):
         data: Optional[MeshList] = None
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class AddOverride(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str
+            override: Parameter
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class UpdateOverride(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str
+            override: Parameter
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class DeleteOverride(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str
+            override: Parameter
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass

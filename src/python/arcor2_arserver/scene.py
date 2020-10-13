@@ -12,6 +12,7 @@ from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.scene import SceneClosed, SceneState
 
@@ -78,6 +79,14 @@ async def notify_scene_closed(scene_id: str) -> None:
     )
 
 
+def check_object_parameters(obj_type: ObjectTypeData, parameters: List[Parameter]) -> None:
+
+    if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in parameters}:
+        raise Arcor2Exception("Some required parameter is missing.")
+
+    # TODO check types of parameters, ranges, etc.
+
+
 def check_object(obj: SceneObject, new_one: bool = False) -> None:
     """Checks if object can be added into the scene."""
 
@@ -92,8 +101,7 @@ def check_object(obj: SceneObject, new_one: bool = False) -> None:
     if obj_type.meta.disabled:
         raise Arcor2Exception("Object type disabled.")
 
-    if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in obj.parameters}:
-        raise Arcor2Exception("Some required parameter is missing.")
+    check_object_parameters(obj_type, obj.parameters)
 
     # TODO check whether object needs parent and if so, if the parent is in scene and parent_id is set
     if obj_type.meta.needs_parent_type:
@@ -145,6 +153,10 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
     # settings -> dataclass
     assert obj_type.type_def
+    glob.logger.debug(
+        f"Creating instance of {obj_type.type_def.__name__} with name {obj.name}. "
+        f"Parameters: {obj.parameters}, overrides: {overrides}."
+    )
     settings = settings_from_params(obj_type.type_def, obj.parameters, overrides)
 
     assert obj_type.type_def is not None

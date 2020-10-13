@@ -145,7 +145,7 @@ for mod in modules:
 @pytest.fixture()
 def ars() -> Iterator[ARServer]:
 
-    with ARServer(ars_connection_str(), timeout=10, event_mapping=event_mapping) as ws:
+    with ARServer(ars_connection_str(), timeout=20, event_mapping=event_mapping) as ws:
         yield ws
 
 
