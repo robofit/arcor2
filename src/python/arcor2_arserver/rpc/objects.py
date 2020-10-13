@@ -7,7 +7,7 @@ from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
-from arcor2.data.common import Pose, Position
+from arcor2.data.common import Parameter, Pose, Position, SceneObject
 from arcor2.data.object_type import Model3dType
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
@@ -18,7 +18,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.decorators import no_project, scene_needed
+from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions
@@ -314,4 +314,105 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
 
     evt = sevts.o.ChangedObjectTypes([obj_type.meta])
     evt.change_type = events.Event.Type.REMOVE
+    asyncio.ensure_future(notif.broadcast_event(evt))
+
+
+def check_override(obj_id: str, override: Parameter, add_new_one: bool = False) -> SceneObject:
+
+    assert glob.SCENE
+    assert glob.PROJECT
+
+    obj = glob.SCENE.object(obj_id)
+
+    for par in glob.OBJECT_TYPES[obj.type].meta.settings:
+        if par.name == override.name:
+            if par.type != override.type:
+                raise Arcor2Exception("Override can't change parameter type.")
+            break
+    else:
+        raise Arcor2Exception("Unknown parameter name.")
+
+    if add_new_one:
+        try:
+            for override in glob.PROJECT.overrides[obj.id]:
+                if override.name == override.name:
+                    raise Arcor2Exception("Override already exists.")
+        except KeyError:
+            pass
+    else:
+        if obj.id not in glob.PROJECT.overrides:
+            raise Arcor2Exception("There are no overrides for the object.")
+
+        for override in glob.PROJECT.overrides[obj.id]:
+            if override.name == override.name:
+                break
+        else:
+            raise Arcor2Exception("Override not found.")
+
+    return obj
+
+
+@project_needed
+async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None:
+
+    assert glob.PROJECT
+
+    obj = check_override(req.args.id, req.args.override, add_new_one=True)
+
+    if req.dry_run:
+        return
+
+    if obj.id not in glob.PROJECT.overrides:
+        glob.PROJECT.overrides[obj.id] = []
+
+    glob.PROJECT.overrides[obj.id].append(req.args.override)
+    glob.PROJECT.update_modified()
+
+    evt = sevts.o.OverrideUpdated(req.args.override)
+    evt.change_type = events.Event.Type.ADD
+    evt.parent_id = req.args.id
+    asyncio.ensure_future(notif.broadcast_event(evt))
+
+
+@project_needed
+async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -> None:
+
+    assert glob.PROJECT
+
+    obj = check_override(req.args.id, req.args.override)
+
+    if req.dry_run:
+        return
+
+    for override in glob.PROJECT.overrides[obj.id]:
+        if override.name == override.name:
+            override.value = req.args.override.value
+    glob.PROJECT.update_modified()
+
+    evt = sevts.o.OverrideUpdated(req.args.override)
+    evt.change_type = events.Event.Type.UPDATE
+    evt.parent_id = req.args.id
+    asyncio.ensure_future(notif.broadcast_event(evt))
+
+
+@project_needed
+async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -> None:
+
+    assert glob.PROJECT
+
+    obj = check_override(req.args.id, req.args.override)
+
+    if req.dry_run:
+        return
+
+    glob.PROJECT.overrides[obj.id] = [ov for ov in glob.PROJECT.overrides[obj.id] if ov.name != req.args.override.name]
+
+    if not glob.PROJECT.overrides[obj.id]:
+        del glob.PROJECT.overrides[obj.id]
+
+    glob.PROJECT.update_modified()
+
+    evt = sevts.o.OverrideUpdated(req.args.override)
+    evt.change_type = events.Event.Type.REMOVE
+    evt.parent_id = req.args.id
     asyncio.ensure_future(notif.broadcast_event(evt))

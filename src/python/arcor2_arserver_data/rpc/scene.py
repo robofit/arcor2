@@ -52,6 +52,25 @@ class AddObjectToScene(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class UpdateObjectParameters(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str
+            parameters: List[Parameter] = field(default_factory=list)
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 class RemoveFromScene(RPC):
     @dataclass
     class Request(RPC.Request):

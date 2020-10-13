@@ -1,5 +1,6 @@
 import inspect
 import json
+from dataclasses import is_dataclass
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
 
 import typing_inspect  # type: ignore
@@ -61,6 +62,9 @@ def built_in_types_names() -> Set[str]:
 
 class DataError(Arcor2Exception):
     pass
+
+
+# TODO settings_to_params
 
 
 def settings_from_params(
@@ -136,6 +140,9 @@ def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
 
     if not issubclass(settings_cls, Settings):
         raise Arcor2Exception("Settings have invalid type.")
+
+    if not is_dataclass(settings_cls):
+        raise Arcor2Exception("Settings misses @dataclass decorator.")
 
     return settings_cls
 
