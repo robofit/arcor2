@@ -316,6 +316,8 @@ def main() -> None:
 
     run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
+    shutil.rmtree(settings.OBJECT_TYPE_PATH)
+
 
 if __name__ == "__main__":
     main()
