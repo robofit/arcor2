@@ -7,7 +7,7 @@ import time
 import uuid
 from typing import Dict, Tuple, Union, cast
 
-import humps
+import humps  # type: ignore
 from apispec import APISpec  # type: ignore
 from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
 from dataclasses_jsonschema.apispec import DataclassesPlugin

@@ -6,7 +6,7 @@ from functools import partial
 from io import BytesIO
 from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Type, TypeVar, Union, overload
 
-import humps
+import humps  # type: ignore
 import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError  # type: ignore
