@@ -13,8 +13,6 @@ from arcor2.exceptions.helpers import handle
 
 URL = os.getenv("ARCOR2_SCENE_SERVICE_URL", "http://0.0.0.0:5013")
 
-_STARTED: bool = False  # TODO this is only a temporal solution until there will be a way how to get the current state
-
 
 class SceneServiceException(Arcor2Exception):
     pass
@@ -82,22 +80,20 @@ def delete_all_collisions() -> None:
 def start() -> None:
     """To be called after all objects are created."""
 
-    global _STARTED
     rest.call(rest.Method.PUT, f"{URL}/system/start")
-    _STARTED = True
 
 
 @handle(SceneServiceException, message="Failed to stop the scene.")
 def stop() -> None:
     """To be called when project is closed or when main script ends."""
 
-    global _STARTED
     rest.call(rest.Method.PUT, f"{URL}/system/stop")
-    _STARTED = False
 
 
-def started() -> bool:  # TODO this should rather ask the Scene service
-    return _STARTED
+def started() -> bool:
+    """Checks whether the scene is running."""
+
+    return rest.call(rest.Method.PUT, f"{URL}/system/running", return_type=bool)
 
 
 @handle(SceneServiceException, message="Failed to get transforms.")

@@ -21,7 +21,7 @@ from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 # Create an APISpec
 spec = APISpec(
     title=f"{SCENE_SERVICE_NAME} ({version()})",
-    version="0.2.0",
+    version="0.3.0",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
@@ -304,7 +304,7 @@ def put_stop() -> RespT:
     return "ok", 200
 
 
-@app.route("/system/started", methods=["GET"])
+@app.route("/system/running", methods=["PUT"])
 def get_started() -> RespT:
     return cast(Response, jsonify(started))
 
