@@ -7,7 +7,7 @@ from threading import Lock
 from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
 
-import humps
+import humps  # type: ignore
 from packaging.version import Version, parse
 
 from arcor2.exceptions import Arcor2Exception

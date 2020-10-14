@@ -25,7 +25,7 @@ from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request, send_file
 from flask_cors import CORS  # type: ignore
 from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
-from sqlitedict import SqliteDict
+from sqlitedict import SqliteDict  # type: ignore
 from werkzeug.utils import secure_filename
 
 from arcor2.data import events

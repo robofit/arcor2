@@ -1,6 +1,6 @@
 from typing import Set
 
-import humps
+import humps  # type: ignore
 from typed_ast.ast3 import Module, Pass
 
 import arcor2.object_types
