@@ -122,7 +122,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
- - 2020-10-05: [0.9.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.9.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_build/0.9.0/images/sha256-b2e3d3c691c3f9aacb6304b43499574bb21c29848c13ebd06b826674cc345bda?context=repo), [pypi](https://pypi.org/project/arcor2-build/0.9.0/)).
+ - 2020-10-16: [0.9.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.9.0) ([docker](https://hub.docker.com/layers/arcor2/arcor2_build/0.9.0/images/sha256-b2e3d3c691c3f9aacb6304b43499574bb21c29848c13ebd06b826674cc345bda?context=repo), [pypi](https://pypi.org/project/arcor2-build/0.9.0/)).
 
  - 2020-10-05: [0.8.1](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.8.1) ([docker](https://hub.docker.com/layers/arcor2/arcor2_build/0.8.1/images/sha256-a75bad5da4aefdaed22dc8cb53f4d69ecf81a91f855893bf286cf862745e0a5a?context=repo)).
 
