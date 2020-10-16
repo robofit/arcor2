@@ -2,8 +2,25 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.0] - WIP
 
-## [0.8.0] - WIP
+### Changed
+- Scene client updated for Scene 0.3.0.
+- Exceptions refactored (BREAKING).
+  - Arcor2Exception no longer has `message` property
+  - There is a new package arcor2/exceptions.
+  - Clients using `handle` decorator now have specific error messages defined.
+  - Previously generated execution packages will become broken as `print_exception` function was moved 
+- Loggers are now created using functions from `logging` module.
+- `rest` module rewritten (BREAKING).
+  - Now there is only one method `call` which takes http method as an argument.
+  - There is `ARCOR2_REST_DEBUG` environment variable. When set, debugging logs are turned on.
+
+### Fixed
+- JSON containing only boolean value was not handled properly by `arcor2.rest` module.
+
+
+## [0.8.0] - 2020-09-24
 ### Changed
 - Reorganisation of the repository - switched to monorepo based on [Pants](https://www.pantsbuild.org/docs/welcome-to-pants). The code was divided into more packages (that can be separatelly relased) within one repository.
 - Tests now run on GitHub instead of CircleCi.

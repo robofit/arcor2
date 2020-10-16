@@ -2,7 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.8.1] - WIP
+## [0.9.0] - WIP
+
+### Changed
+- Code generation adapted according to `print_exception` location change.
+
+## [0.8.1] - 2020-10-05
 
 ### Added
 - Build now has `--debug` argument ([0e6e418](http://github.com/robofit/arcor2/commit/0e6e418)).
