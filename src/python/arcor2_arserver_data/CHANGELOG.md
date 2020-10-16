@@ -3,7 +3,7 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
-## [0.9.0] - WIP
+## [0.9.0] - 2020-10-16
 
 ### Changed
 - WS API for updates of scene objects parameters and management of project-defined overrides.

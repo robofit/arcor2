@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.9.0] - WIP
+## [0.9.0] - 2020-10-16
 ### Changed
 - Clients updated to use rewritten `rest` module.
 - KinaliRobot updated for Robot 0.8.0 (IK/FK methods added).
