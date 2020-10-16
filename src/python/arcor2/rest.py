@@ -267,11 +267,18 @@ def call(
 
         return BytesIO(resp.content)
 
+    logger.debug(f"Response text: {resp.text}")
+
     try:
-        resp_json = humps.decamelize(json.loads(resp.text))
-    except (json.JSONDecodeError, TypeError) as e:
+        resp_json = resp.json()
+    except ValueError as e:
         logger.debug(f"Got invalid JSON in the response: {resp.text}")
         raise RestException("Invalid JSON.") from e
+
+    logger.debug(f"Response json: {resp_json}")
+    if isinstance(resp_json, (dict, list)):
+        resp_json = humps.decamelize(resp_json)
+    logger.debug(f"Decamelized json: {resp_json}")
 
     if list_return_type and not isinstance(resp_json, list):
         logger.debug(f"Expected list of type {return_type}, but got {resp_json}.")
