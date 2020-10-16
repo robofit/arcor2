@@ -3,7 +3,7 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
-## [0.8.0] - WIP
+## [0.8.0] - 2020-09-24
 ### Changed
 - Initial release of the separated package.
 - Execution service is now ok with packages that do not contain scene/project/package.json.
