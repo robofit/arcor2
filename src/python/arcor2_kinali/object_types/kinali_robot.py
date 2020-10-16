@@ -193,6 +193,39 @@ class KinaliRobot(AbstractRobot):
 
         rest.call(rest.Method.PUT, f"{self.settings.url}/endEffectors/{end_effector_id}/unlink")
 
+    def inverse_kinematics(
+        self, end_effector_id: str, start_joints: List[Joint], avoid_collisions: bool, pose: Pose
+    ) -> List[Joint]:
+        """Computes inverse kinematics.
+
+        :param end_effector_id: IK target pose end-effector
+        :param start_joints: IK start joints
+        :param avoid_collisions: Return non-collision IK result if true
+        :param pose: IK target pose
+        :return: Inverse kinematics
+        """
+        return rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",
+            params={"startJoints": [j.to_dict() for j in start_joints], "avoidCollisions": avoid_collisions},
+            body=pose,
+            list_return_type=Joint,
+        )
+
+    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
+        """Computes forward kinematics.
+
+        :param end_effector_id: Target end effector name
+        :param joints: Input joint values
+        :return: Pose of the given end effector
+        """
+        return rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/endEffectors/{end_effector_id}/forwardKinematics",
+            body=joints,
+            return_type=Pose,
+        )
+
     # --- Grippers Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()
