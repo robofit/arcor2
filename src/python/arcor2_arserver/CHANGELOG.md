@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - ARCOR2 dependency updated
+
+### Fixed
+- fixed check for existing override
  
 ## [0.9.0] - 2020-10-16
 
