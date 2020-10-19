@@ -334,8 +334,8 @@ def check_override(obj_id: str, override: Parameter, add_new_one: bool = False) 
 
     if add_new_one:
         try:
-            for override in glob.PROJECT.overrides[obj.id]:
-                if override.name == override.name:
+            for existing_override in glob.PROJECT.overrides[obj.id]:
+                if override.name == existing_override.name:
                     raise Arcor2Exception("Override already exists.")
         except KeyError:
             pass

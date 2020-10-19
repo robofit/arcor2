@@ -99,6 +99,15 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     assert override_evt.change_type == override_evt.change_type.ADD
     assert override_evt.parent_id == obj_id
 
+    override2 = Parameter("str_param", "string", json.dumps("test"))
+
+    assert ars.call_rpc(
+        rpc.o.AddOverride.Request(uid(), rpc.o.AddOverride.Request.Args(obj_id, override2)),
+        rpc.o.AddOverride.Response,
+    ).result
+
+    event(ars, events.o.OverrideUpdated)
+
     save_project(ars)
 
     # now it should be possible to start the scene
