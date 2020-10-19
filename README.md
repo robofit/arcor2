@@ -119,7 +119,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_arserver_data/README.md) | [CHANGELOG](src/python/arcor2_arserver_data/CHANGELOG.md)
 
- - 2020-10-19: [0.8.1](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F0.8.1) ([pypi](https://pypi.org/project/arcor2-arserver-data/0.8.1/)).
+ - 2020-10-19: [0.9.1](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F0.9.1) ([pypi](https://pypi.org/project/arcor2-arserver-data/0.9.1/)).
 
  - 2020-09-24: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F0.8.0) ([pypi](https://pypi.org/project/arcor2-arserver-data/0.8.0/)).
 
