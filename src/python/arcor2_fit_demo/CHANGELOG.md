@@ -2,8 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.2.1] - 2020-10-19
 
-## [0.2.0] - WIP
+### Changed
+- ARCOR2 dependency updated
+
+## [0.2.0] - 2020-09-24
 ### Changed
 - Package is now part of the arcor2 monorepo.
 - Support for Dobot M1.
