@@ -4,7 +4,7 @@ FROM arcor2/arcor2_base:$version
 COPY . /root/arcor2/
 
 RUN cd ~/arcor2 \
-	&& ./pants binary src/python/arcor2_execution_rest_proxy/scripts:execution_rest_proxy
+	&& ./pants package src/python/arcor2_execution_rest_proxy/scripts:execution_rest_proxy
 
 FROM arcor2/arcor2_dist_base:$version
 

@@ -4,7 +4,7 @@ python_library(
     ]
 )
 
-python_distribution(
+arcor2_python_distribution(
     name="arcor2_execution_rest_proxy_dist",
     dependencies=[
         ":arcor2_execution_rest_proxy",
