@@ -1,6 +1,6 @@
 pex_binary(
     name = "upload_objects",
     sources = ["upload.py"],
-    entry_point = "arcor2_fit_demo.scripts.upload",
+    entry_point = "arcor2_fit_demo.scripts.upload:main",
     zip_safe=False
 )

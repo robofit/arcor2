@@ -4,7 +4,7 @@ python_library(
     ]
 )
 
-python_distribution(
+arcor2_python_distribution(
     name="arcor2_fit_demo_dist",
     dependencies=[
         ":arcor2_fit_demo",

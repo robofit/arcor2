@@ -4,7 +4,7 @@ python_library(
     ]
 )
 
-python_distribution(
+arcor2_python_distribution(
     name="arcor2_calibration_data_dist",
     dependencies=[
         ":arcor2_calibration_data",
