@@ -8,10 +8,13 @@ from arcor2.data.robot import RobotType
 
 @dataclass
 class RobotFeatures(JsonSchemaMixin):
+    """Names of the robot features must match names of the methods."""
 
     move_to_pose: bool = False
     move_to_joints: bool = False
     stop: bool = False
+    forward_kinematics: bool = False
+    inverse_kinematics: bool = False
 
 
 @dataclass

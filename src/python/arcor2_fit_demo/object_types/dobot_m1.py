@@ -1,9 +1,9 @@
 import time
-from typing import List
+from typing import List, Optional
 
 from pydobot import dobot  # type: ignore
 
-from arcor2.data.common import ActionMetadata, Joint, StrEnum
+from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 
 from .abstract_dobot import AbstractDobot, DobotException
 
@@ -33,6 +33,18 @@ class DobotM1(AbstractDobot):
             Joint(Joints.J3, joints.j3),
             Joint(Joints.J4, joints.j4),
         ]
+
+    def inverse_kinematics(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
+    ) -> List[Joint]:
+        raise NotImplementedError()
+
+    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
+        raise NotImplementedError()
 
     def suck(self) -> None:
 

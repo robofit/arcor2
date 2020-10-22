@@ -187,6 +187,32 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     def stop(self) -> None:
         raise NotImplementedError("The robot can't be stopped.")
 
+    def inverse_kinematics(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
+    ) -> List[Joint]:
+        """Computes inverse kinematics.
+
+        :param end_effector_id: IK target pose end-effector
+        :param pose: IK target pose
+        :param start_joints: IK start joints
+        :param avoid_collisions: Return non-collision IK result if true
+        :return: Inverse kinematics
+        """
+        raise NotImplementedError()
+
+    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
+        """Computes forward kinematics.
+
+        :param end_effector_id: Target end effector name
+        :param joints: Input joint values
+        :return: Pose of the given end effector
+        """
+        raise NotImplementedError()
+
 
 __all__ = [
     Generic.__name__,
