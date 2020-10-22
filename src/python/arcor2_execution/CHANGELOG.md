@@ -5,8 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.9.0] - WIP
 
 ### Changed
-- Implements Execution API 0.4.0.
-  - `ProjectName` property added to `SummaryPackage` model.
+- Sets `project_meta` property of `PackageSummary` if the execution package contains `project.json` file.
 
 
 ## [0.8.1] - 2020-10-19
