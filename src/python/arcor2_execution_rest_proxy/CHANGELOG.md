@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.8.2] - WIP
+
+### Changed
+- Implements Execution API 0.4.0.
+  - `ProjectName` property added to `SummaryPackage` model.
+
 ## [0.8.1] - 2020-10-19
 
 ### Changed
