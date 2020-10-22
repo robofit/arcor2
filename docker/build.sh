@@ -5,7 +5,7 @@ build_base_image () {
 }
 
 build_dist_base_image () {
-	docker build -f Dockerfile-dist-base -t arcor2/arcor2_dist_base:"$(cat ../src/python/arcor2/VERSION)"  ../ --build-arg version="$VERSION"
+	docker build -f Dockerfile-dist-base -t arcor2/arcor2_dist_base:"$VERSION"  ../ --build-arg version="$VERSION"
 }
 
 build_arserver_image () {

@@ -22,6 +22,7 @@ Always use explicit version of all services, never use latest!
 $env:ARCOR2_VERSION="version"
 $env:ARCOR2_BUILD_VERSION="version"
 $env:ARCOR2_EXECUTION_VERSION="version"
+$env:ARCOR2_EXECUTION_PROXY_VERSION="version"
 docker-compose up
 ```
 
@@ -31,6 +32,7 @@ For persistent variables, use this:
 [Environment]::SetEnvironmentVariable("ARCOR2_VERSION", "version", "User")
 [Environment]::SetEnvironmentVariable("ARCOR2_BUILD_VERSION", "version", "User")
 [Environment]::SetEnvironmentVariable("ARCOR2_EXECUTION_VERSION", "version", "User")
+[Environment]::SetEnvironmentVariable("ARCOR2_EXECUTION_PROXY_VERSION", "version", "User")
 ```
 Restart powershell or open new window.
 ```
@@ -46,6 +48,7 @@ Always use explicit version of all services, never use latest!
 export ARCOR2_VERSION=version
 export ARCOR2_BUILD_VERSION=version
 export ARCOR2_EXECUTION_VERSION=version
+export ARCOR2_EXECUTION_PROXY_VERSION=version
 sudo -E docker-compose up
 ```
 

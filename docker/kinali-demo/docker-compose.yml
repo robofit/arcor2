@@ -56,7 +56,7 @@ services:
         - execution:/root/project
 
   execution-proxy:
-    image: arcor2/arcor2_execution_proxy:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
+    image: arcor2/arcor2_execution_proxy:${ARCOR2_EXECUTION_PROXY_VERSION:?ARCOR2_EXECUTION_PROXY_VERSION env variable not set}
     container_name: execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
