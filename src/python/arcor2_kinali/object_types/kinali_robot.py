@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Set, TypeVar
+from typing import TYPE_CHECKING, Callable, List, Optional, Set, TypeVar
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -194,16 +194,24 @@ class KinaliRobot(AbstractRobot):
         rest.call(rest.Method.PUT, f"{self.settings.url}/endEffectors/{end_effector_id}/unlink")
 
     def inverse_kinematics(
-        self, end_effector_id: str, start_joints: List[Joint], avoid_collisions: bool, pose: Pose
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
     ) -> List[Joint]:
         """Computes inverse kinematics.
 
         :param end_effector_id: IK target pose end-effector
-        :param start_joints: IK start joints
-        :param avoid_collisions: Return non-collision IK result if true
         :param pose: IK target pose
+        :param start_joints: IK start joints (if not provided, current joint values will be used)
+        :param avoid_collisions: Return non-collision IK result if true
         :return: Inverse kinematics
         """
+
+        if start_joints is None:
+            start_joints = self.robot_joints()
+
         return rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",

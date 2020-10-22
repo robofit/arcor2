@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-
+import math
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -90,6 +89,16 @@ class Position(IterableIndexable):
 
         rotated_vector = quaternion.rotate_vectors([q], [list(self)])[0][0]
         return Position(rotated_vector[0], rotated_vector[1], rotated_vector[2])
+
+    def __eq__(self, other: object) -> bool:
+
+        if not isinstance(other, Position):
+            return False
+
+        for my_val, other_val in zip(self, other):
+            if not math.isclose(my_val, other_val):
+                return False
+        return True
 
 
 @dataclass

@@ -289,3 +289,29 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
         asyncio.ensure_future(
             robot.move_to_ap_joints(req.args.robot_id, joints.joints, req.args.speed, req.args.joints_id)
         )
+
+
+@scene_needed
+async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.InverseKinematics.Response:
+
+    ensure_scene_started()
+    await check_feature(req.args.robot_id, Robot.inverse_kinematics.__name__)
+
+    joints = await robot.ik(
+        req.args.robot_id, req.args.end_effector_id, req.args.pose, req.args.start_joints, req.args.avoid_collisions
+    )
+    resp = srpc.r.InverseKinematics.Response()
+    resp.data = joints
+    return resp
+
+
+@scene_needed
+async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.ForwardKinematics.Response:
+
+    ensure_scene_started()
+    await check_feature(req.args.robot_id, Robot.forward_kinematics.__name__)
+
+    pose = await robot.fk(req.args.robot_id, req.args.end_effector_id, req.args.joints)
+    resp = srpc.r.ForwardKinematics.Response()
+    resp.data = pose
+    return resp

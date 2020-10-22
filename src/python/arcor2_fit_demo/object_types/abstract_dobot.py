@@ -97,15 +97,15 @@ class AbstractDobot(Robot):
             return tr.make_pose_abs(self.pose, self._ee_pose)
 
         try:
-            pos = self._dobot.get_pose().position  # in mm
+            pos = self._dobot.get_pose()  # in mm
         except dobot.DobotException as e:
             raise DobotException("Failed to get pose.") from e
 
         p = Pose()
-        p.position.x = pos.x / 1000.0
-        p.position.y = pos.y / 1000.0
-        p.position.z = pos.z / 1000.0
-        p.orientation.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, pos.r))
+        p.position.x = pos.position.x / 1000.0
+        p.position.y = pos.position.y / 1000.0
+        p.position.z = pos.position.z / 1000.0
+        p.orientation.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4)))
 
         return tr.make_pose_abs(self.pose, p)
 

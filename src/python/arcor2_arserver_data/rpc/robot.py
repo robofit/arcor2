@@ -203,3 +203,43 @@ class MoveToActionPoint(RPC):
     @dataclass
     class Response(RPC.Response):
         pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class InverseKinematics(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            end_effector_id: str
+            pose: Pose
+            start_joints: Optional[List[Joint]] = None
+            avoid_collisions: bool = True
+
+        args: Args
+
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[List[Joint]] = None
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class ForwardKinematics(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            end_effector_id: str
+            joints: List[Joint]
+
+        args: Args
+
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Pose] = None
