@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.0] - WIP
+
+### Changed
+- Updated due to a breaking change in `arcor2_execution_data`.
+
 ## [0.9.1] - 2020-10-19
 
 ### Changed

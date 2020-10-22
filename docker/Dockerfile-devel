@@ -4,7 +4,19 @@ FROM arcor2/arcor2_base:$version
 COPY . /root/arcor2/
 
 RUN cd ~/arcor2 \
-	&& ./pants setup-py ::
+	&& ./pants package src/python/arcor2:arcor2_dist \
+	&& ./pants package src/python/arcor2_arserver:arcor2_arserver_dist \
+	&& ./pants package src/python/arcor2_arserver_data:arcor2_arserver_data_dist \
+	&& ./pants package src/python/arcor2_build:arcor2_build_dist \
+	&& ./pants package src/python/arcor2_build_data:arcor2_build_data_dist \
+	&& ./pants package src/python/arcor2_calibration:arcor2_calibration_dist \
+	&& ./pants package src/python/arcor2_calibration_data:arcor2_calibration_data_dist \
+	&& ./pants package src/python/arcor2_execution:arcor2_execution_dist \
+	&& ./pants package src/python/arcor2_execution_data:arcor2_execution_data_dist \
+	&& ./pants package src/python/arcor2_execution_rest_proxy:arcor2_execution_rest_proxy_dist \
+	&& ./pants package src/python/arcor2_fit_demo:arcor2_fit_demo_dist \
+	&& ./pants package src/python/arcor2_kinali:arcor2_kinali_dist \
+	&& ./pants package src/python/arcor2_mocks:arcor2_mocks_dist
 
 # RUN cd ~/arcor2 \
 #    && ./build-support/setup-venv.sh

@@ -61,6 +61,7 @@ class SummaryPackage(JsonSchemaMixin):
     id: str
     name: Optional[str] = None
     projectId: Optional[str] = None
+    projectName: Optional[str] = None
     created: Optional[datetime] = None
     executed: Optional[datetime] = None
 
@@ -84,7 +85,7 @@ class Token(JsonSchemaMixin):
 # Create an APISpec
 spec = APISpec(
     title=f"{SERVICE_NAME} ({arcor2_execution_rest_proxy.version()})",
-    version="0.3.0",
+    version="0.4.0",
     openapi_version="3.0.2",
     plugins=[FlaskPlugin(), DataclassesPlugin()],
 )
@@ -460,8 +461,10 @@ def get_packages() -> RespT:
         sp = SummaryPackage(pck.id)
         sp.name = pck.package_meta.name
         sp.created = pck.package_meta.built
-        sp.projectId = pck.project_id
         sp.executed = pck.package_meta.executed
+        if pck.project_meta:
+            sp.projectId = pck.project_meta.id
+            sp.projectName = pck.project_meta.name
         ret.append(sp.to_dict())
 
     return jsonify(ret), 200

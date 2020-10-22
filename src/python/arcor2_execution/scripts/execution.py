@@ -32,7 +32,7 @@ from arcor2.helpers import port_from_url
 from arcor2.logging import get_aiologger
 from arcor2.package import PROJECT_PATH, read_package_meta, write_package_meta
 from arcor2_execution_data import EVENTS, URL, events, rpc
-from arcor2_execution_data.common import PackageSummary
+from arcor2_execution_data.common import PackageSummary, ProjectMeta
 
 logger = get_aiologger("Execution")
 
@@ -327,13 +327,13 @@ async def get_summary(path: str) -> PackageSummary:
     except (ValidationError, IOError) as e:
         logger.error(f"Failed to read/parse project file of {package_dir}: {e}")
 
-        return PackageSummary(package_dir, "N/A", datetime.fromtimestamp(0, tz=timezone.utc), package_meta)
+        return PackageSummary(package_dir, package_meta)
 
     modified = project.modified
     if not modified:
         modified = datetime.fromtimestamp(0, tz=timezone.utc)
 
-    return PackageSummary(package_dir, project.id, modified, package_meta)
+    return PackageSummary(package_dir, package_meta, ProjectMeta(project.id, project.name, modified))
 
 
 async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.ListPackages.Response:

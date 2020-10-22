@@ -8,7 +8,7 @@ python_library(
     ]
 )
 
-python_distribution(
+arcor2_python_distribution(
     name="arcor2_arserver_dist",
     dependencies=[
         ":arcor2_arserver",

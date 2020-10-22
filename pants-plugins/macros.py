@@ -23,3 +23,11 @@ def arcor2_setup_py(**kwargs):
     kwargs["python_requires"] = "==3.8.*"  # we support only Python 3.8
 
     return setup_py(**kwargs)
+
+
+def arcor2_python_distribution(**kwargs):
+
+    if "setup_py_commands" not in kwargs:
+        kwargs["setup_py_commands"] = ["sdist", "bdist_wheel", "--python-tag", "py38"]
+
+    return python_distribution(**kwargs)

@@ -4,8 +4,8 @@ FROM arcor2/arcor2_base:$version
 COPY . /root/arcor2/
 
 RUN cd ~/arcor2 \
-	&& ./pants binary src/python/arcor2_mocks/scripts:mock_project \
-	&& ./pants binary src/python/arcor2_mocks/scripts:mock_scene
+	&& ./pants package src/python/arcor2_mocks/scripts:mock_project \
+	&& ./pants package src/python/arcor2_mocks/scripts:mock_scene
 
 FROM arcor2/arcor2_dist_base:$version
 
