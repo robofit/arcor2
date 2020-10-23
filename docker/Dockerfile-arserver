@@ -13,7 +13,3 @@ RUN mkdir -p /root/data
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_arserver.scripts/arserver.pex /root/arserver.pex
 
 COPY docker/start-arserver.sh ./start.sh
-
-RUN mkdir -p ~/project
-ENV PYTHONPATH ~
-ENV ARCOR2_PROJECT_PATH /root/project
