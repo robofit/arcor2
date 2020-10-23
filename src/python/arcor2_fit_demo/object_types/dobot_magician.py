@@ -24,7 +24,7 @@ class DobotMagician(AbstractDobot):
     _ABSTRACT = False
     urdf_package_name = "dobot-magician.zip"
 
-    # Dimentions in meters (according to URDF)
+    # Dimensions in meters (according to URDF)
     link_2_length = 0.135
     link_3_length = 0.147
     link_4_length = 0.06
@@ -45,10 +45,11 @@ class DobotMagician(AbstractDobot):
 
         return pose
 
+    # TODO joint4/5
     valid_ranges: Dict[Joints, Tuple[float, float]] = {
         Joints.J1: (-2, 2),
         Joints.J2: (0, 1.46),
-        Joints.J3: (0.69, 2.47),  # TODO joint4/5
+        Joints.J3: (0.69, 2.47),
     }
 
     def validate_joints(self, joints: List[Joint]) -> None:
