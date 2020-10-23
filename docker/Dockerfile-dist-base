@@ -5,4 +5,5 @@ RUN apt-get update \
   git \
   && rm -rf /var/lib/apt/lists/*
 
+ENV PYTHONOPTIMIZE=1
 CMD ["/bin/sh", "/start.sh"]
