@@ -11,22 +11,37 @@ import arcor2
 from arcor2.data.common import ActionMetadata, Parameter
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, Settings
-from arcor2.source.utils import find_class_def, parse
+from arcor2.source.utils import find_class_def, parse, parse_def
 
 
 class ObjectTypeException(Arcor2Exception):
     pass
 
 
+def get_containing_module_sources(type_def: Type[Generic]) -> str:
+    """Returns sources of the whole containing module.
+
+    ...whereas inspect.getsource(type_def) returns just source of the class itself
+    :param type_def:
+    :return:
+    """
+
+    with open(inspect.getfile(type_def), "r") as source_file:
+        return source_file.read()
+
+
 def check_object_type(type_def: Type[Generic]) -> None:
     """Checks whether the object type source is a valid one.
 
-    :param object_type_source:
+    :param type_def:
     :return:
     """
 
     if not issubclass(type_def, Generic):
         raise ObjectTypeException("Not a subclass of Generic.")
+
+    # it might happen that the code is ok, but can't be parsed e.g. due to unsupported placement of comment
+    parse_def(type_def)
 
     # TODO some more (simple) checks here?
 

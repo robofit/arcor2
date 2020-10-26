@@ -32,7 +32,7 @@ def parse(source: str) -> AST:
 
     try:
         return horast.parse(source)
-    except SyntaxError as e:
+    except (AssertionError, NotImplementedError, SyntaxError) as e:
         raise SourceException("Failed to parse the code.") from e
 
 
