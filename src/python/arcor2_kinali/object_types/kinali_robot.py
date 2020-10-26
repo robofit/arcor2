@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, List, Optional, Set, TypeVar
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Set, TypeVar
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -212,10 +212,16 @@ class KinaliRobot(AbstractRobot):
         if start_joints is None:
             start_joints = self.robot_joints()
 
+        # TODO list comprehension here resulted in ValueError: Expected token OP:'[', got OP:'=' on line 169 col 27
+        # start_joints_list = [joint.to_dict() for joint in start_joints]
+        start_joints_list: List[Dict] = []
+        for joint in start_joints:
+            start_joints_list.append(joint.to_dict())
+
         return rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",
-            params={"startJoints": [j.to_dict() for j in start_joints], "avoidCollisions": avoid_collisions},
+            params={"startJoints": start_joints_list, "avoidCollisions": avoid_collisions},
             body=pose,
             list_return_type=Joint,
         )
