@@ -1,6 +1,5 @@
 import os
 import subprocess
-import time
 from typing import Iterator
 
 import pytest  # type: ignore
@@ -8,6 +7,7 @@ import pytest  # type: ignore
 from arcor2.clients import scene_service
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box
+from arcor2.helpers import find_free_port
 from arcor2.object_types.abstract import GenericWithPose
 
 
@@ -23,22 +23,26 @@ def finish_processes(processes) -> None:
 def start_processes() -> Iterator[None]:
 
     my_env = os.environ.copy()
-    my_env["ARCOR2_SCENE_SERVICE_URL"] = "http://0.0.0.0:5013"
-    scene_service.URL = my_env["ARCOR2_SCENE_SERVICE_URL"]
+
+    scene_port = find_free_port()
+    scene_url = f"http://0.0.0.0:{scene_port}"
+
+    my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
+    my_env["ARCOR2_SCENE_SERVICE_MOCK_PORT"] = str(scene_port)
+    scene_service.URL = scene_url
 
     processes = []
 
-    for cmd in ("arcor2_mock_scene",):
+    for cmd in ("./src.python.arcor2_mocks.scripts/mock_scene.pex",):
         processes.append(subprocess.Popen(cmd, env=my_env, stdout=subprocess.PIPE))
 
-    time.sleep(2)
+    scene_service.wait_for(20)
 
     yield None
 
     finish_processes(processes)
 
 
-@pytest.mark.skip(reason="Integration tests are temporarily disabled.")
 def test_generic_with_pose(start_processes: None) -> None:
 
     obj = GenericWithPose("id", "name", Pose(), Box("boxId", 0.1, 0.1, 0.1))
