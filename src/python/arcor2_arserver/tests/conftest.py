@@ -1,10 +1,8 @@
 import inspect
 import logging
 import os
-import socket
 import subprocess as sp
 import tempfile
-from contextlib import closing
 from typing import Dict, Iterator, Tuple, Type, TypeVar
 
 import pytest  # type: ignore
@@ -12,6 +10,7 @@ import pytest  # type: ignore
 from arcor2.clients import persistent_storage, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
+from arcor2.helpers import find_free_port
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
@@ -20,13 +19,6 @@ from arcor2_arserver_data.client import ARServer, uid
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 
 LOGGER = logging.getLogger(__name__)
-
-
-def find_free_port() -> int:
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("localhost", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        return s.getsockname()[1]
 
 
 _arserver_port: int = 0
@@ -86,6 +78,8 @@ def start_processes() -> Iterator[None]:
             "./src.python.arcor2_build.scripts/build.pex",
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
+
+        scene_service.wait_for(30)
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):

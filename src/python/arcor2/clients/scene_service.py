@@ -1,4 +1,5 @@
 import os
+import time
 from dataclasses import dataclass
 from typing import Optional, Set
 
@@ -25,6 +26,19 @@ class MeshParameters(JsonSchemaMixin):
     mesh_scale_y: float = 1.0
     mesh_scale_z: float = 1.0
     transform_id: str = "world"
+
+
+def wait_for(timeout: float = 10.0) -> None:
+
+    start_time = time.monotonic()
+    while time.monotonic() < start_time + timeout:
+        try:
+            started()
+            return
+        except SceneServiceException:
+            pass
+
+    raise SceneServiceException("Failed to contact Scene service.")
 
 
 @handle(SceneServiceException, message="Failed to add or update the collision model.")
@@ -90,6 +104,7 @@ def stop() -> None:
     rest.call(rest.Method.PUT, f"{URL}/system/stop")
 
 
+@handle(SceneServiceException, message="Failed to get scene state.")
 def started() -> bool:
     """Checks whether the scene is running."""
 

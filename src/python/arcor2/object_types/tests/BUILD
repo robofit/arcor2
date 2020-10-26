@@ -1,5 +1,5 @@
 python_tests(
-    dependencies = [
-        "src/python/arcor2_mocks:arcor2_mocks_dist"
+    runtime_package_dependencies = [
+        "src/python/arcor2_mocks/scripts:mock_scene",
     ]
 )

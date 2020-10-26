@@ -2,7 +2,9 @@ import asyncio
 import importlib
 import keyword
 import os
+import socket
 import sys
+from contextlib import closing
 from threading import Lock
 from types import ModuleType
 from typing import Any, Callable, Tuple, Type, TypeVar
@@ -159,3 +161,10 @@ class NonBlockingLock:
 def port_from_url(url: str) -> int:
 
     return int(url.strip().split(":")[-1])
+
+
+def find_free_port() -> int:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("localhost", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
