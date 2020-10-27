@@ -59,9 +59,7 @@ class AbstractDobot(Robot):
                 self.home()
 
         else:
-
-            self._ee_pose = Pose()
-            self._ee_pose.orientation.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, 0))
+            self._joint_values: List[Joint] = []  # has to be set to some initial value in derived classes
 
     def alarms_to_exception(self) -> None:
 
@@ -94,7 +92,7 @@ class AbstractDobot(Robot):
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:  # global pose
 
         if self.settings.simulator:
-            return tr.make_pose_abs(self.pose, self._ee_pose)
+            return self.forward_kinematics("", self._joint_values)
 
         try:
             pos = self._dobot.get_pose()  # in mm
@@ -110,10 +108,10 @@ class AbstractDobot(Robot):
         return tr.make_pose_abs(self.pose, p)
 
     def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
-        self.move(target_pose, MoveType.LINEAR, speed * 100, 50.0)
+        self.move(target_pose, MoveType.LINEAR, speed * 100)
 
     def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
-        raise NotImplementedError("Dobot does not support setting joints so far.")
+        self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
 
     def home(self):
         """Run the homing procedure."""
@@ -147,12 +145,12 @@ class AbstractDobot(Robot):
 
         with self._move_lock:
 
-            rp = tr.make_pose_rel(self.pose, pose)
-
             if self.settings.simulator:
+                self._joint_values = self.inverse_kinematics("", pose)
                 time.sleep((100.0 - velocity) * 0.05)
-                self._ee_pose = rp
                 return
+
+            rp = tr.make_pose_rel(self.pose, pose)
 
             try:
                 self._dobot.clear_alarms()

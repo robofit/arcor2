@@ -7,7 +7,7 @@ from pydobot import dobot  # type: ignore
 import arcor2.transformations as tr
 from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, StrEnum
 
-from .abstract_dobot import AbstractDobot, DobotException
+from .abstract_dobot import AbstractDobot, DobotException, DobotSettings
 
 
 class Joints(StrEnum):
@@ -29,6 +29,18 @@ class DobotMagician(AbstractDobot):
     link_3_length = 0.147
     link_4_length = 0.06
     end_effector_length = 0.06
+
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: DobotSettings) -> None:
+        super(DobotMagician, self).__init__(obj_id, name, pose, settings)
+
+        if self.settings.simulator:
+            self._joint_values = [
+                Joint(Joints.J1, -0.038),
+                Joint(Joints.J2, 0.341),
+                Joint(Joints.J3, 1.934),
+                Joint(Joints.J4, -0.704),
+                Joint(Joints.J5, -0.568),
+            ]
 
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
 
@@ -157,13 +169,7 @@ class DobotMagician(AbstractDobot):
     def robot_joints(self) -> List[Joint]:
 
         if self.settings.simulator:
-            return [
-                Joint(Joints.J1, 0),
-                Joint(Joints.J2, 0),
-                Joint(Joints.J3, 0),
-                Joint(Joints.J4, 0),
-                Joint(Joints.J5, 0),
-            ]
+            return self._joint_values
 
         joints = self._dobot.get_pose().joints.in_radians()
         return [

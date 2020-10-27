@@ -1,11 +1,11 @@
 import time
-from typing import List, Optional
+from typing import List
 
 from pydobot import dobot  # type: ignore
 
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 
-from .abstract_dobot import AbstractDobot, DobotException
+from .abstract_dobot import AbstractDobot, DobotException, DobotSettings
 
 
 class Joints(StrEnum):
@@ -21,10 +21,16 @@ class DobotM1(AbstractDobot):
     _ABSTRACT = False
     urdf_package_name = "dobot-m1.zip"
 
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: DobotSettings) -> None:
+        super(DobotM1, self).__init__(obj_id, name, pose, settings)
+
+        if self.settings.simulator:
+            self._joint_values = [Joint(Joints.J1, 0), Joint(Joints.J2, 0), Joint(Joints.J3, 0), Joint(Joints.J4, 0)]
+
     def robot_joints(self) -> List[Joint]:
 
         if self.settings.simulator:
-            return [Joint(Joints.J1, 0), Joint(Joints.J2, 0), Joint(Joints.J3, 0), Joint(Joints.J4, 0)]
+            return self._joint_values
 
         joints = self._dobot.get_pose().joints.in_radians()
         return [
@@ -33,18 +39,6 @@ class DobotM1(AbstractDobot):
             Joint(Joints.J3, joints.j3),
             Joint(Joints.J4, joints.j4),
         ]
-
-    def inverse_kinematics(
-        self,
-        end_effector_id: str,
-        pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
-        avoid_collisions: bool = True,
-    ) -> List[Joint]:
-        raise NotImplementedError()
-
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
-        raise NotImplementedError()
 
     def suck(self) -> None:
 
