@@ -4,7 +4,7 @@ from arcor2.action import patch_object_actions
 from arcor2.data.common import ActionMetadata, StrEnum
 from arcor2.object_types.abstract import GenericWithPose
 from arcor2.object_types.tests.test_utils import TestObjectWithSettings
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
+from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import parse_def
 from arcor2_arserver.object_types.utils import meta_from_def, object_actions
 
@@ -109,23 +109,23 @@ def test_settings() -> None:
 
     assert meta.settings[0].name == "string"
     assert not meta.settings[0].children
-    assert meta.settings[0].type == TYPE_TO_PLUGIN[str].type_name()
+    assert meta.settings[0].type == plugin_from_type(str).type_name()
 
     assert meta.settings[1].name == "integer"
     assert not meta.settings[1].children
-    assert meta.settings[1].type == TYPE_TO_PLUGIN[int].type_name()
+    assert meta.settings[1].type == plugin_from_type(int).type_name()
 
     assert meta.settings[2].name == "boolean"
     assert not meta.settings[2].children
-    assert meta.settings[2].type == TYPE_TO_PLUGIN[bool].type_name()
+    assert meta.settings[2].type == plugin_from_type(bool).type_name()
 
     assert meta.settings[3].name == "double"
     assert not meta.settings[3].children
-    assert meta.settings[3].type == TYPE_TO_PLUGIN[float].type_name()
+    assert meta.settings[3].type == plugin_from_type(float).type_name()
 
     assert meta.settings[4].name == "enum"
     assert not meta.settings[4].children
-    assert meta.settings[4].type == TYPE_TO_PLUGIN[StrEnum].type_name()
+    assert meta.settings[4].type == plugin_from_type(StrEnum).type_name()
 
     assert meta.settings[5].name == "nested_settings"
     assert len(meta.settings[5].children) == 1
@@ -135,4 +135,4 @@ def test_settings() -> None:
 
     assert nested.name == "boolean"
     assert not nested.children
-    assert nested.type == TYPE_TO_PLUGIN[bool].type_name()
+    assert nested.type == plugin_from_type(bool).type_name()

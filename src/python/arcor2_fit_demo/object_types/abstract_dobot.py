@@ -89,10 +89,30 @@ class AbstractDobot(Robot):
     def suctions(self) -> Set[str]:
         return {"default"}
 
-    def get_end_effector_pose(self, end_effector_id: str) -> Pose:  # global pose
+    def _handle_pose_out(self, pose: Pose) -> None:
+        """This is called (only for a real robot) from `get_end_effector_pose`
+        so derived classes can do custom changes to the pose.
+
+        :param pose:
+        :return:
+        """
+
+        pass
+
+    def _handle_pose_in(self, pose: Pose) -> None:
+        """This is called (only for a real robot) from `move` so derived
+        classes can do custom changes to the pose.
+
+        :param pose:
+        :return:
+        """
+
+        pass
+
+    def get_end_effector_pose(self, end_effector_id: str) -> Pose:
 
         if self.settings.simulator:
-            return self.forward_kinematics("", self._joint_values)
+            return tr.make_pose_abs(self.pose, self.forward_kinematics("", self._joint_values))
 
         try:
             pos = self._dobot.get_pose()  # in mm
@@ -107,6 +127,7 @@ class AbstractDobot(Robot):
             quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4 + pos.joints.j1))
         )
 
+        self._handle_pose_out(p)
         return tr.make_pose_abs(self.pose, p)
 
     def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
@@ -153,6 +174,7 @@ class AbstractDobot(Robot):
                 return
 
             rp = tr.make_pose_rel(self.pose, pose)
+            self._handle_pose_in(rp)
 
             try:
                 self._dobot.clear_alarms()

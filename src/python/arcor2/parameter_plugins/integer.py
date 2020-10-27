@@ -83,11 +83,17 @@ class IntegerPlugin(ParameterPlugin):
     def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
 
         super(IntegerPlugin, cls).meta(param_meta, action_method, action_node)
-        get_min_max(IntegerPlugin, param_meta, action_method, action_node)
+        get_min_max(cls, param_meta, action_method, action_node)
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) -> int:
-        return cls.type()(super(IntegerPlugin, cls).value(type_defs, scene, project, action_id, parameter_id))
+    def parameter_value(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> int:
+        return cls.type()(super(IntegerPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id))
+
+    @classmethod
+    def _value_from_json(cls, value: str) -> int:
+        return super(IntegerPlugin, cls)._value_from_json(value)
 
 
 class IntegerListPlugin(ListParameterPlugin):
@@ -97,14 +103,14 @@ class IntegerListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(IntegerPlugin)
+        return get_type_name(IntegerPlugin)  # type: ignore
 
     @classmethod
     def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
         super(IntegerListPlugin, cls).meta(param_meta, action_method, action_node)
 
     @classmethod
-    def value(
+    def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> List[int]:
-        return super(IntegerListPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
+        return super(IntegerListPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)

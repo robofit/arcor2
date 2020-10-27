@@ -3,7 +3,7 @@ import logging
 import os
 import subprocess as sp
 import tempfile
-from typing import Dict, Iterator, Tuple, Type, TypeVar
+from typing import Dict, Iterator, Optional, Tuple, Type, TypeVar
 
 import pytest  # type: ignore
 
@@ -13,6 +13,7 @@ from arcor2.data.events import Event
 from arcor2.helpers import find_free_port
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.upload import upload_def
+from arcor2_arserver.tests.objects.object_with_actions import ObjectWithActions
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, uid
@@ -79,7 +80,7 @@ def start_processes() -> Iterator[None]:
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
 
-        scene_service.wait_for(30)
+        scene_service.wait_for(60)
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):
@@ -93,6 +94,7 @@ def start_processes() -> Iterator[None]:
         else:
             raise Exception("Failed to upload objects.")
 
+        upload_def(ObjectWithActions)
         upload_def(ObjectWithSettings)
 
         LOGGER.info(f"Starting ARServer listening on port  {_arserver_port}.")
@@ -139,7 +141,7 @@ for mod in modules:
 @pytest.fixture()
 def ars() -> Iterator[ARServer]:
 
-    with ARServer(ars_connection_str(), timeout=20, event_mapping=event_mapping) as ws:
+    with ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping) as ws:
         yield ws
 
 
@@ -226,10 +228,13 @@ def wait_for_event(ars: ARServer, evt_type: Type[E]) -> E:
     return evt
 
 
-def add_logic_item(ars: ARServer, start: str, end: str) -> common.LogicItem:
+def add_logic_item(
+    ars: ARServer, start: str, end: str, condition: Optional[common.ProjectLogicIf] = None
+) -> common.LogicItem:
 
     assert ars.call_rpc(
-        rpc.p.AddLogicItem.Request(uid(), rpc.p.AddLogicItem.Request.Args(start, end)), rpc.p.AddLogicItem.Response
+        rpc.p.AddLogicItem.Request(uid(), rpc.p.AddLogicItem.Request.Args(start, end, condition)),
+        rpc.p.AddLogicItem.Response,
     ).result
 
     evt = event(ars, events.p.LogicItemChanged)

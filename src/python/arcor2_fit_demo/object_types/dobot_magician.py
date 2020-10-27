@@ -42,20 +42,21 @@ class DobotMagician(AbstractDobot):
                 Joint(Joints.J5, -0.568),
             ]
 
-    def get_end_effector_pose(self, end_effector_id: str) -> Pose:
+    def _handle_pose_in(self, pose: Pose) -> None:
 
-        pose = super(DobotMagician, self).get_end_effector_pose(end_effector_id)
+        base_joint = self.robot_joints()[0].value
 
-        if self.settings.simulator:
-            return pose
+        pose.position.x -= self.link_4_length * math.cos(base_joint)
+        pose.position.y -= self.link_4_length * math.sin(base_joint)
+        pose.position.z += self.end_effector_length
+
+    def _handle_pose_out(self, pose: Pose) -> None:
 
         base_joint = self.robot_joints()[0].value
 
         pose.position.x += self.link_4_length * math.cos(base_joint)
         pose.position.y += self.link_4_length * math.sin(base_joint)
         pose.position.z -= self.end_effector_length
-
-        return pose
 
     # TODO joint4/5
     valid_ranges: Dict[Joints, Tuple[float, float]] = {

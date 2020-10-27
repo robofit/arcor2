@@ -15,14 +15,15 @@ from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
 from arcor2.object_types.abstract import Robot
-from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import ParameterPluginException
+from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.helpers import unique_name
+from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.project import (
     check_action_params,
     check_flows,
@@ -148,15 +149,11 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
             import json
 
             params[param.name] = json.loads(const.value)
-        elif param.value:
+        else:
 
             try:
-                params[param.name] = PARAM_PLUGINS[param.type].execution_value(
-                    {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
-                    glob.SCENE,
-                    glob.PROJECT,
-                    action.id,
-                    param.name,
+                params[param.name] = plugin_from_type_name(param.type).parameter_execution_value(
+                    get_types_dict(), glob.SCENE, glob.PROJECT, action.id, param.name
                 )
             except ParameterPluginException as e:
                 glob.logger.error(e)
@@ -328,7 +325,9 @@ async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Requ
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
-            if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.name, req.args.joints_id):
+            if plugin_from_type_name(param.type).uses_robot_joints(
+                glob.PROJECT, act.id, param.name, req.args.joints_id
+            ):
                 raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.name}).")
 
     joints_to_be_removed = glob.PROJECT.remove_joints(req.args.joints_id)
@@ -638,7 +637,9 @@ async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrient
 
     for act in glob.PROJECT.actions:
         for param in act.parameters:
-            if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.name, req.args.orientation_id):
+            if plugin_from_type_name(param.type).uses_orientation(
+                glob.PROJECT, act.id, param.name, req.args.orientation_id
+            ):
                 raise Arcor2Exception(f"Orientation used in action {act.name} (parameter {param.name}).")
 
     if req.dry_run:
@@ -816,11 +817,11 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
                 continue
 
             for joints in glob.PROJECT.ap_joints(ap.id):
-                if PARAM_PLUGINS[param.type].uses_robot_joints(glob.PROJECT, act.id, param.name, joints.id):
+                if plugin_from_type_name(param.type).uses_robot_joints(glob.PROJECT, act.id, param.name, joints.id):
                     raise Arcor2Exception(f"Joints {joints.name} used in action {act.name} (parameter {param.name}).")
 
             for ori in glob.PROJECT.ap_orientations(ap.id):
-                if PARAM_PLUGINS[param.type].uses_orientation(glob.PROJECT, act.id, param.name, ori.id):
+                if plugin_from_type_name(param.type).uses_orientation(glob.PROJECT, act.id, param.name, ori.id):
                     raise Arcor2Exception(f"Orientation {ori.name} used in action {act.name} (parameter {param.name}).")
 
             # TODO some hypothetical parameter type could use just bare ActionPoint (its position)
@@ -987,15 +988,37 @@ def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> No
             raise Arcor2Exception("Logic item has unknown end.")
 
     if logic_item.condition is not None:
-        # what = logic_item.condition.parse_what()
-        # action = parent.action(what.action_id)
-        # flow = action.flow(what.flow_name)
-        # obj_act = find_object_action(glob.SCENE, action)
 
-        # TODO check if flow is valid
-        # TODO check condition value / type
+        what = logic_item.condition.parse_what()
+        action = parent.action(what.action_id)  # action that produced the result which we depend on here
+        flow = action.flow(what.flow_name)
+        try:
+            flow.outputs[what.output_index]
+        except IndexError:
+            raise Arcor2Exception(f"Flow {flow.type} does not have output with index {what.output_index}.")
 
-        pass
+        action_meta = find_object_action(glob.SCENE, action)
+
+        try:
+            return_type = action_meta.returns[what.output_index]
+        except IndexError:
+            raise Arcor2Exception(f"Invalid output index {what.output_index} for action {action_meta.name}.")
+
+        return_type_plugin = plugin_from_type_name(return_type)
+
+        if not return_type_plugin.COUNTABLE:
+            raise Arcor2Exception(f"Output of type {return_type} can't be branched.")
+
+        # TODO for now there is only support for bool
+        if return_type_plugin.type() != bool:
+            raise Arcor2Exception("Unsupported condition type.")
+
+        # check that condition value is ok, actual value is not interesting
+        # TODO perform this check using plugin
+        import json
+
+        if not isinstance(json.loads(logic_item.condition.value), bool):
+            raise Arcor2Exception("Invalid condition value.")
 
     for existing_item in parent.logic:
 
@@ -1010,6 +1033,7 @@ def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> No
             if None in (logic_item.condition, existing_item.condition):
                 raise Arcor2Exception("Two junctions has the same start action without condition.")
 
+            # when there are more logical connections from A to B, their condition values must be different
             if logic_item.condition == existing_item.condition:
                 raise Arcor2Exception("Two junctions with the same start should have different conditions.")
 

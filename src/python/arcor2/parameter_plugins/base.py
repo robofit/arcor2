@@ -1,26 +1,30 @@
 import abc
 import json
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable
 
 import humps  # type: ignore
 from typed_ast import ast3 as ast
 
-from arcor2.cached import CachedProject, CachedScene
-from arcor2.data.common import ActionParameter
+from arcor2.cached import CachedProject as CProject
+from arcor2.cached import CachedScene as CScene
 from arcor2.data.object_type import ParameterMeta
-from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic
-
-TypesDict = Dict[str, Type[Generic]]
-
-
-class ParameterPluginException(Arcor2Exception):
-    pass
+from arcor2.parameter_plugins import ParameterPluginException, TypesDict
 
 
 class ParameterPlugin(metaclass=abc.ABCMeta):
 
     EXACT_TYPE = True
+    COUNTABLE = False
+
+    @classmethod
+    def _id_from_value(cls, value: str) -> str:
+
+        arbitrary_id = cls._value_from_json(value)
+
+        if not isinstance(arbitrary_id, str):
+            raise ParameterPluginException("String expected.")
+
+        return arbitrary_id
 
     @classmethod
     @abc.abstractmethod
@@ -40,50 +44,44 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         assert param_meta.name
 
     @classmethod
-    def param_value(cls, param: ActionParameter) -> str:
-
-        # TODO support for link, constant (will need access to project)
-        assert param.value is not None
-
-        try:
-            ret = json.loads(param.value)
-        except ValueError:
-            raise ParameterPluginException(f"Parameter: {param.name} has invalid value: {param.value}.")
-
-        if not isinstance(ret, str):
-            raise ParameterPluginException(
-                f"Parameter: {param.name} has invalid value (string expected): {param.value}."
-            )
-
-        return ret
-
-    @classmethod
     @abc.abstractmethod
-    def value(
-        cls, type_defs: TypesDict, scene: CachedScene, project: CachedProject, action_id: str, parameter_id: str
+    def parameter_value(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
 
-        param = project.action(action_id).parameter(parameter_id)
+        action = project.action(action_id)
+        param_value = action.parameter(parameter_id).value
+
         try:
-            return json.loads(param.value)
-        except json.decoder.JSONDecodeError as e:
-            raise ParameterPluginException(f"Value of {action_id}/{parameter_id} is not a valid JSON.", e)
+            return cls._value_from_json(param_value)
+        except ParameterPluginException as e:
+            raise ParameterPluginException(
+                f"Parameter {action.name}/{parameter_id} has invalid value: '{param_value}'."
+            ) from e
 
     @classmethod
-    def execution_value(
-        cls, type_defs: TypesDict, scene: CachedScene, project: CachedProject, action_id: str, parameter_id: str
+    def _value_from_json(cls, value: str) -> Any:
+
+        try:
+            return json.loads(value)
+        except ValueError as e:
+            raise ParameterPluginException(f"Invalid value '{value}'.") from e
+
+    @classmethod
+    def parameter_execution_value(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
 
-        return cls.value(type_defs, scene, project, action_id, parameter_id)
+        return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
 
     @classmethod
     def value_to_json(cls, value: Any) -> str:
         return json.dumps(value)
 
     @classmethod
-    def uses_orientation(cls, project: CachedProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
+    def uses_orientation(cls, project: CProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
         return False
 
     @classmethod
-    def uses_robot_joints(cls, project: CachedProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
+    def uses_robot_joints(cls, project: CProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
         return False

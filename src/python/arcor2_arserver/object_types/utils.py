@@ -14,8 +14,8 @@ from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.utils import built_in_types, get_settings_def, iterate_over_actions
-from arcor2.parameter_plugins import TYPE_TO_PLUGIN
-from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
+from arcor2.parameter_plugins import ParameterPluginException
+from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import SourceException, find_function, parse_def
 from arcor2_arserver import globals as glob
 from arcor2_arserver import settings
@@ -74,7 +74,7 @@ def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]
             pm = ParameterMeta(name=name, type="dataclass")  # TODO come-up with plugin for this?
             pm.children = get_dataclass_params(ttype)
         else:
-            param_type = _resolve_param(name, ttype)
+            param_type = plugin_from_type(ttype)
             assert param_type is not None
             pm = ParameterMeta(name=name, type=param_type.type_name())
 
@@ -134,19 +134,6 @@ class IgnoreActionException(Arcor2Exception):
     pass
 
 
-def _resolve_param(name: str, ttype) -> Type[ParameterPlugin]:
-
-    try:
-        return TYPE_TO_PLUGIN[ttype]
-    except KeyError:
-        for k, v in TYPE_TO_PLUGIN.items():
-            if not v.EXACT_TYPE and inspect.isclass(ttype) and issubclass(ttype, k):
-                return v
-
-    # ignore action with unknown parameter type
-    raise IgnoreActionException(f"Parameter {name} has unknown type {ttype}.")
-
-
 def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction]:
 
     ret: Dict[str, ObjectAction] = {}
@@ -189,17 +176,17 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
                     if typing_inspect.is_tuple_type(ttype):
                         for arg in typing_inspect.get_args(ttype):
-                            resolved_param = _resolve_param(name, arg)
+                            resolved_param = plugin_from_type(arg)
                             if resolved_param is None:
                                 raise IgnoreActionException("None in return tuple is not supported.")
                             data.returns.append(resolved_param.type_name())
                     else:
                         # TODO resolving needed for e.g. enums - add possible values to action metadata somewhere?
-                        data.returns = [_resolve_param(name, ttype).type_name()]
+                        data.returns = [plugin_from_type(ttype).type_name()]
 
                     continue
 
-                param_type = _resolve_param(name, ttype)
+                param_type = plugin_from_type(ttype)
 
                 assert param_type is not None
 

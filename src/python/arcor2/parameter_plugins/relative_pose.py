@@ -8,7 +8,7 @@ from arcor2.data.common import Pose
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
 
 
-class RelativePose(Pose):
+class RelativePose(Pose):  # TODO why it is defined here and not in arcor2.data.common?
     pass
 
 
@@ -18,14 +18,12 @@ class RelativePosePlugin(ParameterPlugin):
         return RelativePose
 
     @classmethod
-    def value(
+    def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> RelativePose:
 
-        param = project.action(action_id).parameter(parameter_id)
-
         try:
-            return RelativePose.from_json(param.value)
+            return RelativePose.from_json(project.action(action_id).parameter(parameter_id).value)
         except ValidationError as e:
             raise ParameterPluginException(e)
 

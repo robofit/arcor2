@@ -24,6 +24,7 @@ class IntegerEnumExtra(JsonSchemaMixin):
 class IntegerEnumPlugin(ParameterPlugin):
 
     EXACT_TYPE = False
+    COUNTABLE = True
 
     @classmethod
     def type(cls) -> Any:
@@ -44,7 +45,9 @@ class IntegerEnumPlugin(ParameterPlugin):
         param_meta.extra = IntegerEnumExtra(ttype.set()).to_json()
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) -> Enum:
+    def parameter_value(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Enum:
 
         action = project.action(action_id)
         param = action.parameter(parameter_id)

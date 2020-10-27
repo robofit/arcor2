@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 import time
 import uuid
@@ -131,8 +129,8 @@ class ARServer:
     def close(self) -> None:
         self._ws.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "ARServer":
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         self.close()

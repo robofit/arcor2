@@ -8,6 +8,7 @@ import typed_astunparse
 from typed_ast.ast3 import (
     AST,
     Assert,
+    Assign,
     Attribute,
     Call,
     ClassDef,
@@ -21,6 +22,7 @@ from typed_ast.ast3 import (
     NodeVisitor,
     Raise,
     Store,
+    Tuple,
     alias,
     fix_missing_locations,
 )
@@ -152,8 +154,38 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
         node.body.insert(0, ImportFrom(module=module, names=[alias(name=cls, asname=None)], level=0))
 
 
-def append_method_call(body: List, instance: str, method: str, args: List, kwargs: List) -> None:
-    body.append(Expr(value=Call(func=get_name_attr(instance, method), args=args, keywords=kwargs)))
+def add_method_call(
+    body: List, instance: str, method: str, args: List, kwargs: List, returns: List[str], index: Optional[int] = None
+) -> None:
+    """Adds method call to be body of a container. By default, it appends. When
+    index is specified, it inserts.
+
+    :param body:
+    :param instance:
+    :param method:
+    :param args:
+    :param kwargs:
+    :param index:
+    :param returns:
+    :return:
+    """
+
+    call = Call(func=get_name_attr(instance, method), args=args, keywords=kwargs)
+
+    cont: Union[Expr, Assign, None] = None
+
+    if not returns:
+        cont = Expr(value=call)
+    elif len(returns) == 1:
+        # TODO AnnAssign??
+        cont = Assign(targets=[Name(id=returns[0], ctx=Store())], value=call)
+    else:
+        cont = Assign(targets=[Tuple(elts=[Name(id=ret, ctx=Store()) for ret in returns], ctx=Store())], value=call)
+
+    if index is None:
+        body.append(cont)
+    else:
+        body.insert(index, cont)
 
 
 def get_name(name: str) -> Name:

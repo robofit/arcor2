@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 
 import argparse
@@ -27,7 +26,7 @@ from arcor2 import action as action_mod
 from arcor2 import ws_server
 from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.exceptions import Arcor2Exception
-from arcor2.parameter_plugins import PARAM_PLUGINS
+from arcor2.parameter_plugins.utils import known_parameter_types
 from arcor2_arserver import events as server_events
 from arcor2_arserver import execution as exe
 from arcor2_arserver import globals as glob
@@ -209,7 +208,7 @@ async def system_info_cb(req: srpc.c.SystemInfo.Request, ui: WsClient) -> srpc.c
     resp.data = resp.Data(
         arcor2_arserver.version(),
         arcor2_arserver_data.version(),
-        set(PARAM_PLUGINS.keys()),
+        known_parameter_types(),
         {key for key in RPC_DICT.keys()},
     )
     return resp
