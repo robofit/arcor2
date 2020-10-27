@@ -2,14 +2,16 @@ import asyncio
 from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
 
 from arcor2 import helpers as hlp
+from arcor2.action import results_to_json
 from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
-from arcor2.parameter_plugins import PARAM_PLUGINS, TYPE_TO_PLUGIN
-from arcor2.parameter_plugins.base import ParameterPluginException
+from arcor2.parameter_plugins import ParameterPluginException
+from arcor2.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.scene import open_scene
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
 from arcor2_arserver_data.events.common import ShowMainScreen
@@ -59,16 +61,16 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
         action_result = await hlp.run_in_executor(action_method, *params.values())
     except (Arcor2Exception, AttributeError, TypeError) as e:
         glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
-        glob.logger.debug(exc_info=True)
+        glob.logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
     else:
         if action_result is not None:
             PREV_RESULTS[glob.RUNNING_ACTION] = action_result
-            try:
-                evt.data.result = TYPE_TO_PLUGIN[type(action_result)].value_to_json(action_result)
-            except KeyError:
-                # TODO temporal workaround for unsupported types
-                evt.data.result = str(action_result)
+
+        try:
+            evt.data.results = results_to_json(action_result)
+        except Arcor2Exception:
+            glob.logger.error(f"Method {action_method.__name__} returned unsupported type of result: {action_result}.")
 
     if glob.RUNNING_ACTION is None:
         # action was cancelled, do not send any event
@@ -104,10 +106,8 @@ def check_action_params(
 
         elif param.type == common.ActionParameter.TypeEnum.LINK:
 
-            assert param.type is None
-
             parsed_link = param.parse_link()
-            outputs = project.action(parsed_link.action_id).flow(parsed_link.flow_name)
+            outputs = project.action(parsed_link.action_id).flow(parsed_link.flow_name).outputs
 
             assert len(outputs) == len(object_action.returns)
 
@@ -117,16 +117,12 @@ def check_action_params(
 
         else:
 
-            if param.type not in PARAM_PLUGINS:
+            if param.type not in known_parameter_types():
                 raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has unknown type: {param.type}.")
 
             try:
-                PARAM_PLUGINS[param.type].value(
-                    {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None},
-                    scene,
-                    project,
-                    action.id,
-                    param.name,
+                plugin_from_type_name(param.type).parameter_value(
+                    get_types_dict(), scene, project, action.id, param.name
                 )
             except ParameterPluginException as e:
                 raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has invalid value. {str(e)}")
@@ -145,6 +141,12 @@ def check_flows(
 
     flow = action.flow()  # searches default flow (just this flow is supported so far)
 
+    # it is ok to not specify any output (if the values are not going to be used anywhere)
+    # return value(s) won't be stored in variable(s)
+    if not flow.outputs:
+        return
+
+    # otherwise, all return values have to be stored in variables
     if len(flow.outputs) != len(action_meta.returns):
         raise Arcor2Exception("Number of the flow outputs does not match the number of action outputs.")
 

@@ -6,6 +6,9 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, ValuesView
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
 
+if __debug__:
+    import random
+
 # TODO cached ProjectFunction (actions from functions are totally ignored at the moment)
 
 
@@ -207,6 +210,10 @@ class CachedProject:
         return self._logic_items.values()
 
     @property
+    def valid_logic_endpoints(self) -> Set[str]:
+        return {cmn.LogicItem.START, cmn.LogicItem.END} | self._logic_items.keys()
+
+    @property
     def constants(self) -> ValuesView[cmn.ProjectConstant]:
         return self._constants.values()
 
@@ -328,6 +335,45 @@ class CachedProject:
             return self._actions.data[action_id]
         except KeyError:
             raise CachedProjectException("Action not found")
+
+    def action_io(self, action_id: str) -> Tuple[List[cmn.LogicItem], List[cmn.LogicItem]]:
+        """Returns list of logical connection ending in the action (its inputs)
+        and starting from the action (its outputs)
+
+        :param action_id:
+        :return:
+        """
+
+        inputs: List[cmn.LogicItem] = []
+        outputs: List[cmn.LogicItem] = []
+
+        for item in self._logic_items.values():
+            parsed_start = item.parse_start()
+            if parsed_start.start_action_id == action_id:
+                outputs.append(item)
+            if item.end == action_id:
+                inputs.append(item)
+
+        if __debug__:  # make it a bit harder for tests to succeed
+            random.shuffle(inputs)
+            random.shuffle(outputs)
+
+        return inputs, outputs
+
+    def first_action_id(self) -> str:
+
+        first_action: Optional[str] = None
+
+        for item in self._logic_items.values():
+            if item.start == item.START:
+                if first_action:
+                    raise CachedProjectException("Duplicate start.")
+                first_action = self.action(item.end).id
+
+        if first_action is None:
+            raise CachedProjectException("Start action not found.")
+
+        return first_action
 
     def action_point_and_action(self, action_id: str) -> Tuple[cmn.BareActionPoint, cmn.Action]:
 
@@ -506,6 +552,7 @@ class UpdateableCachedProject(CachedProject):
         return ap
 
     def upsert_logic_item(self, logic_item: cmn.LogicItem) -> None:
+
         self._logic_items[logic_item.id] = logic_item
         self.update_modified()
 

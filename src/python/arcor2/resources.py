@@ -19,8 +19,8 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.runtime import print_exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
-from arcor2.parameter_plugins import PARAM_PLUGINS
 from arcor2.parameter_plugins.base import TypesDict
+from arcor2.parameter_plugins.utils import plugin_from_type_name
 
 
 class ResourcesException(Arcor2Exception):
@@ -148,7 +148,7 @@ class IntResources:
         ret: Dict[str, Any] = {}
 
         for param in act.parameters:
-            ret[param.name] = PARAM_PLUGINS[param.type].execution_value(
+            ret[param.name] = plugin_from_type_name(param.type).parameter_execution_value(
                 self.type_defs, self.scene, self.project, action_id, param.name
             )
 

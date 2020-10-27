@@ -110,11 +110,13 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert act_state_before
     assert act_state_before.method == TimeActions.sleep.__name__
     assert act_state_before.where == act_state_before.where.BEFORE
+    assert act_state_before.results is None
 
     act_state_after = event(ars, arcor2_events.ActionState).data
     assert act_state_after
     assert act_state_after.method == TimeActions.sleep.__name__
     assert act_state_after.where == act_state_after.where.AFTER
+    assert act_state_after.results is None
 
     # TODO pause, resume
 

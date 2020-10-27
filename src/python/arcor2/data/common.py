@@ -43,9 +43,8 @@ class LinkToActionOutput(NamedTuple):
 
 def parse_link(val: str) -> LinkToActionOutput:
 
-    action_id, flow_name, output_idx_str = val.split("/")
-
     try:
+        action_id, flow_name, output_idx_str = val.split("/")
         return LinkToActionOutput(action_id, FlowTypes(flow_name), int(output_idx_str))
     except ValueError as e:
         raise Arcor2Exception("Invalid link value.") from e

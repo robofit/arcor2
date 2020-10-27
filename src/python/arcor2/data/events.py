@@ -117,6 +117,7 @@ class PackageInfo(Event):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+# TODO divide into ActionStateBefore (containing action parameters) and ActionStateAfter (containing results)
 @dataclass
 class ActionState(Event):
     @dataclass
@@ -128,5 +129,6 @@ class ActionState(Event):
         object_id: str
         method: str
         where: StateEnum = StateEnum.BEFORE
+        results: Optional[List[str]] = None
 
     data: Data

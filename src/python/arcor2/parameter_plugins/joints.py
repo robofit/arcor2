@@ -16,13 +16,13 @@ class JointsPlugin(ParameterPlugin):
         return "joints"
 
     @classmethod
-    def value(
+    def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> ProjectRobotJoints:
 
         ap, action = project.action_point_and_action(action_id)
         param = action.parameter(parameter_id)
-        joints_id = cls.param_value(param)
+        joints_id = cls._id_from_value(param.value)
 
         robot_id, action_method_name = action.parse_type()
 
@@ -40,7 +40,6 @@ class JointsPlugin(ParameterPlugin):
     @classmethod
     def uses_robot_joints(cls, project: CProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
 
-        param = project.action(action_id).parameter(parameter_id)
-        value_id = cls.param_value(param)
+        value_id = cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
 
         return value_id == robot_joints_id

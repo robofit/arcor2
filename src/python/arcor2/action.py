@@ -1,11 +1,12 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, Type, TypeVar, Union, cast
+from typing import Any, Callable, List, Optional, Type, TypeVar, Union, cast
 
 from arcor2.data.events import ActionState, Event, PackageState
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import iterate_over_actions
+from arcor2.parameter_plugins.utils import plugin_from_instance
 
 HANDLE_ACTIONS = True
 
@@ -53,9 +54,7 @@ except ImportError:
         return None
 
 
-def handle_action(inst: Generic, f: Callable[..., Any], where: ActionState.Data.StateEnum) -> None:
-
-    print_event(ActionState(ActionState.Data(inst.id, f.__name__, where)))
+def handle_action() -> None:
 
     ctrl_cmd = read_stdin()
 
@@ -78,6 +77,23 @@ def print_event(event: Event) -> None:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
+def results_to_json(res: Any) -> Optional[List[str]]:
+    """Prepares action results into list of JSONs. Return value could be tuple
+    or single value.
+
+    :param res:
+    :return:
+    """
+
+    if res is None:
+        return None
+
+    if isinstance(res, tuple):
+        return [plugin_from_instance(r).value_to_json(r) for r in res]
+    else:
+        return [plugin_from_instance(res).value_to_json(res)]
+
+
 def action(f: F) -> F:
     @wraps(f)
     def wrapper(*args: Union[Generic, Any], **kwargs: Any) -> Any:
@@ -87,8 +103,10 @@ def action(f: F) -> F:
             kwargs = args[1]
             args = (args[0],)
 
+        inst = args[0]
+
         if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
-            handle_action(args[0], f, ActionState.Data.StateEnum.BEFORE)
+            print_event(ActionState(ActionState.Data(inst.id, f.__name__, ActionState.Data.StateEnum.BEFORE)))
 
         if wrapper.__action__.composite:  # type: ignore # TODO and not step_into
             action.inside_composite = f  # type: ignore
@@ -99,7 +117,11 @@ def action(f: F) -> F:
             action.inside_composite = None  # type: ignore
 
         if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
-            handle_action(args[0], f, ActionState.Data.StateEnum.AFTER)
+            print_event(
+                ActionState(
+                    ActionState.Data(inst.id, f.__name__, ActionState.Data.StateEnum.AFTER, results_to_json(res))
+                )
+            )
 
         return res
 

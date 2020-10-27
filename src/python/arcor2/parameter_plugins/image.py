@@ -21,9 +21,16 @@ class ImagePlugin(ParameterPlugin):
         return "image"
 
     @classmethod
-    def value(cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str) -> Image:
-        json_str = super(ImagePlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
-        b64_bytes = json_str.encode()
+    def parameter_value(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Image:
+        json_str = super(ImagePlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
+        return cls._value_from_json(json_str)
+
+    @classmethod
+    def _value_from_json(cls, value: str) -> Image:
+
+        b64_bytes = value.encode()
         image_data = base64.b64decode(b64_bytes)
         return PIL.Image.open(io.BytesIO(image_data))
 

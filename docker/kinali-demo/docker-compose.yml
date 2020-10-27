@@ -11,6 +11,7 @@ services:
       - testitoff-scene-webapi
     ports:
       - "6789:6789"
+      - "6780:8888"
     networks:
       - testitoff-execution-network
       - testitoff-scene-network

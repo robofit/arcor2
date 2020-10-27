@@ -11,6 +11,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
 from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources
+from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
@@ -30,6 +31,11 @@ from arcor2_arserver.object_types.utils import (
 from arcor2_arserver.robot import get_robot_meta
 from arcor2_arserver_data.events.objects import ChangedObjectTypes
 from arcor2_arserver_data.objects import ObjectTypeMeta
+
+
+def get_types_dict() -> TypesDict:
+
+    return {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None}
 
 
 def get_obj_type_name(object_id: str) -> str:

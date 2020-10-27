@@ -15,11 +15,11 @@ def get_type_name(base: Type[ParameterPlugin]) -> str:
 class ListParameterPlugin(ParameterPlugin):
     @classmethod
     @abc.abstractmethod
-    def value(
+    def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> List[Any]:
 
-        val = super(ListParameterPlugin, cls).value(type_defs, scene, project, action_id, parameter_id)
+        val = super(ListParameterPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
 
         if not isinstance(val, list):
             raise ParameterPluginException("Not a list!")
@@ -29,7 +29,7 @@ class ListParameterPlugin(ParameterPlugin):
         return val
 
     @classmethod
-    def param_value_list(cls, param: ActionParameter) -> List[str]:
+    def _param_value_list(cls, param: ActionParameter) -> List[str]:
 
         lst = json.loads(param.value)
 

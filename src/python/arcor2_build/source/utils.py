@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from typed_ast.ast3 import (
     Assign,
@@ -44,12 +44,12 @@ from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, get_name_attr, parse, tree_to_str
 
 
-def main_loop_body(tree: Module) -> List[Any]:
+def main_loop(tree: Module) -> While:
     main = find_function("main", tree)
 
     for node in main.body:
         if isinstance(node, While):  # TODO more specific condition (test for True argument)
-            return node.body
+            return node
 
     raise SourceException("Main loop not found.")
 
