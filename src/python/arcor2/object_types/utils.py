@@ -11,7 +11,7 @@ import arcor2
 from arcor2.data.common import ActionMetadata, Parameter
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, Settings
-from arcor2.source.utils import find_class_def, parse, parse_def
+from arcor2.source.utils import find_class_def, parse
 
 
 class ObjectTypeException(Arcor2Exception):
@@ -41,7 +41,8 @@ def check_object_type(type_def: Type[Generic]) -> None:
         raise ObjectTypeException("Not a subclass of Generic.")
 
     # it might happen that the code is ok, but can't be parsed e.g. due to unsupported placement of comment
-    parse_def(type_def)
+    # parse_def is not enough here - there might be something unparseable outside of the ObjectType class itself
+    parse(get_containing_module_sources(type_def))
 
     # TODO some more (simple) checks here?
 
