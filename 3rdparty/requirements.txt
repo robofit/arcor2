@@ -1,6 +1,6 @@
 dataclasses==0.6
 dataclasses-jsonschema-rereleased[fast-validation]==2.12.2
-horast-rereleased==0.4.1
+horast-rereleased==0.4.3
 typed-ast==1.4.1
 autopep8==1.5.4
 typed-astunparse==2.1.4
