@@ -32,16 +32,16 @@ class MoveTypeEnum(StrEnum):
 class MoveRelativeParameters(JsonSchemaMixin):
 
     pose: Pose
-    position: Position  # relative position
-    orientation: Orientation  # relative orientation
+    position: Position
+    orientation: Orientation
 
 
 @dataclass
 class MoveRelativeJointsParameters(JsonSchemaMixin):
 
     joints: List[Joint]
-    position: Position  # relative position
-    orientation: Orientation  # relative orientation
+    position: Position
+    orientation: Orientation
 
 
 class KinaliRobot(AbstractRobot):
