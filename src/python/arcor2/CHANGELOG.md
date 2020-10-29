@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.2] - WIP
+
+### Fixed
+- `parse` function now also catches `ValueError` exception.
+-  `check_object_type` now tries to parse whole module instead of just source of the class itself.
+
+### Changed
+- `Robot` base class now have methods for IK/FK.
+- It is possible to use `==` on `Position` instances.
+
 ## [0.9.1] - 2020-10-19
 
 ### Fixed

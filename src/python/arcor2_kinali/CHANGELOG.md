@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.2] - WIP
+
+### Changed
+- Call to `patch_object_actions` added to the example script.
+- Slight change of `inverse_kinematics` method signature (`start_joints` and `avoid_collisions` now have default values).
+
 ## [0.9.1] - 2020-10-19
 
 ### Changed
