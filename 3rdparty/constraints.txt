@@ -2,7 +2,7 @@ aiologger==0.6.0
 aiorun==2020.6.1
 apispec==3.3.2
 apispec-webframeworks==0.5.2
-asttokens==1.1.15
+asttokens==2.0.4
 astunparse==1.6.3
 attrs==20.2.0
 autopep8==1.5.4
@@ -18,7 +18,7 @@ flask_cors==3.0.8
 flask-swagger-ui==3.25.0
 gitdb==4.0.5
 GitPython==3.1.8
-horast-rereleased==0.4.1
+horast-rereleased==0.4.3
 idna==2.10
 iniconfig==1.0.1
 itsdangerous==1.1.0
