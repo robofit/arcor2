@@ -98,10 +98,10 @@ do
 	if [ "$var" = "devel" ]; then
     	build_devel_image
 	fi
-	if [ "$var" = "fit_demo" ]; then
+	if [ "$var" = "upload-fit-demo" ]; then
     	build_upload_fit_demo_image
 	fi
-	if [ "$var" = "kinali_demo" ]; then
+	if [ "$var" = "upload-kinali" ]; then
     	build_upload_kinali_image
 	fi
 done
