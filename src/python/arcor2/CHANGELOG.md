@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.9.2] - WIP
+## [0.9.2] - 2020-10-30
 
 ### Fixed
 - `parse` function now also catches `ValueError` exception.
