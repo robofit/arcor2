@@ -37,7 +37,7 @@ class DobotMagician(AbstractDobot):
             self._joint_values = [
                 Joint(Joints.J1, -0.038),
                 Joint(Joints.J2, 0.341),
-                Joint(Joints.J3, 1.934),
+                Joint(Joints.J3, 0.3632),
                 Joint(Joints.J4, -0.704),
                 Joint(Joints.J5, -0.568),
             ]
@@ -60,8 +60,8 @@ class DobotMagician(AbstractDobot):
     # TODO joint4/5
     valid_ranges: Dict[Joints, Tuple[float, float]] = {
         Joints.J1: (-2, 2),
-        Joints.J2: (0, 1.46),
-        Joints.J3: (0.69, 2.47),
+        Joints.J2: (-0.1, 1.46),
+        Joints.J3: (-0.95, 1.15),
     }
 
     def validate_joints(self, joints: List[Joint]) -> None:
@@ -121,14 +121,14 @@ class DobotMagician(AbstractDobot):
         # joint angles
         baseAngle = math.atan2(y, x)
         rearAngle = math.pi / 2 - beta - alpha
-        frontAngle = math.pi - gamma
+        frontAngle = math.pi / 2 - gamma
         j5 = quaternion.as_euler_angles(pose.orientation.as_quaternion())[2]
 
         joints = [
             Joint(Joints.J1, baseAngle),
             Joint(Joints.J2, rearAngle),
             Joint(Joints.J3, frontAngle),
-            Joint(Joints.J4, math.pi / 2 - rearAngle - frontAngle),
+            Joint(Joints.J4, -rearAngle - frontAngle),
             Joint(Joints.J5, j5),
         ]
         self.validate_joints(joints)
@@ -152,15 +152,17 @@ class DobotMagician(AbstractDobot):
         sj = j2 + j3
 
         radius = (
-            self.link_2_length * math.cos(j2 - math.pi / 2)
-            + self.link_3_length * math.cos(sj - math.pi / 2)
-            + self.link_4_length
+            self.link_2_length * math.cos(j2 - math.pi / 2) + self.link_3_length * math.cos(sj) + self.link_4_length
         )
 
         x = radius * math.cos(j1)
         y = radius * math.sin(j1)
 
-        z = self.link_2_length * math.cos(j2) + self.link_3_length * math.cos(sj) - self.end_effector_length
+        z = (
+            self.link_2_length * math.cos(j2)
+            + self.link_3_length * math.cos(sj + math.pi / 2)
+            - self.end_effector_length
+        )
 
         ori = Orientation()
         ori.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value))
@@ -175,7 +177,7 @@ class DobotMagician(AbstractDobot):
         return [
             Joint(Joints.J1, joints.j1),
             Joint(Joints.J2, joints.j2),
-            Joint(Joints.J3, joints.j3 - joints.j2 + math.pi / 2),
+            Joint(Joints.J3, joints.j3 - joints.j2),
             Joint(Joints.J4, -joints.j3),
             Joint(Joints.J5, joints.j4),
         ]
