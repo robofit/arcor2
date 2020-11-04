@@ -1,5 +1,6 @@
 from packaging.version import parse, LegacyVersion
 
+from pants.backend.python.target_types import PythonProvidesField
 from pants.backend.python.goals.setup_py import SetupKwargsRequest
 from pants.engine.target import Target
 from pants.engine.rules import collect_rules
@@ -7,17 +8,6 @@ from pants.engine.unions import UnionRule
 from pants.backend.python.goals.setup_py import SetupKwargs
 from pants.engine.rules import Get, rule
 from pants.engine.fs import DigestContents, GlobMatchErrorBehavior, PathGlobs
-
-
-URL_PATTERN = 'https://pypi.python.org/pypi/{package}/json'
-
-
-class VersionException(Exception):
-    pass
-
-
-def remove_suffix(v, s):
-    return v[:-len(s)] if v.endswith(s) else v
 
 
 class CustomSetupKwargsRequest(SetupKwargsRequest):
@@ -46,7 +36,7 @@ async def setup_kwargs_plugin(request: CustomSetupKwargsRequest) -> SetupKwargs:
     )
     version = version_digest_contents[0].content.decode().strip()
 
-    package_name = remove_suffix(request.target.address.target_name, "_dist")  # TODO this is hacky / fragile
+    package_name = request.target[PythonProvidesField].value.name
 
     local_version = parse(version)
     if isinstance(local_version, LegacyVersion):
