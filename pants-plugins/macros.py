@@ -31,3 +31,17 @@ def arcor2_python_distribution(**kwargs):
         kwargs["setup_py_commands"] = ["sdist", "bdist_wheel", "--python-tag", "py38"]
 
     return python_distribution(**kwargs)
+
+
+def arcor2_pex_binary(**kwargs):
+
+    if "entry_point" not in kwargs:
+        kwargs["entry_point"] = ":main"
+
+    if "zip_safe" not in kwargs:
+        kwargs["zip_safe"] = False
+
+    if "sources" not in kwargs:
+        kwargs["sources"] = [f"{kwargs['name']}.py"]
+
+    return pex_binary(**kwargs)

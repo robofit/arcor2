@@ -1,6 +1,3 @@
-pex_binary(
-    name = "calibration",
-    sources = ["calibration.py"],
-    entry_point = "arcor2_calibration.scripts.calibration:main",
-    zip_safe=False
+arcor2_pex_binary(
+    name = "calibration"
 )

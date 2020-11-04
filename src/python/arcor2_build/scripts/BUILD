@@ -1,7 +1,4 @@
-pex_binary(
+arcor2_pex_binary(
     name = "build",
-    sources = ["build.py"],
-    dependencies = ["3rdparty:PyYAML"],
-    entry_point = "arcor2_build.scripts.build:main",
-    zip_safe=False
+    dependencies = ["3rdparty:PyYAML"]
 )
