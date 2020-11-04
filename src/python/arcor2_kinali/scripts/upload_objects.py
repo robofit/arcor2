@@ -4,10 +4,11 @@ from arcor2.object_types.upload import upload_def
 from arcor2_kinali.object_types.abstract_robot import AbstractRobot
 from arcor2_kinali.object_types.abstract_simple import AbstractSimple
 from arcor2_kinali.object_types.abstract_with_pose import AbstractWithPose
+from arcor2_kinali.object_types.aubo import Aubo
 from arcor2_kinali.object_types.barcode import Barcode
 from arcor2_kinali.object_types.interaction import Interaction
-from arcor2_kinali.object_types.kinali_robot import KinaliRobot
 from arcor2_kinali.object_types.search import Search
+from arcor2_kinali.object_types.simatic import Simatic
 from arcor2_kinali.object_types.statistic import Statistic
 
 
@@ -21,7 +22,8 @@ def main() -> None:
     # concrete classes
     upload_def(Barcode)
     upload_def(Interaction)
-    upload_def(KinaliRobot)
+    upload_def(Aubo)
+    upload_def(Simatic)
     upload_def(Search)
     upload_def(Statistic)
 

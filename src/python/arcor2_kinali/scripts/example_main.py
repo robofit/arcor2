@@ -9,9 +9,9 @@ from arcor2.data.object_type import Box
 from arcor2_kinali.object_types.abstract_robot import Settings as RobotSettings
 from arcor2_kinali.object_types.abstract_simple import Settings as SimpleSettings
 from arcor2_kinali.object_types.abstract_with_pose import Settings
+from arcor2_kinali.object_types.aubo import Aubo, MoveTypeEnum
 from arcor2_kinali.object_types.barcode import Barcode
 from arcor2_kinali.object_types.interaction import Interaction, NotificationLevelEnum
-from arcor2_kinali.object_types.kinali_robot import KinaliRobot, MoveTypeEnum
 from arcor2_kinali.object_types.search import LogLevel, Search, SearchEngineParameters, SearchLogLevel
 from arcor2_kinali.object_types.statistic import Statistic
 
@@ -19,8 +19,8 @@ from arcor2_kinali.object_types.statistic import Statistic
 def main() -> None:
 
     # robots
-    aubo = KinaliRobot(uid(), "Whatever", Pose(), RobotSettings("http://127.0.0.1:13000", "aubo"))
-    simatic = KinaliRobot(uid(), "Whatever", Pose(), RobotSettings("http://127.0.0.1:13001", "simatic"))
+    aubo = Aubo(uid(), "Whatever", Pose(), RobotSettings("http://127.0.0.1:13000", "aubo"))
+    simatic = Aubo(uid(), "Whatever", Pose(), RobotSettings("http://127.0.0.1:13001", "simatic"))
 
     # objects with pose, with 'System' and 'Configurations' controllers
     barcode = Barcode(uid(), "Whatever", Pose(), settings=Settings("http://127.0.0.1:14000", "simulator"))
@@ -35,7 +35,7 @@ def main() -> None:
     # Certain functions of Execution unit (as e.g. pausing script execution) would not work without this step.
     # Note: in a generated script, this is done within the Resources context manager.
     # Side effect: a lot of JSON data will be printed out to the console when running the script manually.
-    patch_object_actions(KinaliRobot)
+    patch_object_actions(Aubo)
     patch_object_actions(Barcode)
     patch_object_actions(Search)
     patch_object_actions(Interaction)
