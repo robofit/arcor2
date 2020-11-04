@@ -16,6 +16,7 @@ services:
       - testitoff-scene-network
       - testitoff-project-network
       - testitoff-robot-network
+      - testitoff-robot2-network
       - testitoff-search-network
       - testitoff-barcode-network
       - testitoff-statistic-network 
@@ -45,6 +46,7 @@ services:
         - testitoff-execution-network
         - testitoff-scene-network
         - testitoff-robot-network
+        - testitoff-robot2-network
         - testitoff-search-network
         - testitoff-barcode-network
         - testitoff-statistic-network
@@ -78,7 +80,6 @@ services:
       expose:
           - "13000"
       environment:
-          - MONGODB_URL=testitoff-robot-mongodb:27017
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000
       ports:
         - "13000:13000"
@@ -86,21 +87,20 @@ services:
       networks:
         - testitoff-robot-network
         - testitoff-scene-network
-  testitoff-robot-mongodb:
-      image: mongo:4.2.0-bionic
-      container_name: "testitoff-robot-mongodb"
-      restart: always
-      environment:
-          - MONGO_DATA_DIR=/data/db
-          - MONGO_LOG_DIR=/dev/null
-      volumes:
-          - testitoff-robot-mongodb:/data/db
-      networks:
-          - testitoff-robot-network
-      expose:
-          - "27017"
-      ports:
-          - "13017:27017"  
+
+  testitoff-robot2-webapi:
+    image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.8.0
+    container_name: "testitoff-robot2-webapi"
+    expose:
+      - "13001"
+    environment:
+      - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000
+    ports:
+      - "13001:13000"
+    restart: always
+    networks:
+      - testitoff-robot2-network
+      - testitoff-scene-network
 
   testitoff-robotsystem-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.3.0
@@ -114,6 +114,7 @@ services:
       restart: always
       networks:
         - testitoff-robot-network
+        - testitoff-robot2-network
         - testitoff-scene-network
   testitoff-robotsystem-mongodb:
       image: mongo:4.2.0-bionic
@@ -126,13 +127,13 @@ services:
           - testitoff-robotsystem-mongodb:/data/db
       networks:
           - testitoff-robot-network
+          - testitoff-robot2-network
           - testitoff-scene-network
       expose:
           - "27017"
       ports:
           - "14017:27017"  
 
-  
   testitoff-search-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.5.0
       container_name: "testitoff-search-webapi"
@@ -178,29 +179,11 @@ services:
       container_name: "testitoff-statistic-webapi"
       privileged: true
       restart: always
-      environment:
-        - MONGODB_URL=testitoff-statistic-mongodb:27017
       ports:
         - "16000:16000"
       networks:
         - testitoff-statistic-network
         - testitoff-scene-network
-
-  testitoff-statistic-mongodb:
-      image: mongo:4.2.0-bionic
-      container_name: "testitoff-statistic-mongodb"
-      restart: always
-      environment:
-          - MONGO_DATA_DIR=/data/db
-          - MONGO_LOG_DIR=/dev/null
-      volumes:
-          - testitoff-statistic-mongodb:/data/db
-      networks:
-          - testitoff-statistic-network
-      expose:
-          - "27017"
-      ports:
-          - "16017:27017"
 
   project:
       image: registry.gitlab.com/kinalisoft/test-it-off/project:0.4.0
@@ -235,28 +218,10 @@ services:
       container_name: "testitoff-interaction-webapi"
       privileged: true
       restart: always
-      environment:
-        - MONGODB_URL=testitoff-interaction-mongodb:27017
       ports:
         - "17000:17000"
       networks:
         - testitoff-interaction-network
-
-  testitoff-interaction-mongodb:
-      image: mongo:4.2.0-bionic
-      container_name: "testitoff-interaction-mongodb"
-      restart: always
-      environment:
-          - MONGO_DATA_DIR=/data/db
-          - MONGO_LOG_DIR=/dev/null
-      volumes:
-          - testitoff-interaction-mongodb:/data/db
-      networks:
-          - testitoff-interaction-network
-      expose:
-          - "27017"
-      ports:
-          - "17017:27017"
 
   testitoff-barcode-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/barcode-simulator:0.3.0
@@ -288,12 +253,9 @@ services:
 
 
 volumes:
-  mongodb:   
-  testitoff-robot-mongodb:  
+  mongodb:
   testitoff-search-mongodb:
   testitoff-barcode-mongodb:
-  testitoff-statistic-mongodb:
-  testitoff-interaction-mongodb:
   testitoff-robotsystem-mongodb:
   execution-proxy:
   execution:
@@ -302,7 +264,8 @@ networks:
   testitoff-execution-network:
   testitoff-scene-network:
   testitoff-project-network:
-  testitoff-robot-network: 
+  testitoff-robot-network:
+  testitoff-robot2-network:
   testitoff-search-network:
   testitoff-barcode-network:
   testitoff-statistic-network:
