@@ -21,7 +21,7 @@ from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
-from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions
+from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
 from arcor2_arserver.project import scene_object_pose_updated
 from arcor2_arserver.robot import get_end_effector_pose
 from arcor2_arserver.scene import ensure_scene_started, scenes, set_object_pose
@@ -311,6 +311,7 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
             glob.logger.error(str(e))
 
     del glob.OBJECT_TYPES[req.args.id]
+    remove_object_type(req.args.id)
 
     evt = sevts.o.ChangedObjectTypes([obj_type.meta])
     evt.change_type = events.Event.Type.REMOVE

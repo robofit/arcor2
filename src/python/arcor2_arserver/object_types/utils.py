@@ -1,7 +1,9 @@
 import copy
 import inspect
+import os
 from typing import Dict, List, Type, get_type_hints
 
+import humps  # type: ignore
 import typing_inspect  # type: ignore
 from dataclasses_jsonschema import JsonSchemaMixin
 from typed_ast.ast3 import AST
@@ -16,12 +18,24 @@ from arcor2.parameter_plugins import TYPE_TO_PLUGIN
 from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException
 from arcor2.source.utils import SourceException, find_function, parse_def
 from arcor2_arserver import globals as glob
+from arcor2_arserver import settings
 from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeDict
 from arcor2_arserver_data.objects import ObjectAction, ObjectTypeMeta
 
 
 class ObjectTypeException(Arcor2Exception):
     pass
+
+
+def remove_object_type(obj_type_id: str) -> None:
+
+    path = os.path.join(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE, f"{humps.depascalize(obj_type_id)}.py")
+    glob.logger.debug(f"Deleting {path}.")
+
+    try:
+        os.remove(path)
+    except FileNotFoundError as e:
+        raise Arcor2Exception(f"File for {obj_type_id} was not found.") from e
 
 
 def obj_description_from_base(data: ObjectTypeDict, obj_type: ObjectTypeMeta) -> str:

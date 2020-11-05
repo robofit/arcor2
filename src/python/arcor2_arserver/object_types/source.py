@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import humps  # type: ignore
 from typed_ast.ast3 import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
@@ -11,11 +12,19 @@ from arcor2_arserver_data.objects import ObjectTypeMeta
 
 
 def prepare_object_types_dir(path: str, module: str) -> None:
+    """Creates a fresh directory, where ObjectTypes will be placed.
+
+    :param path:
+    :param module:
+    :return:
+    """
 
     full_path = os.path.join(path, module)
 
-    if not os.path.exists(full_path):
-        os.makedirs(full_path)
+    if os.path.exists(full_path):
+        shutil.rmtree(full_path)
+
+    os.makedirs(full_path)
 
     with open(os.path.join(full_path, "__init__.py"), "w"):
         pass

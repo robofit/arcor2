@@ -37,7 +37,6 @@ from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.object_types.source import prepare_object_types_dir
 from arcor2_arserver_data import events as evts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.rpc import objects as obj_rpc
@@ -311,8 +310,6 @@ def main() -> None:
     if os.path.exists(settings.URDF_PATH):
         shutil.rmtree(settings.URDF_PATH)
     os.makedirs(settings.URDF_PATH)
-
-    prepare_object_types_dir(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
 
     run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
