@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import asyncio
 import os
 from typing import Optional, Type
@@ -8,12 +5,15 @@ from typing import Optional, Type
 from arcor2 import helpers as hlp
 from arcor2.action import patch_object_actions
 from arcor2.clients import aio_persistent_storage as ps
+from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
+from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
+from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.object_types.source import prepare_object_types_dir
@@ -25,8 +25,10 @@ from arcor2_arserver.object_types.utils import (
     meta_from_def,
     obj_description_from_base,
     object_actions,
+    remove_object_type,
 )
 from arcor2_arserver.robot import get_robot_meta
+from arcor2_arserver_data.events.objects import ChangedObjectTypes
 from arcor2_arserver_data.objects import ObjectTypeMeta
 
 
@@ -64,14 +66,26 @@ async def handle_robot_urdf(robot: Type[Robot]) -> None:
 
 async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
+    glob.logger.debug(f"Processing {obj_id}.")
+
     if obj_id in object_types:
+        glob.logger.debug(f"{obj_id} already processed, skipping...")
         return
 
     obj = await storage.get_object_type(obj_id)
 
+    if obj_id in glob.OBJECT_TYPES and glob.OBJECT_TYPES[obj_id].type_def is not None:
+
+        stored_type_def = glob.OBJECT_TYPES[obj_id].type_def
+        assert stored_type_def
+        if hash(get_containing_module_sources(stored_type_def)) == hash(obj.source):
+            glob.logger.debug(f"No need to update {obj_id}.")
+            return
+
     try:
         base = otu.base_from_source(obj.source, obj_id)
-        if base and base not in object_types.keys():
+        if base and base not in object_types.keys() | built_in_types_names():
+            glob.logger.debug(f"Getting base class {base} for {obj_id}.")
             await get_object_data(object_types, base)
     except Arcor2Exception:
         object_types[obj_id] = ObjectTypeData(
@@ -113,32 +127,80 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
 
 async def get_object_types() -> None:
+    """Serves to initialize or update knowledge about awailable ObjectTypes.
 
-    await hlp.run_in_executor(prepare_object_types_dir, settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
+    :return:
+    """
 
-    object_types: ObjectTypeDict = built_in_types_data()
+    assert glob.SCENE is None
 
-    obj_ids = await storage.get_object_type_ids()
+    initialization = False
 
-    for id_desc in obj_ids.items:
-        await get_object_data(object_types, id_desc.id)
+    # initialize with built-in types, this has to be done just once
+    if not glob.OBJECT_TYPES:
+        glob.logger.debug("Initialization of object types.")
+        initialization = True
+        await hlp.run_in_executor(prepare_object_types_dir, settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
+        glob.OBJECT_TYPES.update(built_in_types_data())
 
-    for obj_type in object_types.values():
+    updated_object_types: ObjectTypeDict = {}
+
+    object_type_ids = {it.id for it in (await storage.get_object_type_ids()).items}
+
+    for obj_id in object_type_ids:
+        await get_object_data(updated_object_types, obj_id)
+
+    removed_object_ids = {
+        obj for obj in glob.OBJECT_TYPES.keys() if obj not in object_type_ids
+    } - built_in_types_names()
+    updated_object_ids = {k for k in updated_object_types.keys() if k in glob.OBJECT_TYPES}
+    new_object_ids = {k for k in updated_object_types.keys() if k not in glob.OBJECT_TYPES}
+
+    glob.logger.debug(f"Removed ids: {removed_object_ids}")
+    glob.logger.debug(f"Updated ids: {updated_object_ids}")
+    glob.logger.debug(f"New ids: {new_object_ids}")
+
+    if not initialization and removed_object_ids:
+
+        remove_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in removed_object_ids])
+        remove_evt.change_type = Event.Type.REMOVE
+        asyncio.ensure_future(notif.broadcast_event(remove_evt))
+
+        for removed in removed_object_ids:
+            assert removed not in built_in_types_names(), "Attempt to remove built-in type."
+            del glob.OBJECT_TYPES[removed]
+            await hlp.run_in_executor(remove_object_type, removed)
+
+    glob.OBJECT_TYPES.update(updated_object_types)
+
+    glob.logger.debug(f"All known ids: {glob.OBJECT_TYPES.keys()}")
+
+    for obj_type in updated_object_types.values():
 
         # if description is missing, try to get it from ancestor(s)
         if not obj_type.meta.description:
 
             try:
-                obj_type.meta.description = obj_description_from_base(object_types, obj_type.meta)
+                obj_type.meta.description = obj_description_from_base(glob.OBJECT_TYPES, obj_type.meta)
             except otu.DataError as e:
                 glob.logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
 
         if not obj_type.meta.disabled and not obj_type.meta.built_in:
-            add_ancestor_actions(obj_type.meta.type, object_types)
+            add_ancestor_actions(obj_type.meta.type, glob.OBJECT_TYPES)
 
-    glob.OBJECT_TYPES = object_types
+    if not initialization:
 
-    for obj_type in glob.OBJECT_TYPES.values():
+        if updated_object_ids:
+            update_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in updated_object_ids])
+            update_evt.change_type = Event.Type.UPDATE
+            asyncio.ensure_future(notif.broadcast_event(update_evt))
+
+        if new_object_ids:
+            add_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in new_object_ids])
+            add_evt.change_type = Event.Type.ADD
+            asyncio.ensure_future(notif.broadcast_event(add_evt))
+
+    for obj_type in updated_object_types.values():
 
         if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
             await get_robot_meta(obj_type)

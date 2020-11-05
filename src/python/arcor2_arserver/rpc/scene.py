@@ -19,6 +19,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.decorators import no_project, no_scene, scene_needed
 from arcor2_arserver.helpers import unique_name
+from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver.project import (
     associated_projects,
     projects_using_object,
@@ -92,6 +93,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
     if req.dry_run:
         return None
 
+    await get_object_types()  # TODO not ideal, may take quite long time
     glob.SCENE = UpdateableCachedScene(common.Scene(common.uid(), req.args.name, desc=req.args.desc))
     asyncio.ensure_future(notif.broadcast_event(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.SCENE.scene))))
     asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
