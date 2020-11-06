@@ -96,6 +96,12 @@ class DobotMagician(AbstractDobot):
 
         local_pose = tr.make_pose_rel(self.pose, pose)
 
+        roll, pitch, yaw = quaternion.as_euler_angles(local_pose.orientation.as_quaternion())
+
+        eps = 1.0e-6
+        if abs(roll) > eps or abs(pitch - math.pi) > eps:
+            raise DobotException("Impossible orientation.")
+
         x = local_pose.position.x
         y = local_pose.position.y
         z = local_pose.position.z + self.end_effector_length
@@ -122,14 +128,13 @@ class DobotMagician(AbstractDobot):
         baseAngle = math.atan2(y, x)
         rearAngle = math.pi / 2 - beta - alpha
         frontAngle = math.pi / 2 - gamma
-        j5 = quaternion.as_euler_angles(pose.orientation.as_quaternion())[2]
 
         joints = [
             Joint(Joints.J1, baseAngle),
             Joint(Joints.J2, rearAngle),
             Joint(Joints.J3, frontAngle),
             Joint(Joints.J4, -rearAngle - frontAngle),
-            Joint(Joints.J5, j5),
+            Joint(Joints.J5, yaw - baseAngle),
         ]
         self.validate_joints(joints)
         return joints
@@ -165,7 +170,7 @@ class DobotMagician(AbstractDobot):
         )
 
         ori = Orientation()
-        ori.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value))
+        ori.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value + j1))
         return tr.make_pose_abs(self.pose, Pose(Position(x, y, z), ori))
 
     def robot_joints(self) -> List[Joint]:

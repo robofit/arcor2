@@ -1,3 +1,5 @@
+import quaternion  # type: ignore
+
 from arcor2.data.common import Pose
 
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
@@ -14,6 +16,7 @@ def main():
     pose = dm.get_end_effector_pose("default")
     print(pose)
     print(joints)
+    print(quaternion.as_euler_angles(pose.orientation.as_quaternion()))
 
     print("--- Forward Kinematics -----------------------------")
 
@@ -28,6 +31,8 @@ def main():
     print("dx: {:+.06f}".format(dx))
     print("dy: {:+.06f}".format(dy))
     print("dz: {:+.06f}".format(dz))
+
+    print(fk_pose.orientation)
 
     print("--- Inverse Kinematics -----------------------------")
 
