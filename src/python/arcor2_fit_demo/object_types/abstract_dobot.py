@@ -103,7 +103,9 @@ class AbstractDobot(Robot):
         p.position.x = pos.position.x / 1000.0
         p.position.y = pos.position.y / 1000.0
         p.position.z = pos.position.z / 1000.0
-        p.orientation.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4)))
+        p.orientation.set_from_quaternion(
+            quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4 + pos.joints.j1))
+        )
 
         return tr.make_pose_abs(self.pose, p)
 
