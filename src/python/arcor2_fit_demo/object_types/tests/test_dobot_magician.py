@@ -4,3 +4,4 @@ from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 
 def test_dobot_magician() -> None:
     check_object_type(DobotMagician)
+    assert not DobotMagician.abstract()
