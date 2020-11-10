@@ -2,6 +2,8 @@
 
 """This is an example of the main script without usage of Resources class."""
 
+# within an execution package, imports of ObjectTypes should be relative, e.g.:
+# from object_types.aubo import Aubo
 from arcor2.action import patch_object_actions
 from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Pose, ProjectRobotJoints, uid
