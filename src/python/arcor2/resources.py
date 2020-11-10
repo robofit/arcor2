@@ -27,6 +27,9 @@ class ResourcesException(Arcor2Exception):
     pass
 
 
+R = TypeVar("R", bound="IntResources")
+
+
 class IntResources:
 
     CUSTOM_OBJECT_TYPES_MODULE = "object_types"
@@ -112,7 +115,7 @@ class IntResources:
             # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
             tr.make_relative_ap_global(self.scene, self.project, aps)
 
-    def __enter__(self) -> "IntResources":
+    def __enter__(self: R) -> R:
         return self
 
     def __exit__(self, ex_type, ex_value, traceback) -> bool:
