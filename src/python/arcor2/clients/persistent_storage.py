@@ -126,3 +126,10 @@ def save_mesh_file(mesh_id: str, path: str) -> None:
     """Saves mesh file to a given path."""
 
     rest.download(f"{URL}/models/{mesh_id}/mesh/file", path)
+
+
+@handle(ProjectServiceException, message="Failed to upload the mesh.")
+def upload_mesh_file(mesh_id: str, file_content: bytes) -> None:
+    """Upload a mesh file."""
+
+    rest.call(rest.Method.PUT, f"{URL}/models/{mesh_id}/mesh/file", files={"file": file_content})

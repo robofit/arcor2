@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+
+<root xmlns:xi="http://www.w3.org/2001/XInclude"
+	xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:property name="J_PI" value="3.1415926535897931" />
+
+    <xacro:macro name="dobot_armlink" params="link_name link_mesh base_origin_xyz base_origin_rpy">
+        <link name="${link_name}">
+            <visual>
+            	<origin xyz="${base_origin_xyz}" rpy="${base_origin_rpy}" />
+                <geometry>
+                    <mesh
+                        filename="package://dobot/model/meshes/dae/${link_mesh}.dae"/>
+                </geometry>
+                <material name="white">
+                    <color rgba="1 1 1 1" />
+                </material>
+            </visual>
+
+            <collision>
+               	<origin xyz="${base_origin_xyz}" rpy="${base_origin_rpy}" />
+                <geometry>
+                    <mesh
+                        filename="package://dobot/model/meshes/dae/${link_mesh}.dae"/>
+                </geometry>
+            </collision>
+      </link>			
+		  	
+    </xacro:macro>
+
+  <xacro:macro name="dobot_armjoint" params="joint_name type parent child joint_axis_xyz joint_origin_xyz joint_origin_rpy joint_lower_limit joint_upper_limit fixed:=false">
+    <joint name="${joint_name}" type="${type}">
+        <parent link="${parent}"/>
+        <child link="${child}"/>
+        <axis xyz="${joint_axis_xyz}"/>
+        <limit effort="2000" velocity="1" lower="${joint_lower_limit}" upper="${joint_upper_limit}"/>
+        <origin xyz="${joint_origin_xyz}" rpy="${joint_origin_rpy}"/>
+        <dynamics damping="0.0" friction="0.0"/>
+     </joint>
+   <xacro:unless value="${fixed}">
+     <transmission name="${joint_name}_trans">
+        <type>transmission_interface/SimpleTransmission</type>
+        <joint name="${joint_name}">
+          <hardwareInterface>EffortJointInterface</hardwareInterface>
+        </joint>
+        <actuator name="${joint_name}_actuator">
+          <hardwareInterface>EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>160</mechanicalReduction>
+        </actuator>
+     </transmission>
+     </xacro:unless>
+  </xacro:macro>
+
+
+    <xacro:macro name="dobot_virtual_link" params="link_name">
+        <link name="${link_name}">
+            <visual>
+                <geometry>
+                    <box size = "0 0 0"/>
+                </geometry>
+            </visual>
+            <collision>
+                <geometry>
+                    <box size = "0 0 0"/>
+                </geometry>
+            </collision>
+        </link>
+    </xacro:macro>
+
+    <xacro:macro name="dobot_virtual_joint" params="joint_name type parent child joint_axis_xyz joint_origin_xyz joint_origin_rpy joint_lower_limit joint_upper_limit">
+    <joint name="${joint_name}" type="${type}">
+        <parent link="${parent}"/>
+        <child link="${child}"/>
+        <axis xyz="${joint_axis_xyz}"/>
+        <limit effort="2000" velocity="1" lower="${joint_lower_limit}" upper="${joint_upper_limit}"/>
+        <origin xyz="${joint_origin_xyz}" rpy="${joint_origin_rpy}"/>
+     </joint>
+    </xacro:macro>
+   
+</root>
