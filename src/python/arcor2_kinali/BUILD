@@ -7,11 +7,7 @@ python_library(
 arcor2_python_distribution(
     name="arcor2_kinali_dist",
     dependencies=[
-        ":arcor2_kinali",
-        "src/python/arcor2_kinali/object_types",
-        "src/python/arcor2_kinali/scripts",
         ":py.typed",
-        "src/python/arcor2_kinali/scripts:upload_objects"  # TODO why is this necessary?
     ],
     provides=arcor2_setup_py(
         name="arcor2_kinali",

@@ -31,6 +31,7 @@ class Aubo(AbstractRobot):
     """REST interface to the robot service (0.7.0)."""
 
     _ABSTRACT = False
+    urdf_package_name = "aubo.zip"
 
     def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
         self.move(end_effector_id, target_pose, MoveTypeEnum.SIMPLE, speed, safe=True)

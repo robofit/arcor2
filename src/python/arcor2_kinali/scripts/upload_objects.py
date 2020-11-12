@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-from arcor2.object_types.upload import upload_def
+from arcor2.object_types.upload import Urdf, upload_def
+from arcor2_kinali import get_data
 from arcor2_kinali.object_types.abstract_robot import AbstractRobot
 from arcor2_kinali.object_types.abstract_simple import AbstractSimple
 from arcor2_kinali.object_types.abstract_with_pose import AbstractWithPose
@@ -22,7 +23,7 @@ def main() -> None:
     # concrete classes
     upload_def(Barcode)
     upload_def(Interaction)
-    upload_def(Aubo)
+    upload_def(Aubo, urdf=Urdf(get_data("aubo"), Aubo.urdf_package_name))
     upload_def(Simatic)
     upload_def(Search)
     upload_def(Statistic)

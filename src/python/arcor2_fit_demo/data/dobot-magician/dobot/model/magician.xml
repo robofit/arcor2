@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+
+<root xmlns:xi="http://www.w3.org/2001/XInclude"
+   xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find dobot)/model/dobot_common.xml" />
+
+    <xacro:property name="link_base_mesh" value="magicianBase" />
+    <xacro:property name="link_1_mesh" value="magicianLink1" />
+    <xacro:property name="link_2_mesh" value="magicianLink2" />
+    <xacro:property name="link_3_mesh" value="magicianLink3" />
+    <xacro:property name="link_4_mesh" value="magicianLink4" />
+    <xacro:property name="link_5_mesh" value="magicianSuctionCup" />
+ 
+    <xacro:property name="link_base_length" value="0.0" />   
+    <xacro:property name="link_2_length" value="0.135" />
+    <xacro:property name="link_3_length" value="0.147" />    
+    <xacro:property name="link_4_length" value="${0.041+0.019}" />
+    <xacro:property name="end_effector_length" value="0.06" />
+
+    <xacro:property name="joint_base" value="joint_base" />
+    <xacro:property name="joint_base_type" value="fixed" />
+    <xacro:property name="joint_base_axis_xyz" value="0 0 0" />
+    <xacro:property name="joint_base_origin_xyz" value="0 0 ${link_base_length}" />
+    <xacro:property name="joint_base_origin_rpy" value="0 0 0" />
+
+	<!-- 	yaw    -->        
+    <xacro:property name="joint_1" value="joint_1" />
+    <xacro:property name="joint_1_type" value="revolute" />
+    <xacro:property name="joint_1_axis_xyz" value="0 0 1" />
+    <xacro:property name="joint_1_origin_xyz" value="0 0 0.0" />
+    <xacro:property name="joint_1_origin_rpy" value="0 0 0" />
+    <xacro:property name="joint_1_lower_limit" value="${-90/180*J_PI}" />
+    <xacro:property name="joint_1_upper_limit" value="${ 90/180*J_PI}" />
+
+	<!-- 	pitch     -->    
+    <xacro:property name="joint_2" value="joint_2" />
+    <xacro:property name="joint_2_type" value="revolute" />
+    <xacro:property name="joint_2_offset" value="${20/180*J_PI}" />
+    <xacro:property name="joint_2_axis_xyz" value="0 1 0" />
+    <xacro:property name="joint_2_origin_xyz" value="0 0 0.0" />
+    <xacro:property name="joint_2_origin_rpy" value="0 ${0/180*J_PI} 0" />
+    <xacro:property name="joint_2_lower_limit" value="${0/180*J_PI}" />
+    <xacro:property name="joint_2_upper_limit" value="${85/180*J_PI}" />
+    <xacro:property name="joint_2_base_origin_xyz" value="0 0 0" />
+    <xacro:property name="joint_2_base_origin_rpy" value="0 ${-joint_2_offset} 0" />
+
+	<!-- 	pitch     -->    
+    <xacro:property name="joint_3" value="joint_3" />
+    <xacro:property name="joint_3_offset" value="${7/180*J_PI}" />
+    <xacro:property name="joint_3_type" value="revolute" />
+    <xacro:property name="joint_3_axis_xyz" value="0 1 0" />
+    <xacro:property name="joint_3_origin_xyz" value="0 0.0 ${link_2_length}" />
+    <xacro:property name="joint_3_origin_rpy" value="0 0 0" />
+    <xacro:property name="joint_3_lower_limit" value="${-10/180*J_PI}" />
+    <xacro:property name="joint_3_upper_limit" value="${90/180*J_PI}" />
+    <xacro:property name="joint_3_base_origin_xyz" value="${link_2_length*sin(joint_3_offset)} 0 ${-link_2_length+(link_2_length-link_2_length*cos(joint_3_offset))}" />
+    <xacro:property name="joint_3_base_origin_rpy" value="0 ${-joint_2_offset-joint_3_offset} 0" />
+
+	<!-- 	pitch     -->
+    <xacro:property name="joint_4" value="joint_4" />
+    <xacro:property name="joint_4_type" value="continuous" />
+    <xacro:property name="joint_4_axis_xyz" value="0 1 0" />
+    <xacro:property name="joint_4_origin_xyz" value="${link_3_length} 0 0" />
+    <xacro:property name="joint_4_origin_rpy" value="0 0 0" />
+    <xacro:property name="joint_4_lower_limit" value="${0*J_PI}" />
+    <xacro:property name="joint_4_upper_limit" value="${2*J_PI}" />
+    <xacro:property name="joint_4_base_origin_xyz" value="${-1*(link_2_length*sin(joint_2_offset)+link_3_length*cos(joint_2_offset+joint_3_offset))} 0 ${link_2_length-1*(link_2_length*cos(joint_2_offset)+link_3_length*sin(joint_2_offset+joint_3_offset))}" />
+    <xacro:property name="joint_4_base_origin_rpy" value="0 0 0" />
+
+	<!-- 	yaw     -->
+    <xacro:property name="joint_5" value="joint_5" />
+    <xacro:property name="joint_5_type" value="revolute" />
+    <xacro:property name="joint_5_axis_xyz" value="0 0 1" />
+    <xacro:property name="joint_5_origin_xyz" value="${link_4_length} 0 0" />
+    <xacro:property name="joint_5_origin_rpy" value="0 0 0" />
+    <xacro:property name="joint_5_lower_limit" value="${-2*J_PI}" />
+    <xacro:property name="joint_5_upper_limit" value="${2*J_PI}" />
+    <xacro:property name="joint_5_base_origin_xyz" value="${-1*(link_2_length*sin(joint_2_offset)+link_3_length*cos(joint_2_offset+joint_3_offset)+link_4_length)} 0 ${link_2_length-1*(link_2_length*cos(joint_2_offset)+link_3_length*sin(joint_2_offset+joint_3_offset))}" />
+    <xacro:property name="joint_5_base_origin_rpy" value="0 0 0" />
+    
+    <xacro:property name="joint_end_effector" value="end_effector_offset" />
+    <xacro:property name="joint_end_effector_type" value="fixed" />
+    <xacro:property name="joint_end_effector_axis_xyz" value="0 0 0" />
+    <xacro:property name="joint_end_effector_origin_xyz" value="0 0 ${-1*end_effector_length}" />
+    <xacro:property name="joint_end_effector_origin_rpy" value="0 0 0" />
+
+
+
+    <xacro:macro name="magician" params="base_parent prefix:=magician">
+    
+        <xacro:dobot_armlink link_name="${prefix}_link_base" link_mesh="${link_base_mesh}" base_origin_xyz="0 0 0" base_origin_rpy="0 0 0" />
+        <xacro:dobot_armjoint joint_name="${prefix}_joint_base" type="${joint_base_type}" parent="${base_parent}" child="${prefix}_link_base" joint_axis_xyz="${joint_base_axis_xyz}" joint_origin_xyz="${joint_base_origin_xyz}" joint_origin_rpy="${joint_base_origin_rpy}" joint_lower_limit="0" joint_upper_limit="0" fixed="true"/>
+
+        <xacro:dobot_armlink link_name="${prefix}_link_1" link_mesh="${link_1_mesh}" base_origin_xyz="0 0 0" base_origin_rpy="0 0 0" />
+        <xacro:dobot_armjoint joint_name="${prefix}_joint_1" type="${joint_1_type}" parent="${prefix}_link_base" child="${prefix}_link_1" joint_axis_xyz="${joint_1_axis_xyz}" joint_origin_xyz="${joint_1_origin_xyz}" joint_origin_rpy="${joint_1_origin_rpy}" joint_lower_limit="${joint_1_lower_limit}" joint_upper_limit="${joint_1_upper_limit}"/>
+
+        <xacro:dobot_armlink link_name="${prefix}_link_2" link_mesh="${link_2_mesh}" base_origin_xyz="${joint_2_base_origin_xyz}" base_origin_rpy="${joint_2_base_origin_rpy}" />
+        <xacro:dobot_armjoint joint_name="${prefix}_joint_2" type="${joint_2_type}" parent="${prefix}_link_1" child="${prefix}_link_2" joint_axis_xyz="${joint_2_axis_xyz}" joint_origin_xyz="${joint_2_origin_xyz}" joint_origin_rpy="${joint_2_origin_rpy}" joint_lower_limit="${joint_2_lower_limit}" joint_upper_limit="${joint_2_upper_limit}"/>
+
+        <xacro:dobot_armlink link_name="${prefix}_link_3" link_mesh="${link_3_mesh}" base_origin_xyz="${joint_3_base_origin_xyz}" base_origin_rpy="${joint_3_base_origin_rpy}" />
+        <xacro:dobot_armjoint joint_name="${prefix}_joint_3" type="${joint_3_type}" parent="${prefix}_link_2" child="${prefix}_link_3" joint_axis_xyz="${joint_3_axis_xyz}" joint_origin_xyz="${joint_3_origin_xyz}" joint_origin_rpy="${joint_3_origin_rpy}" joint_lower_limit="${joint_3_lower_limit}" joint_upper_limit="${joint_3_upper_limit}"/>
+
+        <xacro:dobot_armlink link_name="${prefix}_link_4" link_mesh="${link_4_mesh}" base_origin_xyz="${joint_4_base_origin_xyz}" base_origin_rpy="${joint_4_base_origin_rpy}" />
+        <xacro:dobot_armjoint joint_name="${prefix}_joint_4" type="${joint_4_type}" parent="${prefix}_link_3" child="${prefix}_link_4" joint_axis_xyz="${joint_4_axis_xyz}" joint_origin_xyz="${joint_4_origin_xyz}" joint_origin_rpy="${joint_4_origin_rpy}" joint_lower_limit="${joint_4_lower_limit}" joint_upper_limit="${joint_4_upper_limit}"/>
+
+        <xacro:dobot_armlink link_name="${prefix}_link_5" link_mesh="${link_5_mesh}"  base_origin_xyz="${joint_5_base_origin_xyz}" base_origin_rpy="${joint_5_base_origin_rpy}"  />
+        <xacro:dobot_armjoint joint_name="${prefix}_joint_5" type="${joint_5_type}" parent="${prefix}_link_4" child="${prefix}_link_5" joint_axis_xyz="${joint_5_axis_xyz}" joint_origin_xyz="${joint_5_origin_xyz}" joint_origin_rpy="${joint_5_origin_rpy}" joint_lower_limit="${joint_5_lower_limit}" joint_upper_limit="${joint_5_upper_limit}"/>
+
+        <xacro:dobot_virtual_link link_name="${prefix}_end_effector"/>
+        <xacro:dobot_virtual_joint joint_name="${prefix}_joint_end_effector" type="${joint_end_effector_type}" parent="${prefix}_link_5" child="${prefix}_end_effector" joint_axis_xyz="${joint_end_effector_axis_xyz}" joint_origin_xyz="${joint_end_effector_origin_xyz}" joint_origin_rpy="${joint_end_effector_origin_rpy}" joint_lower_limit="0" joint_upper_limit="0"/>
+
+    </xacro:macro>
+
+    
+
+</root>
