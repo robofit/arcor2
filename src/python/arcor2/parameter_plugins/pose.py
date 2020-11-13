@@ -5,6 +5,8 @@ from arcor2 import transformations as tr
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import Pose
+from arcor2.exceptions import Arcor2Exception
+from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 
@@ -19,9 +21,12 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
-        ap, ori = project.bare_ap_and_orientation(
-            cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
-        )
+        try:
+            ap, ori = project.bare_ap_and_orientation(
+                cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
+            )
+        except Arcor2Exception as e:
+            raise ParameterPluginException("Failed to get scene/project data.") from e
         return Pose(ap.position, ori.orientation)
 
     @classmethod

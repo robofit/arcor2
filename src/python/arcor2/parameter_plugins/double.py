@@ -28,7 +28,7 @@ class DoublePlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> float:
-        return cls.type()(super(DoublePlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id))
+        return super(DoublePlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
 
     @classmethod
     def _value_from_json(cls, value: str) -> float:

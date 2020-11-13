@@ -28,6 +28,7 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
     # Assert(test=Compare(left=Num(n=0), ops=[LtE(), LtE()], comparators=[Name(id='speed', ctx=Load()), Num(n=100)]))
 
     for ass in asserts:
+
         if not isinstance(ass.test, ast.Compare):
             continue
 
@@ -46,7 +47,7 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
             continue
 
         try:
-            if ass.test.comparators[0].name == param_name:  # type: ignore
+            if ass.test.comparators[0].id == param_name:  # type: ignore
                 return ass.test.left.n, ass.test.comparators[1].n  # type: ignore
         except AttributeError:
             continue
@@ -89,7 +90,7 @@ class IntegerPlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> int:
-        return cls.type()(super(IntegerPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id))
+        return super(IntegerPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
 
     @classmethod
     def _value_from_json(cls, value: str) -> int:

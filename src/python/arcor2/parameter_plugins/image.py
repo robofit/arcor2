@@ -30,7 +30,7 @@ class ImagePlugin(ParameterPlugin):
     @classmethod
     def _value_from_json(cls, value: str) -> Image:
 
-        b64_bytes = value.encode()
+        b64_bytes = json.loads(value).encode()
         image_data = base64.b64decode(b64_bytes)
         return PIL.Image.open(io.BytesIO(image_data))
 
