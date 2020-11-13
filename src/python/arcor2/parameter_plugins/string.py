@@ -19,7 +19,7 @@ class StringPlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> str:
-        return cls.type()(super(StringPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id))
+        return super(StringPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
 
 
 class StringListPlugin(ListParameterPlugin):

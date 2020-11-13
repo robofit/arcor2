@@ -52,10 +52,21 @@ class IntegerEnumPlugin(ParameterPlugin):
         action = project.action(action_id)
         param = action.parameter(parameter_id)
         obj_id, action_type = action.parse_type()
-        obj_type = type_defs[scene.object(obj_id).type]
+        obj_type_name = scene.object(obj_id).type
+        try:
+            obj_type = type_defs[obj_type_name]
+        except KeyError:
+            raise ParameterPluginException(f"Unknown object type {obj_type_name}.")
 
-        method = getattr(obj_type, action_type)
-        ttype = get_type_hints(method)[param.name]
+        try:
+            method = getattr(obj_type, action_type)
+        except AttributeError:
+            raise ParameterPluginException(f"Object type {obj_type_name} does not have method {action_type}.")
+
+        try:
+            ttype = get_type_hints(method)[param.name]
+        except KeyError:
+            raise ParameterPluginException(f"Method {obj_type}/{method.__name__} does not have parameter {param.name}.")
 
         if not issubclass(ttype, cls.type()):
             raise ParameterPluginException(f"Type {ttype.__name__} is not subclass of {cls.type().__name__}.")

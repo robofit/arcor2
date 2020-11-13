@@ -53,11 +53,17 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         param_value = action.parameter(parameter_id).value
 
         try:
-            return cls._value_from_json(param_value)
+            val = cls._value_from_json(param_value)
         except ParameterPluginException as e:
             raise ParameterPluginException(
                 f"Parameter {action.name}/{parameter_id} has invalid value: '{param_value}'."
             ) from e
+
+        if not isinstance(val, cls.type()):
+
+            raise ParameterPluginException(f"Parameter {action.name}/{parameter_id} has invalid type: '{type(val)}'.")
+
+        return val
 
     @classmethod
     def _value_from_json(cls, value: str) -> Any:
