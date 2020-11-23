@@ -49,7 +49,7 @@ services:
         - execution:/root/project
 
   testitoff-scene-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.3.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.3.1
       container_name: "testitoff-scene"
       restart: always
       ports:
@@ -61,7 +61,7 @@ services:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.3.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.3.3
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
@@ -91,7 +91,7 @@ services:
           - "14017:27017"  
 
   project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.4.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.5.0
     container_name: "project"
     ports:
       - "10000-10001:10000-10001"
