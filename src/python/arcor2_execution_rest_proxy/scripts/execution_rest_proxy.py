@@ -176,6 +176,10 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() == "zip"
 
 
+def package_exists(package_id: str) -> bool:
+    return os.path.exists(os.path.join(PROJECT_PATH, package_id))
+
+
 @app.route("/tokens/create", methods=["POST"])
 def post_token() -> RespT:  # noqa
     """post_token
@@ -297,7 +301,6 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
             token = Token.from_dict(tokens[tokenId])
         except KeyError:
             return "Token not found", 404
-        print(request.args["newAccess"])
         token.access = request.args["newAccess"] == "true"
         tokens[tokenId] = token.to_dict()
 
@@ -420,15 +423,13 @@ def get_package(packageId: str) -> RespT:  # noqa
             description: Package ID was not found.
     """
 
-    package_path = os.path.join(PROJECT_PATH, packageId)
-
-    if not os.path.exists(package_path):
+    if not package_exists(packageId):
         return "Not found", 404
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
         archive_path = os.path.join(tmpdirname, packageId)
-        shutil.make_archive(archive_path, "zip", package_path)
+        shutil.make_archive(archive_path, "zip", os.path.join(PROJECT_PATH, packageId))
 
         return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
 
@@ -498,6 +499,9 @@ def delete_package(packageId: str) -> RespT:  # noqa
                     type: string
     """
 
+    if not package_exists(packageId):
+        return "Not found", 404
+
     resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
 
     if resp.result:
@@ -533,6 +537,9 @@ def package_start(packageId: str) -> RespT:  # noqa
                   items:
                     type: string
     """
+
+    if not package_exists(packageId):
+        return "Not found", 404
 
     resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
 
