@@ -44,18 +44,16 @@ class DobotMagician(AbstractDobot):
 
     def _handle_pose_in(self, pose: Pose) -> None:
 
-        base_joint = self.robot_joints()[0].value
-
-        pose.position.x -= self.link_4_length * math.cos(base_joint)
-        pose.position.y -= self.link_4_length * math.sin(base_joint)
+        base_angle = math.atan2(pose.position.y, pose.position.x)
+        pose.position.x -= self.link_4_length * math.cos(base_angle)
+        pose.position.y -= self.link_4_length * math.sin(base_angle)
         pose.position.z += self.end_effector_length
 
     def _handle_pose_out(self, pose: Pose) -> None:
 
-        base_joint = self.robot_joints()[0].value
-
-        pose.position.x += self.link_4_length * math.cos(base_joint)
-        pose.position.y += self.link_4_length * math.sin(base_joint)
+        base_angle = math.atan2(pose.position.y, pose.position.x)
+        pose.position.x += self.link_4_length * math.cos(base_angle)
+        pose.position.y += self.link_4_length * math.sin(base_angle)
         pose.position.z -= self.end_effector_length
 
     # TODO joint4/5
@@ -97,11 +95,10 @@ class DobotMagician(AbstractDobot):
 
         local_pose = tr.make_pose_rel(self.pose, pose)
 
-        roll, pitch, yaw = quaternion.as_euler_angles(local_pose.orientation.as_quaternion())
+        # TODO this is probably not working properly (use similar solution as in _check_orientation?)
+        _, _, yaw = quaternion.as_euler_angles(local_pose.orientation.as_quaternion())
 
-        eps = 1.0e-6
-        if abs(roll) > eps or abs(pitch - math.pi) > eps:
-            raise DobotException("Impossible orientation.")
+        self._check_orientation(local_pose)
 
         x = local_pose.position.x
         y = local_pose.position.y
@@ -172,7 +169,13 @@ class DobotMagician(AbstractDobot):
 
         ori = Orientation()
         ori.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value + j1))
-        return tr.make_pose_abs(self.pose, Pose(Position(x, y, z), ori))
+
+        pose = Pose(Position(x, y, z), ori)
+
+        if __debug__:
+            self._check_orientation(pose)
+
+        return tr.make_pose_abs(self.pose, pose)
 
     def robot_joints(self) -> List[Joint]:
 

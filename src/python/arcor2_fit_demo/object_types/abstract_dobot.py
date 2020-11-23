@@ -109,10 +109,20 @@ class AbstractDobot(Robot):
 
         pass
 
+    def _check_orientation(self, pose: Pose) -> None:
+
+        x = math.sin(math.atan2(pose.orientation.x, pose.orientation.w))
+        y = math.sin(math.atan2(pose.orientation.y, pose.orientation.w))
+
+        eps = 1e-6
+
+        if (abs(x) > eps and 1 - abs(x) > eps) or 1 - abs(y) > eps:
+            raise DobotException("Impossible orientation.")
+
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
 
         if self.settings.simulator:
-            return tr.make_pose_abs(self.pose, self.forward_kinematics("", self._joint_values))
+            return self.forward_kinematics("", self._joint_values)
 
         try:
             pos = self._dobot.get_pose()  # in mm
@@ -174,12 +184,16 @@ class AbstractDobot(Robot):
                 return
 
             rp = tr.make_pose_rel(self.pose, pose)
+            self._check_orientation(rp)
             self._handle_pose_in(rp)
 
             try:
                 self._dobot.clear_alarms()
-                rotation = quaternion.as_euler_angles(rp.orientation.as_quaternion())[2]
+
+                # TODO this is probably not working properly (use similar solution as in _check_orientation?)
+                rotation = math.degrees(quaternion.as_euler_angles(rp.orientation.as_quaternion())[2])
                 self._dobot.speed(velocity, acceleration)
+
                 self._dobot.wait_for_cmd(
                     self._dobot.move_to(
                         rp.position.x * 1000.0,
