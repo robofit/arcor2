@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.0] - WIP
+
+### Changed
+- `ActionResult` event changed to match with `ActionState` (support for actions that may return more than one result).
+
+### Changed
+- RPC for IK/FK.
+
 ## [0.9.2] - 2020-10-30
 
 ### Changed

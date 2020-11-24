@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.0] - WIP
+
+### Changed
+- `action` decorator now handles outputs of actions.
+- `CachedProject` has new methods for handling project logic.
+- `ActionState` event now contains action results.
+- New built-in ObjectTypes `RandomActions`.
+- Parameter plugins slightly reworked, some new helper functions.
+- If a robot has URDF, it is zipped and uploaded to the Project service).
+  - ...as a mesh file, which is workaround for missing storage of URDF models.
+
 ## [0.9.2] - 2020-10-30
 
 ### Fixed
