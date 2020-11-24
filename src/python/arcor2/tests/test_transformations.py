@@ -2,8 +2,8 @@
 
 import copy
 
-import pytest  # type: ignore
-import quaternion  # type: ignore
+import pytest
+import quaternion
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import ActionPoint, Orientation, Pose, Position, Project, Scene, SceneObject

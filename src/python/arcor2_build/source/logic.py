@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Dict, Optional, Set, Union
 
-import humps  # type: ignore
+import humps
 from typed_ast.ast3 import Compare, Continue, Eq, FunctionDef, If, Load, Module, Name, NameConstant, Pass, While
 
 import arcor2.object_types

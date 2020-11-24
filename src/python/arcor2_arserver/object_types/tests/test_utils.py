@@ -1,4 +1,4 @@
-import pytest  # type: ignore
+import pytest
 
 from arcor2.action import patch_object_actions
 from arcor2.data.common import ActionMetadata, StrEnum

@@ -17,15 +17,15 @@ from threading import Thread
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
 
 import arcor2_execution_rest_proxy
-import websocket  # type: ignore
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+import websocket
+from apispec import APISpec
+from apispec_webframeworks.flask import FlaskPlugin
 from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request, send_file
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
-from sqlitedict import SqliteDict  # type: ignore
+from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
+from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
 
 from arcor2.data import events

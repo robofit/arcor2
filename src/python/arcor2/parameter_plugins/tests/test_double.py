@@ -1,7 +1,7 @@
 import inspect
 import json
 
-import pytest  # type: ignore
+import pytest
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import Action, ActionParameter, ActionPoint, Position, Project, Scene, SceneObject

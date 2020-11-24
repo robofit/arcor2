@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Iterator
 
-import pytest  # type: ignore
+import pytest
 
 from arcor2.clients import scene_service
 from arcor2.data.common import Pose

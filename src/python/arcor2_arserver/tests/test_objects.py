@@ -1,4 +1,4 @@
-import pytest  # type: ignore
+import pytest
 
 from arcor2.data.object_type import Box, Cylinder, Model3dType, ObjectModel, Sphere
 from arcor2.object_types.abstract import GenericWithPose

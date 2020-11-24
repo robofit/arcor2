@@ -3,8 +3,8 @@ import time
 from dataclasses import dataclass
 from typing import List, Set, cast
 
-import quaternion  # type: ignore
-from pydobot import dobot  # type: ignore
+import quaternion
+from pydobot import dobot
 
 import arcor2.transformations as tr
 from arcor2 import DynamicParamTuple as DPT

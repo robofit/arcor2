@@ -13,8 +13,8 @@ import uuid
 from typing import Dict, List, Type, get_type_hints
 
 import websockets
-from aiologger.levels import LogLevel  # type: ignore
-from aiorun import run  # type: ignore
+from aiologger.levels import LogLevel
+from aiorun import run
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 

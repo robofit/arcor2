@@ -3,8 +3,8 @@ import io
 import json
 from typing import Any
 
-import PIL.Image  # type: ignore
-from PIL.Image import Image  # type: ignore
+import PIL.Image
+from PIL.Image import Image
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene

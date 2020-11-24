@@ -1,7 +1,7 @@
 import time
 from typing import List
 
-from pydobot import dobot  # type: ignore
+from pydobot import dobot
 
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 

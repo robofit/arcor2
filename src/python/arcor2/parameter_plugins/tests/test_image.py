@@ -2,8 +2,8 @@ import inspect
 import json
 from typing import Dict, Type
 
-import pytest  # type: ignore
-from PIL import Image  # type: ignore
+import pytest
+from PIL import Image
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import Action, ActionParameter, ActionPoint, Position, Project, Scene, SceneObject

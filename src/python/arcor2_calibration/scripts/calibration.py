@@ -4,13 +4,13 @@ import argparse
 import json
 from typing import Tuple
 
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+from apispec import APISpec
+from apispec_webframeworks.flask import FlaskPlugin
 from arcor2_calibration_data import PORT, SERVICE_NAME
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 from werkzeug.utils import secure_filename
 
 import arcor2_calibration

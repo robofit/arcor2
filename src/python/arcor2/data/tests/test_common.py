@@ -1,4 +1,4 @@
-import pytest  # type: ignore
+import pytest
 
 from arcor2.data.common import Orientation
 from arcor2.exceptions import Arcor2Exception

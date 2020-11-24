@@ -1,7 +1,7 @@
 from subprocess import check_output
 
 import yaml
-from openapi_spec_validator import validate_spec  # type: ignore
+from openapi_spec_validator import validate_spec
 
 
 def test_build_openapi() -> None:

@@ -4,7 +4,7 @@ import uuid
 from queue import Empty, Queue
 from typing import Dict, Optional, Type, TypeVar
 
-import websocket  # type: ignore
+import websocket
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.data import events, rpc

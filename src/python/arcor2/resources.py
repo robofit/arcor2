@@ -3,7 +3,7 @@ import json
 import os
 from typing import Any, Dict, Optional, Type, TypeVar
 
-import humps  # type: ignore
+import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types

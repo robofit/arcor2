@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
-from PIL.Image import Image  # type: ignore
+from PIL.Image import Image
 
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Pose, StrEnum

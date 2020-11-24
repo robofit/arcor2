@@ -9,12 +9,12 @@ from datetime import datetime, timezone
 from io import BytesIO
 from typing import Set, Tuple, Union
 
-import humps  # type: ignore
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+import humps
+from apispec import APISpec
+from apispec_webframeworks.flask import FlaskPlugin
 from flask import Flask, Response, request, send_file
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 
 import arcor2_build
 from arcor2.cached import CachedProject, CachedScene

@@ -6,10 +6,10 @@ from functools import partial
 from io import BytesIO
 from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Type, TypeVar, Union, overload
 
-import humps  # type: ignore
+import humps
 import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
-from PIL import Image, UnidentifiedImageError  # type: ignore
+from PIL import Image, UnidentifiedImageError
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
