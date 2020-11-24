@@ -2,7 +2,7 @@ import abc
 import json
 from typing import Any, Callable
 
-import humps  # type: ignore
+import humps
 from typed_ast import ast3 as ast
 
 from arcor2.cached import CachedProject as CProject

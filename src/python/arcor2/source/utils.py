@@ -2,7 +2,7 @@ import importlib
 import inspect
 from typing import List, Optional, Type, Union
 
-import autopep8  # type: ignore
+import autopep8
 import horast
 import typed_astunparse
 from typed_ast.ast3 import (

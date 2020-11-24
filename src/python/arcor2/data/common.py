@@ -6,7 +6,7 @@ from enum import Enum, unique
 from json import JSONEncoder
 from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, cast
 
-import quaternion  # type: ignore
+import quaternion
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.exceptions import Arcor2Exception

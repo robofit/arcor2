@@ -6,13 +6,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Tuple, Union, cast
 
-import humps  # type: ignore
-from apispec import APISpec  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+import humps
+from apispec import APISpec
+from apispec_webframeworks.flask import FlaskPlugin
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request
-from flask_cors import CORS  # type: ignore
-from flask_swagger_ui import get_swaggerui_blueprint  # type: ignore
+from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 
 from arcor2.data import common, object_type
 from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version

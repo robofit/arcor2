@@ -1,4 +1,4 @@
-import quaternion  # type: ignore
+import quaternion
 
 from arcor2.data.common import Pose
 

@@ -1,7 +1,7 @@
 import os
 import shutil
 
-import humps  # type: ignore
+import humps
 from typed_ast.ast3 import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
 
 import arcor2.object_types

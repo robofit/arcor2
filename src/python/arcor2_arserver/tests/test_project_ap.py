@@ -1,4 +1,4 @@
-import pytest  # type: ignore
+import pytest
 
 from arcor2.data import common
 from arcor2_arserver.tests.conftest import event

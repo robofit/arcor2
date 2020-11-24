@@ -1,6 +1,6 @@
 import datetime
 
-import pytest  # type: ignore
+import pytest
 
 from arcor2 import helpers as hlp
 

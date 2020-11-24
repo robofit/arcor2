@@ -5,7 +5,7 @@ import subprocess as sp
 import tempfile
 from typing import Dict, Iterator, Optional, Tuple, Type, TypeVar
 
-import pytest  # type: ignore
+import pytest
 
 from arcor2.clients import persistent_storage, scene_service
 from arcor2.data import common

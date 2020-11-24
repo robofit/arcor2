@@ -1,6 +1,6 @@
 import logging
 
-import aiologger  # type: ignore
+import aiologger
 
 LOG_FORMAT = "%(asctime)s - %(levelname)-8s: %(message)s", "%Y-%m-%d %H:%M:%S"
 

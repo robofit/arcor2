@@ -2,7 +2,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Dict
 
-from lru import LRU  # type: ignore
+from lru import LRU
 
 from arcor2.clients import aio_persistent_storage as ps
 from arcor2.clients.aio_persistent_storage import (

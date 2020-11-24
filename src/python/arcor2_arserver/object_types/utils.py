@@ -3,8 +3,8 @@ import inspect
 import os
 from typing import Dict, List, Type, get_type_hints
 
-import humps  # type: ignore
-import typing_inspect  # type: ignore
+import humps
+import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin
 from typed_ast.ast3 import AST
 

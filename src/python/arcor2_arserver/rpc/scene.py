@@ -4,7 +4,7 @@ import functools
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional, Set
 
-import quaternion  # type: ignore
+import quaternion
 from arcor2_calibration_data import client as calibration
 from websockets.server import WebSocketServerProtocol as WsClient
 

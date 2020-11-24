@@ -16,8 +16,8 @@ from datetime import datetime, timezone
 from typing import Awaitable, List, Optional, Set, Union
 
 import websockets
-from aiologger.levels import LogLevel  # type: ignore
-from aiorun import run  # type: ignore
+from aiologger.levels import LogLevel
+from aiorun import run
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 

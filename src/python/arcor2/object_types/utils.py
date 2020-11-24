@@ -3,7 +3,7 @@ import json
 from dataclasses import is_dataclass
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
 
-import typing_inspect  # type: ignore
+import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from typed_ast.ast3 import Name
 

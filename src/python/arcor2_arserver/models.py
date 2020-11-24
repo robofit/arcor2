@@ -2,9 +2,9 @@ import inspect
 from enum import Enum
 from typing import List, Type, Union
 
-from apispec import APISpec  # type: ignore
-from apispec.exceptions import DuplicateComponentNameError  # type: ignore
-from apispec_webframeworks.flask import FlaskPlugin  # type: ignore
+from apispec import APISpec
+from apispec.exceptions import DuplicateComponentNameError
+from apispec_webframeworks.flask import FlaskPlugin
 from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 

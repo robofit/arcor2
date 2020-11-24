@@ -5,7 +5,7 @@ from collections import deque
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
 
 import websockets
-from aiologger.levels import LogLevel  # type: ignore
+from aiologger.levels import LogLevel
 from dataclasses_jsonschema import ValidationError
 
 from arcor2.data.events import Event

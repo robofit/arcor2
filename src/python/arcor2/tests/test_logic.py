@@ -1,4 +1,4 @@
-import pytest  # type: ignore
+import pytest
 
 from arcor2.cached import UpdateableCachedProject
 from arcor2.data.common import Action, ActionPoint, Flow, LogicItem, Position, Project, Scene
