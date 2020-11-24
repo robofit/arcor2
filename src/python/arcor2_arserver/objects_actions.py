@@ -3,7 +3,6 @@ import os
 from typing import Optional, Type
 
 from arcor2 import helpers as hlp
-from arcor2.action import patch_object_actions
 from arcor2.clients import aio_persistent_storage as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
@@ -99,6 +98,8 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
         )
         return
 
+    glob.logger.debug(f"Updating {obj_id}.")
+
     try:
         type_def = await hlp.run_in_executor(
             hlp.save_and_import_type_def,
@@ -118,8 +119,6 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=str(e))
         )
         return
-
-    patch_object_actions(type_def)
 
     if obj.model:
         model = await storage.get_model(obj.model.id, obj.model.type)
@@ -211,6 +210,23 @@ async def get_object_types() -> None:
         if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
             await get_robot_meta(obj_type)
             asyncio.ensure_future(handle_robot_urdf(obj_type.type_def))
+
+    # if object does not change but its base has changed, it has to be reloaded
+    for obj_id, obj in glob.OBJECT_TYPES.items():
+
+        if obj_id in updated_object_ids:
+            continue
+
+        if obj.type_def and obj.meta.base in updated_object_ids:
+
+            glob.logger.debug(f"Re-importing {obj.meta.type} because its base {obj.meta.base} type has changed.")
+            obj.type_def = await hlp.run_in_executor(
+                hlp.import_type_def,
+                obj.meta.type,
+                Generic,
+                settings.OBJECT_TYPE_PATH,
+                settings.OBJECT_TYPE_MODULE,
+            )
 
 
 async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Robot:
