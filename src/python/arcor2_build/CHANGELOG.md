@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.0] - WIP
+
+### Changed
+- Ability to generate branched logic (if/elif block after action).
+
 ## [0.9.2] - 2020-10-30
 
 ### Changed
