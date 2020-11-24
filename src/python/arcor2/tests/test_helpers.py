@@ -1,30 +1,6 @@
-import datetime
-
 import pytest
 
 from arcor2 import helpers as hlp
-
-
-def test_import_cls_valid() -> None:
-
-    mod, cls = hlp.import_cls("datetime/timedelta")
-
-    assert mod == datetime
-    assert cls == datetime.timedelta
-
-
-def test_import_cls_non_existing() -> None:
-
-    with pytest.raises(hlp.ImportClsException):
-
-        mod, cls = hlp.import_cls("nonsense/NonSense")
-
-
-def test_import_cls_invalid() -> None:
-
-    with pytest.raises(hlp.ImportClsException):
-
-        mod, cls = hlp.import_cls("Generic")
 
 
 @pytest.mark.parametrize(

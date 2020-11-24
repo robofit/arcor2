@@ -6,7 +6,6 @@ from typing import List, NamedTuple, Optional, Type
 from arcor2.clients import persistent_storage as storage
 from arcor2.data.object_type import Models, ObjectType
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import ImportClsException, import_cls
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.utils import check_object_type, get_containing_module_sources
 
@@ -72,15 +71,3 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Op
 
         mem_zip.seek(0)
         storage.upload_mesh_file(urdf.archive_name, mem_zip.getvalue())
-
-
-def upload(module_cls: str, model: Optional[Models] = None) -> None:
-    try:
-        _, cls = import_cls(module_cls)
-    except ImportClsException as e:
-        raise UploadException(e)
-
-    if not issubclass(cls, Generic):
-        raise UploadException("Object should be derived from Generic.")
-
-    upload_def(cls, model)

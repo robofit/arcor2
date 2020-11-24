@@ -6,8 +6,7 @@ import socket
 import sys
 from contextlib import closing
 from threading import Lock
-from types import ModuleType
-from typing import Any, Callable, Tuple, Type, TypeVar
+from typing import Callable, Type, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -21,31 +20,6 @@ class ImportClsException(Arcor2Exception):
 
 class TypeDefException(Arcor2Exception):
     pass
-
-
-def import_cls(module_cls: str) -> Tuple[ModuleType, Type[Any]]:
-    """Gets module and class based on string like 'module/Cls'.
-
-    :param module_cls:
-    :return:
-    """
-
-    try:
-        module_name, cls_name = module_cls.split("/")
-    except (IndexError, ValueError):
-        raise ImportClsException("Invalid format.")
-
-    try:
-        module = importlib.import_module(module_name)
-    except ModuleNotFoundError:
-        raise ImportClsException(f"Module '{module_name}' not found.")
-
-    try:
-        cls = getattr(module, cls_name)
-    except AttributeError:
-        raise ImportClsException(f"Class {cls_name} not found in module '{module_name}'.")
-
-    return module, cls
 
 
 def is_valid_identifier(value: str) -> bool:
@@ -90,19 +64,37 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     :return:
     """
 
-    if path not in sys.path:
-        sys.path.append(path)
-
     type_file = humps.depascalize(type_name)
     full_path = os.path.join(path, module_name, type_file)
 
     with open(f"{full_path}.py", "w") as file:
         file.write(source)
 
+    return import_type_def(type_name, output_type, path, module_name)
+
+
+def import_type_def(type_name: str, output_type: Type[T], path: str, module_name: str) -> Type[T]:
+    """Save source to a file in object_type_path directory.
+
+    :param source:
+    :param type_name:
+    :param output_type:
+    :param object_type_path:
+    :return:
+    """
+
+    if path not in sys.path:
+        sys.path.append(path)
+
+    type_file = humps.depascalize(type_name)
+
     try:
         module = importlib.import_module(f"{module_name}.{type_file}")
     except ModuleNotFoundError:
         raise ImportClsException(f"Module '{module_name}' not found.")
+
+    # this is necessary for cases when the module is already loaded
+    importlib.reload(module)
 
     try:
         cls = getattr(module, type_name)
