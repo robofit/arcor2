@@ -89,6 +89,9 @@ class AbstractDobot(Robot):
     def suctions(self) -> Set[str]:
         return {"default"}
 
+    def _inverse_kinematics(self, pose: Pose) -> List[Joint]:
+        raise NotImplementedError()
+
     def _handle_pose_out(self, pose: Pose) -> None:
         """This is called (only for a real robot) from `get_end_effector_pose`
         so derived classes can do custom changes to the pose.
@@ -178,13 +181,19 @@ class AbstractDobot(Robot):
 
         with self._move_lock:
 
+            rp = tr.make_pose_rel(self.pose, pose)
+
+            # prevent Dobot from moving when given an unreachable goal
+            try:
+                jv = self._inverse_kinematics(rp)
+            except NotImplementedError:  # TODO remove this once M1 has IK
+                pass
+
             if self.settings.simulator:
-                self._joint_values = self.inverse_kinematics("", pose)
+                self._joint_values = jv
                 time.sleep((100.0 - velocity) * 0.05)
                 return
 
-            rp = tr.make_pose_rel(self.pose, pose)
-            self._check_orientation(rp)
             self._handle_pose_in(rp)
 
             try:
