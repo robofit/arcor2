@@ -107,6 +107,7 @@ def action(f: F) -> F:
 
         if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
             print_event(ActionState(ActionState.Data(inst.id, f.__name__, ActionState.Data.StateEnum.BEFORE)))
+            handle_action()
 
         if wrapper.__action__.composite:  # type: ignore # TODO and not step_into
             action.inside_composite = f  # type: ignore
@@ -122,6 +123,7 @@ def action(f: F) -> F:
                     ActionState.Data(inst.id, f.__name__, ActionState.Data.StateEnum.AFTER, results_to_json(res))
                 )
             )
+            handle_action()
 
         return res
 
