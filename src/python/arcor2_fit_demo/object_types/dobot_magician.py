@@ -75,34 +75,23 @@ class DobotMagician(AbstractDobot):
                         )
                     )
 
-    def inverse_kinematics(
-        self,
-        end_effector_id: str,
-        pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
-        avoid_collisions: bool = True,
-    ) -> List[Joint]:
+    def _inverse_kinematics(self, pose: Pose) -> List[Joint]:
         """Computes inverse kinematics.
 
         Inspired by DobotKinematics.py from open-dobot project and DobotInverseKinematics.py from BenchBot.
 
-        :param end_effector_id: IK target pose end-effector
-        :param pose: IK target pose
-        :param start_joints: IK start joints (not supported)
-        :param avoid_collisions: Return non-collision IK result if true (not supported)
+        :param pose: IK target pose (relative to robot)
         :return: Inverse kinematics
         """
 
-        local_pose = tr.make_pose_rel(self.pose, pose)
+        self._check_orientation(pose)
 
         # TODO this is probably not working properly (use similar solution as in _check_orientation?)
-        _, _, yaw = quaternion.as_euler_angles(local_pose.orientation.as_quaternion())
+        _, _, yaw = quaternion.as_euler_angles(pose.orientation.as_quaternion())
 
-        self._check_orientation(local_pose)
-
-        x = local_pose.position.x
-        y = local_pose.position.y
-        z = local_pose.position.z + self.end_effector_length
+        x = pose.position.x
+        y = pose.position.y
+        z = pose.position.z + self.end_effector_length
 
         # pre-compute distances
         # radial position of end effector in the x-y plane
@@ -136,6 +125,24 @@ class DobotMagician(AbstractDobot):
         ]
         self.validate_joints(joints)
         return joints
+
+    def inverse_kinematics(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
+    ) -> List[Joint]:
+        """Computes inverse kinematics.
+
+        :param end_effector_id: IK target pose end-effector
+        :param pose: IK target pose
+        :param start_joints: IK start joints (not supported)
+        :param avoid_collisions: Return non-collision IK result if true (not supported)
+        :return: Inverse kinematics
+        """
+
+        return self._inverse_kinematics(tr.make_pose_rel(self.pose, pose))
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
