@@ -10,10 +10,15 @@ LogicContainer = CachedProject  # TODO make it Union[CachedProject, CachedProjec
 
 
 def check_for_loops(parent: LogicContainer, first_action_id: Optional[str] = None) -> None:
+    """Finds loops in logic. Can process even unfinished logic, when first
+    action id is provided.
 
-    visited_actions: Set[str] = set()
+    :param parent:
+    :param first_action_id:
+    :return:
+    """
 
-    def _check_for_loops(action: Action) -> None:
+    def _check_for_loops(action: Action, visited_actions: Set[str]) -> None:
 
         if action.id in visited_actions:
             raise Arcor2Exception("Loop detected!")
@@ -23,10 +28,12 @@ def check_for_loops(parent: LogicContainer, first_action_id: Optional[str] = Non
         _, outputs = parent.action_io(action.id)
 
         for output in outputs:
+
             if output.end == output.END:
                 continue
 
-            _check_for_loops(parent.action(output.end))
+            # each possible execution path have its own set of visited actions
+            _check_for_loops(parent.action(output.end), visited_actions.copy())
 
     if first_action_id is None:
 
@@ -37,4 +44,5 @@ def check_for_loops(parent: LogicContainer, first_action_id: Optional[str] = Non
 
     first_action = parent.action(first_action_id)
 
-    _check_for_loops(first_action)
+    visited_actions: Set[str] = set()
+    _check_for_loops(first_action, visited_actions)
