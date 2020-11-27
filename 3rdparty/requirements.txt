@@ -28,3 +28,5 @@ opencv-contrib-python==4.4.0.46
 pydobot2==0.1.0
 pyhumps==1.6.1
 sqlitedict==1.7.0
+pyk4a==1.0.1
+packaging==20.4

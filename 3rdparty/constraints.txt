@@ -64,3 +64,4 @@ websockets==8.1
 Werkzeug==1.0.1
 wheel==0.35.1
 opencv-contrib-python==4.4.0.46
+pyk4a==1.0.1

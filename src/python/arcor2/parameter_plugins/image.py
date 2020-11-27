@@ -1,13 +1,10 @@
-import base64
-import io
-import json
 from typing import Any
 
-import PIL.Image
 from PIL.Image import Image
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
+from arcor2.image import image_from_json, image_to_json
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 
 
@@ -29,16 +26,8 @@ class ImagePlugin(ParameterPlugin):
 
     @classmethod
     def _value_from_json(cls, value: str) -> Image:
-
-        b64_bytes = json.loads(value).encode()
-        image_data = base64.b64decode(b64_bytes)
-        return PIL.Image.open(io.BytesIO(image_data))
+        return image_from_json(value)
 
     @classmethod
     def value_to_json(cls, value: Image) -> str:
-
-        with io.BytesIO() as output:
-            value.save(output, "jpeg")
-            b64_bytes = base64.b64encode(output.getvalue())
-            b64_str = b64_bytes.decode()
-            return json.dumps(b64_str)
+        return image_to_json(value)

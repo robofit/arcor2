@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Optional, Set
 
-from arcor2_calibration_data import CameraParameters
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Pose
 from arcor2.data.rpc.common import RPC
 

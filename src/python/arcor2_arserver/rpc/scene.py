@@ -524,7 +524,7 @@ async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
 async def calibration_cb(req: srpc.c.Calibration.Request, ui: WsClient) -> srpc.c.Calibration.Response:
 
     return srpc.c.Calibration.Response(
-        data=await hlp.run_in_executor(calibration.get_marker_pose, req.args.camera_parameters, req.args.image)
+        data=await hlp.run_in_executor(calibration.estimate_camera_pose, req.args.camera_parameters, req.args.image)
     )
 
 
