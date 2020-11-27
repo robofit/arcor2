@@ -4,3 +4,7 @@ arcor2_pex_binary(
         "src/python/arcor2_fit_demo/data/dobot-m1",
         "src/python/arcor2_fit_demo/data/dobot-magician"]
 )
+
+arcor2_pex_binary(
+    name = "kinect_viewer"
+)
