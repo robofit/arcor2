@@ -8,6 +8,7 @@ from typing import Tuple, Union
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
 from arcor2_calibration_data import CALIBRATION_URL, SERVICE_NAME
+from arcor2_calibration_data.client import CalibrateRobotArgs
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -18,7 +19,9 @@ import arcor2_calibration
 from arcor2.data.common import Pose
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
+from arcor2.urdf import urdf_from_url
 from arcor2_calibration.calibration import get_poses
+from arcor2_calibration.robot import calibrate_robot
 
 logger = get_logger(__name__)
 
@@ -32,7 +35,7 @@ spec = APISpec(
 
 RETURN_TYPE = Union[Tuple[str, int], Response, Tuple[Response, int]]
 
-MARKER_SIZE = float(os.getenv("ARCOR2_CALIBRATION_MARKER_SIZE", 0.09))
+MARKER_SIZE = float(os.getenv("ARCOR2_CALIBRATION_MARKER_SIZE", 0.091))
 MARKER_ID = int(os.getenv("ARCOR2_CALIBRATION_MARKER_ID", 10))
 
 app = Flask(__name__)
@@ -44,7 +47,55 @@ def get_swagger() -> str:
     return json.dumps(spec.to_dict())
 
 
-@app.route("/calibration", methods=["PUT"])
+@app.route("/calibrate/robot", methods=["PUT"])
+def put_calibrate_robot() -> RETURN_TYPE:
+    """Get calibration (camera pose wrt. marker)
+    ---
+    put:
+        description: Get calibration
+        tags:
+           - Calibration
+        requestBody:
+              content:
+                multipart/form-data:
+                  schema:
+                    type: object
+                    required:
+                        - image
+                        - args
+                    properties:
+                      # 'image' will be the field name in this multipart request
+                      image:
+                        type: string
+                        format: binary
+                      args:
+                        $ref: "#/components/schemas/CalibrateRobotArgs"
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    $ref: Pose
+
+    """
+
+    image = Image.open(request.files["image"].stream)
+    args = CalibrateRobotArgs.from_json(request.files["args"].read())
+
+    pose = calibrate_robot(
+        args.robot_joints,
+        args.robot_pose,
+        args.camera_pose,
+        args.camera_parameters,
+        urdf_from_url(args.urdf_uri),
+        image,
+    )
+
+    return jsonify(pose.to_dict()), 200
+
+
+@app.route("/calibrate/camera", methods=["PUT"])
 def get_calibration() -> RETURN_TYPE:
     """Get calibration (camera pose wrt. marker)
     ---
@@ -85,7 +136,6 @@ def get_calibration() -> RETURN_TYPE:
               name: distCoefs
               schema:
                 type: array
-                collectionFormat: multi
                 items:
                     type: number
                     format: float
@@ -134,9 +184,11 @@ def get_calibration() -> RETURN_TYPE:
 
 
 with app.test_request_context():
+    spec.path(view=put_calibrate_robot)
     spec.path(view=get_calibration)
 
 spec.components.schema(Pose.__name__, schema=Pose)
+spec.components.schema(CalibrateRobotArgs.__name__, schema=CalibrateRobotArgs)
 
 
 def main() -> None:

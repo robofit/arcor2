@@ -2,20 +2,29 @@ import asyncio
 import time
 from typing import Awaitable, Callable, Dict
 
+from arcor2_calibration_data import client as calib_client
+from arcor2_calibration_data.client import CalibrateRobotArgs
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import transformations as tr
 from arcor2 import ws_server
+from arcor2.clients.persistent_storage import URL as ps_url
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Robot
+from arcor2.helpers import run_in_executor
+from arcor2.object_types.abstract import Camera, Robot
+from arcor2_arserver import camera
 from arcor2_arserver import globals as glob
+from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import robot
 from arcor2_arserver.decorators import project_needed, scene_needed
-from arcor2_arserver.scene import ensure_scene_started, scene_started
+from arcor2_arserver.scene import ensure_scene_started, scene_started, update_scene_object_pose
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
+from arcor2_arserver_data.events.common import ProcessState
+
+RBT_CALIB = "RobotCalibration"
 
 TaskDict = Dict[str, asyncio.Task]
 
@@ -315,3 +324,68 @@ async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.F
     resp = srpc.r.ForwardKinematics.Response()
     resp.data = pose
     return resp
+
+
+async def calibrate_robot(robot_inst: Robot, camera_inst: Camera, move_to_calibration_pose: bool) -> None:
+
+    assert glob.SCENE
+    assert camera_inst.color_camera_params
+
+    # TODO it should not be possible to close the scene during this process
+
+    await notif.broadcast_event(ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Started)))
+
+    try:
+
+        if move_to_calibration_pose:
+            await run_in_executor(robot_inst.move_to_calibration_pose)
+        robot_joints = await run_in_executor(robot_inst.robot_joints)
+        depth_image = await run_in_executor(camera_inst.depth_image, 128)
+
+        args = CalibrateRobotArgs(
+            robot_joints,
+            robot_inst.pose,
+            camera_inst.pose,
+            camera_inst.color_camera_params,
+            f"{ps_url}/models/{robot_inst.urdf_package_name}/mesh/file",
+        )
+
+        new_pose = await run_in_executor(calib_client.calibrate_robot, args, depth_image)
+
+    except Arcor2Exception as e:
+        await notif.broadcast_event(
+            ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Failed, str(e)))
+        )
+        glob.logger.exception("Failed to calibrate the robot.")
+        return
+
+    await update_scene_object_pose(glob.SCENE.object(robot_inst.id), new_pose, robot_inst)
+    await notif.broadcast_event(ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Finished)))
+
+
+@scene_needed
+async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -> None:
+
+    ensure_scene_started()
+    robot_inst = await osa.get_robot_instance(req.args.robot_id)
+
+    if not robot_inst.urdf_package_name:
+        raise Arcor2Exception("Robot with model required!")
+
+    if req.args.camera_id:
+        camera_inst = camera.get_camera_instance(req.args.camera_id)
+    else:
+        for obj in glob.SCENE_OBJECT_INSTANCES.values():
+            if isinstance(obj, Camera):
+                camera_inst = obj
+                break
+        else:
+            raise Arcor2Exception("No camera found.")
+
+    if camera_inst.color_camera_params is None:
+        raise Arcor2Exception("Calibrated camera required!")
+
+    # TODO check camera features / check that it supports depth
+    asyncio.ensure_future(calibrate_robot(robot_inst, camera_inst, req.args.move_to_calibration_pose))
+
+    return None

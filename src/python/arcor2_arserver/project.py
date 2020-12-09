@@ -192,27 +192,6 @@ async def associated_projects(scene_id: str) -> Set[str]:
     return {project.id async for project in projects(scene_id)}
 
 
-async def scene_object_pose_updated(scene_id: str, obj_id: str) -> None:
-    """Invalidates robot joints if action point's parent has changed its pose.
-
-    :param scene_id:
-    :param obj_id:
-    :return:
-    """
-
-    async for project in projects_using_object_as_parent(scene_id, obj_id):
-
-        for ap in project.action_points:
-
-            if ap.parent != obj_id:
-                continue
-
-            glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
-            project.invalidate_joints(ap.id)
-
-        await storage.update_project(project.project)
-
-
 async def remove_object_references_from_projects(obj_id: str) -> None:
 
     assert glob.SCENE
@@ -304,6 +283,24 @@ async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIt
     async for project in projects(scene_id):
         if _project_using_object_as_parent(project, obj_id):
             yield project
+
+
+async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> None:
+
+    assert glob.SCENE
+
+    # Invalidates robot joints if action point's parent has changed its pose.
+    async for project in projects_using_object_as_parent(glob.SCENE.id, obj.id):
+
+        for ap in project.action_points:
+
+            if ap.parent != obj.id:
+                continue
+
+            glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
+            project.invalidate_joints(ap.id)
+
+        await storage.update_project(project.project)
 
 
 async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[CachedProject]:

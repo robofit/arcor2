@@ -20,3 +20,19 @@ class ShowMainScreen(Event):
         highlight: Optional[str] = None
 
     data: Data
+
+
+@dataclass
+class ProcessState(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        class StateEnum(common.StrEnum):
+            Started: str = "started"
+            Finished: str = "finished"
+            Failed: str = "failed"
+
+        id: str
+        state: StateEnum
+        message: Optional[str] = None
+
+    data: Data

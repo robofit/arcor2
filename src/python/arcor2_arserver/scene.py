@@ -5,6 +5,7 @@ from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data.common import Parameter, Pose, SceneObject
+from arcor2.data.events import Event
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
@@ -15,21 +16,44 @@ from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver_data.events.common import ShowMainScreen
-from arcor2_arserver_data.events.scene import SceneClosed, SceneState
+from arcor2_arserver_data.events.scene import SceneClosed, SceneObjectChanged, SceneState
 
 # TODO maybe this could be property of ARServerScene(CachedScene)?
 _scene_state: SceneState.Data.StateEnum = SceneState.Data.StateEnum.Stopped
 
 
-async def set_object_pose(obj: GenericWithPose, pose: Pose) -> None:
-    """
-    Object pose is property that might call scene service - that's why it should be called using executor.
+async def update_scene_object_pose(
+    obj: SceneObject, pose: Optional[Pose] = None, obj_inst: Optional[GenericWithPose] = None
+) -> None:
+    """Performs all necessary actions when pose of an object is updated.
+
     :param obj:
     :param pose:
+    :param obj_inst:
     :return:
     """
 
-    await hlp.run_in_executor(setattr, obj, "pose", pose)
+    assert glob.SCENE
+
+    if pose:
+        obj.pose = pose
+    glob.SCENE.update_modified()
+
+    evt = SceneObjectChanged(obj)
+    evt.change_type = Event.Type.UPDATE
+    await notif.broadcast_event(evt)
+
+    glob.OBJECTS_WITH_UPDATED_POSE.add(obj.id)
+
+    if scene_started():
+
+        if obj_inst is None:
+            inst = get_instance(obj.id)
+            assert isinstance(inst, GenericWithPose)
+            obj_inst = inst
+
+        # Object pose is property that might call scene service - that's why it has to be called using executor.
+        await hlp.run_in_executor(setattr, obj_inst, "pose", pose)
 
 
 async def set_scene_state(state: SceneState.Data.StateEnum, message: Optional[str] = None) -> None:
@@ -208,6 +232,7 @@ async def open_scene(scene_id: str) -> None:
         raise Arcor2Exception(f"Failed to open scene. {str(e)}") from e
 
 
+# TODO optional parameter for expected return type
 def get_instance(obj_id: str) -> Generic:
 
     if obj_id not in glob.SCENE_OBJECT_INSTANCES:

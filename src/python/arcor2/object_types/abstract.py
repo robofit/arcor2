@@ -14,7 +14,7 @@ from arcor2.data.common import Joint, Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
-from arcor2.exceptions import Arcor2Exception
+from arcor2.exceptions import Arcor2Exception, Arcor2NotImplemented
 from arcor2.helpers import NonBlockingLock
 
 
@@ -143,6 +143,9 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
 
         return None
 
+    def move_to_calibration_pose(self) -> None:
+        raise Arcor2NotImplemented("No calibration pose specified.")
+
     @abc.abstractmethod
     def get_end_effectors_ids(self) -> Set[str]:
         pass
@@ -234,7 +237,7 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
     def color_image(self) -> Image.Image:
         raise NotImplementedError()
 
-    def depth_image(self) -> Image.Image:
+    def depth_image(self, averaged_frames: int = 1) -> Image.Image:
         """This should provide depth image transformed into color camera
         perspective.
 

@@ -13,7 +13,7 @@ from apispec_webframeworks.flask import FlaskPlugin
 from arcor2_kinect_azure import version
 from arcor2_kinect_azure.kinect_azure import KinectAzure
 from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, Response, jsonify, send_file
+from flask import Flask, Response, jsonify, request, send_file
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 
@@ -151,7 +151,11 @@ def get_image_color() -> Response:
     """
 
     assert _kinect is not None
-    return send_file(image_to_bytes_io(_kinect.color_image()), mimetype="image/jpeg", cache_timeout=0)
+    return send_file(
+        image_to_bytes_io(_kinect.color_image(), target_format="JPEG", target_mode="RGB"),
+        mimetype="image/jpeg",
+        cache_timeout=0,
+    )
 
 
 @app.route("/color/parameters", methods=["GET"])
@@ -191,6 +195,14 @@ def get_image_depth() -> Response:
         description: Get the depth image.
         tags:
            - Depth camera
+        parameters:
+           - in: query
+             name: averagedFrames
+             schema:
+                type: integer
+                default: 1
+             required: false
+             description: Package name
         responses:
             200:
               description: Ok
@@ -203,7 +215,13 @@ def get_image_depth() -> Response:
     """
 
     assert _kinect is not None
-    return send_file(image_to_bytes_io(_kinect.depth_image(), lossless=True), mimetype="image/png", cache_timeout=0)
+    return send_file(
+        image_to_bytes_io(
+            _kinect.depth_image(averaged_frames=int(request.args.get("averagedFrames", default=1))), target_format="PNG"
+        ),
+        mimetype="image/png",
+        cache_timeout=0,
+    )
 
 
 @app.route("/synchronized/image", methods=["GET"])
@@ -234,7 +252,7 @@ def get_image_both() -> Response:
 
     with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_STORED) as zf:
         zf.writestr("color.jpg", image_to_bytes_io(both.color).getvalue())
-        zf.writestr("depth.png", image_to_bytes_io(both.depth, lossless=True).getvalue())
+        zf.writestr("depth.png", image_to_bytes_io(both.depth, target_format="PNG").getvalue())
 
     mem_zip.seek(0)
     return send_file(
