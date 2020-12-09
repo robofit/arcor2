@@ -1,25 +1,29 @@
 import io
 import json
+from typing import Optional
 
+import cv2
+import numpy as np
 import PIL.Image
 from PIL.Image import Image
 
-TARGET_MODE = "RGB"
-TARGET_FORMAT = "JPEG"
-LOSSLESS_TARGET_FORMAT = "PNG"
 ENCODING = "latin-1"
 
 
-def image_to_bytes_io(value: Image, lossless: bool = False) -> io.BytesIO:
+def image_to_cv2(pil_image: Image) -> np.array:
+
+    return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+
+
+def image_to_bytes_io(value: Image, target_format: str = "jpeg", target_mode: Optional[str] = None) -> io.BytesIO:
 
     output = io.BytesIO()
-    fmt = LOSSLESS_TARGET_FORMAT if lossless else TARGET_FORMAT
 
-    if value.mode != TARGET_MODE:
-        rgb_im = value.convert(TARGET_MODE)
-        rgb_im.save(output, fmt)
+    if target_mode and value.mode != target_mode:
+        rgb_im = value.convert(target_mode)
+        rgb_im.save(output, target_format)
     else:
-        value.save(output, fmt)
+        value.save(output, target_format)
     output.seek(0)
     return output
 

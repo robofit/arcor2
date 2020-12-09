@@ -7,7 +7,7 @@ from pydobot import dobot
 import arcor2.transformations as tr
 from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, StrEnum
 
-from .abstract_dobot import AbstractDobot, DobotException, DobotSettings
+from .abstract_dobot import AbstractDobot, DobotException, DobotSettings, MoveType
 
 
 class Joints(StrEnum):
@@ -41,6 +41,18 @@ class DobotMagician(AbstractDobot):
                 Joint(Joints.J4, -0.704),
                 Joint(Joints.J5, -0.568),
             ]
+
+    def move_to_calibration_pose(self) -> None:
+
+        joint_values = [
+            Joint(Joints.J1, -0.0115),
+            Joint(Joints.J2, 0.638),
+            Joint(Joints.J3, -0.5486),
+            Joint(Joints.J4, -0.0898),
+            Joint(Joints.J5, 1.41726),
+        ]
+
+        self.move(self.forward_kinematics("", joint_values), MoveType.LINEAR, 50)
 
     def _handle_pose_in(self, pose: Pose) -> None:
 

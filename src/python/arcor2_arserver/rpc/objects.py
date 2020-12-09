@@ -22,9 +22,8 @@ from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
-from arcor2_arserver.project import scene_object_pose_updated
 from arcor2_arserver.robot import get_end_effector_pose
-from arcor2_arserver.scene import ensure_scene_started, scenes, set_object_pose
+from arcor2_arserver.scene import ensure_scene_started, scenes, update_scene_object_pose
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 
@@ -167,18 +166,11 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
         glob.logger.error(f"Focus failed with: {e}, mfa: {mfa}.")
         raise Arcor2Exception("Focusing failed.") from e
 
-    obj.pose = new_pose
-    glob.SCENE.update_modified()
-
     glob.logger.info(f"Done focusing for {obj_id}.")
 
     clean_up_after_focus(obj_id)
 
-    evt = sevts.s.SceneObjectChanged(obj)
-    evt.change_type = events.Event.Type.UPDATE
-    asyncio.ensure_future(notif.broadcast_event(evt))
-    asyncio.ensure_future(scene_object_pose_updated(glob.SCENE.id, obj.id))
-    asyncio.ensure_future(set_object_pose(obj_inst, new_pose))
+    asyncio.ensure_future(update_scene_object_pose(obj, new_pose, obj_inst))
 
     return None
 

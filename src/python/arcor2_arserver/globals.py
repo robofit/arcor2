@@ -40,3 +40,5 @@ RegisteredUiDict = DefaultDict[str, Set[WsClient]]
 
 ROBOT_JOINTS_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs
 ROBOT_EEF_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs
+
+OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
