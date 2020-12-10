@@ -3,6 +3,8 @@
 import argparse
 import json
 import os
+import random
+import time
 from typing import Tuple, Union
 
 from apispec import APISpec
@@ -16,7 +18,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from PIL import Image
 
 import arcor2_calibration
-from arcor2.data.common import Pose
+from arcor2.data.common import Pose, Position
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2.urdf import urdf_from_url
@@ -37,6 +39,8 @@ RETURN_TYPE = Union[Tuple[str, int], Response, Tuple[Response, int]]
 
 MARKER_SIZE = float(os.getenv("ARCOR2_CALIBRATION_MARKER_SIZE", 0.091))
 MARKER_ID = int(os.getenv("ARCOR2_CALIBRATION_MARKER_ID", 10))
+
+_mock: bool = False
 
 app = Flask(__name__)
 CORS(app)
@@ -83,14 +87,21 @@ def put_calibrate_robot() -> RETURN_TYPE:
     image = Image.open(request.files["image"].stream)
     args = CalibrateRobotArgs.from_json(request.files["args"].read())
 
-    pose = calibrate_robot(
-        args.robot_joints,
-        args.robot_pose,
-        args.camera_pose,
-        args.camera_parameters,
-        urdf_from_url(args.urdf_uri),
-        image,
-    )
+    if _mock:
+        time.sleep(5)
+        pose = args.robot_pose
+        pose.position.x += random.uniform(-0.1, 0.1)
+        pose.position.y += random.uniform(-0.1, 0.1)
+        pose.position.z += random.uniform(-0.1, 0.1)
+    else:
+        pose = calibrate_robot(
+            args.robot_joints,
+            args.robot_pose,
+            args.camera_pose,
+            args.camera_parameters,
+            urdf_from_url(args.urdf_uri),
+            image,
+        )
 
     return jsonify(pose.to_dict()), 200
 
@@ -174,11 +185,16 @@ def get_calibration() -> RETURN_TYPE:
     image = Image.open(file.stream)
 
     dist_matrix = [float(val) for val in request.args.getlist("distCoefs")]
-    poses = get_poses(camera_matrix, dist_matrix, image, MARKER_SIZE)
-    try:
-        pose = poses[MARKER_ID]  # TODO this is just temporary (single-marker) solution
-    except KeyError:
-        return "Marker not found", 404
+
+    if _mock:
+        time.sleep(0.5)
+        pose = Pose(Position(random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), random.uniform(0.2, 1)))
+    else:
+        poses = get_poses(camera_matrix, dist_matrix, image, MARKER_SIZE)
+        try:
+            pose = poses[MARKER_ID]  # TODO this is just temporary (single-marker) solution
+        except KeyError:
+            return "Marker not found", 404
 
     return jsonify(pose.to_dict()), 200
 
@@ -195,11 +211,17 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
+    parser.add_argument("-m", "--mock", action="store_true", default=False)
     args = parser.parse_args()
 
     if args.swagger:
         print(spec.to_yaml())
         return
+
+    global _mock
+    _mock = args.mock
+    if _mock:
+        logger.info("Starting as a mock!")
 
     SWAGGER_URL = "/swagger"
 
