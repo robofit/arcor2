@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.1.0rc1"
+pants_version = "2.2.0.dev1"
 colors = true
 
 
@@ -61,7 +61,7 @@ args = ["--count=3 -x"]
 timeout_default = 600
 
 [test]
-use_coverage = true
+use_coverage = false
 
 [black]
 config = "pyproject.toml"
