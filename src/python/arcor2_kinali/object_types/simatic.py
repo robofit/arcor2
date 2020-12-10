@@ -1,7 +1,7 @@
 from typing import Set
 
 from arcor2.data.common import Pose
-from arcor2.exceptions import Arcor2Exception
+from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.object_types.abstract import RobotType
 
 from .abstract_robot import AbstractRobot
@@ -17,7 +17,7 @@ class Simatic(AbstractRobot):
         return set()
 
     def get_end_effector_pose(self, end_effector: str) -> Pose:
-        raise Arcor2Exception("Not supported")  # TODO Arcor2NotImplementedError
+        raise Arcor2NotImplemented("Not supported")
 
     def suctions(self) -> Set[str]:
         return set()

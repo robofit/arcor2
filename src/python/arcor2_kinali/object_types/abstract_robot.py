@@ -131,12 +131,8 @@ class AbstractRobot(Robot):
         assert 0.0 <= speed <= 1.0
         assert 0.0 <= acceleration <= 1.0
 
-        if safe:
-            url = f"{self.settings.url}/jointsCollideLess"
-        else:
-            url = f"{self.settings.url}/joints"
-
-        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
+        url = f"{self.settings.url}/joints"
+        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration, "safe": safe}
 
         with self._move_lock:
             rest.call(rest.Method.PUT, url, body=joints.joints, params=params, timeout=self.move_timeout)
