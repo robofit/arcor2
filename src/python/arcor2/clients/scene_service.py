@@ -108,7 +108,7 @@ def stop() -> None:
 def started() -> bool:
     """Checks whether the scene is running."""
 
-    return rest.call(rest.Method.PUT, f"{URL}/system/running", return_type=bool)
+    return rest.call(rest.Method.GET, f"{URL}/system/running", return_type=bool)
 
 
 @handle(SceneServiceException, message="Failed to get transforms.")

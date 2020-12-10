@@ -71,12 +71,9 @@ class Aubo(AbstractRobot):
         assert 0.0 <= speed <= 1.0
         assert 0.0 <= acceleration <= 1.0
 
-        if safe:
-            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveCollideLess"
-        else:
-            url = f"{self.settings.url}/endEffectors/{end_effector_id}/move"
+        url = f"{self.settings.url}/endEffectors/{end_effector_id}/move"
 
-        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
+        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration, "safe": safe}
 
         with self._move_lock:
             rest.call(rest.Method.PUT, url, body=pose, params=params, timeout=self.move_timeout)
@@ -106,12 +103,9 @@ class Aubo(AbstractRobot):
         assert 0.0 <= speed <= 1.0
         assert 0.0 <= acceleration <= 1.0
 
-        if safe:
-            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveCollideLessRelative"
-        else:
-            url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveRelative"
+        url = f"{self.settings.url}/endEffectors/{end_effector_id}/moveRelative"
 
-        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration}
+        params = {"moveType": move_type.value, "speed": speed, "acceleration": acceleration, "safe": safe}
         body = MoveRelativeParameters(pose, rel_pose.position, rel_pose.orientation)
 
         with self._move_lock:

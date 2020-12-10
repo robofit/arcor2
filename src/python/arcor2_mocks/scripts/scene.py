@@ -304,7 +304,7 @@ def put_stop() -> RespT:
     return "ok", 200
 
 
-@app.route("/system/running", methods=["PUT"])
+@app.route("/system/running", methods=["GET"])
 def get_started() -> RespT:
     return cast(Response, jsonify(started))
 

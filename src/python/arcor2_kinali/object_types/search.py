@@ -111,6 +111,15 @@ class Search(AbstractWithPose):
         """
         return rest.call(rest.Method.GET, f"{self.settings.url}/capture/pose", return_type=Pose)
 
+    def capture_export(self, path_to_save_zip: str) -> None:
+        """Gets the zipped captured data.
+
+        :param path_to_save_zip: Where to save the zip file.
+        :return:
+        """
+
+        rest.download(f"{self.settings.url}/capture/export", path_to_save_zip)
+
     # --- Pick Controller ----------------------------------------------------------------------------------------------
 
     def upsert_pick_args(self, item_id: str, suction_id: str, poses: List[PickArgs]) -> None:

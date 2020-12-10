@@ -76,7 +76,7 @@ services:
       - execution
 
   testitoff-robot-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.8.1
+      image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.9.0
       container_name: "testitoff-robot-webapi"
       expose:
           - "13000"
@@ -90,7 +90,7 @@ services:
         - testitoff-scene-network
 
   testitoff-robot2-webapi:
-    image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.8.1
+    image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.9.0
     container_name: "testitoff-robot2-webapi"
     expose:
       - "13001"
@@ -104,7 +104,7 @@ services:
       - testitoff-scene-network
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.3.3
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.0
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
@@ -136,7 +136,7 @@ services:
           - "14017:27017"  
 
   testitoff-search-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.5.1
+      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.7.0
       container_name: "testitoff-search-webapi"
       privileged: true
       restart: always
@@ -165,7 +165,7 @@ services:
           - "12017:27017" 
 
   testitoff-scene-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.3.1
+      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.0
       container_name: "testitoff-scene"
       restart: always
       ports:
@@ -225,7 +225,7 @@ services:
         - testitoff-interaction-network
 
   testitoff-barcode-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/barcode-simulator:0.3.1
+      image: registry.gitlab.com/kinalisoft/test-it-off/barcode-simulator:0.4.0
       container_name: "testitoff-barcode-webapi"
       privileged: true
       restart: always
