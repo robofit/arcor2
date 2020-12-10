@@ -16,6 +16,7 @@ from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request, send_file
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
+from PIL import Image
 
 from arcor2.data.camera import CameraParameters
 from arcor2.helpers import port_from_url
@@ -39,6 +40,8 @@ app = Flask(__name__)
 CORS(app)
 
 _kinect: Optional[KinectAzure] = None
+_mock: bool = False
+_mock_started: bool = False
 
 
 @app.route("/swagger/api/swagger.json", methods=["GET"])
@@ -47,6 +50,10 @@ def get_swagger() -> str:
 
 
 def started() -> bool:
+
+    if _mock:
+        return _mock_started
+
     return _kinect is not None
 
 
@@ -58,6 +65,16 @@ def requires_started(f):
         return f(*args, **kwargs)
 
     return wrapped
+
+
+def color_image() -> Image.Image:
+
+    return Image.new("RGB", (1920, 1080), color="white")
+
+
+def depth_image() -> Image.Image:
+
+    return Image.new("I;16", (1920, 1080), color="white")
 
 
 @app.route("/state/start", methods=["PUT"])
@@ -75,13 +92,17 @@ def put_start() -> Tuple[str, int]:
               description: Already started
     """
 
-    global _kinect
-
     if started():
         return "Already started.", 403
 
-    assert _kinect is None
-    _kinect = KinectAzure()
+    if _mock:
+        global _mock_started
+        _mock_started = True
+    else:
+        global _kinect
+        assert _kinect is None
+        _kinect = KinectAzure()
+
     return "ok", 200
 
 
@@ -101,10 +122,14 @@ def put_stop() -> Tuple[str, int]:
               description: Not started
     """
 
-    global _kinect
-    assert _kinect is not None
-    _kinect.cleanup()
-    _kinect = None
+    if _mock:
+        global _mock_started
+        _mock_started = False
+    else:
+        global _kinect
+        assert _kinect is not None
+        _kinect.cleanup()
+        _kinect = None
     return "ok", 200
 
 
@@ -150,9 +175,14 @@ def get_image_color() -> Response:
               description: Not started
     """
 
-    assert _kinect is not None
+    if _mock:
+        img = color_image()
+    else:
+        assert _kinect is not None
+        img = _kinect.color_image()
+
     return send_file(
-        image_to_bytes_io(_kinect.color_image(), target_format="JPEG", target_mode="RGB"),
+        image_to_bytes_io(img, target_format="JPEG", target_mode="RGB"),
         mimetype="image/jpeg",
         cache_timeout=0,
     )
@@ -178,12 +208,19 @@ def get_color_camera_parameters() -> Tuple[str, int]:
               description: Not started
     """
 
-    assert _kinect is not None
+    if _mock:
+        params = CameraParameters(
+            915.575, 915.425, 957.69, 556.35, [0.447, -2.5, 0.00094, -0.00053, 1.432, 0.329, -2.332, 1.363]
+        )
+    else:
+        assert _kinect is not None
 
-    if not _kinect.color_camera_params:
-        return "Failed to get camera parameters", 403
+        if not _kinect.color_camera_params:
+            return "Failed to get camera parameters", 403
 
-    return jsonify(_kinect.color_camera_params.to_dict()), 200
+        params = _kinect.color_camera_params
+
+    return jsonify(params.to_dict()), 200
 
 
 @app.route("/depth/image", methods=["GET"])
@@ -214,14 +251,13 @@ def get_image_depth() -> Response:
               description: Not started
     """
 
-    assert _kinect is not None
-    return send_file(
-        image_to_bytes_io(
-            _kinect.depth_image(averaged_frames=int(request.args.get("averagedFrames", default=1))), target_format="PNG"
-        ),
-        mimetype="image/png",
-        cache_timeout=0,
-    )
+    if _mock:
+        img = depth_image()
+    else:
+        assert _kinect is not None
+        img = _kinect.depth_image(averaged_frames=int(request.args.get("averagedFrames", default=1)))
+
+    return send_file(image_to_bytes_io(img, target_format="PNG"), mimetype="image/png", cache_timeout=0)
 
 
 @app.route("/synchronized/image", methods=["GET"])
@@ -245,14 +281,20 @@ def get_image_both() -> Response:
               description: Not started
     """
 
-    assert _kinect is not None
+    if _mock:
+        color = color_image()
+        depth = depth_image()
+    else:
+        assert _kinect is not None
+        both = _kinect.sync_images()
+        color = both.color
+        depth = both.depth
 
-    both = _kinect.sync_images()
     mem_zip = io.BytesIO()
 
     with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_STORED) as zf:
-        zf.writestr("color.jpg", image_to_bytes_io(both.color).getvalue())
-        zf.writestr("depth.png", image_to_bytes_io(both.depth, target_format="PNG").getvalue())
+        zf.writestr("color.jpg", image_to_bytes_io(color).getvalue())
+        zf.writestr("depth.png", image_to_bytes_io(depth, target_format="PNG").getvalue())
 
     mem_zip.seek(0)
     return send_file(
@@ -276,11 +318,17 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
+    parser.add_argument("-m", "--mock", action="store_true", default=False)
     args = parser.parse_args()
 
     if args.swagger:
         print(spec.to_yaml())
         return
+
+    global _mock
+    _mock = args.mock
+    if _mock:
+        logger.info("Starting as a mock!")
 
     SWAGGER_URL = "/swagger"
 
