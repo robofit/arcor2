@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.11.0] - WIP
+## [0.11.0] - 2020-12-14
 
 ### Changed
 - Improved support for logic branching.
