@@ -12,4 +12,7 @@ RUN mkdir -p /root/project
 
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_execution.scripts/execution.pex /root/execution.pex
 
+RUN apt-get update \
+        && apt-get install -y -q libgl1-mesa-glx libglib2.0-0
+
 COPY docker/start-execution.sh ./start.sh

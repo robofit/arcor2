@@ -1,0 +1,51 @@
+FROM ubuntu:18.04
+
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends \
+  curl \
+  build-essential \
+  git \
+  python3.8 \
+  python3.8-venv \
+  python3.8-dev \
+  python3-distutils \
+  python3-pip \
+  unzip
+
+RUN pip3 install --upgrade \
+  pip
+
+COPY . /root/arcor2/
+
+ENV TZ=Europe/Kiev
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN apt-get update \
+     && apt-get install -y gnupg2 software-properties-common libpython3.8-dev
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN echo 'libk4a1.4 libk4a1.4/accepted-eula-hash string 0f5d5c5de396e4fee4c0753a21fee0c1ed726cf0316204edda484f08cb266d76' | debconf-set-selections \
+     && echo 'libk4a1.4 libk4a1.4/accept-eula boolean true' | debconf-set-selections
+
+RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+     && apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod \
+     && apt-get update \         
+     && apt-get install -y libk4a1.4 libk4a1.4-dev
+
+RUN apt-get update \      
+    && apt-get install -y python3.6-dev
+
+ENV LC_ALL=en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV PANTS_IGNORE_UNRECOGNIZED_ENCODING=1
+
+RUN cd ~/arcor2 \
+	&& ./pants package src/python/arcor2_kinect_azure/scripts:kinect_azure 
+
+RUN mv /root/arcor2/dist/src.python.arcor2_kinect_azure.scripts/kinect_azure.pex /root/kinect_azure.pex
+
+COPY docker/start-kinect-azure.sh ./start.sh
+
+CMD ["/bin/sh", "/start.sh"]
