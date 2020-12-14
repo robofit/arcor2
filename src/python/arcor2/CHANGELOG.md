@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Parameter plugins slightly reworked, some new helper functions.
 - If a robot has URDF, it is zipped and uploaded to the Project service).
   - ...as a mesh file, which is workaround for missing storage of URDF models.
+- Scene service client updated to support version 0.4.0.
+- New built-in abstract ObjectType `Camera`.
+- Initial support for loading of URDF files.
+- Some first tests for parameter plugins were added.
 
 ## [0.9.2] - 2020-10-30
 

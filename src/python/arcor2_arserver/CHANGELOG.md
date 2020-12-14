@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Improved handling of return values (uses the same function as the main script).
 - The internal database of ObjectTypes in updated each time before opening a scene or a project.
   - Changes are notified using `ChangedObjectTypes` event (one event for added objects, one for updated and another one for deleted ones).
+- Support for camera/robot calibration.
+- Initial support for cameras (getting images, camera parameters).
 
 ## [0.10.1] - 2020-10-30
 
