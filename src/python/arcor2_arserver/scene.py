@@ -36,7 +36,12 @@ async def update_scene_object_pose(
     assert glob.SCENE
 
     if pose:
+        # SceneObject pose was not updated before
         obj.pose = pose
+    else:
+        # SceneObject pose was already updated
+        pose = obj.pose
+
     glob.SCENE.update_modified()
 
     evt = SceneObjectChanged(obj)
@@ -51,6 +56,8 @@ async def update_scene_object_pose(
             inst = get_instance(obj.id)
             assert isinstance(inst, GenericWithPose)
             obj_inst = inst
+
+        assert pose is not None
 
         # Object pose is property that might call scene service - that's why it has to be called using executor.
         await hlp.run_in_executor(setattr, obj_inst, "pose", pose)
