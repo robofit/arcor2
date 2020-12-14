@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.8.3] - WIP
+## [0.8.3] - 2020-12-14
 
 ### Fixed
 - Error code and message when attempting to delete a non-existent execution package. 

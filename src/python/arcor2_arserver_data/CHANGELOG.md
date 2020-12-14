@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.10.0] - WIP
+## [0.10.0] - 2020-12-14
 
 ### Changed
 - `ActionResult` event changed to match with `ActionState` (support for actions that may return more than one result).
