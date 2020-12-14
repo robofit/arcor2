@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - `ActionResult` event changed to match with `ActionState` (support for actions that may return more than one result).
+- `ProcessState` event for signalling state of long-running processes.
+- RPCs for camera/robot calibration.
 
 ### Changed
 - RPC for IK/FK.
