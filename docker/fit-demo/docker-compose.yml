@@ -8,12 +8,14 @@ services:
       - project
       - build
       - execution
+      - kinect
       - testitoff-scene-webapi
       # - mocks
     ports:
       - "6789:6789"
       - "6780:8888"
     networks:
+          - testitoff-kinect-network
           - testitoff-robot-network
           - testitoff-project-network
           - testitoff-scene-network
@@ -23,6 +25,7 @@ services:
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
       - ARCOR2_DATA_PATH=/root/data
+      - ARCOR2_CALIBRATION_URL=http://kinect:5014
 
   build:
     image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
@@ -47,6 +50,14 @@ services:
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
         - execution:/root/project
+
+  kinect:
+    image: arcor2/arcor2_kinect_azure:0.1.0
+    container_name: kinect
+    networks:
+      - testitoff-kinect-network
+    ports:
+        - "5014-5016:5014-5016"
 
   testitoff-scene-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.0
@@ -127,3 +138,5 @@ networks:
   testitoff-execution-network:
   testitoff-scene-network:
   testitoff-project-network:
+  testitoff-kinect-network:
+
