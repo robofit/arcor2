@@ -32,7 +32,7 @@
   <link name="world"/>
   <!-- The base fixed to its parent. -->
   <joint name="world_dobot_m1_base_joint" type="fixed">
-    <origin xyz="0.0 0.0 0.0"/>
+    <origin rpy="0 0 -1.5708" xyz="0.0 0.0 0.0"/>
     <parent link="world"/>
     <child link="dobot_m1_base_link"/>
   </joint>
