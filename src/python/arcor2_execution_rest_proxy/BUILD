@@ -8,8 +8,7 @@ arcor2_python_distribution(
     name="arcor2_execution_rest_proxy_dist",
     dependencies=[
         ":arcor2_execution_rest_proxy",
-        ":py.typed",
-        "src/python/arcor2_execution_rest_proxy/scripts:execution_rest_proxy"  # TODO is it supposed to be here?
+        ":py.typed"
     ],
     provides=arcor2_setup_py(
         name="arcor2_execution_rest_proxy",
