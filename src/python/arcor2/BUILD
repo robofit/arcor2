@@ -14,8 +14,7 @@ arcor2_python_distribution(
         "src/python/arcor2/object_types",
         "src/python/arcor2/parameter_plugins",
         "src/python/arcor2/source",
-        "src/python/arcor2/test_objects",
-        "src/python/arcor2/scripts:upload_builtin_objects"  # TODO why is this necessary?
+        "src/python/arcor2/test_objects"
     ],
     provides=arcor2_setup_py(
         name="arcor2",

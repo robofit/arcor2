@@ -9,7 +9,6 @@ arcor2_python_distribution(
     dependencies=[
         ":arcor2_build",
         ":py.typed",
-        "src/python/arcor2_build/scripts:build",  # TODO why is this necessary?
         "src/python/arcor2_build/source"
     ],
     provides=arcor2_setup_py(

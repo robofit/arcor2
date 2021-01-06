@@ -1,10 +1,10 @@
 [GLOBAL]
-pants_version = "2.2.0.dev1"
+pants_version = "2.2.0rc1"
 colors = true
 
 
 plugins = [
-  "packaging==20.4",
+  "packaging==20.8",
 ]
 
 backend_packages.add = [

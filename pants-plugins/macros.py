@@ -35,13 +35,10 @@ def arcor2_python_distribution(**kwargs):
 
 def arcor2_pex_binary(**kwargs):
 
-    if "entry_point" not in kwargs:
-        kwargs["entry_point"] = ":main"
-
     if "zip_safe" not in kwargs:
         kwargs["zip_safe"] = False
 
-    if "sources" not in kwargs:
-        kwargs["sources"] = [f"{kwargs['name']}.py"]
+    if "entry_point" not in kwargs:
+        kwargs["entry_point"] = f"{kwargs['name']}.py:main"
 
     return pex_binary(**kwargs)
