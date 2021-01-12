@@ -10,7 +10,7 @@ from typing import Optional, Tuple
 
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
-from arcor2_kinect_azure import version
+from arcor2_kinect_azure import get_data, version
 from arcor2_kinect_azure.kinect_azure import KinectAzure
 from dataclasses_jsonschema.apispec import DataclassesPlugin
 from flask import Flask, Response, jsonify, request, send_file
@@ -69,12 +69,12 @@ def requires_started(f):
 
 def color_image() -> Image.Image:
 
-    return Image.new("RGB", (1920, 1080), color="white")
+    return Image.open(get_data("rgb.jpg"))
 
 
 def depth_image() -> Image.Image:
 
-    return Image.new("I;16", (1920, 1080), color="white")
+    return Image.open(get_data("depth.png"))
 
 
 @app.route("/state/start", methods=["PUT"])
@@ -244,7 +244,7 @@ def get_image_depth() -> Response:
             200:
               description: Ok
               content:
-                image/jpeg:
+                image/png:
                     schema:
                         type: string
             403:
