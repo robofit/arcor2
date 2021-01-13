@@ -40,6 +40,10 @@ build_upload_fit_demo_image () {
 	docker build -f Dockerfile-upload-fit-demo -t arcor2/arcor2_upload_fit_demo:"$(cat ../src/python/arcor2_fit_demo/VERSION)" --build-arg version="$VERSION" ../
 }
 
+build_upload_builtin_objects_image () {
+	docker build -f Dockerfile-upload-builtin-objects -t arcor2/arcor2_upload_builtin_objects:"$(cat ../src/python/arcor2/VERSION)" --build-arg version="$VERSION" ../
+}
+
 build_upload_kinali_image () {
 	docker build -f Dockerfile-upload-kinali -t arcor2/arcor2_upload_kinali:"$(cat ../src/python/arcor2_kinali/VERSION)" --build-arg version="$VERSION" ../
 }
@@ -50,16 +54,17 @@ build_all_images() {
 	build_build_image
 	build_execution_image
 	build_execution_proxy_image
-        build_kinect_azure
+    build_kinect_azure
 	build_mocks_image
 	build_devel_image
 	build_upload_fit_demo_image
 	build_upload_kinali_image
+	build_upload_builtin_objects_image
 }
 
 if [ $# -eq 0 ]; then
     echo "Usage:"
-    echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [upload-fit-demo] [upload-kinali]"
+    echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [upload-fit-demo] [upload-kinali] [upload-builtin]"
     echo "sudo sh build.sh VERSION all"
     echo "$VERSION specifies version of base image. Optional parametes specifies which images should be build using version from their VERSION file."
     echo "If no optional parameter is specified, base image is build with version $VERSION."
@@ -106,6 +111,8 @@ do
     	build_upload_fit_demo_image
 	elif [ "$var" = "upload-kinali" ]; then
     	build_upload_kinali_image
+	elif [ "$var" = "upload-builtin" ]; then
+    	build_upload_builtin_objects_image
 	else
 	    echo "Unknown image $var"
             exit 0
