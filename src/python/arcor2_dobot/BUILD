@@ -5,17 +5,17 @@ python_library(
 )
 
 arcor2_python_distribution(
-    name="arcor2_execution_dist",
+    name="arcor2_dobot_dist",
     dependencies=[
-        ":arcor2_execution",
+        ":arcor2_dobot",
         ":py.typed"
     ],
     provides=arcor2_setup_py(
-        name="arcor2_execution",
-        description="ARCOR2 - Augmented Reality Collaborative Robot."
+        name="arcor2_dobot",
+        description="ARCOR2 - Dobot Web API."
     ).with_binaries(
         {
-            "arcor2_execution": "src/python/arcor2_execution/scripts:execution"
+            "arcor2_dobot": "src/python/arcor2_dobot/scripts:dobot"
             }
         )
 )
@@ -27,5 +27,5 @@ resources(
 
 resources(
     name = "VERSION",
-    sources = ["VERSION"]
+    sources = ["VERSION"],
 )
