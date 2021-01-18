@@ -10,9 +10,9 @@ from PIL.Image import Image
 ENCODING = "latin-1"
 
 
-def image_to_cv2(pil_image: Image) -> np.array:
+def image_to_cv2(pil_image: Image, mode=cv2.COLOR_RGB2BGR) -> np.array:
 
-    return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+    return cv2.cvtColor(np.array(pil_image), mode)
 
 
 def image_to_bytes_io(value: Image, target_format: str = "jpeg", target_mode: Optional[str] = None) -> io.BytesIO:
@@ -28,12 +28,12 @@ def image_to_bytes_io(value: Image, target_format: str = "jpeg", target_mode: Op
     return output
 
 
-def image_to_str(value: Image) -> str:
-    return image_to_bytes_io(value).getvalue().decode(ENCODING)
+def image_to_str(value: Image, target_format: str = "jpeg") -> str:
+    return image_to_bytes_io(value, target_format).getvalue().decode(ENCODING)
 
 
 def image_from_str(value: str) -> Image:
-    return image_to_bytes_io(io.BytesIO(value.encode(ENCODING)))
+    return image_from_bytes_io(io.BytesIO(value.encode(ENCODING)))
 
 
 def image_to_json(value: Image) -> str:
