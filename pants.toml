@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.2.0rc1"
+pants_version = "2.3.0.dev0"
 colors = true
 
 
