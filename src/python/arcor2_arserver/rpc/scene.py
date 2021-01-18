@@ -14,6 +14,7 @@ from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
+from arcor2.image import image_from_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
@@ -507,8 +508,11 @@ async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
 async def calibration_cb(req: srpc.c.Calibration.Request, ui: WsClient) -> srpc.c.Calibration.Response:
 
+    # TODO estimated pose should be rather returned in an event (it is possibly a long-running process)
     return srpc.c.Calibration.Response(
-        data=await hlp.run_in_executor(calibration.estimate_camera_pose, req.args.camera_parameters, req.args.image)
+        data=await hlp.run_in_executor(
+            calibration.estimate_camera_pose, req.args.camera_parameters, image_from_str(req.args.image)
+        )
     )
 
 
