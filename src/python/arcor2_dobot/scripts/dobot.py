@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import os
 from functools import wraps
-from typing import Dict, Optional, Tuple, Type
+from typing import Dict, Optional, Type
 
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
 from arcor2_dobot import version
 from arcor2_dobot.dobot import Dobot, MoveType
 from arcor2_dobot.m1 import DobotM1
 from arcor2_dobot.magician import DobotMagician
-from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, jsonify, request
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import jsonify, request
 
 from arcor2.data.common import Joint, Pose
-from arcor2.exceptions import Arcor2Exception
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 
@@ -27,24 +21,10 @@ logger = get_logger(__name__)
 URL = os.getenv("ARCOR2_DOBOT_URL", "http://localhost:5018")
 SERVICE_NAME = "Dobot Service"
 
-# Create an APISpec
-spec = APISpec(
-    title=SERVICE_NAME,
-    version=version(),
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
-)
-
-app = Flask(__name__)
-CORS(app)
+app = create_app(__name__)
 
 _dobot: Optional[Dobot] = None
 _mock = False
-
-
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
 
 
 def started() -> bool:
@@ -63,7 +43,7 @@ def requires_started(f):
 
 
 @app.route("/start", methods=["PUT"])
-def put_start() -> Tuple[str, int]:
+def put_start() -> RespT:
     """Start the robot.
     ---
     put:
@@ -85,7 +65,7 @@ def put_start() -> Tuple[str, int]:
                     - magician
                     - m1
               required: true
-              description: Dobot Model
+              description: Dobot model
         requestBody:
               content:
                 application/json:
@@ -116,7 +96,7 @@ def put_start() -> Tuple[str, int]:
 
 @app.route("/stop", methods=["PUT"])
 @requires_started
-def put_stop() -> Tuple[str, int]:
+def put_stop() -> RespT:
     """Stop the robot.
     ---
     put:
@@ -138,7 +118,7 @@ def put_stop() -> Tuple[str, int]:
 
 
 @app.route("/started", methods=["GET"])
-def get_started() -> Tuple[str, int]:
+def get_started() -> RespT:
     """Get the current state.
     ---
     get:
@@ -161,7 +141,7 @@ def get_started() -> Tuple[str, int]:
 
 @app.route("/eef/pose", methods=["GET"])
 @requires_started
-def get_eef_pose() -> Tuple[str, int]:
+def get_eef_pose() -> RespT:
     """Get the EEF pose.
     ---
     get:
@@ -185,7 +165,7 @@ def get_eef_pose() -> Tuple[str, int]:
 
 @app.route("/eef/pose", methods=["PUT"])
 @requires_started
-def put_eef_pose() -> Tuple[str, int]:
+def put_eef_pose() -> RespT:
     """Set the EEF pose.
     ---
     put:
@@ -245,7 +225,7 @@ def put_eef_pose() -> Tuple[str, int]:
 
 @app.route("/home", methods=["PUT"])
 @requires_started
-def put_home() -> Tuple[str, int]:
+def put_home() -> RespT:
     """Get the current state.
     ---
     put:
@@ -266,7 +246,7 @@ def put_home() -> Tuple[str, int]:
 
 @app.route("/suck", methods=["PUT"])
 @requires_started
-def put_suck() -> Tuple[str, int]:
+def put_suck() -> RespT:
     """Get the current state.
     ---
     put:
@@ -287,7 +267,7 @@ def put_suck() -> Tuple[str, int]:
 
 @app.route("/release", methods=["PUT"])
 @requires_started
-def put_release() -> Tuple[str, int]:
+def put_release() -> RespT:
     """Get the current state.
     ---
     put:
@@ -308,7 +288,7 @@ def put_release() -> Tuple[str, int]:
 
 @app.route("/joints", methods=["GET"])
 @requires_started
-def get_joints() -> Tuple[str, int]:
+def get_joints() -> RespT:
     """Get the current state.
     ---
     get:
@@ -334,7 +314,7 @@ def get_joints() -> Tuple[str, int]:
 
 @app.route("/ik", methods=["PUT"])
 @requires_started
-def put_ik() -> Tuple[str, int]:
+def put_ik() -> RespT:
     """Get the current state.
     ---
     put:
@@ -367,7 +347,7 @@ def put_ik() -> Tuple[str, int]:
 
 @app.route("/fk", methods=["PUT"])
 @requires_started
-def put_fk() -> Tuple[str, int]:
+def put_fk() -> RespT:
     """Get the current state.
     ---
     put:
@@ -398,28 +378,6 @@ def put_fk() -> Tuple[str, int]:
     return jsonify(_dobot.forward_kinematics(joints)), 200
 
 
-@app.errorhandler(Arcor2Exception)
-def handle_bad_request(e: Arcor2Exception) -> Tuple[str, int]:
-    return str(e), 400
-
-
-with app.test_request_context():
-    spec.path(view=put_start)
-    spec.path(view=put_stop)
-    spec.path(view=get_started)
-    spec.path(view=get_eef_pose)
-    spec.path(view=put_eef_pose)
-    spec.path(view=put_home)
-    spec.path(view=put_suck)
-    spec.path(view=put_release)
-    spec.path(view=get_joints)
-    spec.path(view=put_ik)
-    spec.path(view=put_fk)
-
-spec.components.schema(Pose.__name__, schema=Pose)
-spec.components.schema(Joint.__name__, schema=Joint)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
@@ -427,25 +385,12 @@ def main() -> None:
     parser.add_argument("-m", "--mock", action="store_true", default=False)
     args = parser.parse_args()
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
     global _mock
     _mock = args.mock
     if _mock:
         logger.info("Starting as a mock!")
 
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
-    )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=port_from_url(URL))
+    run_app(app, SERVICE_NAME, version(), version(), port_from_url(URL), [Pose, Joint], args.swagger)
 
     if _dobot:
         _dobot.cleanup()

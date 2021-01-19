@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import os
 import random
 import time
-from typing import Tuple, Union
 
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
 from arcor2_calibration_data import CALIBRATION_URL, SERVICE_NAME
 from arcor2_calibration_data.client import CalibrateRobotArgs
-from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, Response, jsonify, request
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import jsonify, request
 from PIL import Image
 
 import arcor2_calibration
 from arcor2.data.common import Pose, Position
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2.urdf import urdf_from_url
@@ -27,32 +21,16 @@ from arcor2_calibration.robot import calibrate_robot
 
 logger = get_logger(__name__)
 
-# Create an APISpec
-spec = APISpec(
-    title=SERVICE_NAME,
-    version=arcor2_calibration.version(),
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
-)
-
-RETURN_TYPE = Union[Tuple[str, int], Response, Tuple[Response, int]]
-
 MARKER_SIZE = float(os.getenv("ARCOR2_CALIBRATION_MARKER_SIZE", 0.091))
 MARKER_ID = int(os.getenv("ARCOR2_CALIBRATION_MARKER_ID", 10))
 
 _mock: bool = False
 
-app = Flask(__name__)
-CORS(app)
-
-
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
+app = create_app(__name__)
 
 
 @app.route("/calibrate/robot", methods=["PUT"])
-def put_calibrate_robot() -> RETURN_TYPE:
+def put_calibrate_robot() -> RespT:
     """Get calibration (camera pose wrt. marker)
     ---
     put:
@@ -107,7 +85,7 @@ def put_calibrate_robot() -> RETURN_TYPE:
 
 
 @app.route("/calibrate/camera", methods=["PUT"])
-def get_calibration() -> RETURN_TYPE:
+def get_calibration() -> RespT:
     """Get calibration (camera pose wrt. marker)
     ---
     put:
@@ -199,14 +177,6 @@ def get_calibration() -> RETURN_TYPE:
     return jsonify(pose.to_dict()), 200
 
 
-with app.test_request_context():
-    spec.path(view=put_calibrate_robot)
-    spec.path(view=get_calibration)
-
-spec.components.schema(Pose.__name__, schema=Pose)
-spec.components.schema(CalibrateRobotArgs.__name__, schema=CalibrateRobotArgs)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
@@ -214,25 +184,20 @@ def main() -> None:
     parser.add_argument("-m", "--mock", action="store_true", default=False)
     args = parser.parse_args()
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
     global _mock
     _mock = args.mock
     if _mock:
         logger.info("Starting as a mock!")
 
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    run_app(
+        app,
+        SERVICE_NAME,
+        arcor2_calibration.version(),
+        arcor2_calibration.version(),
+        port_from_url(CALIBRATION_URL),
+        [Pose, CalibrateRobotArgs],
+        args.swagger,
     )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=port_from_url(CALIBRATION_URL))
 
 
 if __name__ == "__main__":
