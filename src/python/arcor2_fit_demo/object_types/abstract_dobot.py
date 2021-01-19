@@ -86,8 +86,6 @@ class AbstractDobot(Robot):
         assert 0.0 <= velocity <= 100.0
         assert 0.0 <= acceleration <= 100.0
 
-        print(move_type)
-
         with self._move_lock:
             rest.call(
                 rest.Method.PUT,
