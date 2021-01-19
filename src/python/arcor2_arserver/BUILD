@@ -1,7 +1,6 @@
 python_library(
     dependencies = [
-        ":VERSION",
-        "3rdparty:pydobot2"  # TODO temporary solution - will be removed later
+        ":VERSION"
     ]
 )
 
