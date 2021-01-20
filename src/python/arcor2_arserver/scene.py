@@ -195,32 +195,38 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
     try:
 
-        if issubclass(obj_type.type_def, Robot):
-            assert obj.pose is not None
-            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
-                obj_type.type_def, obj.id, obj.name, obj.pose, settings
-            )
-        elif issubclass(obj_type.type_def, GenericWithPose):
-            assert obj.pose is not None
-            coll_model: Optional[Models] = None
-            if obj_type.meta.object_model:
-                coll_model = obj_type.meta.object_model.model()
+        try:
 
-            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
-                obj_type.type_def, obj.id, obj.name, obj.pose, coll_model, settings
-            )
+            if issubclass(obj_type.type_def, Robot):
+                assert obj.pose is not None
+                glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
+                    obj_type.type_def, obj.id, obj.name, obj.pose, settings
+                )
+            elif issubclass(obj_type.type_def, GenericWithPose):
+                assert obj.pose is not None
+                coll_model: Optional[Models] = None
+                if obj_type.meta.object_model:
+                    coll_model = obj_type.meta.object_model.model()
 
-        elif issubclass(obj_type.type_def, Generic):
-            assert obj.pose is None
-            glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
-                obj_type.type_def, obj.id, obj.name, settings
-            )
+                glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
+                    obj_type.type_def, obj.id, obj.name, obj.pose, coll_model, settings
+                )
 
-        else:
-            raise Arcor2Exception("Object type with unknown base.")
+            elif issubclass(obj_type.type_def, Generic):
+                assert obj.pose is None
+                glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
+                    obj_type.type_def, obj.id, obj.name, settings
+                )
 
-    except (TypeError, ValueError) as e:  # catch some most often exceptions
-        raise Arcor2Exception("Failed to create object instance.") from e
+            else:
+                raise Arcor2Exception("Object type with unknown base.")
+
+        except (TypeError, ValueError) as e:  # catch some most often exceptions
+            raise Arcor2Exception("Unhandled error.") from e
+
+    except Arcor2Exception as e:
+        # make the exception a bit more user-friendly by including the object's name
+        raise Arcor2Exception(f"Failed to initialize {obj.name}. {str(e)}") from e
 
     return None
 
@@ -248,6 +254,15 @@ def get_instance(obj_id: str) -> Generic:
     return glob.SCENE_OBJECT_INSTANCES[obj_id]
 
 
+async def cleanup_object(obj: Generic) -> None:
+
+    try:
+        await hlp.run_in_executor(obj.cleanup)
+    except Arcor2Exception as e:
+        # make the exception a bit more user-friendly by including the object's name
+        raise Arcor2Exception(f"Failed to cleanup {obj.name}. {str(e)}") from e
+
+
 async def stop_scene(message: Optional[str] = None) -> None:
     """Destroys scene object instances."""
 
@@ -264,7 +279,7 @@ async def stop_scene(message: Optional[str] = None) -> None:
             return
 
     try:
-        await asyncio.gather(*[hlp.run_in_executor(obj.cleanup) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
+        await asyncio.gather(*[cleanup_object(obj) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
     except Arcor2Exception as e:
         glob.logger.exception("Exception occurred while cleaning up objects.")
         await set_scene_state(SceneState.Data.StateEnum.Stopped, str(e))
