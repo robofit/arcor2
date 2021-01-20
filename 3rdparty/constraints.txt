@@ -72,4 +72,4 @@ pycollada==0.6.0
 pyrender==0.1.43
 scipy==1.6.0
 trimesh==3.9.1
-open3d==0.11.2
+open3d==0.12.0
