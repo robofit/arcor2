@@ -1,4 +1,8 @@
 import os
+from dataclasses import dataclass
+from typing import List
+
+from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2 import package_version
 
@@ -8,3 +12,17 @@ SERVICE_NAME = "ARCOR2 Calibration Service"
 
 def version() -> str:
     return package_version(__name__)
+
+
+@dataclass
+class Corner(JsonSchemaMixin):
+
+    x: float
+    y: float
+
+
+@dataclass
+class MarkerCorners(JsonSchemaMixin):
+
+    marker_id: int
+    corners: List[Corner]
