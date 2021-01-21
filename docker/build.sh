@@ -48,6 +48,14 @@ build_upload_kinali_image () {
 	docker build -f Dockerfile-upload-kinali -t arcor2/arcor2_upload_kinali:"$(cat ../src/python/arcor2_kinali/VERSION)" --build-arg version="$VERSION" ../
 }
 
+build_dobot_image () {
+	docker build -f Dockerfile-dobot -t arcor2/arcor2_dobot:"$(cat ../src/python/arcor2_dobot/VERSION)" --build-arg version="$VERSION" ../
+}
+
+build_calibration_image () {
+	docker build -f Dockerfile-calibration -t arcor2/arcor2_calibration:"$(cat ../src/python/arcor2_calibration/VERSION)" --build-arg version="$VERSION" ../
+}
+
 build_all_images() {
 	build_dist_base_image
 	build_arserver_image
@@ -60,11 +68,13 @@ build_all_images() {
 	build_upload_fit_demo_image
 	build_upload_kinali_image
 	build_upload_builtin_objects_image
+	build_dobot_image
+	build_calibration_image
 }
 
 if [ $# -eq 0 ]; then
     echo "Usage:"
-    echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [upload-fit-demo] [upload-kinali] [upload-builtin]"
+    echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [dobot] [calibration] [upload-fit-demo] [upload-kinali] [upload-builtin]"
     echo "sudo sh build.sh VERSION all"
     echo "$VERSION specifies version of base image. Optional parametes specifies which images should be build using version from their VERSION file."
     echo "If no optional parameter is specified, base image is build with version $VERSION."
@@ -103,10 +113,14 @@ do
     	build_execution_proxy_image
 	elif [ "$var" = "kinect-azure" ]; then
         build_kinect_azure
-        elif [ "$var" = "mocks" ]; then
+    elif [ "$var" = "mocks" ]; then
     	build_mocks_image
 	elif [ "$var" = "devel" ]; then
     	build_devel_image
+	elif [ "$var" = "dobot" ]; then
+    	build_dobot_image
+	elif [ "$var" = "calibration" ]; then
+    	build_calibration_image
 	elif [ "$var" = "upload-fit-demo" ]; then
     	build_upload_fit_demo_image
 	elif [ "$var" = "upload-kinali" ]; then
