@@ -1,0 +1,13 @@
+ARG version=latest
+FROM arcor2/arcor2_base:$version
+
+COPY . /root/arcor2/
+
+RUN cd ~/arcor2 \
+	&& ./pants package src/python/arcor2_dobot/scripts:dobot
+
+FROM arcor2/arcor2_dist_base:$version
+
+COPY --from=0 /root/arcor2/dist/src.python.arcor2_dobot.scripts/dobot.pex /root/dobot.pex
+
+COPY docker/start-dobot.sh ./start.sh

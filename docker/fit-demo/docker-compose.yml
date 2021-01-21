@@ -19,6 +19,8 @@ services:
           - testitoff-robot-network
           - testitoff-project-network
           - testitoff-scene-network
+          - testitoff-dobot-network
+          - testitoff-calibration-network
     environment:
       - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
@@ -26,6 +28,7 @@ services:
       - ARCOR2_BUILD_URL=http://build:5008
       - ARCOR2_DATA_PATH=/root/data
       - ARCOR2_CALIBRATION_URL=http://kinect:5014
+      - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
     image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
@@ -45,9 +48,11 @@ services:
       - testitoff-execution-network
       - testitoff-scene-network
       - testitoff-robot-network
+      - testitoff-dobot-network
     environment:
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_PROJECT_PATH=/root/project
+      - ARCOR2_DOBOT_URL=http://dobot:5018
     volumes:
         - execution:/root/project
 
@@ -58,6 +63,26 @@ services:
       - testitoff-kinect-network
     ports:
         - "5014-5016:5014-5016"
+    environment:
+      - ARCOR2_KINECT_SIMULATOR=true
+
+  calibration:
+    image: arcor2/arcor2_calibration:0.1.2
+    container_name: calibration
+    networks:
+      - testitoff-calibration-network
+    ports:
+        - "5020:5018"
+
+  dobot:
+    image: arcor2/arcor2_dobot:0.1.0
+    container_name: dobot
+    networks:
+      - testitoff-dobot-network
+    ports:
+        - "5018:5018"
+    environment:
+      - ARCOR2_DOBOT_SIMULATOR=true
 
   testitoff-scene-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.0
@@ -139,4 +164,6 @@ networks:
   testitoff-scene-network:
   testitoff-project-network:
   testitoff-kinect-network:
+  testitoff-dobot-network:
+  testitoff-calibration-network:
 
