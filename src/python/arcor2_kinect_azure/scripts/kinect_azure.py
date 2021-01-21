@@ -2,23 +2,18 @@
 
 import argparse
 import io
-import json
 import os
 import zipfile
 from functools import wraps
-from typing import Optional, Tuple
+from typing import Optional
 
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
 from arcor2_kinect_azure import get_data, version
 from arcor2_kinect_azure.kinect_azure import KinectAzure
-from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, Response, jsonify, request, send_file
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import jsonify, request, send_file
 from PIL import Image
 
 from arcor2.data.camera import CameraParameters
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.image import image_to_bytes_io
 from arcor2.logging import get_logger
@@ -28,25 +23,11 @@ logger = get_logger(__name__)
 URL = os.getenv("ARCOR2_KINECT_AZURE_URL", "http://localhost:5016")
 SERVICE_NAME = "Kinect Azure Service"
 
-# Create an APISpec
-spec = APISpec(
-    title=SERVICE_NAME,
-    version=version(),
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
-)
-
-app = Flask(__name__)
-CORS(app)
+app = create_app(__name__)
 
 _kinect: Optional[KinectAzure] = None
 _mock: bool = False
 _mock_started: bool = False
-
-
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
 
 
 def started() -> bool:
@@ -78,7 +59,7 @@ def depth_image() -> Image.Image:
 
 
 @app.route("/state/start", methods=["PUT"])
-def put_start() -> Tuple[str, int]:
+def put_start() -> RespT:
     """Start the sensor.
     ---
     put:
@@ -108,7 +89,7 @@ def put_start() -> Tuple[str, int]:
 
 @app.route("/state/stop", methods=["PUT"])
 @requires_started
-def put_stop() -> Tuple[str, int]:
+def put_stop() -> RespT:
     """Stop the sensor.
     ---
     put:
@@ -134,7 +115,7 @@ def put_stop() -> Tuple[str, int]:
 
 
 @app.route("/state/started", methods=["GET"])
-def get_started() -> Tuple[str, int]:
+def get_started() -> RespT:
     """Get the current state.
     ---
     get:
@@ -157,7 +138,7 @@ def get_started() -> Tuple[str, int]:
 
 @app.route("/color/image", methods=["GET"])
 @requires_started
-def get_image_color() -> Response:
+def get_image_color() -> RespT:
     """Get the color image.
     ---
     get:
@@ -190,7 +171,7 @@ def get_image_color() -> Response:
 
 @app.route("/color/parameters", methods=["GET"])
 @requires_started
-def get_color_camera_parameters() -> Tuple[str, int]:
+def get_color_camera_parameters() -> RespT:
     """Get the color camera parameters.
     ---
     get:
@@ -225,7 +206,7 @@ def get_color_camera_parameters() -> Tuple[str, int]:
 
 @app.route("/depth/image", methods=["GET"])
 @requires_started
-def get_image_depth() -> Response:
+def get_image_depth() -> RespT:
     """Get the depth image.
     ---
     get:
@@ -262,7 +243,7 @@ def get_image_depth() -> Response:
 
 @app.route("/synchronized/image", methods=["GET"])
 @requires_started
-def get_image_both() -> Response:
+def get_image_both() -> RespT:
     """Get the both color/depth image.
     ---
     get:
@@ -302,18 +283,6 @@ def get_image_both() -> Response:
     )
 
 
-with app.test_request_context():
-    spec.path(view=put_start)
-    spec.path(view=put_stop)
-    spec.path(view=get_started)
-    spec.path(view=get_image_color)
-    spec.path(view=get_color_camera_parameters)
-    spec.path(view=get_image_both)
-    spec.path(view=get_image_depth)
-
-spec.components.schema(CameraParameters.__name__, schema=CameraParameters)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
@@ -321,25 +290,12 @@ def main() -> None:
     parser.add_argument("-m", "--mock", action="store_true", default=False)
     args = parser.parse_args()
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
     global _mock
     _mock = args.mock
     if _mock:
         logger.info("Starting as a mock!")
 
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
-    )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=port_from_url(URL))
+    run_app(app, SERVICE_NAME, version(), version(), port_from_url(URL), [CameraParameters], args.swagger)
 
     if _kinect:
         _kinect.cleanup()

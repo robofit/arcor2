@@ -1,40 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import random
 import time
-import uuid
-from typing import Dict, Tuple, Union, cast
+from typing import Dict
 
 import humps
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
-from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, Response, jsonify, request
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import jsonify, request
 
 from arcor2.data import common, object_type, scene
+from arcor2.flask import RespT, create_app, run_app
 from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 
-# Create an APISpec
-spec = APISpec(
-    title=f"{SCENE_SERVICE_NAME} ({version()})",
-    version="0.3.0",
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
-)
-
-app = Flask(__name__)
-CORS(app)
-
-
-def get_id() -> int:
-    return uuid.uuid4().int
-
-
-RespT = Union[Response, Tuple[str, int]]
+app = create_app(__name__)
 
 collision_objects: Dict[str, object_type.Models] = {}
 started: bool = False
@@ -260,7 +238,7 @@ def get_collisions() -> RespT:
                         type: string
     """
 
-    return cast(Response, jsonify(list(collision_objects.keys())))
+    return jsonify(list(collision_objects.keys()))
 
 
 @app.route("/utils/focus", methods=["PUT"])
@@ -285,7 +263,7 @@ def put_focus() -> RespT:
                         $ref: Pose
     """
 
-    return cast(Response, jsonify(common.Pose().to_json()))
+    return jsonify(common.Pose().to_json())
 
 
 @app.route("/system/start", methods=["PUT"])
@@ -306,34 +284,7 @@ def put_stop() -> RespT:
 
 @app.route("/system/running", methods=["GET"])
 def get_started() -> RespT:
-    return cast(Response, jsonify(started))
-
-
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
-
-
-spec.components.schema(common.Pose.__name__, schema=common.Pose)
-spec.components.schema(object_type.Box.__name__, schema=object_type.Box)
-spec.components.schema(object_type.Cylinder.__name__, schema=object_type.Cylinder)
-spec.components.schema(object_type.Sphere.__name__, schema=object_type.Sphere)
-spec.components.schema(object_type.Mesh.__name__, schema=object_type.Mesh)
-spec.components.schema(scene.MeshFocusAction.__name__, schema=scene.MeshFocusAction)
-
-
-with app.test_request_context():
-
-    spec.path(view=put_sphere)
-    spec.path(view=put_box)
-    spec.path(view=put_focus)
-    spec.path(view=put_mesh)
-    spec.path(view=put_cylinder)
-    spec.path(view=delete_collision)
-    spec.path(view=get_collisions)
-    spec.path(view=put_start)
-    spec.path(view=put_stop)
-    spec.path(view=get_started)
+    return jsonify(started)
 
 
 def main() -> None:
@@ -342,20 +293,22 @@ def main() -> None:
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     args = parser.parse_args()
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    run_app(
+        app,
+        SCENE_SERVICE_NAME,
+        version(),
+        "0.3.0",
+        SCENE_PORT,
+        [
+            common.Pose,
+            object_type.Box,
+            object_type.Cylinder,
+            object_type.Sphere,
+            object_type.Mesh,
+            scene.MeshFocusAction,
+        ],
+        args.swagger,
     )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=SCENE_PORT)
 
 
 if __name__ == "__main__":

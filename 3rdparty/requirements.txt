@@ -31,4 +31,4 @@ sqlitedict==1.7.0
 pyk4a==1.1.0
 packaging==20.8
 urdfpy==0.0.22
-open3d==0.11.2
+open3d==0.12.0

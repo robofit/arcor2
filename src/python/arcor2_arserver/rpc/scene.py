@@ -516,6 +516,17 @@ async def calibration_cb(req: srpc.c.Calibration.Request, ui: WsClient) -> srpc.
     )
 
 
+# TODO maybe this would better fit into another category of RPCs? Like common/misc?
+async def marker_corners(req: srpc.c.MarkersCorners.Request, ui: WsClient) -> srpc.c.MarkersCorners.Response:
+
+    # TODO should be rather returned in an event (it is possibly a long-running process)
+    return srpc.c.MarkersCorners.Response(
+        data=await hlp.run_in_executor(
+            calibration.markers_corners, req.args.camera_parameters, image_from_str(req.args.image)
+        )
+    )
+
+
 async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
 
     if get_scene_state() != sevts.s.SceneState.Data.StateEnum.Stopped:

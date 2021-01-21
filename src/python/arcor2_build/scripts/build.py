@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
 import logging
 import os
 import zipfile
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Set, Tuple, Union
+from typing import Set
 
 import humps
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
-from flask import Flask, Response, request, send_file
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import request, send_file
 
 import arcor2_build
 from arcor2.cached import CachedProject, CachedScene
@@ -22,6 +17,7 @@ from arcor2.clients import persistent_storage as ps
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import ObjectModel, ObjectType
 from arcor2.exceptions import Arcor2Exception
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2.object_types.utils import base_from_source, built_in_types_names
@@ -33,18 +29,7 @@ from arcor2_build_data import SERVICE_NAME, URL
 
 logger = get_logger("Build")
 
-# Create an APISpec
-spec = APISpec(
-    title=SERVICE_NAME,
-    version=arcor2_build.version(),
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin()],
-)
-
-app = Flask(__name__)
-CORS(app)
-
-RETURN_TYPE = Union[Tuple[str, int], Response]
+app = create_app(__name__)
 
 
 def get_base(
@@ -72,7 +57,7 @@ def get_base(
         get_base(object_types, written_types, base_obj_type, zf, ot_path)
 
 
-def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
+def _publish(project_id: str, package_name: str) -> RespT:
 
     mem_zip = BytesIO()
 
@@ -178,7 +163,7 @@ def _publish(project_id: str, package_name: str) -> RETURN_TYPE:
 
 
 @app.route("/project/<string:project_id>/publish", methods=["GET"])
-def project_publish(project_id: str) -> RETURN_TYPE:
+def project_publish(project_id: str) -> RespT:
     """Publish project
     ---
     get:
@@ -242,16 +227,6 @@ def project_script(project_id: str):
     pass
 
 
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
-
-
-with app.test_request_context():
-    spec.path(view=project_publish)
-    spec.path(view=project_script)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
@@ -268,20 +243,9 @@ def main() -> None:
     args = parser.parse_args()
     logger.setLevel(args.debug)
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    run_app(
+        app, SERVICE_NAME, arcor2_build.version(), arcor2_build.version(), port_from_url(URL), print_spec=args.swagger
     )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=port_from_url(URL))
 
 
 if __name__ == "__main__":
