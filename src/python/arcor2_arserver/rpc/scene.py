@@ -506,10 +506,10 @@ async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
-async def calibration_cb(req: srpc.c.Calibration.Request, ui: WsClient) -> srpc.c.Calibration.Response:
+async def calibration_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srpc.c.GetCameraPose.Response:
 
     # TODO estimated pose should be rather returned in an event (it is possibly a long-running process)
-    return srpc.c.Calibration.Response(
+    return srpc.c.GetCameraPose.Response(
         data=await hlp.run_in_executor(
             calibration.estimate_camera_pose, req.args.camera_parameters, image_from_str(req.args.image)
         )

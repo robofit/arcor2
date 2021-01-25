@@ -31,7 +31,7 @@ class SystemInfo(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Calibration(RPC):
+class GetCameraPose(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
