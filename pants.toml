@@ -45,9 +45,10 @@ extra_requirements.add = [
   "vulture"
 ]
 
+
 [mypy]
 config = "mypy.ini"
-version = "mypy==0.790"
+version = "mypy==0.800"
 
 [pytest]
 pytest_plugins.add = [
