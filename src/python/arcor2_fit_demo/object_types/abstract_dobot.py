@@ -119,7 +119,7 @@ class AbstractDobot(Robot):
         :return: Inverse kinematics
         """
 
-        return rest.call(rest.Method.GET, f"{self.settings.url}/ik", body=pose, list_return_type=Joint)
+        return rest.call(rest.Method.PUT, f"{self.settings.url}/ik", body=pose, list_return_type=Joint)
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
@@ -129,7 +129,7 @@ class AbstractDobot(Robot):
         :return: Pose of the given end effector
         """
 
-        return rest.call(rest.Method.GET, f"{self.settings.url}/fk", body=joints, return_type=Pose)
+        return rest.call(rest.Method.PUT, f"{self.settings.url}/fk", body=joints, return_type=Pose)
 
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
