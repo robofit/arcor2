@@ -517,7 +517,7 @@ async def calibration_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srp
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
-async def marker_corners(req: srpc.c.MarkersCorners.Request, ui: WsClient) -> srpc.c.MarkersCorners.Response:
+async def marker_corners_cb(req: srpc.c.MarkersCorners.Request, ui: WsClient) -> srpc.c.MarkersCorners.Response:
 
     # TODO should be rather returned in an event (it is possibly a long-running process)
     return srpc.c.MarkersCorners.Response(
