@@ -119,7 +119,7 @@ class KinectAzure:
 
         capture = self._capture()
 
-        if not np.any(capture.color):
+        if not capture.color:
             raise KinectAzureException("Color image not available.")
 
         self._bgra_to_rgba(capture.color)
@@ -148,7 +148,7 @@ class KinectAzure:
 
         capture = self._capture()
 
-        if not np.any(capture.color) or not np.any(capture.depth):
+        if not capture.color or not capture.depth:
             raise KinectAzureException("Color/depth image not available.")
 
         self._bgra_to_rgba(capture.color)

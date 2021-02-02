@@ -21,7 +21,7 @@ class CameraParameters(JsonSchemaMixin):
         if len(self.dist_coefs) not in (4, 5, 8, 12):
             raise Arcor2Exception("Unsupported number of distortion coefficients.")
 
-    def as_camera_matrix(self) -> np.array:
+    def as_camera_matrix(self) -> np.ndarray:
 
         return np.array(
             [

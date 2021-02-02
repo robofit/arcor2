@@ -131,7 +131,7 @@ class Orientation(IterableIndexable):
         self.z = nq.z
         self.w = nq.w
 
-    def as_transformation_matrix(self) -> np.array:
+    def as_transformation_matrix(self) -> np.ndarray:
         """Returns 4x4 transformation matrix.
 
         :return:
@@ -173,7 +173,7 @@ class Pose(JsonSchemaMixin):
     position: Position = field(default_factory=Position)
     orientation: Orientation = field(default_factory=Orientation)
 
-    def as_transformation_matrix(self) -> np.array:
+    def as_transformation_matrix(self) -> np.ndarray:
 
         arr = np.empty((4, 4))
         arr[:3, :3] = quaternion.as_rotation_matrix(self.orientation.as_quaternion())
@@ -182,7 +182,7 @@ class Pose(JsonSchemaMixin):
         return arr
 
     @staticmethod
-    def from_transformation_matrix(matrix: np.array) -> "Pose":
+    def from_transformation_matrix(matrix: np.ndarray) -> "Pose":
 
         tvec = matrix[:3, 3]
         o = Orientation()
