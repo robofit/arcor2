@@ -1,6 +1,8 @@
 import json
 from typing import Any, List
 
+from typed_ast.ast3 import Attribute, Load, Name
+
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -17,14 +19,16 @@ class PosePlugin(ParameterPlugin):
         return Pose
 
     @classmethod
+    def orientation_id(cls, project: CProject, action_id: str, parameter_id: str) -> str:
+        return cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
+
+    @classmethod
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
         try:
-            ap, ori = project.bare_ap_and_orientation(
-                cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
-            )
+            ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
         except Arcor2Exception as e:
             raise ParameterPluginException("Failed to get scene/project data.") from e
         return Pose(ap.position, ori.orientation)
@@ -34,9 +38,7 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
-        return tr.abs_pose_from_ap_orientation(
-            scene, project, cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
-        )
+        return tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
@@ -45,7 +47,27 @@ class PosePlugin(ParameterPlugin):
     @classmethod
     def uses_orientation(cls, project: CProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
 
-        return orientation_id == cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
+        return orientation_id == cls.orientation_id(project, action_id, parameter_id)
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Attribute:
+
+        ap, _ = project.action_point_and_action(action_id)
+        ori = project.orientation(cls.orientation_id(project, action_id, parameter_id))
+
+        return Attribute(
+            value=Attribute(
+                value=Attribute(
+                    value=Name(id="aps", ctx=Load()), attr=ap.name, ctx=Load()  # TODO this should not be hardcoded
+                ),
+                attr="poses",  # TODO this should not be hardcoded
+                ctx=Load(),
+            ),
+            attr=ori.name,
+            ctx=Load(),
+        )
 
 
 class PoseListPlugin(ListParameterPlugin):

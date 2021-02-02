@@ -1,9 +1,11 @@
 from typing import Any
 
 from PIL.Image import Image
+from typed_ast.ast3 import stmt
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
+from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.image import image_from_json, image_to_json
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 
@@ -31,3 +33,9 @@ class ImagePlugin(ParameterPlugin):
     @classmethod
     def value_to_json(cls, value: Image) -> str:
         return image_to_json(value)
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> stmt:
+        raise Arcor2NotImplemented("It does not make much sense to have image as literal.")

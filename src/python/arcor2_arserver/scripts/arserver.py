@@ -93,18 +93,15 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                         server_events.package_stopped.set()
                         server_events.package_started.clear()
 
-                        glob.CURRENT_ACTION = None
-                        glob.ACTION_STATE = None
+                        glob.ACTION_STATE_BEFORE = None
                         glob.PACKAGE_INFO = None
 
                     else:
                         server_events.package_stopped.clear()
                         server_events.package_started.set()
 
-                elif isinstance(evt, events.ActionState):
-                    glob.ACTION_STATE = evt.data
-                elif isinstance(evt, events.CurrentAction):
-                    glob.CURRENT_ACTION = evt.data
+                elif isinstance(evt, events.ActionStateBefore):
+                    glob.ACTION_STATE_BEFORE = evt.data
 
             elif "response" in msg:
 
@@ -181,10 +178,8 @@ async def register(websocket: WsClient) -> None:
         await websocket.send(events.PackageState(glob.PACKAGE_STATE).to_json())
         await websocket.send(events.PackageInfo(glob.PACKAGE_INFO).to_json())
 
-        if glob.ACTION_STATE:
-            await websocket.send(events.ActionState(glob.ACTION_STATE).to_json())
-        if glob.CURRENT_ACTION:
-            await websocket.send(events.CurrentAction(glob.CURRENT_ACTION).to_json())
+        if glob.ACTION_STATE_BEFORE:
+            await websocket.send(events.ActionStateBefore(glob.ACTION_STATE_BEFORE).to_json())
     else:
         assert glob.MAIN_SCREEN
         await notif.event(websocket, evts.c.ShowMainScreen(glob.MAIN_SCREEN))

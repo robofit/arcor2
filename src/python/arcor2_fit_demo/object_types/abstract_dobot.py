@@ -68,12 +68,20 @@ class AbstractDobot(Robot):
     def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
         self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
 
-    def home(self):
+    def home(self, *, an: Optional[str] = None) -> None:
         """Run the homing procedure."""
         with self._move_lock:
             rest.call(rest.Method.PUT, f"{self.settings.url}/home")
 
-    def move(self, pose: Pose, move_type: MoveType, velocity: float = 50.0, acceleration: float = 50.0) -> None:
+    def move(
+        self,
+        pose: Pose,
+        move_type: MoveType,
+        velocity: float = 50.0,
+        acceleration: float = 50.0,
+        *,
+        an: Optional[str] = None,
+    ) -> None:
         """Moves the robot's end-effector to a specific pose.
 
         :param pose: Target pose.
@@ -94,10 +102,10 @@ class AbstractDobot(Robot):
                 params={"move_type": move_type, "velocity": velocity, "acceleration": acceleration},
             )
 
-    def suck(self) -> None:
+    def suck(self, *, an: Optional[str] = None) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/suck")
 
-    def release(self) -> None:
+    def release(self, *, an: Optional[str] = None) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/release")
 
     def robot_joints(self) -> List[Joint]:

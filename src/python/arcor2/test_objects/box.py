@@ -1,3 +1,5 @@
+from typing import Optional
+
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import GenericWithPose
 
@@ -6,14 +8,14 @@ class Box(GenericWithPose):
 
     _ABSTRACT = False
 
-    def test(self) -> None:
+    def test(self, *, an: Optional[str] = None) -> None:
         """Run test.
 
         :return:
         """
         pass
 
-    def action_with_unknown_parameter_type(self, param: ActionMetadata) -> bool:
+    def action_with_unknown_parameter_type(self, param: ActionMetadata, *, an: Optional[str] = None) -> bool:
         """Pointless action.
 
         :param param:

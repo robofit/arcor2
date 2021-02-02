@@ -1,4 +1,5 @@
 import random
+from typing import Optional
 
 from arcor2.data.common import ActionMetadata
 from arcor2.exceptions import Arcor2Exception
@@ -10,7 +11,7 @@ class RandomActions(Generic):
 
     _ABSTRACT = False
 
-    def random_integer(self, range_min: int, range_max: int) -> int:
+    def random_integer(self, range_min: int, range_max: int, *, an: Optional[str] = None) -> int:
         """Generates random integer in given range (including min/max values).
 
         :param range_min: Minimal value.
@@ -23,7 +24,7 @@ class RandomActions(Generic):
         except ValueError as e:
             raise Arcor2Exception(str(e)) from e
 
-    def random_double(self, range_min: float, range_max: float) -> float:
+    def random_double(self, range_min: float, range_max: float, *, an: Optional[str] = None) -> float:
         """Generates random double in given range.
 
         :param range_min: Minimal value.
@@ -36,7 +37,7 @@ class RandomActions(Generic):
         except ValueError as e:
             raise Arcor2Exception(str(e)) from e
 
-    def random_bool(self) -> bool:
+    def random_bool(self, *, an: Optional[str] = None) -> bool:
         """Returns random boolean value.
 
         :return:

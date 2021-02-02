@@ -53,10 +53,10 @@ class KinectAzure(Camera):
     def _stop(self) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/state/stop")
 
-    def color_image(self) -> Image.Image:
+    def color_image(self, *, an: Optional[str] = None) -> Image.Image:
         return rest.get_image(f"{self.settings.url}/color/image")
 
-    def depth_image(self, averaged_frames: int = 1) -> Image.Image:
+    def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
         return Image.open(
             rest.call(
                 rest.Method.GET,

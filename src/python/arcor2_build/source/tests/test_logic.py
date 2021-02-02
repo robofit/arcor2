@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 
 import pytest
 
@@ -15,11 +15,17 @@ from arcor2.data.common import (
     Scene,
     SceneObject,
 )
+from arcor2.object_types.abstract import Generic
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
 
 TAB = 4
+
+
+class Test(Generic):
+    def test(self, *, an: Optional[str] = None):
+        pass
 
 
 def subs_index(spl: List[str], subs: str) -> int:
@@ -51,7 +57,7 @@ def cntsp(a: str) -> int:
 def test_blind_branch() -> None:
 
     scene = Scene("s1", "s1")
-    scene.objects.append(SceneObject("TestId", "test_name", "Test"))
+    scene.objects.append(SceneObject("TestId", "test_name", Test.__name__))
     project = Project("p1", "p1", "s1")
     ap1 = ActionPoint("ap1", "ap1", Position())
     project.action_points.append(ap1)
@@ -71,7 +77,7 @@ def test_blind_branch() -> None:
     project.logic.append(LogicItem("l6", "ac4", LogicItem.END))
 
     with pytest.raises(SourceException, match="Action ac3 has no outputs."):
-        program_src(CachedProject(project), CachedScene(scene), set())
+        program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
 
 
 @pytest.mark.repeat(10)
@@ -98,7 +104,7 @@ def test_branched_output() -> None:
     project.logic.append(LogicItem("l5", "ac3", "ac4"))
     project.logic.append(LogicItem("l6", "ac4", LogicItem.END))
 
-    src = program_src(CachedProject(project), CachedScene(scene), set())
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
     parse(src)
 
     """
@@ -112,21 +118,21 @@ def test_branched_output() -> None:
 
     spl = src.splitlines()
 
-    ac1_idx = subs_index(spl, "bool_res = test_name.test(res.ac1)")
+    ac1_idx = subs_index(spl, "bool_res = test_name.test(an='ac1')")
 
     if_bool_res_false_idx = subs_index(spl, "if (bool_res == False):")
     assert if_bool_res_false_idx > ac1_idx
     assert cntsp(spl[if_bool_res_false_idx]) == cntsp(spl[ac1_idx])
-    assert "test_name.test(res.ac3)" in spl[if_bool_res_false_idx + 1]
+    assert "test_name.test(an='ac3')" in spl[if_bool_res_false_idx + 1]
     assert cntsp(spl[if_bool_res_false_idx]) == cntsp(spl[if_bool_res_false_idx + 1]) - TAB
 
     if_bool_res_true_idx = subs_index(spl, "if (bool_res == True):")
     assert if_bool_res_true_idx > ac1_idx
     assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[ac1_idx])
-    assert "test_name.test(res.ac2)" in spl[if_bool_res_true_idx + 1]
+    assert "test_name.test(an='ac2')" in spl[if_bool_res_true_idx + 1]
     assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[if_bool_res_true_idx + 1]) - TAB
 
-    ac4_idx = subs_index(spl, "test_name.test(res.ac4)")
+    ac4_idx = subs_index(spl, "test_name.test(an='ac4')")
     assert ac4_idx > if_bool_res_false_idx
     assert ac4_idx > if_bool_res_true_idx
     assert cntsp(spl[ac4_idx]) == cntsp(spl[ac1_idx])
@@ -136,7 +142,7 @@ def test_branched_output() -> None:
 def test_branched_output_2() -> None:
 
     scene = Scene("s1", "s1")
-    scene.objects.append(SceneObject("TestId", "test_name", "Test"))
+    scene.objects.append(SceneObject("TestId", "test_name", Test.__name__))
     project = Project("p1", "p1", "s1")
     ap1 = ActionPoint("ap1", "ap1", Position())
     project.action_points.append(ap1)
@@ -165,7 +171,7 @@ def test_branched_output_2() -> None:
 
     project.logic.append(LogicItem("l9", "ac4", LogicItem.END, ProjectLogicIf("ac4/default/0", json.dumps(False))))
 
-    src = program_src(CachedProject(project), CachedScene(scene), set())
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
     parse(src)
 
     """
@@ -185,13 +191,13 @@ def test_branched_output_2() -> None:
     spl = src.splitlines()
 
     # it has to be robust against changed order of blocks
-    ac1_idx = subs_index(spl, "bool_res = test_name.test(res.ac1)")
+    ac1_idx = subs_index(spl, "bool_res = test_name.test(an='ac1')")
 
     if_bool_res_false_idx = subs_index(spl, "if (bool_res == False):")
     assert if_bool_res_false_idx > ac1_idx
     assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_false_idx])
 
-    bool2_res_idx = subs_index(spl, "bool2_res = test_name.test(res.ac4)")
+    bool2_res_idx = subs_index(spl, "bool2_res = test_name.test(an='ac4')")
     assert bool2_res_idx > if_bool_res_false_idx
     assert cntsp(spl[if_bool_res_false_idx]) == cntsp(spl[bool2_res_idx]) - TAB
 
@@ -203,20 +209,20 @@ def test_branched_output_2() -> None:
 
     if_bool_2_res_true_idx = subs_index(spl, "if (bool2_res == True):")
     assert if_bool_2_res_true_idx > bool2_res_idx
-    assert "test_name.test(res.ac5)" in spl[if_bool_2_res_true_idx + 1]
+    assert "test_name.test(an='ac5')" in spl[if_bool_2_res_true_idx + 1]
     assert cntsp(spl[if_bool_2_res_true_idx]) == cntsp(spl[if_bool_2_res_true_idx + 1]) - TAB
 
     if_bool_res_true_idx = subs_index(spl, "if (bool_res == True):")
     assert if_bool_res_true_idx > ac1_idx
     assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_true_idx])
 
-    assert "test_name.test(res.ac2)" in spl[if_bool_res_true_idx + 1]
+    assert "test_name.test(an='ac2')" in spl[if_bool_res_true_idx + 1]
     assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[if_bool_res_true_idx + 1]) - TAB
 
-    assert "test_name.test(res.ac3)" in spl[if_bool_res_true_idx + 2]
+    assert "test_name.test(an='ac3')" in spl[if_bool_res_true_idx + 2]
     assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[if_bool_res_true_idx + 2]) - TAB
 
-    ac6_idx = subs_index(spl, "test_name.test(res.ac6)")
+    ac6_idx = subs_index(spl, "test_name.test(an='ac6')")
     assert cntsp(spl[ac1_idx]) == cntsp(spl[ac6_idx])
     assert ac6_idx > if_bool_2_res_false_idx
     assert ac6_idx > if_bool_2_res_true_idx

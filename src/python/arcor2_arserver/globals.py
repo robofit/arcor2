@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Optional, Set
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -28,12 +28,14 @@ OBJECT_TYPES: ObjectTypeDict = {}
 SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
 
 RUNNING_ACTION: Optional[str] = None  # ID of an action that is being executed during project editing
-RUNNING_ACTION_PARAMS: Optional[Dict[str, Any]] = None
+RUNNING_ACTION_PARAMS: Optional[List[Any]] = None
 
 PACKAGE_STATE = events.PackageState.Data()
 PACKAGE_INFO: Optional[events.PackageInfo.Data] = None
-ACTION_STATE: Optional[events.ActionState.Data] = None
-CURRENT_ACTION: Optional[events.CurrentAction.Data] = None
+
+# there might be some long-running action being executed when ui connects, so let's them know
+ACTION_STATE_BEFORE: Optional[events.ActionStateBefore.Data] = None
+
 TEMPORARY_PACKAGE: bool = False
 
 RegisteredUiDict = DefaultDict[str, Set[WsClient]]

@@ -23,16 +23,16 @@ class ObjectWithActions(Generic):
     def _random_bool(self) -> bool:
         return random.choice([False, True])
 
-    def str_action(self) -> str:
+    def str_action(self, *, an: Optional[str] = None) -> str:
         return "Hello world."
 
-    def bool_action(self) -> bool:
+    def bool_action(self, *, an: Optional[str] = None) -> bool:
         return self._random_bool()
 
-    def tuple_action(self) -> Tuple[bool, bool]:
+    def tuple_action(self, *, an: Optional[str] = None) -> Tuple[bool, bool]:
         return self._random_bool(), self._random_bool()
 
-    def enum_action(self) -> MyEnum:
+    def enum_action(self, *, an: Optional[str] = None) -> MyEnum:
         return random.choice(list(MyEnum))
 
     bool_action.__action__ = ActionMetadata()  # type: ignore

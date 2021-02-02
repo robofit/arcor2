@@ -286,6 +286,11 @@ class CachedProject:
         except KeyError:
             raise CachedProjectException("Unknown orientation.")
 
+    def pose(self, orientation_id: str) -> cmn.Pose:
+
+        ap, ori = self.bare_ap_and_orientation(orientation_id)
+        return cmn.Pose(ap.position, ori.orientation)
+
     def ap_orientations(self, ap_id: str) -> List[cmn.NamedOrientation]:
 
         # TODO come up with something more efficient

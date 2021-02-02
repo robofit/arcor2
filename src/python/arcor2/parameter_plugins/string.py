@@ -1,5 +1,7 @@
 from typing import Any, List
 
+from typed_ast.ast3 import Str
+
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
@@ -20,6 +22,12 @@ class StringPlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> str:
         return super(StringPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Str:
+        return Str(s=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind="")
 
 
 class StringListPlugin(ListParameterPlugin):
