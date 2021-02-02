@@ -1136,6 +1136,12 @@ def check_constant(constant: common.ProjectConstant) -> None:
             raise Arcor2Exception("Name has to be unique.")
 
     # TODO check using (constant?) plugin
+    import json
+
+    val = json.loads(constant.value)
+
+    if not isinstance(val, (int, float, str, bool)):
+        raise Arcor2Exception("Only basic types are supported so far.")
 
 
 @scene_needed

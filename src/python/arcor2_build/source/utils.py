@@ -2,6 +2,7 @@ from typing import List, Union
 
 import humps
 from typed_ast.ast3 import (
+    AnnAssign,
     Assign,
     Attribute,
     Call,
@@ -34,6 +35,7 @@ import arcor2.data.common
 import arcor2.exceptions.runtime
 from arcor2.cached import CachedProject
 from arcor2.data.common import ActionPoint
+from arcor2.exceptions import Arcor2Exception
 from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, tree_to_str
 
@@ -388,3 +390,18 @@ def global_action_points_class(project: CachedProject) -> str:
 
     tree.body.append(aps_cls_def)
     return tree_to_str(tree)
+
+
+def find_last_assign(tree: FunctionDef) -> int:
+    """This is intended to find last assign to a variable in the generated
+    script (without logic).
+
+    :param tree:
+    :return:
+    """
+
+    for body_idx, body_item in reversed(list(enumerate(tree.body))):
+        if isinstance(body_item, (Assign, AnnAssign)):
+            return body_idx
+
+    raise Arcor2Exception("Assign not found.")
