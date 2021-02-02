@@ -10,7 +10,7 @@ from PIL.Image import Image
 ENCODING = "latin-1"
 
 
-def image_to_cv2(pil_image: Image, mode=cv2.COLOR_RGB2BGR) -> np.array:
+def image_to_cv2(pil_image: Image, mode=cv2.COLOR_RGB2BGR) -> np.ndarray:
 
     return cv2.cvtColor(np.array(pil_image), mode)
 

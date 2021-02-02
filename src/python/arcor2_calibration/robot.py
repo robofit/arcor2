@@ -19,7 +19,7 @@ class RobotCalibrationException(Arcor2Exception):
     pass
 
 
-def depth_image_to_np(depth: Image.Image) -> np.array:
+def depth_image_to_np(depth: Image.Image) -> np.ndarray:
     return np.array(depth, dtype=np.float32) / 1000.0
 
 

@@ -5,3 +5,7 @@ arcor2_pex_binary(
     dependencies = [
         "src/python/arcor2_kinect_azure/data"]
 )
+
+arcor2_pex_binary(
+    name = "kinect_viewer"
+)

@@ -49,6 +49,10 @@ extra_requirements.add = [
 [mypy]
 config = "mypy.ini"
 version = "mypy==0.800"
+# TODO enable this once numpy 1.21.0 is out
+# extra_requirements.add = [
+#  "numpy"
+#]
 
 [pytest]
 pytest_plugins.add = [
