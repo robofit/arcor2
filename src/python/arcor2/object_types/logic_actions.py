@@ -1,3 +1,5 @@
+from typing import Optional
+
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import Generic
 
@@ -7,7 +9,7 @@ class LogicActions(Generic):
 
     _ABSTRACT = False
 
-    def equals(self, val1: int, val2: int) -> bool:
+    def equals(self, val1: int, val2: int, *, an: Optional[str] = None) -> bool:
         """Tests if two integer values are equal.
 
         :param val1:
@@ -16,7 +18,7 @@ class LogicActions(Generic):
         """
         return val1 == val2
 
-    def less_than(self, val1: int, val2: int) -> bool:
+    def less_than(self, val1: int, val2: int, *, an: Optional[str] = None) -> bool:
         """Compares two integer values.
 
         :param val1:
@@ -25,7 +27,7 @@ class LogicActions(Generic):
         """
         return val1 < val2
 
-    def greater_than(self, val1: int, val2: int) -> bool:
+    def greater_than(self, val1: int, val2: int, *, an: Optional[str] = None) -> bool:
         """Compares two integer values.
 
         :param val1:

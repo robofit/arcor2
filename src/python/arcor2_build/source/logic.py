@@ -1,39 +1,50 @@
 import logging
 import os
-from typing import Dict, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union
 
 import humps
-from typed_ast.ast3 import Compare, Continue, Eq, FunctionDef, If, Load, Module, Name, NameConstant, Pass, While
+from typed_ast.ast3 import (
+    AST,
+    Compare,
+    Continue,
+    Eq,
+    FunctionDef,
+    If,
+    Load,
+    Module,
+    Name,
+    NameConstant,
+    Pass,
+    Str,
+    While,
+    keyword,
+)
 
-import arcor2.object_types
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import Action, FlowTypes
 from arcor2.logging import get_logger
+from arcor2.parameter_plugins.base import TypesDict
+from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2.source import SCRIPT_HEADER, SourceException
-from arcor2.source.utils import add_import, add_method_call, get_name_attr, tree_to_str
+from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
-from arcor2_build.source.utils import clean, empty_script_tree, main_loop
+from arcor2_build.source.utils import empty_script_tree, main_loop
 
 logger = get_logger(__name__, logging.DEBUG if bool(os.getenv("ARCOR2_LOGIC_DEBUG", False)) else logging.INFO)
 
 
-def program_src(project: CProject, scene: CScene, built_in_objects: Set[str], add_logic: bool = True) -> str:
+def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logic: bool = True) -> str:
 
-    tree = empty_script_tree(add_main_loop=add_logic)
+    tree = empty_script_tree(project.id, add_main_loop=add_logic)
 
     # get object instances from resources object
     for obj in scene.objects:
-
-        if obj.type in built_in_objects:
-            add_import(tree, arcor2.object_types.__name__, obj.type, try_to_import=False)
-        else:
-            add_import(tree, "object_types." + humps.depascalize(obj.type), obj.type, try_to_import=False)
-
+        add_import(tree, "object_types." + humps.depascalize(obj.type), obj.type, try_to_import=False)
         object_instance_from_res(tree, obj.name, obj.id, obj.type)
 
     if add_logic:
-        add_logic_to_loop(tree, scene, project)
+        add_logic_to_loop(type_defs, tree, scene, project)
 
     return SCRIPT_HEADER + tree_to_str(tree)
 
@@ -41,7 +52,7 @@ def program_src(project: CProject, scene: CScene, built_in_objects: Set[str], ad
 Container = Union[FunctionDef, If, While]  # TODO remove While
 
 
-def add_logic_to_loop(tree: Module, scene: CScene, project: CProject) -> None:
+def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project: CProject) -> None:
 
     added_actions: Set[str] = set()
 
@@ -77,12 +88,27 @@ def add_logic_to_loop(tree: Module, scene: CScene, project: CProject) -> None:
         act = current_action.parse_type()
         ac_obj = scene.object(act.obj_id).name
 
+        args: List[AST] = []
+
+        # TODO make sure that the order of parameters is correct / re-order
+        for param in current_action.parameters:
+
+            plugin = plugin_from_type_name(param.type)
+
+            args.append(plugin.parameter_ast(type_defs, scene, project, current_action.id, param.name))
+
+            imp_tup = plugin.need_to_be_imported(type_defs, scene, project, current_action.id, param.name)
+
+            if imp_tup:
+                # TODO what if there are two same names?
+                add_import(tree, f"object_types.{imp_tup.module_name}", imp_tup.class_name, try_to_import=False)
+
         add_method_call(
             container.body,
             ac_obj,
             act.action_type,
-            [get_name_attr("res", clean(current_action.name))],
-            [],
+            args,
+            [keyword(arg="an", value=Str(s=current_action.name, kind=""))],
             current_action.flow(FlowTypes.DEFAULT).outputs,
         )
 

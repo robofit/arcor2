@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data import events
 from arcor2.data.rpc.common import RPC, IdArgs
 from arcor2_execution_data.common import PackageSummary
 
@@ -115,25 +114,6 @@ class PausePackage(RPC):
     @dataclass
     class Response(RPC.Response):
         pass
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-class PackageState(RPC):
-    @dataclass
-    class Request(RPC.Request):
-        pass
-
-    @dataclass
-    class Response(RPC.Response):
-        @dataclass
-        class Data(JsonSchemaMixin):
-            project: events.PackageState.Data
-            action: Optional[events.ActionState.Data] = None
-            action_args: Optional[events.CurrentAction.Data] = None
-
-        data: Optional[Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------

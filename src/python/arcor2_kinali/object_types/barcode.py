@@ -1,3 +1,5 @@
+from typing import Optional
+
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata
 
@@ -9,7 +11,7 @@ class Barcode(AbstractWithPose):
 
     _ABSTRACT = False
 
-    def scan(self) -> str:
+    def scan(self, *, an: Optional[str] = None) -> str:
         """Gets scan from active scanner.
 
         :return:

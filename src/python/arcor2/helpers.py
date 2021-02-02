@@ -93,7 +93,9 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
     except ModuleNotFoundError:
         raise ImportClsException(f"Module '{module_name}' not found.")
 
-    # this is necessary for cases when the module is already loaded
+    # reload is necessary for cases when the module is already loaded
+    path_to_file = os.path.abspath(module.__file__)
+    assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
     importlib.reload(module)
 
     try:

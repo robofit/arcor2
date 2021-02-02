@@ -1,5 +1,7 @@
 from typing import Any
 
+from typed_ast.ast3 import Attribute, Load, Name
+
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import ProjectRobotJoints
@@ -47,3 +49,23 @@ class JointsPlugin(ParameterPlugin):
         value_id = cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
 
         return value_id == robot_joints_id
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Attribute:
+
+        ap, action = project.action_point_and_action(action_id)
+        joints = project.joints(cls._id_from_value(action.parameter(parameter_id).value))
+
+        return Attribute(
+            value=Attribute(
+                value=Attribute(
+                    value=Name(id="aps", ctx=Load()), attr=ap.name, ctx=Load()  # TODO this should not be hardcoded
+                ),
+                attr="joints",  # TODO this should not be hardcoded
+                ctx=Load(),
+            ),
+            attr=joints.name,
+            ctx=Load(),
+        )

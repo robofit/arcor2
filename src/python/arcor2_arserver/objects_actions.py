@@ -9,14 +9,13 @@ from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
-from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources
+from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources, prepare_object_types_dir
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.object_types.source import prepare_object_types_dir
 from arcor2_arserver.object_types.utils import (
     ObjectTypeData,
     ObjectTypeDict,
@@ -174,6 +173,8 @@ async def get_object_types() -> None:
     glob.logger.debug(f"New ids: {new_object_ids}")
 
     if not initialization and removed_object_ids:
+
+        # TODO remove it from sys.modules
 
         remove_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in removed_object_ids])
         remove_evt.change_type = Event.Type.REMOVE

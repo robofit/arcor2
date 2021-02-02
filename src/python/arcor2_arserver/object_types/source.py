@@ -1,6 +1,3 @@
-import os
-import shutil
-
 import humps
 from typed_ast.ast3 import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
 
@@ -9,25 +6,6 @@ from arcor2.object_types.utils import built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.utils import find_function, find_raises, get_name
 from arcor2_arserver_data.objects import ObjectTypeMeta
-
-
-def prepare_object_types_dir(path: str, module: str) -> None:
-    """Creates a fresh directory, where ObjectTypes will be placed.
-
-    :param path:
-    :param module:
-    :return:
-    """
-
-    full_path = os.path.join(path, module)
-
-    if os.path.exists(full_path):
-        shutil.rmtree(full_path)
-
-    os.makedirs(full_path)
-
-    with open(os.path.join(full_path, "__init__.py"), "w"):
-        pass
 
 
 # TODO could this be done like this https://stackoverflow.com/a/9269964/3142796 ??

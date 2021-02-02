@@ -1,9 +1,8 @@
 import asyncio
 import collections.abc as collections_abc
 import copy
-import inspect
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, Optional, Set
+from typing import Any, AsyncGenerator, Dict, List, Optional, Set
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -89,6 +88,8 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
 
     cancel_params: Dict[str, Any] = {}
 
+    # TODO fix or remove this?
+    """
     cancel_sig = inspect.signature(cancel_method)
 
     assert glob.RUNNING_ACTION_PARAMS is not None
@@ -98,6 +99,7 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
             cancel_params[param_name] = glob.RUNNING_ACTION_PARAMS[param_name]
         except KeyError as e:
             raise Arcor2Exception("Cancel method parameters should be subset of action parameters.") from e
+    """
 
     await hlp.run_in_executor(cancel_method, *cancel_params.values())
 
@@ -124,7 +126,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
 
     obj_id, action_name = action.parse_type()
 
-    params: Dict[str, Any] = {}
+    params: List[Any] = []
 
     for param in action.parameters:
 
@@ -138,22 +140,24 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 raise Arcor2Exception(f"Action '{prev_action.name}' has to be executed first.")
 
             if isinstance(results, collections_abc.Iterable) and not isinstance(results, str):
-                params[param.name] = results[parsed_link.output_index]
+                params.append(results[parsed_link.output_index])
             else:
                 assert parsed_link.output_index == 0
-                params[param.name] = results
+                params.append(results)
 
         elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
             const = glob.PROJECT.constant(param.value)
             # TODO use plugin to get the value
             import json
 
-            params[param.name] = json.loads(const.value)
+            params.append(json.loads(const.value))
         else:
 
             try:
-                params[param.name] = plugin_from_type_name(param.type).parameter_execution_value(
-                    get_types_dict(), glob.SCENE, glob.PROJECT, action.id, param.name
+                params.append(
+                    plugin_from_type_name(param.type).parameter_execution_value(
+                        get_types_dict(), glob.SCENE, glob.PROJECT, action.id, param.name
+                    )
                 )
             except ParameterPluginException as e:
                 glob.logger.error(e)

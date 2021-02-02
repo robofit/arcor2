@@ -234,10 +234,10 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
 
         self.color_camera_params: Optional[CameraParameters] = None
 
-    def color_image(self) -> Image.Image:
+    def color_image(self, *, an: Optional[str] = None) -> Image.Image:
         raise NotImplementedError()
 
-    def depth_image(self, averaged_frames: int = 1) -> Image.Image:
+    def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
         """This should provide depth image transformed into color camera
         perspective.
 

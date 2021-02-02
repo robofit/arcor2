@@ -49,7 +49,7 @@ async def close_project() -> None:
     asyncio.ensure_future(notify_project_closed(project_id))
 
 
-async def execute_action(action_method: Callable, params: Dict[str, Any]) -> None:
+async def execute_action(action_method: Callable, params: List[Any]) -> None:
 
     assert glob.RUNNING_ACTION
 
@@ -58,7 +58,7 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
     evt = ActionResult(ActionResult.Data(glob.RUNNING_ACTION))
 
     try:
-        action_result = await hlp.run_in_executor(action_method, *params.values())
+        action_result = await hlp.run_in_executor(action_method, *params)
     except (Arcor2Exception, AttributeError, TypeError) as e:
         glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
         glob.logger.debug(str(e), exc_info=True)

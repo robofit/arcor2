@@ -26,7 +26,7 @@ import arcor2_execution_data
 from arcor2 import ws_server
 from arcor2.data import common, compile_json_schemas
 from arcor2.data import rpc as arcor2_rpc
-from arcor2.data.events import ActionState, CurrentAction, Event, PackageInfo, PackageState, ProjectException
+from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_aiologger
@@ -43,8 +43,6 @@ RUNNING_PACKAGE_ID: Optional[str] = None
 # in case of man. written scripts, this might not be sent
 PACKAGE_INFO_EVENT: Optional[PackageInfo] = None
 
-ACTION_EVENT: Optional[ActionState] = None
-ACTION_ARGS_EVENT: Optional[CurrentAction] = None
 TASK = None
 
 CLIENTS: Set = set()
@@ -114,17 +112,11 @@ async def read_proc_stdout() -> None:
             evt.data.package_id = RUNNING_PACKAGE_ID
             await package_state(evt)
             continue
-        elif isinstance(evt, ActionState):
-            ACTION_EVENT = evt
-        elif isinstance(evt, CurrentAction):
-            ACTION_ARGS_EVENT = evt
         elif isinstance(evt, PackageInfo):
             PACKAGE_INFO_EVENT = evt
 
         await send_to_clients(evt)
 
-    ACTION_EVENT = None
-    ACTION_ARGS_EVENT = None
     PACKAGE_INFO_EVENT = None
 
     if PROCESS.returncode:
@@ -259,17 +251,6 @@ async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> Non
     PROCESS.stdin.write("r\n".encode())
     await PROCESS.stdin.drain()
     return None
-
-
-async def package_state_cb(req: rpc.PackageState.Request, ui: WsClient) -> rpc.PackageState.Response:
-
-    resp = rpc.PackageState.Response()
-    resp.data = resp.Data(PACKAGE_STATE_EVENT.data)
-    if ACTION_EVENT:
-        resp.data.action = ACTION_EVENT.data
-    if ACTION_ARGS_EVENT:
-        resp.data.action_args = ACTION_ARGS_EVENT.data
-    return resp
 
 
 async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> None:
@@ -424,7 +405,6 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
     rpc.StopPackage.__name__: (rpc.StopPackage, stop_package_cb),
     rpc.PausePackage.__name__: (rpc.PausePackage, pause_package_cb),
     rpc.ResumePackage.__name__: (rpc.ResumePackage, resume_package_cb),
-    rpc.PackageState.__name__: (rpc.PackageState, package_state_cb),
     rpc.UploadPackage.__name__: (rpc.UploadPackage, _upload_package_cb),
     rpc.ListPackages.__name__: (rpc.ListPackages, list_packages_cb),
     rpc.DeletePackage.__name__: (rpc.DeletePackage, delete_package_cb),

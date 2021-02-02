@@ -1,7 +1,7 @@
 import copy
 import inspect
 import os
-from typing import Dict, List, Type, get_type_hints
+from typing import Dict, List, Optional, Type, get_type_hints
 
 import humps
 import typing_inspect
@@ -66,6 +66,7 @@ def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]
     sig = inspect.signature(type_def.__init__)
 
     # TODO Will this work for inherited properties? Make a test! There is also dataclasses.fields maybe...
+    # TODO use inspect.signature to get reliable order of parameters
     for name, ttype in get_type_hints(type_def.__init__).items():
         if name == "return":
             continue
@@ -158,7 +159,7 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
                 if doc_short:
                     data.description = doc_short
 
-            signature = inspect.signature(method_def)
+            signature = inspect.signature(method_def)  # sig.parameters is OrderedDict
 
             try:
                 method_tree = find_function(method_name, tree)
@@ -166,25 +167,47 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
                 # function is probably defined in predecessor, will be added later
                 continue
 
-            for name, ttype in get_type_hints(method_def).items():
+            hints = get_type_hints(method_def)  # standard (unordered) dict
 
-                if name == "return":
+            if "an" not in signature.parameters.keys():
+                raise IgnoreActionException("Action is missing 'an' parameter.")
 
-                    # ...just ignore NoneType for returns
-                    if ttype == type(None):  # noqa: E721
-                        continue
+            try:
+                if hints["an"] != Optional[str]:
+                    raise IgnoreActionException("Parameter 'an' has invalid type annotation.")
+            except KeyError:
+                raise IgnoreActionException("Parameter 'an' is missing type annotation.")
 
-                    if typing_inspect.is_tuple_type(ttype):
-                        for arg in typing_inspect.get_args(ttype):
-                            resolved_param = plugin_from_type(arg)
-                            if resolved_param is None:
-                                raise IgnoreActionException("None in return tuple is not supported.")
-                            data.returns.append(resolved_param.type_name())
-                    else:
-                        # TODO resolving needed for e.g. enums - add possible values to action metadata somewhere?
-                        data.returns = [plugin_from_type(ttype).type_name()]
+            parameter_names_without_self = list(signature.parameters.keys())[1:]
 
-                    continue
+            if not parameter_names_without_self or parameter_names_without_self[-1] != "an":
+                raise IgnoreActionException("The 'an' parameter have to be the last one.")
+
+            # handle return
+            try:
+                return_ttype = hints["return"]
+            except KeyError:
+                raise IgnoreActionException("Action is missing return type annotation.")
+
+            # ...just ignore NoneType for returns
+            if return_ttype != type(None):  # noqa: E721
+
+                if typing_inspect.is_tuple_type(return_ttype):
+                    for arg in typing_inspect.get_args(return_ttype):
+                        resolved_param = plugin_from_type(arg)
+                        if resolved_param is None:
+                            raise IgnoreActionException("None in return tuple is not supported.")
+                        data.returns.append(resolved_param.type_name())
+                else:
+                    # TODO resolving needed for e.g. enums - add possible values to action metadata somewhere?
+                    data.returns = [plugin_from_type(return_ttype).type_name()]
+
+            for name in parameter_names_without_self[:-1]:  # omit also an
+
+                try:
+                    ttype = hints[name]
+                except KeyError:
+                    raise IgnoreActionException(f"Parameter {name} is missing type annotation.")
 
                 param_type = plugin_from_type(ttype)
 

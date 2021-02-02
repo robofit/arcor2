@@ -1,6 +1,7 @@
 from typing import Any, Callable, List
 
 from typed_ast import ast3 as ast
+from typed_ast.ast3 import Num
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -33,6 +34,12 @@ class DoublePlugin(ParameterPlugin):
     @classmethod
     def _value_from_json(cls, value: str) -> float:
         return super(DoublePlugin, cls)._value_from_json(value)
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Num:
+        return Num(n=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id))
 
 
 class DoubleListPlugin(ListParameterPlugin):

@@ -98,25 +98,18 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert pi
     assert pi.package_id == package.id
 
-    act_in = event(ars, arcor2_events.CurrentAction).data
-    assert act_in
-    assert act_in.action_id == action.id
-    # assert len(act_in.args) == 1
+    act_state_before = event(ars, arcor2_events.ActionStateBefore).data
+    assert act_state_before
+    assert act_state_before.action_id == action.id
+    assert len(act_state_before.parameters) == 1
     # assert act_in.args[0].name == "seconds"
     # assert act_in.args[0].type == "double"
     # assert act_in.args[0].value == "0.1"
 
-    act_state_before = event(ars, arcor2_events.ActionState).data
-    assert act_state_before
-    assert act_state_before.method == TimeActions.sleep.__name__
-    assert act_state_before.where == act_state_before.where.BEFORE
-    assert act_state_before.results is None
-
-    act_state_after = event(ars, arcor2_events.ActionState).data
+    act_state_after = event(ars, arcor2_events.ActionStateAfter).data
     assert act_state_after
-    assert act_state_after.method == TimeActions.sleep.__name__
-    assert act_state_after.where == act_state_after.where.AFTER
-    assert act_state_after.results is None
+    assert act_state_after.action_id == action.id
+    assert not act_state_after.results
 
     # TODO pause, resume
 

@@ -1,14 +1,15 @@
 import io
+from typing import Optional
 
 from arcor2.action import patch_object_actions
 from arcor2.data.common import ActionMetadata
-from arcor2.data.events import ActionState
+from arcor2.data.events import ActionStateAfter, ActionStateBefore
 from arcor2.object_types.abstract import Generic
 
 
 def test_patch_object_actions(monkeypatch, capsys) -> None:
     class MyObject(Generic):
-        def action(self) -> None:
+        def action(self, *, an: Optional[str] = None) -> None:
             pass
 
         action.__action__ = ActionMetadata()  # type: ignore
@@ -26,21 +27,16 @@ def test_patch_object_actions(monkeypatch, capsys) -> None:
     out_before, _ = capsys.readouterr()
     assert not out_before
 
-    patch_object_actions(MyObject)
+    patch_object_actions(MyObject, {"name": "id"})
 
-    my_obj.action()
+    my_obj.action(an="name")
     out_after, _ = capsys.readouterr()
 
     arr = out_after.strip().split("\n")
     assert len(arr) == 2
 
-    before_evt = ActionState.from_json(arr[0])
-    after_evt = ActionState.from_json(arr[1])
+    before_evt = ActionStateBefore.from_json(arr[0])
+    after_evt = ActionStateAfter.from_json(arr[1])
 
-    assert before_evt.data.object_id == obj_id
-    assert before_evt.data.method == MyObject.action.__name__
-    assert before_evt.data.where == ActionState.Data.StateEnum.BEFORE
-
-    assert after_evt.data.object_id == obj_id
-    assert after_evt.data.method == MyObject.action.__name__
-    assert after_evt.data.where == ActionState.Data.StateEnum.AFTER
+    assert before_evt.data.action_id == "id"
+    assert after_evt.data.action_id == "id"
