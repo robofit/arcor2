@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Set, Union
 import humps
 from typed_ast.ast3 import (
     AST,
+    Assign,
     Compare,
     Continue,
     Eq,
@@ -14,22 +15,26 @@ from typed_ast.ast3 import (
     Module,
     Name,
     NameConstant,
+    Num,
     Pass,
+    Store,
     Str,
     While,
+    expr,
     keyword,
 )
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
-from arcor2.data.common import Action, FlowTypes
+from arcor2.data.common import Action, ActionParameter, FlowTypes
+from arcor2.exceptions import Arcor2Exception, Arcor2NotImplemented
 from arcor2.logging import get_logger
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
-from arcor2_build.source.utils import empty_script_tree, main_loop
+from arcor2_build.source.utils import empty_script_tree, find_function, find_last_assign, main_loop
 
 logger = get_logger(__name__, logging.DEBUG if bool(os.getenv("ARCOR2_LOGIC_DEBUG", False)) else logging.INFO)
 
@@ -39,9 +44,39 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     tree = empty_script_tree(project.id, add_main_loop=add_logic)
 
     # get object instances from resources object
+    main = find_function("main", tree)
+    last_assign = find_last_assign(main)
     for obj in scene.objects:
         add_import(tree, "object_types." + humps.depascalize(obj.type), obj.type, try_to_import=False)
-        object_instance_from_res(tree, obj.name, obj.id, obj.type)
+        last_assign += 1
+        main.body.insert(last_assign, object_instance_from_res(obj.name, obj.id, obj.type))
+
+    # TODO temporary solution - should be (probably) handled by plugin(s)
+    import json
+
+    # TODO should we put there even unused constants?
+    for const in project.constants:
+        val = json.loads(const.value)
+
+        aval: Optional[expr] = None
+
+        if isinstance(val, (int, float)):
+            aval = Num(n=val)
+        elif isinstance(val, bool):
+            aval = NameConstant(value=val)
+        elif isinstance(val, str):
+            aval = Str(s=val, kind="")
+
+        if not aval:
+            raise Arcor2Exception(f"Unsupported constant type ({const.type}) or value ({val}).")
+
+        last_assign += 1
+        main.body.insert(
+            last_assign,
+            Assign(  # TODO use rather AnnAssign?
+                targets=[Name(id=const.name, ctx=Store())], value=aval, type_comment=None
+            ),
+        )
 
     if add_logic:
         add_logic_to_loop(type_defs, tree, scene, project)
@@ -93,15 +128,21 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
         # TODO make sure that the order of parameters is correct / re-order
         for param in current_action.parameters:
 
-            plugin = plugin_from_type_name(param.type)
+            if param.type == ActionParameter.TypeEnum.LINK:
+                raise Arcor2NotImplemented("Links are not supported yet.")
+            elif param.type == ActionParameter.TypeEnum.CONSTANT:
+                args.append(Name(id=project.constant(param.value).name, ctx=Load()))
+            else:
 
-            args.append(plugin.parameter_ast(type_defs, scene, project, current_action.id, param.name))
+                plugin = plugin_from_type_name(param.type)
 
-            imp_tup = plugin.need_to_be_imported(type_defs, scene, project, current_action.id, param.name)
+                args.append(plugin.parameter_ast(type_defs, scene, project, current_action.id, param.name))
 
-            if imp_tup:
-                # TODO what if there are two same names?
-                add_import(tree, f"object_types.{imp_tup.module_name}", imp_tup.class_name, try_to_import=False)
+                imp_tup = plugin.need_to_be_imported(type_defs, scene, project, current_action.id, param.name)
+
+                if imp_tup:
+                    # TODO what if there are two same names?
+                    add_import(tree, f"object_types.{imp_tup.module_name}", imp_tup.class_name, try_to_import=False)
 
         add_method_call(
             container.body,

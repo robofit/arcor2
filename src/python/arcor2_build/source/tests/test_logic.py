@@ -6,11 +6,13 @@ import pytest
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import (
     Action,
+    ActionParameter,
     ActionPoint,
     Flow,
     LogicItem,
     Position,
     Project,
+    ProjectConstant,
     ProjectLogicIf,
     Scene,
     SceneObject,
@@ -24,7 +26,10 @@ TAB = 4
 
 
 class Test(Generic):
-    def test(self, *, an: Optional[str] = None):
+    def test(self, *, an: Optional[str] = None) -> bool:
+        pass
+
+    def test_par(self, param: int, *, an: Optional[str] = None) -> None:
         pass
 
 
@@ -51,6 +56,33 @@ def cntsp(a: str) -> int:
     """
 
     return len(a) - len(a.lstrip(" "))
+
+
+def test_constant() -> None:
+
+    scene = Scene("s1", "s1")
+    scene.objects.append(SceneObject("TestId", "test_name", Test.__name__))
+    project = Project("p1", "p1", "s1")
+    ap1 = ActionPoint("ap1", "ap1", Position())
+    project.action_points.append(ap1)
+
+    const_value = 1234
+    const = ProjectConstant("c1", "int_const", "integer", json.dumps(const_value))
+    project.constants.append(const)
+
+    ap1.actions.append(
+        Action(
+            "ac1", "ac1", "TestId/test_par", flows=[Flow()], parameters=[ActionParameter("param", "constant", const.id)]
+        )
+    )
+
+    project.logic.append(LogicItem("l1", LogicItem.START, "ac1"))
+    project.logic.append(LogicItem("l2", "ac1", LogicItem.END))
+
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
+    assert f"{const.name} = {const_value}" in src
+    assert f"test_name.{Test.test_par.__name__}({const.name}, an='ac1')" in src
 
 
 @pytest.mark.repeat(10)
