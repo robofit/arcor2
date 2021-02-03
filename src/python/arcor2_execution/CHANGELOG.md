@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.0] - WIP
+
+### Changed
+- Execution state reporting was improved
+  - 'CurrentAction' and 'ActionState' events -> 'ActionStateBefore' and 'ActionStateAfter'.
+  - 'ActionStateBefore' contains action id and its parameters.
+  - 'ActionStateAfter' contains action id and its results.
+  - 'PackageState' RPC removed.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

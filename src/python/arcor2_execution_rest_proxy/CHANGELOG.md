@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.0] - WIP
+
+### Changed
+- Part of the code refactored into `arcor2/flask.py`.
+- Update of 3rd party dependencies.
+
 ## [0.8.3] - 2020-12-14
 
 ### Fixed

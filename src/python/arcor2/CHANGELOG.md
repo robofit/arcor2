@@ -2,6 +2,22 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.0] - WIP
+
+### Changed
+- Explicit action parameters.
+  - `Resources` class now do not need to deal with parameters.
+  - Update of ObjectTypes (all actions now have the mandatory `an` parameter).
+- `CurrentAction` removed, `ActionState` divided into `ActionStateBefore` and `ActionStateAfter`.
+- New module with shared code for Flask-based apps.
+- Updates of 3rd party dependencies.
+- WS server now logs too long RPCs. 
+  - Max. duration could be configured using `ARCOR2_MAX_RPC_DURATION`.
+
+### Fixed
+- At a startup, the main script now checks if the scene is running before attempt to stop it.
+- `image_from_str` function fixed.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

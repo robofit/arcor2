@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.0] - WIP
+
+### Changed
+- `Calibration` RPC renamed to `GetCameraPose`.
+- New `MarkersCorners` RPC.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

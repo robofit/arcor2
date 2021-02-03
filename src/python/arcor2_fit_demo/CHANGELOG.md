@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.4.0] - WIP
+
+### Changed
+- ObjectTypes are now just proxies to the Dobot service.
+- Added the mandatory `an` parameter to all actions.
+
+### Fixed
+- Dobot M1 model (rotation of parts).
+
 ## [0.3.0] - 2020-12-14
 
 ### Changed
