@@ -2,6 +2,24 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - WIP
+
+### Changed
+- Improved scene-related messages.
+  - Error messages now contain the name of the object which caused the error.
+- New `MarkersCorners` RPC for getting markers corners.
+- Support for `an` parameter (explicit parameters).
+- Improved check of action signature and annotation.
+- New WS API for execution state reporting.
+- Support for project constants.
+  - Only basic types are supported so far.
+
+### Fixed
+- Better handling of missing collision model.
+  - If server can't get collision model of the object, the object is disabled.
+  - Previously, this situation caused crash of the server.
+- `GetCameraPose` callback fixed (used to be `Calibration`).
+
 ## [0.11.0] - 2020-12-14
 
 ### Changed

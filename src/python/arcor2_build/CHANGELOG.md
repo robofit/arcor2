@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.0] - WIP
+
+### Changed
+- Part of the code refactored into `arcor2/flask.py`.
+- Support for explicit parameters in the main script.
+  - `Actions` class is no longer generated (does not make sense now). 
+  - `Resources` class is no longer generated (used to have actions parameters as properties).
+  - Improved/adapted `ActionPoints` generated class.
+- Support for project constants.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed
