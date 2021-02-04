@@ -190,6 +190,10 @@ class Pose(JsonSchemaMixin):
         return Pose(Position(tvec[0], tvec[1], tvec[2]), o)
 
 
+class RelativePose(Pose):
+    pass
+
+
 @dataclass
 class ActionMetadata(JsonSchemaMixin):
 

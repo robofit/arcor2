@@ -138,11 +138,12 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
                 args.append(plugin.parameter_ast(type_defs, scene, project, current_action.id, param.name))
 
-                imp_tup = plugin.need_to_be_imported(type_defs, scene, project, current_action.id, param.name)
+                list_of_imp_tup = plugin.need_to_be_imported(type_defs, scene, project, current_action.id, param.name)
 
-                if imp_tup:
+                if list_of_imp_tup:
                     # TODO what if there are two same names?
-                    add_import(tree, f"object_types.{imp_tup.module_name}", imp_tup.class_name, try_to_import=False)
+                    for imp_tup in list_of_imp_tup:
+                        add_import(tree, imp_tup.module_name, imp_tup.class_name, try_to_import=False)
 
         add_method_call(
             container.body,

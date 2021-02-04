@@ -5,8 +5,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
-from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, ProjectRobotJoints
-from arcor2.parameter_plugins.relative_pose import RelativePose
+from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, ProjectRobotJoints, RelativePose
 
 from .abstract_robot import AbstractRobot, MoveTypeEnum, lru_cache
 
