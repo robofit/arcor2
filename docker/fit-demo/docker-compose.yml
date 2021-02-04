@@ -27,7 +27,7 @@ services:
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
       - ARCOR2_DATA_PATH=/root/data
-      - ARCOR2_CALIBRATION_URL=http://kinect:5014
+      - ARCOR2_CALIBRATION_URL=http://calibration:5014
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
@@ -72,7 +72,9 @@ services:
     networks:
       - testitoff-calibration-network
     ports:
-        - "5020:5018"
+      - "5020:5014"
+    environment:
+      - ARCOR2_CALIBRATION_URL=http://calibration:5014
 
   dobot:
     image: arcor2/arcor2_dobot:0.1.0
