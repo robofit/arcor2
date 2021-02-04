@@ -1,17 +1,13 @@
-from typing import Any
+from typing import Any, List, Optional
 
 from dataclasses_jsonschema import ValidationError
 from typed_ast.ast3 import Call, Load, Name, Num
 
+import arcor2.data.common
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
-from arcor2.data.common import Orientation, Pose, Position
-from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
-
-
-# TODO should it be defined here or in e.g. arcor2.data.common?
-class RelativePose(Pose):
-    pass
+from arcor2.data.common import Orientation, Position, RelativePose
+from arcor2.parameter_plugins.base import ImportTuple, ParameterPlugin, ParameterPluginException, TypesDict
 
 
 class RelativePosePlugin(ParameterPlugin):
@@ -41,8 +37,7 @@ class RelativePosePlugin(ParameterPlugin):
         val = cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
 
         return Call(
-            # TODO should this be RelativePose (must be imported) instead of Pose?
-            func=Name(id=Pose.__name__, ctx=Load()),
+            func=Name(id=RelativePose.__name__, ctx=Load()),
             args=[
                 Call(
                     func=Name(id=Position.__name__, ctx=Load()),
@@ -62,3 +57,16 @@ class RelativePosePlugin(ParameterPlugin):
             ],
             keywords=[],
         )
+
+    @classmethod
+    def need_to_be_imported(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Optional[List[ImportTuple]]:
+
+        mod = arcor2.data.common.__name__
+
+        return [
+            ImportTuple(mod, RelativePose.__name__),
+            ImportTuple(mod, Position.__name__),
+            ImportTuple(mod, Orientation.__name__),
+        ]

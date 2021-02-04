@@ -2,7 +2,7 @@ import inspect
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, Set, get_type_hints
+from typing import Any, Callable, List, Optional, Set, get_type_hints
 
 from dataclasses_jsonschema import JsonSchemaMixin
 from typed_ast import ast3 as ast
@@ -90,11 +90,13 @@ class IntegerEnumPlugin(ParameterPlugin):
     @classmethod
     def need_to_be_imported(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> Optional[ImportTuple]:
+    ) -> Optional[List[ImportTuple]]:
 
         enum_cls = cls.parameter_value(type_defs, scene, project, action_id, parameter_id).__class__
         # TODO does this work as expected in all cases?
         module = inspect.getmodule(enum_cls)
         if not module:
             raise ParameterPluginException("Failed to get the module.")
-        return ImportTuple(module.__name__.split(".")[-1], enum_cls.__name__)
+
+        # TODO enums are typically defined in the same module as a object type but could be def. elsewhere (arcor2.data)
+        return [ImportTuple(f"object_types.{module.__name__.split('.')[-1]}", enum_cls.__name__)]

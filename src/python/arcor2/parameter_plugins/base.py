@@ -1,6 +1,6 @@
 import abc
 import json
-from typing import Any, Callable, NamedTuple, Optional
+from typing import Any, Callable, List, NamedTuple, Optional
 
 import humps
 from typed_ast import ast3 as ast
@@ -107,7 +107,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def need_to_be_imported(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> Optional[ImportTuple]:
+    ) -> Optional[List[ImportTuple]]:
         return None
 
     @classmethod
