@@ -77,7 +77,7 @@ class PoseListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(PosePlugin)  # type: ignore
+        return get_type_name(PosePlugin)
 
     @classmethod
     def parameter_value(

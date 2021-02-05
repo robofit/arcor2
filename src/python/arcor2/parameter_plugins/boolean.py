@@ -44,7 +44,7 @@ class BooleanListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(BooleanPlugin)  # type: ignore
+        return get_type_name(BooleanPlugin)
 
     @classmethod
     def parameter_value(

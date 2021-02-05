@@ -1,5 +1,4 @@
 import asyncio
-import collections.abc as collections_abc
 import copy
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional, Set
@@ -139,7 +138,8 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 prev_action = glob.PROJECT.action(parsed_link.action_id)
                 raise Arcor2Exception(f"Action '{prev_action.name}' has to be executed first.")
 
-            if isinstance(results, collections_abc.Iterable) and not isinstance(results, str):
+            # an action result could be a tuple or a single value
+            if isinstance(results, tuple):
                 params.append(results[parsed_link.output_index])
             else:
                 assert parsed_link.output_index == 0
@@ -389,7 +389,7 @@ def detect_ap_loop(ap: common.BareActionPoint, new_parent_id: str) -> None:
         visited_ids.add(ap.id)
 
         if ap.parent is None:
-            break
+            break  # type: ignore  # this is certainly reachable
 
         try:
             ap = glob.PROJECT.bare_action_point(ap.parent)

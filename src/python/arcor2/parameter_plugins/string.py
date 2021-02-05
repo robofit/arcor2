@@ -37,7 +37,7 @@ class StringListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(StringPlugin)  # type: ignore
+        return get_type_name(StringPlugin)
 
     @classmethod
     def parameter_value(
