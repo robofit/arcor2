@@ -111,7 +111,7 @@ class IntegerListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(IntegerPlugin)  # type: ignore
+        return get_type_name(IntegerPlugin)
 
     @classmethod
     def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:

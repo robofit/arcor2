@@ -60,7 +60,7 @@ class Dobot(metaclass=ABCMeta):
         if alarms:
             raise DobotException(f"Alarm(s): {','.join([alarm.name for alarm in alarms])}.")
 
-    def cleanup(self):
+    def cleanup(self) -> None:
 
         if not self.simulator:
             self._dobot.close()
@@ -125,7 +125,7 @@ class Dobot(metaclass=ABCMeta):
         self._handle_pose_out(p)
         return tr.make_pose_abs(self.pose, p)
 
-    def home(self):
+    def home(self) -> None:
         """Run the homing procedure."""
 
         with self._move_lock:

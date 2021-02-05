@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
+from typing import Any, AsyncIterator, Callable, Dict, List, Set, Tuple, Union
 
 from arcor2 import helpers as hlp
 from arcor2.action import results_to_json
@@ -18,7 +18,7 @@ from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import ProjectClosed
 from arcor2_arserver_data.objects import ObjectAction
 
-PREV_RESULTS: Dict[str, List[Any]] = {}
+PREV_RESULTS: Dict[str, Union[Tuple[Any], Any]] = {}
 
 
 def remove_prev_result(action_id: str) -> None:
@@ -74,7 +74,7 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
 
     if glob.RUNNING_ACTION is None:
         # action was cancelled, do not send any event
-        return
+        return  # type: ignore  # action could be cancelled during its execution
 
     await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None

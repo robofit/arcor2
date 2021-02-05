@@ -1,6 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
 
 from lru import LRU
 
@@ -31,11 +31,12 @@ _scenes_list: Dict[str, IdDesc] = {}
 _projects_list: Dict[str, IdDesc] = {}
 
 # here we can forget least used items
-_scenes: Dict[str, Scene] = {}
-_projects: Dict[str, Project] = {}
-
-_scenes = LRU(16)  # type: ignore
-_projects = LRU(32)  # type: ignore
+if TYPE_CHECKING:
+    _scenes: Dict[str, Scene] = {}
+    _projects: Dict[str, Project] = {}
+else:
+    _scenes = LRU(16)
+    _projects = LRU(32)
 
 
 async def initialize_module() -> None:

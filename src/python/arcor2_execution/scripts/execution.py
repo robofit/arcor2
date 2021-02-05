@@ -57,7 +57,7 @@ def process_running() -> bool:
     return PROCESS is not None and PROCESS.returncode is None
 
 
-async def package_state(event: PackageState):
+async def package_state(event: PackageState) -> None:
 
     global PACKAGE_STATE_EVENT
     PACKAGE_STATE_EVENT = event
