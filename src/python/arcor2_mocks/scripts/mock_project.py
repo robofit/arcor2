@@ -2,10 +2,11 @@
 
 import argparse
 from datetime import datetime, timezone
-from typing import Dict
+from io import BytesIO
+from typing import Dict, Tuple
 
 import humps
-from flask import jsonify, request
+from flask import jsonify, request, send_file
 
 from arcor2.data import common, object_type
 from arcor2.flask import RespT, create_app, run_app
@@ -20,6 +21,76 @@ OBJECT_TYPES: Dict[str, object_type.ObjectType] = {}
 BOXES: Dict[str, object_type.Box] = {}
 CYLINDERS: Dict[str, object_type.Cylinder] = {}
 SPHERES: Dict[str, object_type.Sphere] = {}
+
+MESHES: Dict[str, Tuple[BytesIO, str]] = {}
+
+
+@app.route("/models/<string:mesh_id>/mesh/file", methods=["PUT"])
+def put_mesh_file(mesh_id: str) -> RespT:
+    """Puts mesh file.
+    ---
+    put:
+        description: Puts mesh file.
+        tags:
+           - Models
+        parameters:
+            - name: mesh_id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        requestBody:
+              content:
+                multipart/form-data:
+                  schema:
+                    type: object
+                    required:
+                        - file
+                    properties:
+                      file:
+                        type: string
+                        format: binary
+        responses:
+            200:
+              description: Ok
+    """
+
+    buff = BytesIO()
+    fs = request.files["file"]
+    fs.save(buff)
+    MESHES[mesh_id] = buff, fs.filename
+    return "ok", 200
+
+
+@app.route("/models/<string:mesh_id>/mesh/file", methods=["GET"])
+def get_mesh_file(mesh_id: str) -> RespT:
+    """Gets mesh file by id.
+    ---
+    get:
+        tags:
+            - Models
+        summary: Gets mesh file by id.
+        parameters:
+            - name: mesh_id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                    schema:
+                        type: string
+                        format: binary
+    """
+
+    mesh_file, filename = MESHES[mesh_id]
+    mesh_file.seek(0)
+    return send_file(mesh_file, as_attachment=True, cache_timeout=0, attachment_filename=filename)
 
 
 @app.route("/project", methods=["PUT"])
