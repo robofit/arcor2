@@ -2,10 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.1] - WIP
+
+### Changed
+- Add Ict service 0.1.0
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed
 - Added the mandatory `an` parameter to all actions.
+- Add Ict service 0.1.0
 
 ### Fixed
 - Invalid url in `move_relative_joints`.
