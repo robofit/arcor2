@@ -29,7 +29,7 @@ build_execution_proxy_image () {
 }
 
 build_mocks_image () {
-	docker build -f Dockerfile-mocks -t arcor2/arcor2_mocks:"$VERSION" --build-arg version="$(cat ../src/python/arcor2_mocks/VERSION)" ../
+	docker build -f Dockerfile-mocks -t arcor2/arcor2_mocks:"$(cat ../src/python/arcor2_mocks/VERSION)" --build-arg version="$VERSION" ../
 }
 
 build_devel_image () {
