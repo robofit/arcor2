@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.11.0] - WIP
+## [0.11.0] - 2021-02-04
 
 ### Changed
 - Added the mandatory `an` parameter to all actions.
