@@ -27,7 +27,7 @@ from typed_ast.ast3 import (
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import Action, ActionParameter, FlowTypes
-from arcor2.exceptions import Arcor2Exception, Arcor2NotImplemented
+from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.parameter_plugins.utils import plugin_from_type_name
@@ -129,7 +129,25 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
         for param in current_action.parameters:
 
             if param.type == ActionParameter.TypeEnum.LINK:
-                raise Arcor2NotImplemented("Links are not supported yet.")
+                parsed_link = param.parse_link()
+
+                parent_action = project.action(parsed_link.action_id)
+
+                # TODO add support for tuples
+                assert len(parent_action.flow(FlowTypes.DEFAULT).outputs) == 1, "Only one result is supported atm."
+                assert parsed_link.output_index == 0
+
+                res_name = parent_action.flow(FlowTypes.DEFAULT).outputs[0]
+
+                # make sure that the result already exists
+                if parent_action.id not in added_actions:
+                    raise SourceException(
+                        f"Action {current_action.name} attempts to use result {res_name} "
+                        f"of subsequent action {parent_action.name}."
+                    )
+
+                args.append(Name(id=res_name, ctx=Load()))
+
             elif param.type == ActionParameter.TypeEnum.CONSTANT:
                 args.append(Name(id=project.constant(param.value).name, ctx=Load()))
             else:

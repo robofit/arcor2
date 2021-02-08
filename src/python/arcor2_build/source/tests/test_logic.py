@@ -26,6 +26,12 @@ TAB = 4
 
 
 class Test(Generic):
+
+    INT = 1234
+
+    def get_int(self, *, an: Optional[str] = None) -> int:
+        return self.INT
+
     def test(self, *, an: Optional[str] = None) -> bool:
         pass
 
@@ -58,6 +64,46 @@ def cntsp(a: str) -> int:
     return len(a) - len(a.lstrip(" "))
 
 
+def test_prev_result() -> None:
+
+    scene = Scene("s1", "s1")
+    scene.objects.append(SceneObject("TestId", "test_name", Test.__name__))
+    project = Project("p1", "p1", "s1")
+    ap1 = ActionPoint("ap1", "ap1", Position())
+    project.action_points.append(ap1)
+
+    ac1 = Action("ac1", "ac1", f"TestId/{Test.get_int.__name__}", flows=[Flow(outputs=["res"])])
+    ap1.actions.append(ac1)
+
+    ac2 = Action(
+        "ac2",
+        "ac2",
+        f"TestId/{Test.test_par.__name__}",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", ActionParameter.TypeEnum.LINK, f"{ac1.id}/default/0")],
+    )
+    ap1.actions.append(ac2)
+
+    project.logic.append(LogicItem("l1", LogicItem.START, ac1.id))
+    project.logic.append(LogicItem("l2", ac1.id, ac2.id))
+    project.logic.append(LogicItem("l3", ac2.id, LogicItem.END))
+
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
+    assert f"res = test_name.{Test.get_int.__name__}(an='{ac1.name}')" in src
+    assert f"test_name.{Test.test_par.__name__}(res, an='{ac2.name}')" in src
+
+    # test wrong order of logic
+    project.logic.clear()
+
+    project.logic.append(LogicItem("l1", LogicItem.START, ac2.id))
+    project.logic.append(LogicItem("l2", ac2.id, ac1.id))
+    project.logic.append(LogicItem("l3", ac1.id, LogicItem.END))
+
+    with pytest.raises(SourceException):
+        program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
+
 def test_constant() -> None:
 
     scene = Scene("s1", "s1")
@@ -72,7 +118,11 @@ def test_constant() -> None:
 
     ap1.actions.append(
         Action(
-            "ac1", "ac1", "TestId/test_par", flows=[Flow()], parameters=[ActionParameter("param", "constant", const.id)]
+            "ac1",
+            "ac1",
+            "TestId/test_par",
+            flows=[Flow()],
+            parameters=[ActionParameter("param", ActionParameter.TypeEnum.CONSTANT, const.id)],
         )
     )
 

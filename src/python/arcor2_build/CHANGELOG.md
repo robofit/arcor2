@@ -10,7 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - `Actions` class is no longer generated (does not make sense now). 
   - `Resources` class is no longer generated (used to have actions parameters as properties).
   - Improved/adapted `ActionPoints` generated class.
-- Support for project constants.
+- Support for project constants (parameter type `constant`).
+- An action can now use a previous result as its parameter (parameter type `link`).
 
 ## [0.10.0] - 2020-12-14
 
