@@ -27,7 +27,7 @@ class MoveRelativeJointsParameters(JsonSchemaMixin):
 
 
 class Aubo(AbstractRobot):
-    """REST interface to the robot service (0.7.0)."""
+    """REST interface to the robot service (0.9.0)."""
 
     _ABSTRACT = False
     urdf_package_name = "aubo.zip"

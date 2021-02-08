@@ -83,7 +83,7 @@ class SearchEngineParameters(JsonSchemaMixin):
 
 
 class Search(AbstractWithPose):
-    """REST interface to the search service (0.5.0)."""
+    """REST interface to the search service (0.7.0)."""
 
     _ABSTRACT = False
 
