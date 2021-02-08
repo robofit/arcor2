@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.2.0] - WIP
+## [0.2.0] - 2021-02-08
 
 ### Changed
 - Mock now sends real images.

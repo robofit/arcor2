@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.9.0] - WIP
+## [0.9.0] - 2021-02-08
 
 ### Changed
 - Part of the code refactored into `arcor2/flask.py`.
