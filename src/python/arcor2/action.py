@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, ca
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.events import ActionStateAfter, ActionStateBefore, Event, PackageState
+from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import iterate_over_actions
 from arcor2.parameter_plugins.utils import plugin_from_instance
@@ -20,7 +21,8 @@ def patch_object_actions(type_def: Type[Generic], action_name_to_id: Optional[Di
     """Dynamically adds @action decorator to the methods with assigned
     ActionMetadata.
 
-    :param type_def:
+    :param type_def: Type to be patched.
+    :param action_name_to_id: Mapping from action names (`an` parameter) to action ids.
     :return:
     """
 
@@ -29,6 +31,7 @@ def patch_object_actions(type_def: Type[Generic], action_name_to_id: Optional[Di
         type_def.action_name_to_id = action_name_to_id  # type: ignore
 
     for method_name, method in iterate_over_actions(type_def):
+        # TODO avoid accidental double patching
         setattr(type_def, method_name, action(method))
 
 
@@ -105,24 +108,29 @@ def results_to_json(res: Any) -> Optional[List[str]]:
 
 def action(f: F) -> F:
     @wraps(f)
-    def wrapper(*args: Union[Generic, Any], **kwargs: Any) -> Any:
+    def wrapper(*args: Union[Generic, Any], an: Optional[str] = None, **kwargs: Any) -> Any:
 
-        action_name = kwargs["an"]
         action_args = args[1:]
-
         action_id: Optional[str] = None
+
         try:
-            action_id = args[0].action_name_to_id[action_name]  # type: ignore
+            action_id = args[0].action_name_to_id[an]  # type: ignore
         except AttributeError:
+            # mapping from action name to id not provided, ActionState won't be sent
             pass
+        except KeyError:
+            if an is None:
+                raise Arcor2Exception("Mapping from action name to id provided, but action name not set.")
+            raise Arcor2Exception(f"Mapping from action name to id is missing key {an}.")
 
         if not action.inside_composite and HANDLE_ACTIONS:  # type: ignore
-            # TODO support also kwargs parameters
             if action_id:
                 print_event(
                     ActionStateBefore(
                         ActionStateBefore.Data(
-                            action_id, [plugin_from_instance(arg).value_to_json(arg) for arg in action_args]
+                            # TODO deal with kwargs parameters
+                            action_id,
+                            [plugin_from_instance(arg).value_to_json(arg) for arg in action_args],
                         )
                     )
                 )
@@ -131,7 +139,7 @@ def action(f: F) -> F:
         if wrapper.__action__.composite:  # type: ignore # TODO and not step_into
             action.inside_composite = f  # type: ignore
 
-        res = f(*args, **kwargs)
+        res = f(*args, an=an, **kwargs)
 
         if action.inside_composite == f:  # type: ignore
             action.inside_composite = None  # type: ignore

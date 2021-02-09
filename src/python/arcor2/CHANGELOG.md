@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.1] - WIP
+
+### Fixed
+- `@action` decorator fixed.
+- `KeyError` was raised when `an` parameter was not given to an action.
+- This only happened in the "manual" script writing scenario and when `patch_object_actions` was used.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed
