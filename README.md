@@ -98,11 +98,11 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
+ - 2021-02-09: [0.11.1](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.11.1) ([pypi](https://pypi.org/project/arcor2/0.11.1/)).
+
  - 2021-02-08: [0.11.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.11.0) ([pypi](https://pypi.org/project/arcor2/0.11.0/)).
  
  - 2020-12-14: [0.10.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.10.0) ([pypi](https://pypi.org/project/arcor2/0.10.0/)).
- 
- - 2020-10-30: [0.9.2](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.9.2) ([pypi](https://pypi.org/project/arcor2/0.9.2/)).
 
  
 ### arcor2_arserver
@@ -205,11 +205,11 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_kinali/README.md) | [CHANGELOG](src/python/arcor2_kinali/CHANGELOG.md)
 
-- 2020-12-14: [0.11.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.11.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.11.0), [pypi](https://pypi.org/project/arcor2-kinali/0.11.0/)).
+- 2021-02-09: [0.11.1](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.11.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.11.1), [pypi](https://pypi.org/project/arcor2-kinali/0.11.1/)).
+
+- 2021-02-08: [0.11.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.11.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.11.0), [pypi](https://pypi.org/project/arcor2-kinali/0.11.0/)).
 
 - 2020-12-14: [0.10.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.10.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.10.0), [pypi](https://pypi.org/project/arcor2-kinali/0.10.0/)).
-
-- 2020-10-30: [0.9.2](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.9.2) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.9.2), [pypi](https://pypi.org/project/arcor2-kinali/0.9.2/)).
   
 ### arcor2_kinect_azure
 
