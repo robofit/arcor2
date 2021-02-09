@@ -30,7 +30,7 @@ class Ict(AbstractWithPose):
             params={"configurationId": self.settings.configuration_id, "id": self.id},
         )
 
-    def test(self, serial_number: str) -> bool:
+    def test(self, serial_number: str, *, an: Optional[str] = None) -> bool:
         """Tests a PCB in an ICT tester.
 
         :return:
@@ -43,7 +43,7 @@ class Ict(AbstractWithPose):
             return_type=bool,
         )
 
-    def ready(self) -> bool:
+    def ready(self, *, an: Optional[str] = None) -> bool:
         """Determines whether the ICT Tester is open and ready to start
         testing.
 
