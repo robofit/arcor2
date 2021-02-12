@@ -1,3 +1,5 @@
+import logging
+import os
 from typing import List, Optional, Tuple, Type, Union
 
 from apispec import APISpec
@@ -66,5 +68,10 @@ def run_app(
 
     # Register blueprint at URL
     app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
+    if not os.getenv("ARCOR2_REST_API_DEBUG", False):
+        # turn off logging each endpoint call by default
+        log = logging.getLogger("werkzeug")
+        log.setLevel(logging.ERROR)
 
     app.run(host="0.0.0.0", port=port)
