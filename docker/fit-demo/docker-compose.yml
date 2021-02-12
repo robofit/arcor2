@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:${ARCOR2_VERSION:?ARCOR2_VERSION env variable not set}
+    image: arcor2/arcor2_arserver:0.12.0
     container_name: arserver
     depends_on:
       - project
@@ -31,7 +31,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
+    image: arcor2/arcor2_build:0.11.0
     container_name: build
     depends_on:
       - project
@@ -42,7 +42,7 @@ services:
     networks:           
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
+    image: arcor2/arcor2_execution:0.11.0
     container_name: execution
     networks:
       - testitoff-execution-network
@@ -57,7 +57,7 @@ services:
         - execution:/root/project
 
   kinect:
-    image: arcor2/arcor2_kinect_azure:0.1.0
+    image: arcor2/arcor2_kinect_azure:0.2.0
     container_name: kinect
     networks:
       - testitoff-kinect-network
@@ -67,7 +67,7 @@ services:
       - ARCOR2_KINECT_SIMULATOR=true
 
   calibration:
-    image: arcor2/arcor2_calibration:0.1.2
+    image: arcor2/arcor2_calibration:0.2.0
     container_name: calibration
     networks:
       - testitoff-calibration-network
@@ -99,7 +99,7 @@ services:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.3
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"

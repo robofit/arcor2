@@ -1,7 +1,7 @@
 
 # Docker environment
 
-This document describes resources needed for building and running docker images with arcor2
+This document describes resources needed for building and running docker images with arcor2.
 
 ## Running in docker:
 
@@ -14,45 +14,21 @@ Select one of the docker-compose files in respective folders (currently fit-demo
 
 
 ### Run system 
+
+Compose files always contain the latest released versions of services. If you need some other version, please modify the compose file according to your needs. 
+
 #### Windows
 
-Always use explicit version of all services, never use latest!
-
 ```bash
-$env:ARCOR2_VERSION="version"
-$env:ARCOR2_BUILD_VERSION="version"
-$env:ARCOR2_EXECUTION_VERSION="version"
-$env:ARCOR2_EXECUTION_PROXY_VERSION="version"
-docker-compose up
-```
-
-For persistent variables, use this:
-
-```bash
-[Environment]::SetEnvironmentVariable("ARCOR2_VERSION", "version", "User")
-[Environment]::SetEnvironmentVariable("ARCOR2_BUILD_VERSION", "version", "User")
-[Environment]::SetEnvironmentVariable("ARCOR2_EXECUTION_VERSION", "version", "User")
-[Environment]::SetEnvironmentVariable("ARCOR2_EXECUTION_PROXY_VERSION", "version", "User")
-```
-Restart powershell or open new window.
-```
 docker-compose up
 ```
 
 
 #### Linux
 
-Always use explicit version of all services, never use latest!
-
 ```bash
-export ARCOR2_VERSION=version
-export ARCOR2_BUILD_VERSION=version
-export ARCOR2_EXECUTION_VERSION=version
-export ARCOR2_EXECUTION_PROXY_VERSION=version
 sudo -E docker-compose up
 ```
-
-For persistent variables put the three exports to the \~/.bashrc file
 
 ## Uploading object_types to project service
 Use arcor2_upload_kinali or arcor2_upload_fit_demo image to upload all object types in the corresponding demo to project service. For more information see README.md in the demo folder (fit-demo and kinali-demo).
