@@ -166,23 +166,25 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     def suctions(self) -> Set[str]:
         return set()
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
         """Move given robot's end effector to the selected pose.
 
         :param end_effector_id:
         :param target_pose:
         :param speed:
+        :param safe:
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
         raise NotImplementedError("Robot does not support moving to pose.")
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
         """Sets target joint values.
 
         :param target_joints:
         :param speed:
+        :param safe:
         :return:
         """
 

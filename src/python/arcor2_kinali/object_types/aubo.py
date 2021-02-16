@@ -32,11 +32,8 @@ class Aubo(AbstractRobot):
     _ABSTRACT = False
     urdf_package_name = "aubo.zip"
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
-        self.move(end_effector_id, target_pose, MoveTypeEnum.SIMPLE, speed, safe=True)
-
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
-        self.set_joints(ProjectRobotJoints("", "", "", target_joints), MoveTypeEnum.SIMPLE, speed, safe=True)
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
+        self.move(end_effector_id, target_pose, MoveTypeEnum.SIMPLE, speed, safe=safe)
 
     # --- EndEffectors Controller --------------------------------------------------------------------------------------
 
