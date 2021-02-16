@@ -356,9 +356,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
     if req.args.new_name == ap.name:
         return None
 
-    if not hlp.is_valid_identifier(req.args.new_name):
-        raise Arcor2Exception("Name has to be valid Python identifier.")
-
+    hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, glob.PROJECT.action_points_names)
 
     if req.dry_run:
@@ -767,8 +765,7 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
     unique_name(req.args.name, glob.PROJECT.action_points_names)
     check_ap_parent(req.args.parent)
 
-    if not hlp.is_valid_identifier(req.args.name):
-        raise Arcor2Exception("Name has to be valid Python identifier.")
+    hlp.is_valid_identifier(req.args.name)
 
     if req.dry_run:
         return None
@@ -851,9 +848,7 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
     ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
     unique_name(req.args.name, glob.PROJECT.action_user_names())
-
-    if not hlp.is_valid_identifier(req.args.name):
-        raise Arcor2Exception("Action name has to be valid Python identifier.")
+    hlp.is_valid_identifier(req.args.name)
 
     new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters, req.args.flows)
 
@@ -1124,8 +1119,7 @@ def check_constant(constant: common.ProjectConstant) -> None:
 
     assert glob.PROJECT
 
-    if not hlp.is_valid_identifier(constant.name):
-        raise Arcor2Exception("Name has to be valid Python identifier.")
+    hlp.is_valid_identifier(constant.name)
 
     for const in glob.PROJECT.constants:
 

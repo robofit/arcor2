@@ -151,8 +151,7 @@ def check_flows(
         raise Arcor2Exception("Number of the flow outputs does not match the number of action outputs.")
 
     for output in flow.outputs:
-        if not hlp.is_valid_identifier(output):
-            raise Arcor2Exception(f"Output {output} is not a valid Python identifier.")
+        hlp.is_valid_identifier(output)
 
     outputs: Set[str] = set()
 

@@ -182,8 +182,7 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
     if meta.type in glob.OBJECT_TYPES:
         raise Arcor2Exception("Object type already exists.")
 
-    if not hlp.is_valid_type(meta.type):
-        raise Arcor2Exception("Object type invalid (should be CamelCase).")
+    hlp.is_valid_type(meta.type)
 
     if meta.base not in glob.OBJECT_TYPES:
         raise Arcor2Exception(

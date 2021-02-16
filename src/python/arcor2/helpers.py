@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import importlib
 import keyword
 import os
@@ -22,7 +23,7 @@ class TypeDefException(Arcor2Exception):
     pass
 
 
-def is_valid_identifier(value: str) -> bool:
+def is_valid_identifier(value: str) -> None:
     """
     Identifier (e.g. object id) will be used as variable name in the script - it should
     not contain any special characters etc.
@@ -30,11 +31,26 @@ def is_valid_identifier(value: str) -> bool:
     :return:
     """
 
-    return value.isidentifier() and not keyword.iskeyword(value)
+    if not value:
+        raise Arcor2Exception("Empty string is not enough.")
+
+    if not (value[0].isalpha() or value[0] == "_"):
+        raise Arcor2Exception("It has to start with character or underscore.")
+
+    for c in value[1:]:
+        if c == " ":
+            raise Arcor2Exception("Use underscore instead of space.")
+        if not (c.isalnum() or c == "_"):
+            raise Arcor2Exception(f"Character '{c}' can't be used.")
+
+    assert value.isidentifier()
+
+    if keyword.iskeyword(value) or value in builtins.__dict__.keys():
+        raise Arcor2Exception("Reserved keyword.")
 
 
-def is_valid_type(value: str) -> bool:
-    return is_valid_identifier(value)
+def is_valid_type(value: str) -> None:
+    is_valid_identifier(value)
 
 
 S = TypeVar("S")
