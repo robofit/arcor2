@@ -24,24 +24,17 @@ class TypeDefException(Arcor2Exception):
 
 def is_valid_identifier(value: str) -> bool:
     """
-    Identifier (e.g. object id) will be used as variable name in the script - it should be in snake_case,
-    not containing any special characters etc.
+    Identifier (e.g. object id) will be used as variable name in the script - it should
+    not contain any special characters etc.
     :param value:
     :return:
     """
 
-    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_snakecase(value)
+    return value.isidentifier() and not keyword.iskeyword(value)
 
 
 def is_valid_type(value: str) -> bool:
-    """
-    Value will be used as object type name - it should be in CamelCase,
-    not containing any special characters etc.
-    :param value:
-    :return:
-    """
-
-    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_pascalcase(value)
+    return is_valid_identifier(value)
 
 
 S = TypeVar("S")

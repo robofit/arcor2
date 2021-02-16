@@ -9,10 +9,10 @@ from arcor2 import helpers as hlp
         "valid",
         "valid_ident",
         "abc",
-        pytest.param("InvalidIdent", marks=pytest.mark.xfail),
+        "InvalidIdent",
         pytest.param("invalid ident", marks=pytest.mark.xfail),
         pytest.param("invalid?ident", marks=pytest.mark.xfail),
-        pytest.param("Abc", marks=pytest.mark.xfail),
+        "Abc",
         pytest.param("def", marks=pytest.mark.xfail),
         pytest.param("class", marks=pytest.mark.xfail),
     ],
@@ -26,10 +26,10 @@ def test_is_valid_identifier(val) -> None:
     [
         "Valid",
         "ValidType",
-        pytest.param("invalid_type", marks=pytest.mark.xfail),
+        "invalid_type",
         pytest.param("Invalid Type", marks=pytest.mark.xfail),
         pytest.param("invalid?type", marks=pytest.mark.xfail),
-        pytest.param("abc", marks=pytest.mark.xfail),
+        "abc",
     ],
 )
 def test_is_valid_type(val) -> None:
