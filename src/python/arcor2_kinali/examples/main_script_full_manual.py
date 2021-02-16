@@ -4,6 +4,7 @@
 
 # within an execution package, imports of ObjectTypes should be relative, e.g.:
 # from object_types.aubo import Aubo
+from arcor2 import rest
 from arcor2.action import patch_object_actions
 from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Pose, ProjectRobotJoints, uid
@@ -56,7 +57,16 @@ def main() -> None:
     search.set_search_parameters(SearchEngineParameters(search_log_level=SearchLogLevel(LogLevel.DEBUG)))
     search.grab_image()
     interaction.add_notification("Test", NotificationLevelEnum.INFO)
-    statistic.get_groups()
+
+    try:
+        statistic.get_groups()
+    except rest.RestHttpException as e:
+        # service returned error code
+        print(f"The error code is {e.error_code}.")
+    except rest.RestException as e:
+        # request totally failed (timeout, connection error, etc)
+        print(str(e))
+
     if ict.ready():
         test = ict.test("OK")
         print(test)
