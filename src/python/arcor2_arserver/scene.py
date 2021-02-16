@@ -156,8 +156,7 @@ def check_object(obj: SceneObject, new_one: bool = False) -> None:
         if obj.name in glob.SCENE.object_names():
             raise Arcor2Exception("Name is already used.")
 
-    if not hlp.is_valid_identifier(obj.name):
-        raise Arcor2Exception("Object name invalid (should be snake_case).")
+    hlp.is_valid_identifier(obj.name)
 
 
 async def add_object_to_scene(obj: SceneObject, dry_run: bool = False) -> None:

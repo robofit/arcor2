@@ -7,11 +7,15 @@ from arcor2.source.utils import get_name_attr
 
 def object_instance_from_res(object_name: str, object_id: str, cls_name: str) -> AnnAssign:
 
-    if not is_valid_identifier(object_name):
-        raise Arcor2Exception(f"Object name {object_name} is not a valid identifier.")
+    try:
+        is_valid_identifier(object_name)
+    except Arcor2Exception as e:
+        raise Arcor2Exception(f"Object name {object_name} invalid. {str(e)}")
 
-    if not is_valid_type(cls_name):
-        raise Arcor2Exception(f"Class name {cls_name} is not valid.")
+    try:
+        is_valid_type(cls_name)
+    except Arcor2Exception as e:
+        raise Arcor2Exception(f"Class name {cls_name} invalid. {str(e)}")
 
     return AnnAssign(
         target=Name(id=object_name, ctx=Store()),

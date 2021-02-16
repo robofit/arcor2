@@ -417,8 +417,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
         if obj_name == req.args.new_name:
             raise Arcor2Exception("Object name already exists.")
 
-    if not hlp.is_valid_identifier(req.args.new_name):
-        raise Arcor2Exception("Object name invalid (should be snake_case).")
+    hlp.is_valid_identifier(req.args.new_name)
 
     if req.dry_run:
         return None
