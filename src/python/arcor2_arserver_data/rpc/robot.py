@@ -140,6 +140,7 @@ class MoveToPose(RPC):
             speed: float
             position: Optional[Position]
             orientation: Optional[Orientation]
+            safe: bool = True
 
         args: Args
 
@@ -176,6 +177,7 @@ class MoveToJoints(RPC):
             robot_id: str
             speed: float
             joints: List[Joint]
+            safe: bool = True
 
         args: Args
 
@@ -197,6 +199,7 @@ class MoveToActionPoint(RPC):
             end_effector_id: Optional[str] = None
             orientation_id: Optional[str] = None
             joints_id: Optional[str] = None
+            safe: bool = True
 
         args: Args
 

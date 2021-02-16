@@ -60,6 +60,9 @@ class AbstractRobot(Robot):
         super(AbstractRobot, self).cleanup()
         rest.call(rest.Method.PUT, f"{self.settings.url}/system/reset")
 
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
+        self.set_joints(ProjectRobotJoints("", "", "", target_joints), MoveTypeEnum.SIMPLE, speed, safe=safe)
+
     # --- Grippers Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()

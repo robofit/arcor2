@@ -1,6 +1,6 @@
-from typing import Set
+from typing import List, Set
 
-from arcor2.data.common import Pose
+from arcor2.data.common import Joint, Pose
 from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.object_types.abstract import RobotType
 
@@ -21,3 +21,8 @@ class Simatic(AbstractRobot):
 
     def suctions(self) -> Set[str]:
         return set()
+
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = False) -> None:
+        if safe:
+            raise Arcor2NotImplemented("Simatic does not support safe moves.")
+        super().move_to_joints(target_joints, speed, safe)

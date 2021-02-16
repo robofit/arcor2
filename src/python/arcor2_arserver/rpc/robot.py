@@ -239,7 +239,9 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
         raise Arcor2Exception("Position or orientation should be given.")
 
     # TODO check if the target pose is reachable (dry_run)
-    asyncio.ensure_future(robot.move_to_pose(req.args.robot_id, req.args.end_effector_id, target_pose, req.args.speed))
+    asyncio.ensure_future(
+        robot.move_to_pose(req.args.robot_id, req.args.end_effector_id, target_pose, req.args.speed, req.args.safe)
+    )
 
 
 @scene_needed
@@ -248,7 +250,7 @@ async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> N
     ensure_scene_started()
     await check_feature(req.args.robot_id, Robot.move_to_joints.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
-    asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, req.args.joints, req.args.speed))
+    asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, req.args.joints, req.args.speed, req.args.safe))
 
 
 @scene_needed
@@ -284,7 +286,12 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
         # TODO check if the target pose is reachable (dry_run)
         asyncio.ensure_future(
             robot.move_to_ap_orientation(
-                req.args.robot_id, req.args.end_effector_id, pose, req.args.speed, req.args.orientation_id
+                req.args.robot_id,
+                req.args.end_effector_id,
+                pose,
+                req.args.speed,
+                req.args.orientation_id,
+                req.args.safe,
             )
         )
 
@@ -296,7 +303,7 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
 
         # TODO check if the joints are within limits and reachable (dry_run)
         asyncio.ensure_future(
-            robot.move_to_ap_joints(req.args.robot_id, joints.joints, req.args.speed, req.args.joints_id)
+            robot.move_to_ap_joints(req.args.robot_id, joints.joints, req.args.speed, req.args.joints_id, req.args.safe)
         )
 
 
