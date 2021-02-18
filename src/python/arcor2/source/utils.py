@@ -197,14 +197,9 @@ def get_name_attr(name: str, attr: str, ctx: Union[Type[Load], Type[Store]] = Lo
 
 
 def tree_to_str(tree: AST) -> str:
-    # TODO why this fails?
-    # validator.visit(tree)
 
     fix_missing_locations(tree)
-    generated_code: str = horast.unparse(tree)
-    generated_code = autopep8.fix_code(generated_code, options={"aggressive": 1})
-
-    return generated_code
+    return autopep8.fix_code(horast.unparse(tree), options={"aggressive": 1, "max_line_length": 120})
 
 
 def dump(tree: Module) -> str:
