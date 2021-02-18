@@ -36,7 +36,17 @@ class AbstractDobot(Robot):
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: DobotSettings) -> None:
         super(AbstractDobot, self).__init__(obj_id, name, pose, settings)
 
+    def _started(self) -> bool:
+        return rest.call(rest.Method.GET, f"{self.settings.url}/started", return_type=bool)
+
+    def _stop(self) -> None:
+        rest.call(rest.Method.PUT, f"{self.settings.url}/stop")
+
     def _start(self, model: str) -> None:
+
+        if self._started():
+            self._stop()
+
         rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/start",
@@ -49,7 +59,7 @@ class AbstractDobot(Robot):
         return cast(DobotSettings, super(AbstractDobot, self).settings)
 
     def cleanup(self):
-        rest.call(rest.Method.PUT, f"{self.settings.url}/stop")
+        self._stop()
 
     def get_end_effectors_ids(self) -> Set[str]:
         return {"default"}
