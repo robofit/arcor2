@@ -435,7 +435,8 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
     Can't send orientation changes and then ActionPointChanged/UPDATE_BASE (or vice versa)
     because UI would display orientations wrongly (for a short moment).
     """
-    evt = sevts.p.ActionPointChanged(ap)
+    # 'ap' is BareActionPoint, that does not contain orientations
+    evt = sevts.p.ActionPointChanged(glob.PROJECT.action_point(req.args.action_point_id))
     evt.change_type = Event.Type.UPDATE
     asyncio.ensure_future(notif.broadcast_event(evt))
     return None
