@@ -87,7 +87,7 @@ services:
       - ARCOR2_DOBOT_SIMULATOR=true
 
   testitoff-scene-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.1
       container_name: "testitoff-scene"
       restart: always
       ports:
