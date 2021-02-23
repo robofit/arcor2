@@ -2,7 +2,7 @@ import time
 from typing import List
 
 from arcor2_dobot.dobot import Dobot, DobotException
-from pydobot import dobot
+from arcor2_dobot.dobot_api import DobotApiException
 
 from arcor2.data.common import Joint, Pose, StrEnum
 
@@ -43,7 +43,7 @@ class DobotM1(Dobot):
         try:
             self._dobot.set_io(17, False)  # suck
             self._dobot.set_io(18, False)  # on
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Suck failed.") from e
 
     def release(self, blow_out_sec: float = 0.1) -> None:
@@ -60,5 +60,5 @@ class DobotM1(Dobot):
 
             self._dobot.set_io(18, True)  # off
 
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Release failed.") from e

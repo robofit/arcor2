@@ -9,6 +9,6 @@ python_requirements(
             "pyhumps": ["humps"],
             "dataclasses-jsonschema-rereleased": ["dataclasses_jsonschema"],
             "horast-rereleased": ["horast"],
-            "pydobot2": ["pydobot"]
+            "pyserial": ["serial"]
           }
 )
