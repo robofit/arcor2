@@ -244,6 +244,56 @@ def put_home() -> RespT:
     return "ok", 200
 
 
+@app.route("/hand_teaching", methods=["GET"])
+@requires_started
+def get_hand_teaching() -> RespT:
+    """Get hand teaching status.
+    ---
+    get:
+        description: Get hand teaching status.
+        tags:
+           - Robot
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                    schema:
+                        type: boolean
+            403:
+              description: Not started
+    """
+
+    assert _dobot
+    return jsonify(_dobot.hand_teaching_mode), 200
+
+
+@app.route("/hand_teaching", methods=["PUT"])
+@requires_started
+def put_hand_teaching() -> RespT:
+    """Set hand teaching status.
+    ---
+    put:
+        description: Set hand teaching status.
+        tags:
+           - Robot
+        parameters:
+            - in: query
+              name: enabled
+              schema:
+                type: boolean
+        responses:
+            200:
+              description: Ok
+            403:
+              description: Not started
+    """
+
+    assert _dobot
+    _dobot.hand_teaching_mode = request.args.get("enabled", default="false") == "true"
+    return "ok", 200
+
+
 @app.route("/suck", methods=["PUT"])
 @requires_started
 def put_suck() -> RespT:

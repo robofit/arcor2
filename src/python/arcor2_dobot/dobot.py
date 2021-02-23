@@ -49,6 +49,7 @@ class Dobot(metaclass=ABCMeta):
 
         else:
             self._joint_values: List[Joint] = []  # has to be set to some initial value in derived classes
+            self._hand_teaching = False
 
     def alarms_to_exception(self) -> None:
 
@@ -64,6 +65,23 @@ class Dobot(metaclass=ABCMeta):
 
         if not self.simulator:
             self._dobot.close()
+
+    @property
+    def hand_teaching_mode(self) -> bool:
+
+        if self.simulator:
+            return self._hand_teaching
+
+        return self._dobot.get_hht_trig_output()
+
+    @hand_teaching_mode.setter
+    def hand_teaching_mode(self, value: bool) -> None:
+
+        if self.simulator:
+            self._hand_teaching = value
+            return
+
+        self._dobot.set_hht_trig_output(value)
 
     def _inverse_kinematics(self, pose: Pose) -> List[Joint]:
         raise Arcor2NotImplemented()

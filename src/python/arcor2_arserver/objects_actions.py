@@ -46,6 +46,14 @@ def get_obj_type_name(object_id: str) -> str:
         raise Arcor2Exception("Unknown object id.")
 
 
+def get_obj_type_data(object_id: str) -> ObjectTypeData:
+
+    try:
+        return glob.OBJECT_TYPES[get_obj_type_name(object_id)]
+    except KeyError:
+        raise Arcor2Exception("Unknown object type.")
+
+
 def valid_object_types() -> ObjectTypeDict:
     """To get only valid (not disabled) types.
 

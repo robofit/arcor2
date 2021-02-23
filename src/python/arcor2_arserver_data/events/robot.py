@@ -99,3 +99,16 @@ class RobotMoveToActionPointJoints(Event):
         message: Optional[str] = None
 
     data: Data
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class HandTeachingMode(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        robot_id: str
+        enabled: bool
+
+    data: Data

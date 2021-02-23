@@ -23,6 +23,7 @@ from arcor2_arserver.scene import ensure_scene_started, scene_started, update_sc
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.events.common import ProcessState
+from arcor2_arserver_data.events.robot import HandTeachingMode
 
 RBT_CALIB = "RobotCalibration"
 
@@ -396,3 +397,25 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
     asyncio.ensure_future(calibrate_robot(robot_inst, camera_inst, req.args.move_to_calibration_pose))
 
     return None
+
+
+@scene_needed
+async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClient) -> None:
+
+    ensure_scene_started()
+    robot_inst = await osa.get_robot_instance(req.args.robot_id)
+
+    otd = osa.get_obj_type_data(req.args.robot_id)
+    assert otd.robot_meta is not None
+    if not otd.robot_meta.features.hand_teaching:
+        raise Arcor2Exception("Robot does not support hand teaching.")
+
+    if req.args.enable == robot_inst.hand_teaching_mode:
+        raise Arcor2Exception("That's the current state.")
+
+    if req.dry_run:
+        return
+
+    robot_inst.set_hand_teaching_mode(req.args.enable)
+    evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable))
+    asyncio.ensure_future(notif.broadcast_event(evt))
