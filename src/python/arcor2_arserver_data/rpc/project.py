@@ -160,6 +160,25 @@ class RemoveActionPoint(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class CopyActionPoint(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            id: str
+            position: Optional[Position] = None
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 class AddActionPointJointsUsingRobot(RPC):
     @dataclass
     class Request(RPC.Request):

@@ -841,6 +841,86 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
 
 @scene_needed
 @project_needed
+async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient) -> None:
+
+    assert glob.PROJECT
+
+    def make_name_unique(orig_name: str, names: Set[str]) -> str:
+
+        cnt = 1
+        name = orig_name
+
+        while name in names:
+            name = f"{orig_name}_{cnt}"
+            cnt += 1
+
+        return name
+
+    async def copy_action_point(
+        orig_ap: common.BareActionPoint,
+        new_parent_id: Optional[str] = None,
+        position: Optional[common.Position] = None,
+    ) -> None:
+
+        assert glob.PROJECT
+
+        ap = glob.PROJECT.upsert_action_point(
+            common.uid(),
+            make_name_unique(f"copy_of_{orig_ap.name}", glob.PROJECT.action_points_names),
+            orig_ap.position if position is None else position,
+            orig_ap.parent if new_parent_id is None else new_parent_id,
+        )
+
+        ap_added_evt = sevts.p.ActionPointChanged(ap)
+        ap_added_evt.change_type = Event.Type.ADD
+        await notif.broadcast_event(ap_added_evt)
+
+        for ori in glob.PROJECT.ap_orientations(orig_ap.id):
+            new_ori = copy.deepcopy(ori)
+            new_ori.id = common.uid()
+            glob.PROJECT.upsert_orientation(ap.id, new_ori)
+
+            ori_added_evt = sevts.p.OrientationChanged(new_ori)
+            ori_added_evt.change_type = Event.Type.ADD
+            ori_added_evt.parent_id = ap.id
+            await notif.broadcast_event(ori_added_evt)
+
+        for joints in glob.PROJECT.ap_joints(orig_ap.id):
+            new_joints = copy.deepcopy(joints)
+            new_joints.id = common.uid()
+            glob.PROJECT.upsert_joints(ap.id, new_joints)
+
+            joints_added_evt = sevts.p.JointsChanged(new_joints)
+            joints_added_evt.change_type = Event.Type.ADD
+            joints_added_evt.parent_id = ap.id
+            await notif.broadcast_event(joints_added_evt)
+
+        action_names = glob.PROJECT.action_names  # action name has to be globally unique
+        for act in glob.PROJECT.ap_actions(orig_ap.id):
+            new_act = copy.deepcopy(act)
+            new_act.id = common.uid()
+            new_act.name = make_name_unique(f"copy_of_{act.name}", action_names)
+            glob.PROJECT.upsert_action(ap.id, new_act)
+
+            action_added_evt = sevts.p.ActionChanged(new_act)
+            action_added_evt.change_type = Event.Type.ADD
+            action_added_evt.parent_id = ap.id
+            await notif.broadcast_event(action_added_evt)
+
+        for child_ap in glob.PROJECT.action_points_with_parent:
+            if child_ap.parent == orig_ap.id:
+                await copy_action_point(child_ap, ap.id)
+
+    original_ap = glob.PROJECT.bare_action_point(req.args.id)
+
+    if req.dry_run:
+        return
+
+    asyncio.ensure_future(copy_action_point(original_ap, position=req.args.position))
+
+
+@scene_needed
+@project_needed
 async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
 
     assert glob.PROJECT
@@ -848,7 +928,7 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
 
     ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
-    unique_name(req.args.name, glob.PROJECT.action_user_names())
+    unique_name(req.args.name, glob.PROJECT.action_names)
     hlp.is_valid_identifier(req.args.name)
 
     new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters, req.args.flows)
@@ -1345,7 +1425,7 @@ async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> No
 
     assert glob.PROJECT
 
-    unique_name(req.args.new_name, glob.PROJECT.action_user_names())
+    unique_name(req.args.new_name, glob.PROJECT.action_names)
 
     if req.dry_run:
         return None
