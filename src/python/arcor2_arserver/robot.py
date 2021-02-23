@@ -120,7 +120,6 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
         obj_type.robot_meta.urdf_package_filename = obj_type.type_def.urdf_package_name
 
 
-# TODO this will be useless (?) once NotImplementedError will be replaced by something based on Arcor2Exception
 async def stop(robot_id: str) -> None:
 
     robot_inst = await osa.get_robot_instance(robot_id)
@@ -128,13 +127,9 @@ async def stop(robot_id: str) -> None:
     if not robot_inst.move_in_progress:
         raise Arcor2Exception("Robot is not moving.")
 
-    try:
-        await hlp.run_in_executor(robot_inst.stop)
-    except NotImplementedError as e:
-        raise Arcor2Exception from e
+    await hlp.run_in_executor(robot_inst.stop)
 
 
-# TODO this will be useless (?) once NotImplementedError will be replaced by something based on Arcor2Exception
 async def ik(
     robot_id: str,
     end_effector_id: str,
@@ -145,23 +140,15 @@ async def ik(
 
     robot_inst = await osa.get_robot_instance(robot_id)
 
-    try:
-        return await hlp.run_in_executor(
-            robot_inst.inverse_kinematics, end_effector_id, pose, start_joints, avoid_collisions
-        )
-    except NotImplementedError as e:
-        raise Arcor2Exception from e
+    return await hlp.run_in_executor(
+        robot_inst.inverse_kinematics, end_effector_id, pose, start_joints, avoid_collisions
+    )
 
 
-# TODO this will be useless (?) once NotImplementedError will be replaced by something based on Arcor2Exception
 async def fk(robot_id: str, end_effector_id: str, joints: List[common.Joint]) -> common.Pose:
 
     robot_inst = await osa.get_robot_instance(robot_id)
-
-    try:
-        return await hlp.run_in_executor(robot_inst.forward_kinematics, end_effector_id, joints)
-    except NotImplementedError as e:
-        raise Arcor2Exception from e
+    return await hlp.run_in_executor(robot_inst.forward_kinematics, end_effector_id, joints)
 
 
 async def check_robot_before_move(robot_id: str) -> None:
@@ -179,7 +166,6 @@ async def check_robot_before_move(robot_id: str) -> None:
             raise Arcor2Exception("Robot is executing action.")
 
 
-# TODO this will be useless (?) once NotImplementedError will be replaced by something based on Arcor2Exception
 async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, safe: bool) -> None:
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
 
@@ -187,9 +173,9 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
 
     try:
         await hlp.run_in_executor(robot_inst.move_to_pose, end_effector_id, pose, speed, safe)
-    except (NotImplementedError, Arcor2Exception) as e:
+    except Arcor2Exception as e:
         glob.logger.error(f"Robot movement failed with: {str(e)}")
-        raise Arcor2Exception(str(e)) from e
+        raise
 
 
 async def move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, safe: bool) -> None:
@@ -254,9 +240,9 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
 
     try:
         await hlp.run_in_executor(robot_inst.move_to_joints, joints, speed, safe)
-    except (NotImplementedError, Arcor2Exception) as e:
+    except Arcor2Exception as e:
         glob.logger.error(f"Robot movement failed with: {str(e)}")
-        raise Arcor2Exception(str(e)) from e
+        raise
 
 
 async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float, safe: bool) -> None:

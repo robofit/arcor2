@@ -1,3 +1,4 @@
+from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.source.utils import parse_def, tree_to_str
 from arcor2_arserver.object_types.source import function_implemented, new_object_type
 from arcor2_arserver_data.objects import ObjectTypeMeta
@@ -27,15 +28,15 @@ class TestType:
         :return:
         """
 
-        raise NotImplementedError("This function is not implemented.")
+        raise Arcor2NotImplemented("This function is not implemented.")
 
     def func_3(self) -> None:
 
         var = 1 + 2
-        raise NotImplementedError(f"{var}")
+        raise Arcor2NotImplemented(f"{var}")
 
     def func_4(self, param: int) -> bool:
-        """Exceptions different from NotImplementedError are ok.
+        """Exceptions different from Arcor2NotImplemented are ok.
 
         :param param:
         :return:
@@ -46,10 +47,10 @@ class TestType:
         return True
 
     def func_5(self) -> None:
-        raise NotImplementedError
+        raise Arcor2NotImplemented
 
     def func_6(self) -> None:
-        raise NotImplementedError(1)
+        raise Arcor2NotImplemented(1)
 
 
 module_tree = parse_def(TestType)

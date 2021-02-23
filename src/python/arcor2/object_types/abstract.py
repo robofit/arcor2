@@ -177,7 +177,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         """
 
         assert 0.0 <= speed <= 1.0
-        raise NotImplementedError("Robot does not support moving to pose.")
+        raise Arcor2NotImplemented("Robot does not support moving to pose.")
 
     def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
         """Sets target joint values.
@@ -189,10 +189,10 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         """
 
         assert 0.0 <= speed <= 1.0
-        raise NotImplementedError("Robot does not support moving to joints.")
+        raise Arcor2NotImplemented("Robot does not support moving to joints.")
 
     def stop(self) -> None:
-        raise NotImplementedError("The robot can't be stopped.")
+        raise Arcor2NotImplemented("The robot can't be stopped.")
 
     def inverse_kinematics(
         self,
@@ -209,7 +209,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         :param avoid_collisions: Return non-collision IK result if true
         :return: Inverse kinematics
         """
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
@@ -218,7 +218,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         :param joints: Input joint values
         :return: Pose of the given end effector
         """
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
 
 class Camera(GenericWithPose, metaclass=abc.ABCMeta):
@@ -237,7 +237,7 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
         self.color_camera_params: Optional[CameraParameters] = None
 
     def color_image(self, *, an: Optional[str] = None) -> Image.Image:
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
     def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
         """This should provide depth image transformed into color camera
@@ -246,7 +246,7 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
         :return:
         """
 
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
 
 __all__ = [
