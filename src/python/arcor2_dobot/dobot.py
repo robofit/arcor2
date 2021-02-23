@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from typing import List
 
 import quaternion
-from pydobot import dobot
+from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Pose, StrEnum
@@ -27,9 +27,9 @@ class MoveType(StrEnum):
 
 
 MOVE_TYPE_MAPPING = {
-    MoveType.JUMP: dobot.MODE_PTP.JUMP_XYZ,
-    MoveType.JOINTS: dobot.MODE_PTP.MOVJ_XYZ,
-    MoveType.LINEAR: dobot.MODE_PTP.MOVL_XYZ,
+    MoveType.JUMP: MODE_PTP.JUMP_XYZ,
+    MoveType.JOINTS: MODE_PTP.MOVJ_XYZ,
+    MoveType.LINEAR: MODE_PTP.MOVL_XYZ,
 }
 
 
@@ -43,9 +43,9 @@ class Dobot(metaclass=ABCMeta):
         if not self.simulator:
 
             try:
-                self._dobot = dobot.Dobot(port)
-            except dobot.DobotException as e:
-                raise DobotException("Could not connect to the robot.") from e
+                self._dobot = DobotApi(port)
+            except DobotApiException as e:
+                raise DobotApiException("Could not connect to the robot.") from e
 
         else:
             self._joint_values: List[Joint] = []  # has to be set to some initial value in derived classes
@@ -54,11 +54,11 @@ class Dobot(metaclass=ABCMeta):
 
         try:
             alarms = self._dobot.get_alarms()
-        except dobot.DobotException as e:
-            raise DobotException("Failed to get alarms.") from e
+        except DobotApiException as e:
+            raise DobotApiException("Failed to get alarms.") from e
 
         if alarms:
-            raise DobotException(f"Alarm(s): {','.join([alarm.name for alarm in alarms])}.")
+            raise DobotApiException(f"Alarm(s): {','.join([alarm.name for alarm in alarms])}.")
 
     def cleanup(self) -> None:
 
@@ -102,7 +102,7 @@ class Dobot(metaclass=ABCMeta):
         eps = 1e-6
 
         if (abs(x) > eps and 1 - abs(x) > eps) or 1 - abs(y) > eps:
-            raise DobotException("Impossible orientation.")
+            raise DobotApiException("Impossible orientation.")
 
     def get_end_effector_pose(self) -> Pose:
 
@@ -111,7 +111,7 @@ class Dobot(metaclass=ABCMeta):
 
         try:
             pos = self._dobot.get_pose()  # in mm
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Failed to get pose.") from e
 
         p = Pose()
@@ -137,7 +137,7 @@ class Dobot(metaclass=ABCMeta):
             try:
                 self._dobot.clear_alarms()
                 self._dobot.wait_for_cmd(self._dobot.home())
-            except dobot.DobotException as e:
+            except DobotApiException as e:
                 raise DobotException("Homing failed.") from e
 
         self.alarms_to_exception()
@@ -191,7 +191,7 @@ class Dobot(metaclass=ABCMeta):
                         MOVE_TYPE_MAPPING[move_type],
                     )
                 )
-            except dobot.DobotException as e:
+            except DobotApiException as e:
                 raise DobotException("Move failed.") from e
 
         self.alarms_to_exception()

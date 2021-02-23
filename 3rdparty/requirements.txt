@@ -17,12 +17,12 @@ opencv-contrib-python==4.5.1.48
 open3d==0.12.0
 packaging==20.8
 Pillow==8.1.0
-pydobot2==0.1.0
 pyhumps==1.6.1
 pyk4a==1.1.0
 pytest-randomly==3.5.0
 pytest-repeat==0.9.1
 pytest==6.2.1
+pyserial==3.5
 PyYAML==5.3.1
 requests==2.25.1
 sqlitedict==1.7.0

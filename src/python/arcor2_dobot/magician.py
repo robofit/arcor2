@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple
 
 import quaternion
 from arcor2_dobot.dobot import Dobot, DobotException
-from pydobot import dobot
+from arcor2_dobot.dobot_api import DobotApiException
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Orientation, Pose, Position, StrEnum
@@ -201,7 +201,7 @@ class DobotMagician(Dobot):
 
         try:
             self._dobot.wait_for_cmd(self._dobot.suck(True))
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Suck failed.") from e
 
     def release(self) -> None:
@@ -211,5 +211,5 @@ class DobotMagician(Dobot):
 
         try:
             self._dobot.wait_for_cmd(self._dobot.suck(False))
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Release failed.") from e
