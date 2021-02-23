@@ -265,3 +265,22 @@ class CalibrateRobot(RPC):
     @dataclass
     class Response(RPC.Response):
         pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class HandTeachingMode(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            enable: bool
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass

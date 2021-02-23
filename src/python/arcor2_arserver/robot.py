@@ -115,6 +115,7 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
     obj_type.robot_meta.features.stop = _feature(obj_type.type_def, Robot.stop.__name__)
     obj_type.robot_meta.features.inverse_kinematics = _feature(obj_type.type_def, Robot.inverse_kinematics.__name__)
     obj_type.robot_meta.features.forward_kinematics = _feature(obj_type.type_def, Robot.forward_kinematics.__name__)
+    obj_type.robot_meta.features.hand_teaching = _feature(obj_type.type_def, Robot.set_hand_teaching_mode.__name__)
 
     if issubclass(obj_type.type_def, Robot) and obj_type.type_def.urdf_package_name:
         obj_type.robot_meta.urdf_package_filename = obj_type.type_def.urdf_package_name
