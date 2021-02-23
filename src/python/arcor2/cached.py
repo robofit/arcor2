@@ -258,6 +258,10 @@ class CachedProject:
         return [ap for ap in self._action_points.values() if ap.parent]
 
     @property
+    def action_names(self) -> Set[str]:
+        return {act.name for act in self._actions.data.values()}
+
+    @property
     def action_points_names(self) -> Set[str]:
         return {ap.name for ap in self._action_points.values()}
 
@@ -327,6 +331,9 @@ class CachedProject:
     def ap_joint_names(self, ap_id: str) -> Set[str]:
         return {joints.name for joints in self.ap_joints(ap_id)}
 
+    def ap_action_names(self, ap_id: str) -> Set[str]:
+        return {action.name for action in self.ap_actions(ap_id)}
+
     def orientation(self, orientation_id: str) -> cmn.NamedOrientation:
 
         try:
@@ -392,10 +399,7 @@ class CachedProject:
         return list(self._actions.data.values())
 
     def action_ids(self) -> Set[str]:
-        return {action.id for action in self.actions}
-
-    def action_user_names(self) -> Set[str]:
-        return {action.name for action in self.actions}
+        return {action.id for action in self._actions.data.values()}
 
     def bare_action_point(self, action_point_id: str) -> cmn.BareActionPoint:
 
