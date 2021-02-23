@@ -2,6 +2,7 @@ import humps
 from typed_ast.ast3 import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
 
 import arcor2.object_types
+from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.object_types.utils import built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.utils import find_function, find_raises, get_name
@@ -40,7 +41,7 @@ def new_object_type(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> AST:
 
 def function_implemented(tree: AST, func_name: str) -> bool:
     """Body of unimplemented function (e.g. object/service feature) contains
-    only 'raise NotImplementedError()'.
+    only 'raise Arcor2NotImplemented()'.
 
     :param tree:
     :return:
@@ -59,15 +60,15 @@ def function_implemented(tree: AST, func_name: str) -> bool:
     exc = raises[0].exc
 
     if isinstance(exc, Call):
-        # raise NotImplementedError("something")
+        # raise Arcor2NotImplemented("something")
 
         assert isinstance(exc.func, Name)
 
-        if exc.func.id == NotImplementedError.__name__:
+        if exc.func.id == Arcor2NotImplemented.__name__:
             return False
 
-    if isinstance(exc, Name) and exc.id == NotImplementedError.__name__:
-        # raise NotImplementedError
+    if isinstance(exc, Name) and exc.id == Arcor2NotImplemented.__name__:
+        # raise Arcor2NotImplemented
         return False
 
     return True
