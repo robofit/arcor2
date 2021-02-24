@@ -1,4 +1,5 @@
 import abc
+import copy
 import json
 from typing import Any, Callable, List, NamedTuple, Optional
 
@@ -86,7 +87,8 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
 
-        return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+        # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
+        return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 
     @classmethod
     @abc.abstractmethod
