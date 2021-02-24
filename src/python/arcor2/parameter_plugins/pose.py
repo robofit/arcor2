@@ -1,3 +1,4 @@
+import copy
 import json
 from typing import Any, List
 
@@ -38,7 +39,10 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
-        return tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
+        # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
+        return copy.deepcopy(
+            tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
+        )
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
@@ -102,13 +106,13 @@ class PoseListPlugin(ListParameterPlugin):
         ap, action = project.action_point_and_action(action_id)
 
         if not ap.parent:
-            return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+            return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 
         parameter = action.parameter(parameter_id)
         ret: List[Pose] = []
 
         for orientation_id in cls._param_value_list(parameter):
-            ret.append(tr.abs_pose_from_ap_orientation(scene, project, orientation_id))
+            ret.append(copy.deepcopy(tr.abs_pose_from_ap_orientation(scene, project, orientation_id)))
 
         return ret
 
