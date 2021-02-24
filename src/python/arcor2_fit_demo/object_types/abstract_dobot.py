@@ -123,6 +123,38 @@ class AbstractDobot(Robot):
     def release(self, *, an: Optional[str] = None) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/release")
 
+    def pick(self, pick_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+        """Picks an item from given pose.
+
+        :param pick_pose:
+        :param vertical_offset:
+        :return:
+        """
+
+        pick_pose.position.z += vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+        pick_pose.position.z -= vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pick pose
+        self.suck()
+        pick_pose.position.z += vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+
+    def place(self, place_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+        """Places an item to a given pose.
+
+        :param place_pose:
+        :param vertical_offset:
+        :return:
+        """
+
+        place_pose.position.z += vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+        place_pose.position.z -= vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # place pose
+        self.release()
+        place_pose.position.z += vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+
     def robot_joints(self) -> List[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
 
@@ -158,6 +190,8 @@ class AbstractDobot(Robot):
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
     suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
     release.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    pick.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
+    place.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
 
 
 AbstractDobot.DYNAMIC_PARAMS = {
