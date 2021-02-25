@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import List, Optional, Tuple, Type, Union
@@ -13,6 +14,12 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from arcor2.exceptions import Arcor2Exception
 
 RespT = Union[Response, Tuple[str, int]]
+
+
+class FlaskException(Arcor2Exception):
+    def __init__(self, *args, error_code: int):
+        super().__init__(*args)
+        self.error_code = error_code
 
 
 def create_app(import_name: str) -> Flask:
@@ -57,8 +64,12 @@ def run_app(
         return jsonify(spec.to_dict())
 
     @app.errorhandler(Arcor2Exception)
-    def handle_bad_request(e: Arcor2Exception) -> Tuple[str, int]:
-        return str(e), 400
+    def handle_bad_request_general(e: Arcor2Exception) -> Tuple[str, int]:
+        return json.dumps(str(e)), 400
+
+    @app.errorhandler(FlaskException)
+    def handle_bad_request_intentional(e: FlaskException) -> Tuple[str, int]:
+        return json.dumps(str(e)), e.error_code
 
     SWAGGER_URL = "/swagger"
 
