@@ -2,6 +2,18 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.0] - WIP
+
+### Changed
+
+-  API to copy action point (including orientations, joints, child APs).
+- Robot-related API (MoveToPose, MoveToJoints, MoveToActionPoint) updated in order to contain `safe` parameter.
+- API to enable/disable robot hand teaching mode.  
+- Concrete and helpful error messages when a name entered by the user is refused.
+
+### Fixed
+- Only `BareActionPoint` was sent on parent change.
+
 ## [0.12.0] - 2021-02-08
 
 ### Changed

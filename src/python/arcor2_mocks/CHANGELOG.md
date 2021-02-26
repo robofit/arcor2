@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - WIP
+
+### Changed
+- Methods to store/get mesh files were added to the mock Project.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed

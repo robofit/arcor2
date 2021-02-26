@@ -2,6 +2,21 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - WIP
+
+### Fixed
+- Parameter plugins now return copy of the parameter in order to prevent changes in the project if the value is modified e.g. within an action.
+- Method `update_project_sources` of the Project service client was fixed.
+
+### Changed
+- Flask-based apps now don't log each API call by default.
+  - It can be turned on by setting `ARCOR2_REST_API_DEBUG`.
+- The `rest` module has a new exception type RestHttpException for getting HTTP error codes.
+- `is_valid_identifier` now behaves the same as `is_valid_type`, it does not insist on convention (PascalCase vs snake_case) and provides concrete error messages.
+- `Robot` API now has `safe` parameter.
+- `Robot` now has API for hand teaching mode.  
+- Line length of generated code changed from 80 to 120.
+
 ## [0.11.1] - 2021-02-09
 
 ### Fixed
