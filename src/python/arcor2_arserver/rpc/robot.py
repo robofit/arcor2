@@ -416,6 +416,7 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     if req.dry_run:
         return
 
-    robot_inst.set_hand_teaching_mode(req.args.enable)
+    # TODO run in nested coroutine and use ProcessState to notify about errors
+    await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable)
     evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable))
     asyncio.ensure_future(notif.broadcast_event(evt))
