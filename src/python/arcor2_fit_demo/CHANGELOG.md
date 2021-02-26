@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.5.0] - WIP
+
+### Changed
+- `pick`/`place` actions.
+- Hand teaching mode.
+- During initialization, stop the Dobot service if already started.
+- Raise exception on `safe=True` (not supported).
+
 ## [0.4.0] - 2021-02-08
 
 ### Changed

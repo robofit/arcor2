@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - WIP
+
+### Changed
+- Parameter `safe` added to the `Robot` interface.
+- Added an example using `RestHttpException`.
+
+### Fixed
+- `Simatic` robot was missing `move_to_joints` (moved to `AbstractRobot`).
+
 ## [0.11.1] - 2021-02-09
 
 ### Changed
