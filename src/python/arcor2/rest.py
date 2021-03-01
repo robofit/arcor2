@@ -251,6 +251,13 @@ def call(
     else:
         params = {}
 
+    assert params is not None
+
+    # requests just simply stringifies parameters, which does not work for booleans
+    for param_name, param_value in params.items():
+        if isinstance(param_value, bool):
+            params[param_name] = "true" if param_value else "false"
+
     if timeout is None:
         timeout = Timeout()
 
@@ -263,6 +270,8 @@ def call(
         logger.debug("Request failed.", exc_info=True)
         # TODO would be good to provide more meaningful message but the original one could be very very long
         raise RestException("Catastrophic system error.") from e
+
+    logger.debug(resp.url)  # to see if query parameters are ok
 
     _handle_response(resp)
 
