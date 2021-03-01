@@ -272,12 +272,6 @@ if [[ -n "${PANTS_SHA:-}" ]]; then
   pants_extra_args="${pants_extra_args} --python-repos-repos=$(find_links_url "$pants_version" "$PANTS_SHA")"
 fi
 
-# We set the env var no_proxy to '*', to work around an issue with urllib using non
-# async-signal-safe syscalls after we fork a process that has already spawned threads.
-#
-# See https://blog.phusion.nl/2017/10/13/why-ruby-app-servers-break-on-macos-high-sierra-and-what-can-be-done-about-it/
-export no_proxy='*'
-
 # shellcheck disable=SC2086
 exec "${pants_python}" "${pants_binary}" ${pants_extra_args} \
   --pants-bin-name="${PANTS_BIN_NAME}" --pants-version=${pants_version} "$@"

@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.3.0.dev3"
+pants_version = "2.4.0.dev0"
 colors = true
 
 
@@ -29,10 +29,9 @@ root_patterns = [
 ]
 
 [python-setup]
-interpreter_constraints = ["==3.8.*"]
+interpreter_constraints = ["==3.8.*"]  # can't use 3.9 yet because of https://github.com/intel-isl/Open3D/issues/3065
 requirement_constraints = "3rdparty/constraints.txt"
 interpreter_search_paths = ["<PATH>", "/usr/bin/python3.8"]
-resolver_version = "pip-2020-resolver"
 
 [flake8]
 config = ".flake8"
@@ -49,7 +48,7 @@ extra_requirements.add = [
 
 [mypy]
 config = "mypy.ini"
-version = "mypy==0.800"
+version = "mypy==0.812"
 # TODO enable this once numpy 1.21.0 is out
 # extra_requirements.add = [
 #  "numpy"

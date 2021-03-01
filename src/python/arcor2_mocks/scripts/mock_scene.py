@@ -162,19 +162,19 @@ def put_mesh() -> RespT:
               schema:
                 type: number
                 format: float
-                default: 1
+                default: 1.0
             - name: meshScaleY
               in: query
               schema:
                 type: number
                 format: float
-                default: 1
+                default: 1.0
             - name: meshScaleZ
               in: query
               schema:
                 type: number
                 format: float
-                default: 1
+                default: 1.0
         requestBody:
               content:
                 application/json:
