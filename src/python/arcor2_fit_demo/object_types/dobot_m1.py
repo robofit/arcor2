@@ -13,8 +13,7 @@ class DobotM1(AbstractDobot):
         super().__init__(obj_id, name, pose, settings)
         self._start("m1")
 
-    @property
-    def hand_teaching_mode(self) -> bool:
+    def get_hand_teaching_mode(self) -> bool:
         return rest.call(rest.Method.GET, f"{self.settings.url}/hand_teaching", return_type=bool)
 
     def set_hand_teaching_mode(self, enabled: bool) -> None:
