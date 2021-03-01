@@ -91,7 +91,7 @@ def put_start() -> RespT:
 
     _dobot = mapping[model](pose, port, _mock)
 
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/stop", methods=["PUT"])
@@ -114,7 +114,7 @@ def put_stop() -> RespT:
     assert _dobot is not None
     _dobot.cleanup()
     _dobot = None
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/started", methods=["GET"])
@@ -136,7 +136,7 @@ def get_started() -> RespT:
               description: Not started
     """
 
-    return jsonify(started()), 200
+    return jsonify(started())
 
 
 @app.route("/eef/pose", methods=["GET"])
@@ -220,7 +220,7 @@ def put_eef_pose() -> RespT:
     acceleration = float(request.args.get("acceleration", default=50.0))
 
     _dobot.move(pose, MoveType(move_type), velocity, acceleration)
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/home", methods=["PUT"])
@@ -241,7 +241,7 @@ def put_home() -> RespT:
 
     assert _dobot is not None
     _dobot.home()
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/hand_teaching", methods=["GET"])
@@ -265,7 +265,7 @@ def get_hand_teaching() -> RespT:
     """
 
     assert _dobot
-    return jsonify(_dobot.hand_teaching_mode), 200
+    return jsonify(_dobot.hand_teaching_mode)
 
 
 @app.route("/hand_teaching", methods=["PUT"])
@@ -290,8 +290,8 @@ def put_hand_teaching() -> RespT:
     """
 
     assert _dobot
-    _dobot.hand_teaching_mode = request.args.get("enabled", default="false") == "true"
-    return "ok", 200
+    _dobot.hand_teaching_mode = request.args.get("enabled") == "true"
+    return jsonify("ok")
 
 
 @app.route("/suck", methods=["PUT"])
@@ -312,7 +312,7 @@ def put_suck() -> RespT:
 
     assert _dobot is not None
     _dobot.suck()
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/release", methods=["PUT"])
@@ -333,7 +333,7 @@ def put_release() -> RespT:
 
     assert _dobot is not None
     _dobot.release()
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/joints", methods=["GET"])
@@ -359,7 +359,7 @@ def get_joints() -> RespT:
     """
 
     assert _dobot is not None
-    return jsonify(_dobot.robot_joints()), 200
+    return jsonify(_dobot.robot_joints())
 
 
 @app.route("/ik", methods=["PUT"])
@@ -392,7 +392,7 @@ def put_ik() -> RespT:
     assert _dobot is not None
 
     pose = Pose.from_dict(request.json)
-    return jsonify(_dobot.inverse_kinematics(pose)), 200
+    return jsonify(_dobot.inverse_kinematics(pose))
 
 
 @app.route("/fk", methods=["PUT"])
@@ -425,7 +425,7 @@ def put_fk() -> RespT:
     assert _dobot is not None
 
     joints = [Joint.from_dict(j) for j in request.json]
-    return jsonify(_dobot.forward_kinematics(joints)), 200
+    return jsonify(_dobot.forward_kinematics(joints))
 
 
 def main() -> None:
