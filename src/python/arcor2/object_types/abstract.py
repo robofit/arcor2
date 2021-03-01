@@ -142,7 +142,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
             raise RobotException("Already moving.")
 
         try:
-            if self.hand_teaching_mode:
+            if self.get_hand_teaching_mode():
                 raise RobotException("Can't move in hand teaching mode.")
         except Arcor2NotImplemented:
             pass
@@ -226,15 +226,13 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         """
         raise Arcor2NotImplemented()
 
-    @property
-    def hand_teaching_mode(self) -> bool:
+    def get_hand_teaching_mode(self) -> bool:
         """
         This is expected to be implemented if the robot supports set_hand_teaching_mode
         :return:
         """
         raise Arcor2NotImplemented()
 
-    # TODO it would be cleaner to have it as setter for hand_teaching_mode, but this is not supported in ARServer yet
     def set_hand_teaching_mode(self, enabled: bool) -> None:
         raise Arcor2NotImplemented()
 

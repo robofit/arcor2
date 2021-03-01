@@ -410,13 +410,14 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     if not otd.robot_meta.features.hand_teaching:
         raise Arcor2Exception("Robot does not support hand teaching.")
 
-    if req.args.enable == robot_inst.hand_teaching_mode:
+    hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode)
+
+    if req.args.enable == hand_teaching_mode:
         raise Arcor2Exception("That's the current state.")
 
     if req.dry_run:
         return
 
-    # TODO run in nested coroutine and use ProcessState to notify about errors
     await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable)
     evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable))
     asyncio.ensure_future(notif.broadcast_event(evt))
