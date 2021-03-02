@@ -9,9 +9,9 @@ from arcor2.data.common import Joint, Pose, StrEnum
 
 class Joints(StrEnum):
 
-    J1: str = "dobot_m1_z_axis_joint"
-    J2: str = "dobot_m1_axis_2_joint"
-    J3: str = "dobot_m1_axis_3_joint"
+    J1: str = "dobot_m1_axis_2_joint"
+    J2: str = "dobot_m1_axis_3_joint"
+    J3: str = "dobot_m1_z_axis_joint"
     J4: str = "dobot_m1_axis_4_joint"
 
 
