@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.12.0] - WIP
+## [0.12.0] - 2021-03-03
 
 ### Fixed
 - Parameter plugins now return copy of the parameter in order to prevent changes in the project if the value is modified e.g. within an action.

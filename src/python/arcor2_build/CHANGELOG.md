@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.12.0] - WIP
+## [0.12.0] - 2021-03-03
 
 ### Changed
 - A new method `PUT /project/import` to import existing execution package.
