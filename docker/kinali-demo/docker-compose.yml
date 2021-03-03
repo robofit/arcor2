@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.12.0
+    image: arcor2/arcor2_arserver:0.13.0
     container_name: arserver
     depends_on:
       - project
@@ -30,7 +30,7 @@ services:
       - ARCOR2_DATA_PATH=/root/data
 
   build:
-    image: arcor2/arcor2_build:0.11.0
+    image: arcor2/arcor2_build:0.12.0
     container_name: build
     depends_on:
       - project
