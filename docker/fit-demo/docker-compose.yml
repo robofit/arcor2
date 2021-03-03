@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.12.0
+    image: arcor2/arcor2_arserver:0.13.0
     container_name: arserver
     depends_on:
       - project
@@ -31,7 +31,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:0.11.0
+    image: arcor2/arcor2_build:0.12.0
     container_name: build
     depends_on:
       - project
@@ -77,7 +77,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
 
   dobot:
-    image: arcor2/arcor2_dobot:0.1.0
+    image: arcor2/arcor2_dobot:0.2.0
     container_name: dobot
     networks:
       - testitoff-dobot-network
