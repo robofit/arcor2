@@ -58,13 +58,12 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Attribute:
 
-        ap, _ = project.action_point_and_action(action_id)
-        ori = project.orientation(cls.orientation_id(project, action_id, parameter_id))
+        ori_ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
 
         return Attribute(
             value=Attribute(
                 value=Attribute(
-                    value=Name(id="aps", ctx=Load()), attr=ap.name, ctx=Load()  # TODO this should not be hardcoded
+                    value=Name(id="aps", ctx=Load()), attr=ori_ap.name, ctx=Load()  # TODO this should not be hardcoded
                 ),
                 attr="poses",  # TODO this should not be hardcoded
                 ctx=Load(),
