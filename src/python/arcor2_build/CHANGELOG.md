@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 - Bump dependency to arcor2 0.12.1 which fixes code generation in the `Pose` plugin.
+- Check whether ObjectType id (class name) is the same as its models id.
+  - The assertion was turned into exception.
 
 ## [0.12.0] - 2021-03-03
 
