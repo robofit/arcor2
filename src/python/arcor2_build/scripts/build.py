@@ -387,7 +387,12 @@ def project_import() -> RespT:
             logger.debug(f"Found model {model.id} of type {model.type}.")
 
             obj_type.model = model.metamodel()
-            assert obj_type.id == obj_type.model.id
+
+            if obj_type.id != obj_type.model.id:
+                raise FlaskException(
+                    f"Model id ({obj_type.model.id}) has to be the same as ObjectType id ({obj_type.id}).",
+                    error_code=401,
+                )
 
             models[obj_type.id] = model
 
