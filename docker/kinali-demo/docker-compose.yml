@@ -104,7 +104,7 @@ services:
       - testitoff-scene-network
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.3
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.5
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
@@ -136,7 +136,7 @@ services:
           - "14017:27017"  
 
   testitoff-search-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.8.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.9.0
       container_name: "testitoff-search-webapi"
       privileged: true
       restart: always
@@ -176,7 +176,7 @@ services:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
 
   testitoff-statistic-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/statistic:0.3.2
+      image: registry.gitlab.com/kinalisoft/test-it-off/statistic:0.3.3
       container_name: "testitoff-statistic-webapi"
       privileged: true
       restart: always
