@@ -99,7 +99,7 @@ services:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.3
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.5
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
