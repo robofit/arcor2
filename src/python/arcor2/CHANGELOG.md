@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.12.1] - WIP
+## [0.12.1] - 2021-03-08
 
 ### Fixed
 - `Pose` parameter plugin fixed to generate correct code in a case when action on action point A uses orientation from action point B.
