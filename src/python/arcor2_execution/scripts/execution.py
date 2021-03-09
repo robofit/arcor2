@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-
-
 import argparse
 import asyncio
 import base64
@@ -8,6 +5,7 @@ import functools
 import json
 import os
 import shutil
+import signal
 import sys
 import tempfile
 import time
@@ -214,7 +212,7 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
     assert TASK is not None
 
     logger.info("Terminating process")
-    PROCESS.terminate()
+    PROCESS.send_signal(signal.SIGINT)  # the same as when a user presses ctrl+c
     logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
     PACKAGE_INFO_EVENT = None
