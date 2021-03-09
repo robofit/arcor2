@@ -215,7 +215,7 @@ class Aubo(AbstractRobot):
 
     @lru_cache()
     def suctions(self) -> Set[str]:
-        return set(rest.call(rest.Method.GET, f"{self.settings.url}/suctions", return_type=str))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/suctions", list_return_type=str))
 
     def suck(self, suction_id: str, *, an: Optional[str] = None) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/suctions/{suction_id}/suck")
