@@ -74,10 +74,14 @@ async def get_robot_joints(robot_id: str) -> List[common.Joint]:
 def feature(tree: AST, robot_type: Type[Robot], func_name: str) -> bool:
 
     if not function_implemented(tree, func_name):
+        glob.logger.debug(f"robot_type {robot_type.__name__}, func_name {func_name} not implemented.")
         return False
 
     sign = inspect.signature(getattr(robot_type, func_name))
-    return inspect.signature(getattr(Robot, func_name)) == sign
+    res = inspect.signature(getattr(Robot, func_name)) == sign
+    if not res:
+        glob.logger.debug(f"robot_type {robot_type.__name__}, func_name {func_name} has invalid signature.")
+    return res
 
 
 def _feature(type_def: Type[Robot], method_name: str) -> bool:
