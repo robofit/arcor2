@@ -63,7 +63,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerato
         scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     if make_copy:
-        scene.id = common.uid()
+        scene.id = common.Scene.uid()
 
     try:
         yield scene
@@ -94,7 +94,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
         return None
 
     await get_object_types()  # TODO not ideal, may take quite long time
-    glob.SCENE = UpdateableCachedScene(common.Scene(common.uid(), req.args.name, desc=req.args.desc))
+    glob.SCENE = UpdateableCachedScene(common.Scene(req.args.name, desc=req.args.desc))
     asyncio.ensure_future(notif.broadcast_event(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.SCENE.scene))))
     asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
     return None
@@ -171,7 +171,7 @@ async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsCli
 
     can_modify_scene()
 
-    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose, req.args.parameters)
+    obj = common.SceneObject(req.args.name, req.args.type, req.args.pose, req.args.parameters)
 
     await add_object_to_scene(obj, dry_run=req.dry_run)
 

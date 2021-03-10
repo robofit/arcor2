@@ -1,6 +1,7 @@
 [GLOBAL]
 pants_version = "2.4.0.dev0"
 colors = true
+process_execution_local_parallelism = 4
 
 
 plugins = [

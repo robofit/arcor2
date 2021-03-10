@@ -72,7 +72,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
     :return: generated package ID.
     """
 
-    package_id = common.uid()
+    package_id = common.uid("pkg")
 
     # call build service
     # TODO store data in memory

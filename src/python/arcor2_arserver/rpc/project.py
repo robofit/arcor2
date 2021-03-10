@@ -53,7 +53,7 @@ async def managed_project(project_id: str, make_copy: bool = False) -> AsyncGene
         project = UpdateableCachedProject(await storage.get_project(project_id))
 
     if make_copy:
-        project.id = common.uid()
+        project.id = common.Project.uid()
 
     try:
         yield project
@@ -260,7 +260,7 @@ async def add_action_point_joints_using_robot_cb(
     if req.dry_run:
         return None
 
-    prj = common.ProjectRobotJoints(common.uid(), req.args.name, req.args.robot_id, new_joints, True)
+    prj = common.ProjectRobotJoints(req.args.name, req.args.robot_id, new_joints, True)
     glob.PROJECT.upsert_joints(ap.id, prj)
 
     evt = sevts.p.JointsChanged(prj)
@@ -523,7 +523,7 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
     if req.dry_run:
         return None
 
-    orientation = common.NamedOrientation(common.uid(), req.args.name, req.args.orientation)
+    orientation = common.NamedOrientation(req.args.name, req.args.orientation)
     glob.PROJECT.upsert_orientation(ap.id, orientation)
 
     evt = sevts.p.OrientationChanged(orientation)
@@ -584,7 +584,7 @@ async def add_action_point_orientation_using_robot_cb(
     if ap.parent:
         new_pose = tr.make_pose_rel_to_parent(glob.SCENE, glob.PROJECT, new_pose, ap.parent)
 
-    orientation = common.NamedOrientation(common.uid(), req.args.name, new_pose.orientation)
+    orientation = common.NamedOrientation(req.args.name, new_pose.orientation)
     glob.PROJECT.upsert_orientation(ap.id, orientation)
 
     evt = sevts.p.OrientationChanged(orientation)
@@ -715,7 +715,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
     project.PREV_RESULTS.clear()
     glob.PROJECT = UpdateableCachedProject(
-        common.Project(common.uid(), req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
+        common.Project(req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
     )
 
     assert glob.SCENE
@@ -773,7 +773,7 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
     if req.dry_run:
         return None
 
-    ap = glob.PROJECT.upsert_action_point(common.uid(), req.args.name, req.args.position, req.args.parent)
+    ap = glob.PROJECT.upsert_action_point(common.ActionPoint.uid(), req.args.name, req.args.position, req.args.parent)
 
     evt = sevts.p.ActionPointChanged(ap)
     evt.change_type = Event.Type.ADD
@@ -867,7 +867,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         assert glob.PROJECT
 
         ap = glob.PROJECT.upsert_action_point(
-            common.uid(),
+            common.ActionPoint.uid(),
             make_name_unique(f"{orig_ap.name}_copy", glob.PROJECT.action_points_names),
             orig_ap.position if position is None else position,
             orig_ap.parent if new_parent_id is None else new_parent_id,
@@ -878,8 +878,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         await notif.broadcast_event(ap_added_evt)
 
         for ori in glob.PROJECT.ap_orientations(orig_ap.id):
-            new_ori = copy.deepcopy(ori)
-            new_ori.id = common.uid()
+            new_ori = ori.copy()
             glob.PROJECT.upsert_orientation(ap.id, new_ori)
 
             ori_added_evt = sevts.p.OrientationChanged(new_ori)
@@ -888,8 +887,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             await notif.broadcast_event(ori_added_evt)
 
         for joints in glob.PROJECT.ap_joints(orig_ap.id):
-            new_joints = copy.deepcopy(joints)
-            new_joints.id = common.uid()
+            new_joints = joints.copy()
             glob.PROJECT.upsert_joints(ap.id, new_joints)
 
             joints_added_evt = sevts.p.JointsChanged(new_joints)
@@ -899,8 +897,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
         action_names = glob.PROJECT.action_names  # action name has to be globally unique
         for act in glob.PROJECT.ap_actions(orig_ap.id):
-            new_act = copy.deepcopy(act)
-            new_act.id = common.uid()
+            new_act = act.copy()
             new_act.name = make_name_unique(f"{act.name}_copy", action_names)
             glob.PROJECT.upsert_action(ap.id, new_act)
 
@@ -932,7 +929,7 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
 
     unique_name(req.args.name, glob.PROJECT.action_names)
 
-    new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters, req.args.flows)
+    new_action = common.Action(req.args.name, req.args.type, parameters=req.args.parameters, flows=req.args.flows)
 
     action_meta = find_object_action(glob.SCENE, new_action)
 
@@ -1130,7 +1127,7 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
     assert glob.PROJECT
     assert glob.SCENE
 
-    logic_item = common.LogicItem(common.uid(), req.args.start, req.args.end, req.args.condition)
+    logic_item = common.LogicItem(req.args.start, req.args.end, req.args.condition)
     check_logic_item(glob.PROJECT, logic_item)
 
     if logic_item.start != logic_item.START:
@@ -1227,7 +1224,7 @@ async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None
     assert glob.PROJECT
     assert glob.SCENE
 
-    const = common.ProjectConstant(common.uid(), req.args.name, req.args.type, req.args.value)
+    const = common.ProjectConstant(req.args.name, req.args.type, req.args.value)
     check_constant(const)
 
     if req.dry_run:

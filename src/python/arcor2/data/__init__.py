@@ -25,7 +25,7 @@ def compile_json_schemas() -> None:
 
         for _, obj in inspect.getmembers(module, inspect.isclass):
 
-            if not issubclass(obj, JsonSchemaMixin) or obj is JsonSchemaMixin:
+            if not issubclass(obj, JsonSchemaMixin) or obj is JsonSchemaMixin or inspect.isabstract(obj):
                 continue
 
             try:

@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+import abc
+import copy
 import math
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, cast
+from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, TypeVar, cast
 
 import numpy as np
 import quaternion
@@ -13,8 +17,12 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2.exceptions import Arcor2Exception
 
 
-def uid() -> str:
-    return uuid.uuid4().hex
+def uid(prefix: str) -> str:
+
+    if not (prefix and prefix[0].isalpha() and prefix[-1] != "_"):
+        raise Arcor2Exception(f"{prefix} is a invalid uid prefix.")
+
+    return f"{prefix}_{uuid.uuid4().hex}"
 
 
 @unique
@@ -80,7 +88,7 @@ class Position(IterableIndexable):
     y: float = 0.0
     z: float = 0.0
 
-    def rotated(self, rot: "Orientation", inverse: bool = False) -> "Position":
+    def rotated(self, rot: Orientation, inverse: bool = False) -> Position:
 
         q = rot.as_quaternion()
 
@@ -159,12 +167,44 @@ class Orientation(IterableIndexable):
         self.w = nq.w
 
 
-@dataclass
-class NamedOrientation(JsonSchemaMixin):
+class ModelMixin(abc.ABC):
+    """Mixin for objects with 'id' property that is uuid."""
 
     id: str
+
+    @classmethod
+    @abc.abstractmethod
+    def uid_prefix(cls) -> str:
+        pass
+
+    @classmethod
+    def uid(cls) -> str:
+        """Returns uid with proper prefix.
+
+        :return:
+        """
+        return uid(cls.uid_prefix())
+
+    def __post_init__(self) -> None:
+        if not self.id:
+            self.id = self.uid()
+
+
+@dataclass
+class NamedOrientation(JsonSchemaMixin, ModelMixin):
+
     name: str
     orientation: Orientation
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "ori"
+
+    def copy(self) -> NamedOrientation:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
@@ -182,7 +222,7 @@ class Pose(JsonSchemaMixin):
         return arr
 
     @staticmethod
-    def from_transformation_matrix(matrix: np.ndarray) -> "Pose":
+    def from_transformation_matrix(matrix: np.ndarray) -> Pose:
 
         tvec = matrix[:3, 3]
         o = Orientation()
@@ -211,13 +251,22 @@ class Joint(JsonSchemaMixin):
 
 
 @dataclass
-class ProjectRobotJoints(JsonSchemaMixin):
+class ProjectRobotJoints(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     robot_id: str
     joints: List[Joint]
     is_valid: bool = False
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "joi"
+
+    def copy(self) -> ProjectRobotJoints:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
@@ -229,24 +278,44 @@ class Parameter(JsonSchemaMixin):
 
 
 @dataclass
-class SceneObject(JsonSchemaMixin):
+class SceneObject(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     type: str
     pose: Optional[Pose] = None
     parameters: List[Parameter] = field(default_factory=list)
-    children: List["SceneObject"] = field(default_factory=list)
+    children: List[SceneObject] = field(default_factory=list)
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "obj"
+
+    def copy(self) -> SceneObject:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
-class BareScene(JsonSchemaMixin):
+class BareScene(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     desc: str = field(default_factory=str)
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "scn"
+
+    SCN = TypeVar("SCN", bound="BareScene")
+
+    def copy(self: SCN) -> SCN:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
@@ -255,8 +324,8 @@ class Scene(BareScene):
     objects: List[SceneObject] = field(default_factory=list)
 
     @staticmethod
-    def from_bare(bare: BareScene) -> "Scene":
-        return Scene(bare.id, bare.name, bare.desc, bare.modified, bare.int_modified)
+    def from_bare(bare: BareScene) -> Scene:
+        return Scene(bare.name, bare.desc, bare.modified, bare.int_modified, id=bare.id)
 
 
 @dataclass
@@ -298,11 +367,22 @@ class Flow(JsonSchemaMixin):
 
 
 @dataclass
-class BareAction(JsonSchemaMixin):
+class BareAction(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     type: str
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "act"
+
+    ACT = TypeVar("ACT", bound="BareAction")
+
+    def copy(self: ACT) -> ACT:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
@@ -333,7 +413,7 @@ class Action(BareAction):
 
     @property
     def bare(self) -> BareAction:
-        return BareAction(self.id, self.name, self.type)
+        return BareAction(self.name, self.type, id=self.id)
 
     def flow(self, flow_type: FlowTypes = FlowTypes.DEFAULT) -> Flow:
 
@@ -344,12 +424,23 @@ class Action(BareAction):
 
 
 @dataclass
-class BareActionPoint(JsonSchemaMixin):
+class BareActionPoint(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     position: Position
     parent: Optional[str] = None
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "acp"
+
+    ACP = TypeVar("ACP", bound="BareActionPoint")
+
+    def copy(self: ACP) -> ACP:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
@@ -360,8 +451,8 @@ class ActionPoint(BareActionPoint):
     actions: List[Action] = field(default_factory=list)
 
     @staticmethod
-    def from_bare(bare: BareActionPoint) -> "ActionPoint":
-        return ActionPoint(bare.id, bare.name, bare.position, bare.parent)
+    def from_bare(bare: BareActionPoint) -> ActionPoint:
+        return ActionPoint(bare.name, bare.position, bare.parent, id=bare.id)
 
 
 @dataclass
@@ -375,7 +466,7 @@ class ProjectLogicIf(JsonSchemaMixin):
 
 
 @dataclass
-class LogicItem(JsonSchemaMixin):
+class LogicItem(JsonSchemaMixin, ModelMixin):
     class ParsedStart(NamedTuple):
 
         start_action_id: str
@@ -384,10 +475,10 @@ class LogicItem(JsonSchemaMixin):
     START: ClassVar[str] = "START"
     END: ClassVar[str] = "END"
 
-    id: str
     start: str
     end: str
     condition: Optional[ProjectLogicIf] = None
+    id: str = ""
 
     def parse_start(self) -> ParsedStart:
 
@@ -398,14 +489,27 @@ class LogicItem(JsonSchemaMixin):
 
         return self.ParsedStart(start_action_id, start_flow)
 
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "lit"
+
+    def copy(self) -> LogicItem:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
+
 
 @dataclass
-class ProjectConstant(JsonSchemaMixin):
+class ProjectConstant(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     type: str
     value: str
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "pco"
 
 
 @dataclass
@@ -416,14 +520,14 @@ class FunctionReturns(JsonSchemaMixin):
 
 
 @dataclass
-class ProjectFunction(JsonSchemaMixin):
+class ProjectFunction(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     actions: List[Action] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
     parameters: List[ActionParameter] = field(default_factory=list)
     returns: List[FunctionReturns] = field(default_factory=list)
+    id: str = ""
 
     def action_ids(self) -> Set[str]:
         return {act.id for act in self.actions}
@@ -436,24 +540,44 @@ class ProjectFunction(JsonSchemaMixin):
         else:
             raise Arcor2Exception("Action not found")
 
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "pfu"
+
+    def copy(self) -> ProjectFunction:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
+
 
 @dataclass
 class SceneObjectOverride(JsonSchemaMixin):
 
-    id: str
+    id: str  # object id
     parameters: List[Parameter]
 
 
 @dataclass
-class BareProject(JsonSchemaMixin):
+class BareProject(JsonSchemaMixin, ModelMixin):
 
-    id: str
     name: str
     scene_id: str
     desc: str = field(default_factory=str)
     has_logic: bool = True
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
+    id: str = ""
+
+    @classmethod
+    def uid_prefix(cls) -> str:
+        return "pro"
+
+    PRO = TypeVar("PRO", bound="BareProject")
+
+    def copy(self: PRO) -> PRO:
+        c = copy.deepcopy(self)
+        c.id = self.uid()
+        return c
 
 
 @dataclass
@@ -466,8 +590,10 @@ class Project(BareProject):
     object_overrides: List[SceneObjectOverride] = field(default_factory=list)
 
     @staticmethod
-    def from_bare(bare: BareProject) -> "Project":
-        return Project(bare.id, bare.name, bare.scene_id, bare.desc, bare.has_logic, bare.modified, bare.int_modified)
+    def from_bare(bare: BareProject) -> Project:
+        return Project(
+            bare.name, bare.scene_id, bare.desc, bare.has_logic, bare.modified, bare.int_modified, id=bare.id
+        )
 
 
 @dataclass
