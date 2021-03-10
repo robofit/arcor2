@@ -5,7 +5,6 @@ from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
-from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.object_types.abstract import Robot, RobotException, Settings
 
 # TODO jogging
@@ -73,14 +72,14 @@ class AbstractDobot(Robot):
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
         return rest.call(rest.Method.GET, f"{self.settings.url}/eef/pose", return_type=Pose)
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = False) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
         if safe:
-            raise Arcor2NotImplemented("Dobot does not support safe moves.")
+            raise DobotException("Dobot does not support safe moves.")
         self.move(target_pose, MoveType.LINEAR, speed * 100)
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = False) -> None:
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
         if safe:
-            raise Arcor2NotImplemented("Dobot does not support safe moves.")
+            raise DobotException("Dobot does not support safe moves.")
         self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
 
     def home(self, *, an: Optional[str] = None) -> None:

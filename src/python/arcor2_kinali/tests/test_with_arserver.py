@@ -13,7 +13,10 @@ from arcor2.data.rpc.common import TypeArgs
 from arcor2.helpers import find_free_port
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.robot import RobotMeta
 from arcor2_execution_data import EVENTS as EXE_EVENTS
+from arcor2_kinali.object_types.aubo import Aubo
+from arcor2_kinali.object_types.simatic import Simatic
 
 LOGGER = logging.getLogger(__name__)
 
@@ -150,3 +153,30 @@ def test_objects(start_processes: None, ars: ARServer) -> None:
                 if act.problem.startswith("Unknown parameter type"):
                     continue
             assert not act.disabled, f"Action {act.name} of {obj.type} disabled. {act.problem}"
+
+
+def test_robot_meta(start_processes: None, ars: ARServer) -> None:
+
+    assert isinstance(ars.get_event(), events.c.ShowMainScreen)
+
+    res = ars.call_rpc(rpc.r.GetRobotMeta.Request(uid()), rpc.r.GetRobotMeta.Response)
+    assert res.result
+    assert res.data is not None
+
+    robots: Dict[str, RobotMeta] = {robot.type: robot for robot in res.data}
+
+    simatic = robots[Simatic.__name__]
+    assert simatic.features.move_to_joints
+    assert simatic.features.stop
+    assert not simatic.features.move_to_pose
+    assert not simatic.features.inverse_kinematics
+    assert not simatic.features.forward_kinematics
+    assert not simatic.features.hand_teaching
+
+    aubo = robots[Aubo.__name__]
+    assert aubo.features.move_to_pose
+    assert aubo.features.move_to_joints
+    assert aubo.features.inverse_kinematics
+    assert aubo.features.forward_kinematics
+    assert aubo.features.stop
+    assert not aubo.features.hand_teaching
