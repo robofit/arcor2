@@ -866,7 +866,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
         ap = glob.PROJECT.upsert_action_point(
             common.uid(),
-            make_name_unique(f"copy_of_{orig_ap.name}", glob.PROJECT.action_points_names),
+            make_name_unique(f"{orig_ap.name}_copy", glob.PROJECT.action_points_names),
             orig_ap.position if position is None else position,
             orig_ap.parent if new_parent_id is None else new_parent_id,
         )
@@ -899,7 +899,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         for act in glob.PROJECT.ap_actions(orig_ap.id):
             new_act = copy.deepcopy(act)
             new_act.id = common.uid()
-            new_act.name = make_name_unique(f"copy_of_{act.name}", action_names)
+            new_act.name = make_name_unique(f"{act.name}_copy", action_names)
             glob.PROJECT.upsert_action(ap.id, new_act)
 
             action_added_evt = sevts.p.ActionChanged(new_act)
