@@ -114,14 +114,17 @@ def test_make_orientation_rel_and_then_again_abs_2() -> None:
 
 def test_make_relative_ap_global_and_relative_again() -> None:
 
-    scene = Scene("s1", "s1")
-    scene.objects.append(SceneObject("so1", "so1", "WhatEver", Pose(Position(3, 0, 0), Orientation())))
+    scene = Scene("s1")
+    so1 = SceneObject("so1", "WhatEver", Pose(Position(3, 0, 0), Orientation()))
+    scene.objects.append(so1)
     cached_scene = CachedScene(scene)
 
-    project = Project("p1", "p1", "s1")
-    project.action_points.append(ActionPoint("ap1", "ap1", Position(-1, 0, 0), parent="so1"))
-    project.action_points.append(ActionPoint("ap2", "ap2", Position(-1, 0, 0), parent="ap1"))
-    ap3 = ActionPoint("ap3", "ap3", Position(-1, 0, 0), parent="ap2")
+    project = Project("p1", scene.id)
+    ap1 = ActionPoint("ap1", Position(-1, 0, 0), parent=so1.id)
+    project.action_points.append(ap1)
+    ap2 = ActionPoint("ap2", Position(-1, 0, 0), parent=ap1.id)
+    project.action_points.append(ap2)
+    ap3 = ActionPoint("ap3", Position(-1, 0, 0), parent=ap2.id)
     project.action_points.append(ap3)
 
     cached_project = CachedProject(project)
@@ -131,9 +134,9 @@ def test_make_relative_ap_global_and_relative_again() -> None:
     assert ap3.parent is None
     assert ap3.position.x == 0.0
 
-    make_global_ap_relative(cached_scene, cached_project, ap3, "ap2")
+    make_global_ap_relative(cached_scene, cached_project, ap3, ap2.id)
 
-    assert ap3.parent == "ap2"
+    assert ap3.parent == ap2.id
     assert ap3.position.x == -1
 
     ap3.parent = "something_unknown"

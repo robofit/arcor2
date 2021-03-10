@@ -12,7 +12,7 @@ from arcor2_kinali.object_types.statistic import Statistic
 
 def main(res: Resources) -> None:
 
-    statistic = Statistic(uid(), "Whatever", SimpleSettings("http://127.0.0.1:16000"))
+    statistic = Statistic(uid("obj"), "Whatever", SimpleSettings("http://127.0.0.1:16000"))
     statistic.add_value(res.project.id, "value_name", 1.0, an="action_name")
 
 

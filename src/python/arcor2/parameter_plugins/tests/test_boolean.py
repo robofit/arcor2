@@ -41,43 +41,42 @@ class TestParametrized:
 
     def test_get_value(self, val: bool) -> None:
 
-        scene = Scene("s1", "s1")
-        obj_id = "TestId"
-        scene.objects.append(SceneObject(obj_id, "test_name", TestObject.__name__))
-        project = Project("p1", "p1", "s1")
-        ap1 = ActionPoint("ap1", "ap1", Position())
+        scene = Scene("s1")
+        obj = SceneObject("test_name", TestObject.__name__)
+        scene.objects.append(obj)
+        project = Project("p1", "s1")
+        ap1 = ActionPoint("ap1", Position())
         project.action_points.append(ap1)
 
         param_name = "bool_param"
         invalid_param_name = "invalid_param"
-        action_id = "ac1"
+        action_name = "ac1"
 
-        ap1.actions.append(
-            Action(
-                action_id,
-                action_id,
-                f"{obj_id}/{TestObject.action.__name__}",
-                [
-                    ActionParameter(param_name, BooleanPlugin.type_name(), BooleanPlugin.value_to_json(val)),
-                    ActionParameter(invalid_param_name, BooleanPlugin.type_name(), json.dumps("non_sense")),
-                ],
-            )
+        act = Action(
+            action_name,
+            f"{obj.id}/{TestObject.action.__name__}",
+            parameters=[
+                ActionParameter(param_name, BooleanPlugin.type_name(), BooleanPlugin.value_to_json(val)),
+                ActionParameter(invalid_param_name, BooleanPlugin.type_name(), json.dumps("non_sense")),
+            ],
         )
+
+        ap1.actions.append(act)
 
         cscene = CachedScene(scene)
         cproject = CachedProject(project)
 
         with pytest.raises(Arcor2Exception):
-            BooleanPlugin.parameter_value({}, cscene, cproject, action_id, "non_sense")
+            BooleanPlugin.parameter_value({}, cscene, cproject, act.id, "non_sense")
 
         with pytest.raises(Arcor2Exception):
             BooleanPlugin.parameter_value({}, cscene, cproject, "non_sense", param_name)
 
         with pytest.raises(ParameterPluginException):
-            BooleanPlugin.parameter_value({}, cscene, cproject, action_id, invalid_param_name)
+            BooleanPlugin.parameter_value({}, cscene, cproject, act.id, invalid_param_name)
 
-        value = BooleanPlugin.parameter_value({}, cscene, cproject, action_id, param_name)
-        exe_value = BooleanPlugin.parameter_execution_value({}, cscene, cproject, action_id, param_name)
+        value = BooleanPlugin.parameter_value({}, cscene, cproject, act.id, param_name)
+        exe_value = BooleanPlugin.parameter_execution_value({}, cscene, cproject, act.id, param_name)
 
         assert value == val
         assert value == exe_value

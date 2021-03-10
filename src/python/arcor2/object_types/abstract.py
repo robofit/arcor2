@@ -60,7 +60,7 @@ class Generic(metaclass=abc.ABCMeta):
         return parse_docstring(cls.__doc__)["short_description"]
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.name, self.__class__.__name__)
+        return SceneObject(self.name, self.__class__.__name__, id=self.id)
 
     def __repr__(self) -> str:
         return str(self.__dict__)
@@ -93,7 +93,7 @@ class GenericWithPose(Generic):
             scene_service.upsert_collision(self.collision_model, pose)
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.name, self.__class__.__name__, self._pose)
+        return SceneObject(self.name, self.__class__.__name__, self._pose, id=self.id)
 
     @property
     def pose(self) -> Pose:

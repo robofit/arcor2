@@ -37,7 +37,7 @@ class CachedScene:
 
     @property
     def bare(self) -> cmn.BareScene:
-        return cmn.BareScene(self.id, self.name, self.desc, self.modified, self.int_modified)
+        return cmn.BareScene(self.name, self.desc, self.modified, self.int_modified, id=self.id)
 
     def object_names(self) -> Iterator[str]:
 
@@ -166,7 +166,7 @@ class CachedProject:
             if ap.id in self._action_points:
                 raise CachedProjectException(f"Duplicate AP id: {ap.id}.")
 
-            bare_ap = cmn.BareActionPoint(ap.id, ap.name, ap.position, ap.parent)
+            bare_ap = cmn.BareActionPoint(ap.name, ap.position, ap.parent, id=ap.id)
             self._action_points[ap.id] = bare_ap
 
             for ac in ap.actions:
@@ -242,7 +242,7 @@ class CachedProject:
 
     @property
     def bare(self) -> cmn.BareProject:
-        return cmn.BareProject(self.id, self.name, self.scene_id, self.desc, self.has_logic)
+        return cmn.BareProject(self.name, self.scene_id, self.desc, self.has_logic, id=self.id)
 
     @property
     def action_points(self) -> ValuesView[cmn.BareActionPoint]:
@@ -538,7 +538,7 @@ class UpdateableCachedProject(CachedProject):
             ap.position = position
             ap.parent = parent
         except CachedProjectException:
-            ap = cmn.BareActionPoint(ap_id, name, position, parent)
+            ap = cmn.BareActionPoint(name, position, parent, id=ap_id)
             self._action_points[ap_id] = ap
         self.update_modified()
         return ap
