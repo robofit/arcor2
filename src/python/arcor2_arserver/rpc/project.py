@@ -252,6 +252,7 @@ async def add_action_point_joints_using_robot_cb(
 
     ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
+    hlp.is_valid_identifier(req.args.name)
     unique_name(req.args.name, glob.PROJECT.ap_joint_names(ap.id))
 
     new_joints = await get_robot_joints(req.args.robot_id)
@@ -516,6 +517,7 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
     assert glob.PROJECT
 
     ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
+    hlp.is_valid_identifier(req.args.name)
     unique_name(req.args.name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
@@ -571,6 +573,7 @@ async def add_action_point_orientation_using_robot_cb(
     assert glob.PROJECT
 
     ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
+    hlp.is_valid_identifier(req.args.name)
     unique_name(req.args.name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
@@ -763,10 +766,9 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
     assert glob.SCENE
     assert glob.PROJECT
 
+    hlp.is_valid_identifier(req.args.name)
     unique_name(req.args.name, glob.PROJECT.action_points_names)
     check_ap_parent(req.args.parent)
-
-    hlp.is_valid_identifier(req.args.name)
 
     if req.dry_run:
         return None
@@ -929,7 +931,6 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
     ap = glob.PROJECT.bare_action_point(req.args.action_point_id)
 
     unique_name(req.args.name, glob.PROJECT.action_names)
-    hlp.is_valid_identifier(req.args.name)
 
     new_action = common.Action(common.uid(), req.args.name, req.args.type, req.args.parameters, req.args.flows)
 
@@ -1384,6 +1385,7 @@ async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Requ
     assert glob.PROJECT
 
     ap, joints = glob.PROJECT.ap_and_joints(req.args.joints_id)
+    hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, glob.PROJECT.ap_joint_names(ap.id))
 
     if req.dry_run:
@@ -1405,6 +1407,7 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
     assert glob.PROJECT
 
     ap, ori = glob.PROJECT.bare_ap_and_orientation(req.args.orientation_id)
+    hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, glob.PROJECT.ap_orientation_names(ap.id))
 
     if req.dry_run:
