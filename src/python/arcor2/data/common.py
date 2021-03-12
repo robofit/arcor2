@@ -108,6 +108,23 @@ class Position(IterableIndexable):
                 return False
         return True
 
+    def __add__(self, other: object) -> Position:
+
+        if not isinstance(other, Position):
+            raise ValueError
+
+        return Position(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __iadd__(self, other: object) -> Position:
+
+        if not isinstance(other, Position):
+            raise ValueError
+
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
+        return self
+
 
 @dataclass
 class Orientation(IterableIndexable):
@@ -116,6 +133,14 @@ class Orientation(IterableIndexable):
     y: float = 0.0
     z: float = 0.0
     w: float = 1.0
+
+    @classmethod
+    def from_rotation_vector(cls, x: float = 0.0, y: float = 0.0, z: float = 0.0) -> Orientation:
+        return cls.from_quaternion(quaternion.from_rotation_vector([x, y, z]))
+
+    @classmethod
+    def from_quaternion(cls, q: quaternion.quaternion) -> Orientation:
+        return Orientation(q.x, q.y, q.z, q.w)
 
     @staticmethod
     def _normalized(q: quaternion.quaternion) -> quaternion.quaternion:
@@ -156,6 +181,21 @@ class Orientation(IterableIndexable):
             return False
 
         return cast(bool, quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.0e-8)[0])
+
+    def __mul__(self, other: object) -> Orientation:
+
+        if not isinstance(other, Orientation):
+            raise ValueError
+
+        return self.from_quaternion(self.as_quaternion() * other.as_quaternion())
+
+    def __imul__(self, other: object) -> Orientation:
+
+        if not isinstance(other, Orientation):
+            raise ValueError
+
+        self.set_from_quaternion(other.as_quaternion() * self.as_quaternion())
+        return self
 
     def __post_init__(self):
 
@@ -225,9 +265,10 @@ class Pose(JsonSchemaMixin):
     def from_transformation_matrix(matrix: np.ndarray) -> Pose:
 
         tvec = matrix[:3, 3]
-        o = Orientation()
-        o.set_from_quaternion(quaternion.from_rotation_matrix(matrix[:3, :3]))
-        return Pose(Position(tvec[0], tvec[1], tvec[2]), o)
+        return Pose(
+            Position(tvec[0], tvec[1], tvec[2]),
+            Orientation.from_quaternion(quaternion.from_rotation_matrix(matrix[:3, :3])),
+        )
 
 
 class RelativePose(Pose):

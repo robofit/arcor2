@@ -70,8 +70,7 @@ def estimate_camera_pose(
 
         camera_trans_vector = np.matmul(-camera_rot_matrix, tvec[idx].reshape(3, 1)).flatten()
 
-        o = Orientation()
-        o.set_from_quaternion(quaternion.from_rotation_matrix(camera_rot_matrix))
+        o = Orientation.from_quaternion(quaternion.from_rotation_matrix(camera_rot_matrix))
         ret[mid[0]] = Pose(Position(camera_trans_vector[0], camera_trans_vector[1], camera_trans_vector[2]), o)
 
     return ret
