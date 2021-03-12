@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.5.1] - WIP
+
+### Fixed
+- Signatures of some robot methods.
+- Added temporal workaround to `AbstractDobot/pick`.
+
 ## [0.5.0] - 2021-03-03
 
 ### Changed
