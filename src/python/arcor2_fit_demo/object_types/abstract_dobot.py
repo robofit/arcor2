@@ -1,3 +1,4 @@
+import copy
 from dataclasses import dataclass
 from typing import List, Optional, Set, cast
 
@@ -130,6 +131,9 @@ class AbstractDobot(Robot):
         :return:
         """
 
+        # TODO this is a temporal workaround until the generated ActionPoints class will return copies of poses
+        pick_pose = copy.deepcopy(pick_pose)
+
         pick_pose.position.z += vertical_offset
         self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
         pick_pose.position.z -= vertical_offset
@@ -145,6 +149,9 @@ class AbstractDobot(Robot):
         :param vertical_offset:
         :return:
         """
+
+        # TODO this is a temporal workaround until the generated ActionPoints class will return copies of poses
+        place_pose = copy.deepcopy(place_pose)
 
         place_pose.position.z += vertical_offset
         self.move(place_pose, MoveType.JOINTS)  # pre-place pose
