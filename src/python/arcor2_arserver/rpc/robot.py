@@ -1,7 +1,9 @@
 import asyncio
+import math
 import time
-from typing import Awaitable, Callable, Dict
+from typing import Awaitable, Callable, Dict, List, Optional
 
+import numpy as np
 from arcor2_calibration_data import client as calib_client
 from arcor2_calibration_data.client import CalibrateRobotArgs
 from websockets.server import WebSocketServerProtocol as WsClient
@@ -421,3 +423,111 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable)
     evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable))
     asyncio.ensure_future(notif.broadcast_event(evt))
+
+
+@scene_needed
+async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> None:
+
+    ensure_scene_started()
+    await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
+    await robot.check_robot_before_move(req.args.robot_id)
+
+    robot_inst = await osa.get_robot_instance(req.args.robot_id)
+
+    tp = await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id)
+
+    if req.args.mode == req.args.mode.ROBOT:
+        tp = tr.make_pose_rel(robot_inst.pose, tp)
+    elif req.args.mode == req.args.mode.RELATIVE:
+        assert req.args.pose
+        tp = tr.make_pose_rel(req.args.pose, tp)
+    elif req.args.mode == req.args.mode.USER:
+        assert req.args.pose
+        raise Arcor2Exception("Not supported yet.")
+
+    print(f"before: {tp.orientation}")
+
+    if req.args.what == req.args.what.POSITION:
+        if req.args.axis == req.args.axis.X:
+            tp.position.x += req.args.step
+        elif req.args.axis == req.args.axis.Y:
+            tp.position.y += req.args.step
+        elif req.args.axis == req.args.axis.Z:
+            tp.position.z += req.args.step
+    elif req.args.what == req.args.what.ORIENTATION:
+        if req.args.axis == req.args.axis.X:
+            print(common.Orientation.from_rotation_vector(x=req.args.step))
+            tp.orientation *= common.Orientation.from_rotation_vector(x=req.args.step)
+        elif req.args.axis == req.args.axis.Y:
+            print(common.Orientation.from_rotation_vector(y=req.args.step))
+            tp.orientation *= common.Orientation.from_rotation_vector(y=req.args.step)
+        elif req.args.axis == req.args.axis.Z:
+            print(common.Orientation.from_rotation_vector(z=req.args.step))
+            tp.orientation *= common.Orientation.from_rotation_vector(z=req.args.step)
+
+    print(f"after: {tp.orientation}")
+
+    if req.args.mode == req.args.mode.ROBOT:
+        tp = tr.make_pose_abs(robot_inst.pose, tp)
+    elif req.args.mode == req.args.mode.RELATIVE:
+        assert req.args.pose
+        tp = tr.make_pose_abs(req.args.pose, tp)
+
+    await robot.check_reachability(req.args.robot_id, req.args.end_effector_id, tp, req.args.safe)
+
+    if req.dry_run:
+        return
+
+    asyncio.ensure_future(
+        robot.move_to_pose(req.args.robot_id, req.args.end_effector_id, tp, req.args.speed, req.args.safe)
+    )
+
+
+@scene_needed
+async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWorld.Request, ui: WsClient) -> None:
+
+    ensure_scene_started()
+    await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
+    await check_feature(req.args.robot_id, Robot.inverse_kinematics.__name__)
+    await robot.check_robot_before_move(req.args.robot_id)
+
+    # TODO make it available only for articulated robots?
+
+    tp = await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id)
+
+    current_joints = await robot.get_robot_joints(req.args.robot_id)
+    target_joints: Optional[List[common.Joint]] = None
+    target_joints_diff: float = 0.0
+
+    # select best (closest joint configuration) reachable pose
+    for z_rot in np.linspace(-math.pi, math.pi, 100):
+        tp.orientation = common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(
+            z=z_rot
+        )
+        try:
+            joints = await robot.ik(req.args.robot_id, req.args.end_effector_id, tp, avoid_collisions=req.args.safe)
+        except Arcor2Exception:
+            continue
+
+        if not target_joints:
+            target_joints = joints
+            for f, b in zip(current_joints, target_joints):
+                assert f.name == b.name
+                target_joints_diff += (f.value - b.value) ** 2
+        else:
+            diff = 0.0
+            for f, b in zip(current_joints, joints):
+                assert f.name == b.name
+                diff += (f.value - b.value) ** 2
+
+            if diff < target_joints_diff:
+                target_joints = joints
+                target_joints_diff = diff
+
+    if not target_joints:
+        raise Arcor2Exception("Could not find reachable pose.")
+
+    if req.dry_run:
+        return
+
+    asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, target_joints, req.args.speed, req.args.safe))

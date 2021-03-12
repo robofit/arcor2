@@ -156,6 +156,16 @@ async def fk(robot_id: str, end_effector_id: str, joints: List[common.Joint]) ->
     return await hlp.run_in_executor(robot_inst.forward_kinematics, end_effector_id, joints)
 
 
+async def check_reachability(robot_id: str, end_effector_id: str, pose: common.Pose, safe: bool = True) -> None:
+
+    otd = osa.get_obj_type_data(robot_id)
+    if otd.robot_meta and otd.robot_meta.features.inverse_kinematics:
+        try:
+            await ik(robot_id, end_effector_id, pose, avoid_collisions=safe)
+        except Arcor2Exception as e:
+            raise Arcor2Exception("Unreachable pose.") from e
+
+
 async def check_robot_before_move(robot_id: str) -> None:
 
     robot_inst = await osa.get_robot_instance(robot_id)

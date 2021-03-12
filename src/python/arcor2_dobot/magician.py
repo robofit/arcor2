@@ -170,10 +170,10 @@ class DobotMagician(Dobot):
             - self.end_effector_length
         )
 
-        ori = Orientation()
-        ori.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value + j1))
-
-        pose = Pose(Position(x, y, z), ori)
+        pose = Pose(
+            Position(x, y, z),
+            Orientation.from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value + j1)),
+        )
 
         if __debug__:
             self._check_orientation(pose)
