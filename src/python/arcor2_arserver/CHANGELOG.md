@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - WIP
+
+### Changed
+- Improved logging for debugging robot features.
+- Suffix is added to copied AP/action instead of prefix.
+
+### Fixed
+- Names for orientations/joints were not checked as valid identifiers.
+- Action names were checked, but should not be.
+
 ## [0.13.0] - 2021-03-03
 
 ### Changed

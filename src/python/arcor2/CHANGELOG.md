@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.0] - WIP
+
+### Changed
+- IDs (uuid) are now generated within the respective classes.
+  - If necessary, ID can be still provided from outside as before.
+  - IDs are prefixed so developers can easily check type of an object from its ID.
+  - Prefix always start with a character.
+
+### Fixed
+- Composite actions are now properly handled by the `@action` decorator.
+
 ## [0.12.1] - 2021-03-08
 
 ### Fixed

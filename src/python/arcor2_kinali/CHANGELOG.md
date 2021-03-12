@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.1] - WIP
+
+### Fixed
+- Getting suction IDs was broken.
+- Fixed signatures of some robot methods.
+
+### Changed
+- Example scripts were updated with id-related changes.
+
 ## [0.12.0] - 2021-03-03
 
 ### Changed

@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.1] - WIP
+
+### Fixed
+- Script was stopped using wrong signal (SIGTERM instead of SIGINT).
+  - Because of this, the script was not stopped gracefully and `cleanup` methods of objects were not executed.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed
