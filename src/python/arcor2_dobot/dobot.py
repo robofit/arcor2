@@ -125,7 +125,7 @@ class Dobot(metaclass=ABCMeta):
     def get_end_effector_pose(self) -> Pose:
 
         if self.simulator:
-            return self.forward_kinematics(self._joint_values)
+            return self.forward_kinematics(self.robot_joints())
 
         try:
             pos = self._dobot.get_pose()  # in mm

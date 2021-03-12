@@ -1,3 +1,4 @@
+import math
 import time
 from typing import List
 
@@ -22,16 +23,31 @@ class DobotM1(Dobot):
         if self.simulator:
             self._joint_values = [Joint(Joints.J1, 0), Joint(Joints.J2, 0), Joint(Joints.J3, 0), Joint(Joints.J4, 0)]
 
+    def _handle_pose_in(self, pose: Pose) -> None:
+
+        base_angle = math.atan2(pose.position.y, pose.position.x)
+        pose.position.x -= 0.10 * math.cos(base_angle)
+        pose.position.y += 0.2 * math.sin(base_angle)
+        pose.position.z += 0.01
+
+    def _handle_pose_out(self, pose: Pose) -> None:
+
+        base_angle = math.atan2(pose.position.y, pose.position.x)
+        pose.position.x += 0.10 * math.cos(base_angle)
+        pose.position.y -= 0.2 * math.sin(base_angle)
+        pose.position.z -= 0.01
+
     def robot_joints(self) -> List[Joint]:
 
         if self.simulator:
             return self._joint_values
 
         joints = self._dobot.get_pose().joints.in_radians()
+        j3 = self._dobot.get_pose().joints.j3 / 1000
         return [
             Joint(Joints.J1, joints.j1),
             Joint(Joints.J2, joints.j2),
-            Joint(Joints.J3, joints.j3),
+            Joint(Joints.J3, j3),
             Joint(Joints.J4, joints.j4),
         ]
 
