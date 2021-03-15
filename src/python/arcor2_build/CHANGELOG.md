@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - Dependency on arcor2 0.13.0.
+- Generated `ActionPoints` class now returns copy of data (poses etc. can be freely modified within actions).
 
 
 ## [0.12.1] - 2021-03-08
