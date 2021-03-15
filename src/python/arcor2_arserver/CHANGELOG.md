@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.14.0] - WIP
+## [0.14.0] - 2021-03-15
 
 ### Changed
 - Improved logging for debugging robot features.
