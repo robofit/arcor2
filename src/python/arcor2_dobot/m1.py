@@ -25,16 +25,16 @@ class DobotM1(Dobot):
 
     def _handle_pose_in(self, pose: Pose) -> None:
 
-        base_angle = math.atan2(pose.position.y, pose.position.x)
-        pose.position.x -= 0.10 * math.cos(base_angle)
-        pose.position.y += 0.2 * math.sin(base_angle)
+        #base_angle = math.atan2(pose.position.y, pose.position.x)
+        pose.position.x -= 0.11 #* math.cos(base_angle)
+        pose.position.y -= 0.0 #* math.sin(base_angle)
         pose.position.z += 0.01
 
     def _handle_pose_out(self, pose: Pose) -> None:
 
         base_angle = math.atan2(pose.position.y, pose.position.x)
-        pose.position.x += 0.10 * math.cos(base_angle)
-        pose.position.y -= 0.2 * math.sin(base_angle)
+        pose.position.x += 0.11 # * math.cos(base_angle)
+        pose.position.y += 0.0 # * math.sin(base_angle)
         pose.position.z -= 0.01
 
     def robot_joints(self) -> List[Joint]:
