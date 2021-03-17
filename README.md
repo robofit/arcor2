@@ -206,7 +206,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
-- 2021-03-03: [0.5.1](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.5.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.5.1), [pypi](https://pypi.org/project/arcor2-fit-demo/0.5.1/)).
+- 2021-03-15: [0.5.1](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.5.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.5.1), [pypi](https://pypi.org/project/arcor2-fit-demo/0.5.1/)).
 
 - 2021-03-03: [0.5.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.5.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.5.0), [pypi](https://pypi.org/project/arcor2-fit-demo/0.5.0/)).
 
@@ -216,7 +216,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_kinali/README.md) | [CHANGELOG](src/python/arcor2_kinali/CHANGELOG.md)
 
-- 2021-03-03: [0.12.1](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.12.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.12.1), [pypi](https://pypi.org/project/arcor2-kinali/0.12.1/)).
+- 2021-03-15: [0.12.1](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.12.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.12.1), [pypi](https://pypi.org/project/arcor2-kinali/0.12.1/)).
 
 - 2021-03-03: [0.12.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.12.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.12.0), [pypi](https://pypi.org/project/arcor2-kinali/0.12.0/)).
 
@@ -234,7 +234,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
 
- - 2020-10-16: [0.12.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.12.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.12.0), [pypi](https://pypi.org/project/arcor2-mocks/0.12.0/)).
+ - 2021-03-03: [0.12.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.12.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.12.0), [pypi](https://pypi.org/project/arcor2-mocks/0.12.0/)).
 
  - 2021-02-08: [0.11.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.11.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.11.0), [pypi](https://pypi.org/project/arcor2-mocks/0.11.0/)).
 
@@ -244,11 +244,11 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_dobot/README.md) | [CHANGELOG](src/python/arcor2_dobot/CHANGELOG.md)
 
- - 2021-03-03: [0.2.1](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.2.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.2.1), [pypi](https://pypi.org/project/arcor2-dobot/0.2.1/)).
+ - 2021-03-17: [0.2.2](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.2.2) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.2.2), [pypi](https://pypi.org/project/arcor2-dobot/0.2.2/)).
+
+ - 2021-03-15: [0.2.1](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.2.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.2.1), [pypi](https://pypi.org/project/arcor2-dobot/0.2.1/)).
 
  - 2021-03-03: [0.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.2.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.2.0), [pypi](https://pypi.org/project/arcor2-dobot/0.2.0/)).
-
- - 2020-10-19: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.1.0), [pypi](https://pypi.org/project/arcor2-dobot/0.1.0/)).
  
  ## Publications
  
