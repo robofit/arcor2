@@ -92,7 +92,8 @@ class RemoveFromScene(RPC):
 class SaveScene(RPC):
     @dataclass
     class Request(RPC.Request):
-        pass
+
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):

@@ -1,7 +1,7 @@
 import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, Iterator, List, Optional, Set, Tuple, ValuesView
+from typing import Dict, Iterator, List, Optional, Set, Tuple, Union, ValuesView
 
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
@@ -161,6 +161,8 @@ class CachedProject:
 
         self.overrides: Dict[str, List[cmn.Parameter]] = {}
 
+        self._childs: Dict[str, Set[str]] = {}
+
         for ap in project.action_points:
 
             if ap.id in self._action_points:
@@ -168,6 +170,7 @@ class CachedProject:
 
             bare_ap = cmn.BareActionPoint(ap.name, ap.position, ap.parent, id=ap.id)
             self._action_points[ap.id] = bare_ap
+            self._upsert_child(ap.parent, ap.id)
 
             for ac in ap.actions:
 
@@ -176,6 +179,7 @@ class CachedProject:
 
                 self._actions.data[ac.id] = ac
                 self._actions.parent[ac.id] = bare_ap
+                self._upsert_child(ap.id, ac.id)
 
             for joints in ap.robot_joints:
 
@@ -184,6 +188,7 @@ class CachedProject:
 
                 self._joints.data[joints.id] = joints
                 self._joints.parent[joints.id] = bare_ap
+                self._upsert_child(ap.id, joints.id)
 
             for orientation in ap.orientations:
 
@@ -192,6 +197,7 @@ class CachedProject:
 
                 self._orientations.data[orientation.id] = orientation
                 self._orientations.parent[orientation.id] = bare_ap
+                self._upsert_child(ap.id, orientation.id)
 
         for override in project.object_overrides:
             self.overrides[override.id] = override.parameters
@@ -431,6 +437,52 @@ class CachedProject:
         except KeyError:
             raise CachedProjectException("Constant not found.")
 
+    def get_by_id(
+        self, obj_id: str
+    ) -> Union[cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action]:
+
+        if obj_id in self._action_points:  # AP
+            return self._action_points[obj_id]
+        elif obj_id in self._joints.data:  # Joints
+            return self._joints.data[obj_id]
+        elif obj_id in self._orientations.data:  # Orientation
+            return self._orientations.data[obj_id]
+        elif obj_id in self._actions.data:  # Action
+            return self._actions.data[obj_id]
+
+        raise CachedProjectException("Object not found.")
+
+    def get_parent_id(self, obj_id: str) -> Optional[str]:
+
+        if obj_id in self._action_points:  # AP
+            return self._action_points[obj_id].parent if self._action_points[obj_id].parent else None
+        elif obj_id in self._joints.data:  # Joints
+            return self._joints.parent[obj_id].id
+        elif obj_id in self._orientations.data:  # Orientation
+            return self._orientations.parent[obj_id].id
+        elif obj_id in self._actions.data:  # Action
+            return self._actions.parent[obj_id].id
+
+        raise CachedProjectException("Object not found.")
+
+    def _upsert_child(self, parent: Optional[str], child: str) -> None:
+        if parent:
+            if parent not in self._childs:
+                self._childs[parent] = set()
+            self._childs[parent].add(child)
+
+    def childs(self, obj_id: str) -> Set[str]:
+        try:
+            return self._childs[obj_id]
+        except KeyError:
+            return set()
+
+    def _remove_child(self, parent: Optional[str], child: str) -> None:
+        if parent and parent in self._childs:
+            self._childs[parent].remove(child)
+            if not self._childs[parent]:
+                del self._childs[parent]
+
 
 class UpdateableCachedProject(CachedProject):
     def __init__(self, project: cmn.Project):
@@ -460,11 +512,13 @@ class UpdateableCachedProject(CachedProject):
         else:
             self._actions.data[action.id] = action
             self._actions.parent[action.id] = ap
+        self._upsert_child(ap.parent, ap.id)
         self.update_modified()
 
     def remove_action(self, action_id: str) -> cmn.Action:
 
         try:
+            self._remove_child(self._actions.parent[action_id].id, action_id)
             action = self._actions.data.pop(action_id)
             del self._actions.parent[action_id]  # TODO KeyError here might be probably ignored? (it should not happen)
         except KeyError as e:
@@ -494,11 +548,13 @@ class UpdateableCachedProject(CachedProject):
         else:
             self._orientations.data[orientation.id] = orientation
             self._orientations.parent[orientation.id] = ap
+        self._upsert_child(ap_id, orientation.id)
         self.update_modified()
 
     def remove_orientation(self, orientation_id: str) -> cmn.NamedOrientation:
 
         try:
+            self._remove_child(self._orientations.parent[orientation_id].id, orientation_id)
             ori = self._orientations.data.pop(orientation_id)
             del self._orientations.parent[orientation_id]
         except KeyError as e:
@@ -516,11 +572,13 @@ class UpdateableCachedProject(CachedProject):
         else:
             self._joints.data[joints.id] = joints
             self._joints.parent[joints.id] = ap
+        self._upsert_child(ap_id, joints.id)
         self.update_modified()
 
     def remove_joints(self, joints_id: str) -> cmn.ProjectRobotJoints:
 
         try:
+            self._remove_child(self._joints.parent[joints_id].id, joints_id)
             joints = self._joints.data.pop(joints_id)
             del self._joints.parent[joints_id]
         except KeyError as e:
@@ -542,6 +600,7 @@ class UpdateableCachedProject(CachedProject):
         except CachedProjectException:
             ap = cmn.BareActionPoint(name, position, parent, id=ap_id)
             self._action_points[ap_id] = ap
+        self._upsert_child(parent, ap_id)
         self.update_modified()
         return ap
 
@@ -558,6 +617,7 @@ class UpdateableCachedProject(CachedProject):
         for ori in self.ap_orientations(ap_id):
             self.remove_orientation(ori.id)
 
+        self._remove_child(ap.parent, ap_id)
         del self._action_points[ap_id]
         self.update_modified()
         return ap

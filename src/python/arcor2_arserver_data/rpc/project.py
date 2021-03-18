@@ -50,7 +50,8 @@ class CloseProject(RPC):
 class SaveProject(RPC):
     @dataclass
     class Request(RPC.Request):
-        pass
+
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):

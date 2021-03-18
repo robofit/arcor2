@@ -19,6 +19,7 @@ packaging==20.9
 Pillow==8.2.0
 pyhumps==1.6.1
 pyk4a==1.2.3
+pytest-asyncio==0.14.0
 pytest-randomly==3.7.0
 pytest-repeat==0.9.1
 pytest==6.2.3

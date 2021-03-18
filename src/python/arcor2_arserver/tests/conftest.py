@@ -142,6 +142,11 @@ for mod in modules:
 def ars() -> Iterator[ARServer]:
 
     with ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping) as ws:
+        test_username = "testUser"
+        assert ws.call_rpc(
+            rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args(test_username)),
+            rpc.u.RegisterUser.Response,
+        ).result
         yield ws
 
 
@@ -252,3 +257,22 @@ def close_project(ars: ARServer) -> None:
 
     assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
     event(ars, events.p.ProjectClosed)
+
+
+def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
+
+    assert ars.call_rpc(
+        rpc.lock.WriteLock.Request(uid(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
+        rpc.lock.WriteLock.Response,
+    )
+
+    event(ars, events.lk.ObjectsLocked)
+
+
+def unlock_object(ars: ARServer, obj_id: str) -> None:
+
+    assert ars.call_rpc(
+        rpc.lock.WriteUnlock.Request(uid(), rpc.lock.WriteUnlock.Request.Args(obj_id)), rpc.lock.WriteUnlock.Response
+    )
+
+    event(ars, events.lk.ObjectsUnlocked)
