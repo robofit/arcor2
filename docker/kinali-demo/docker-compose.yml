@@ -104,7 +104,7 @@ services:
       - testitoff-scene-network
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.5
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.6
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
