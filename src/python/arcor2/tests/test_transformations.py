@@ -1,21 +1,40 @@
-# -*- coding: utf-8 -*-
-
 import copy
+from math import cos, pi, sin, sqrt
 
+import numpy as np
 import pytest
-import quaternion
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import ActionPoint, Orientation, Pose, Position, Project, Scene, SceneObject
 from arcor2.exceptions import Arcor2Exception
 from arcor2.transformations import (
+    get_parent_pose,
     make_global_ap_relative,
-    make_orientation_abs,
-    make_orientation_rel,
     make_pose_abs,
     make_pose_rel,
     make_relative_ap_global,
 )
+
+
+def random_pose() -> Pose:
+    return Pose(random_position(), random_orientation())
+
+
+def random_position() -> Position:
+    x, y, z = np.random.random(3) * 2 - 1
+    return Position(x, y, z)
+
+
+def random_orientation() -> Orientation:
+
+    r1, r2, r3 = np.random.random(3)
+
+    q1 = sqrt(1.0 - r1) * (sin(2 * pi * r2))
+    q2 = sqrt(1.0 - r1) * (cos(2 * pi * r2))
+    q3 = sqrt(r1) * (sin(2 * pi * r3))
+    q4 = sqrt(r1) * (cos(2 * pi * r3))
+
+    return Orientation(q1, q2, q3, q4)
 
 
 def test_make_pose_rel() -> None:
@@ -46,6 +65,13 @@ def test_make_pose_abs_3() -> None:
     assert make_pose_abs(parent, child) == Pose(Position(0, 0, 0), Orientation(0, 0, 0.707, 0.707))
 
 
+def test_make_pose_abs_4() -> None:
+
+    parent = Pose()
+    child = Pose()
+    assert make_pose_abs(parent, child) == parent
+
+
 def test_make_pose_rel_and_abs_again() -> None:
 
     parent = Pose(Position(), Orientation(0, 0, 1, 0))
@@ -63,53 +89,29 @@ def test_make_pose_rel_and_abs_again_2() -> None:
     assert make_pose_abs(parent, child) == child_to_be
 
 
-def test_make_orientation_abs_2() -> None:
+@pytest.mark.repeat(100)
+def test_make_pose_rel_and_abs_again_random() -> None:
 
-    parent = Orientation(0, 0, 0, 1)
-    child = Orientation(1, 0, 0, 0)
-    assert make_orientation_abs(parent, child) == child
+    # hierarchy of poses
+    p1 = random_pose()
+    p2 = random_pose()
+    p3 = random_pose()
 
+    # global pose
+    c = random_pose()
 
-def test_make_orientation_abs_3() -> None:
+    # make it relative
+    c1 = make_pose_rel(p1, c)
+    c2 = make_pose_rel(p2, c1)
+    c3 = make_pose_rel(p3, c2)
 
-    parent = Orientation(0, 1, 0, 0)
-    child = Orientation(0, 0, 0, 1)
-    assert make_orientation_abs(parent, child) == parent
+    # make it absolute again
+    cc2 = make_pose_abs(p3, c3)
+    cc1 = make_pose_abs(p2, cc2)
+    cc = make_pose_abs(p1, cc1)
 
-
-def test_make_orientation_rel() -> None:
-
-    parent = Orientation(0.707, 0, 0.707, 0)
-    child = Orientation(0.707, 0, 0.707, 0)
-    assert make_orientation_rel(parent, child) == Orientation(0, 0, 0, 1)
-
-
-def test_make_orientation_rel_2() -> None:
-
-    parent = Orientation(0, 0, 0, 1)
-    child = Orientation()
-    child.set_from_quaternion(quaternion.from_euler_angles(0.123, 0.345, 0.987))
-    assert make_orientation_rel(parent, child) == child
-
-
-def test_make_orientation_rel_and_then_again_abs() -> None:
-
-    parent = Orientation(0, -1, 0, 0)
-    obj = Orientation(0.707, 0, 0.707, 0)
-
-    rel_obj = make_orientation_rel(parent, obj)
-    assert obj == make_orientation_abs(parent, rel_obj)
-
-
-def test_make_orientation_rel_and_then_again_abs_2() -> None:
-
-    parent = Orientation()
-    parent.set_from_quaternion(quaternion.from_euler_angles(1.25, -2, 3.78))
-    obj = Orientation()
-    obj.set_from_quaternion(quaternion.from_euler_angles(-2.2, 4, 1.9))
-
-    rel_obj = make_orientation_rel(parent, obj)
-    assert obj == make_orientation_abs(parent, rel_obj)
+    # now it should be the same
+    assert c == cc
 
 
 def test_make_relative_ap_global_and_relative_again() -> None:
@@ -129,10 +131,16 @@ def test_make_relative_ap_global_and_relative_again() -> None:
 
     cached_project = CachedProject(project)
 
+    assert ap3.parent
+    ap3_parent = get_parent_pose(cached_scene, cached_project, ap3.parent)
+
+    assert Pose(ap2.position, Orientation()) == ap3_parent.pose
+    assert ap3_parent.parent_id == ap1.id
+
     make_relative_ap_global(cached_scene, cached_project, ap3)
 
     assert ap3.parent is None
-    assert ap3.position.x == 0.0
+    assert ap3.position.x == 0.0  # type: ignore
 
     make_global_ap_relative(cached_scene, cached_project, ap3, ap2.id)
 
