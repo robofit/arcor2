@@ -81,11 +81,11 @@ We use [Pants](https://www.pantsbuild.org/docs) to build the sources into Python
  - We use type annotations and [mypy](https://mypy.readthedocs.io/en/stable/). All code should have type annotations.
  - If possible, please also add tests with any new code.
  - If necessary, please do not forget do update also documentation.
- - Before commit:
-   - run `./pants fmt ::` to get correct formatting.
-   - run `./pants lint ::` to run flake8.
-   - run `./pants tests ::` to run tests.
-   - ...all of those are ran on CI but are much faster on localhost.
+ - Before commit please run (all of those will run on CI but are much faster on localhost):
+   - `./pants fmt ::` to automatically format the code according to our rules.
+   - `./pants lint ::` to perform style checks (black, flake8, isort, docformatter)
+   - `./pants typecheck ::` to run mypy.
+   - `./pants test ::` to run tests (this may take quite long time).
 
 Any contribution is welcome!
 
