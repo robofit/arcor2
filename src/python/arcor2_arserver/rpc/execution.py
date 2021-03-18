@@ -6,6 +6,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import decorators
 from arcor2_arserver import globals as glob
 from arcor2_arserver.execution import build_and_upload_package, run_temp_package
+from arcor2_arserver.helpers import ctx_write_lock
 from arcor2_arserver_data import rpc
 
 
@@ -17,24 +18,26 @@ async def build_project_cb(req: rpc.b.BuildProject.Request, ui: WsClient) -> rpc
     :return:
     """
 
-    package_id = await build_and_upload_package(req.args.project_id, req.args.package_name)
+    async with ctx_write_lock(req.args.project_id, glob.USERS.user_name(ui)):
+        package_id = await build_and_upload_package(req.args.project_id, req.args.package_name)
 
-    resp = rpc.b.BuildProject.Response()
-    resp.data = resp.Data(package_id)
-    return resp
+        resp = rpc.b.BuildProject.Response()
+        resp.data = resp.Data(package_id)
+        return resp
 
 
 @decorators.project_needed
 async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: WsClient) -> None:
 
-    assert glob.PROJECT
+    async with glob.LOCK.get_lock():
+        assert glob.LOCK.project
 
-    if glob.PROJECT.has_changes:
-        raise Arcor2Exception("Project has unsaved changes.")
+        if glob.LOCK.project.has_changes:
+            raise Arcor2Exception("Project has unsaved changes.")
 
-    package_id = await build_and_upload_package(
-        glob.PROJECT.id, f"Temporary package for project '{glob.PROJECT.name}'."
-    )
+        package_id = await build_and_upload_package(
+            glob.LOCK.project.id, f"Temporary package for project '{glob.LOCK.project.name}'."
+        )
 
-    asyncio.ensure_future(run_temp_package(package_id))
-    return None
+        asyncio.ensure_future(run_temp_package(package_id))
+        return None

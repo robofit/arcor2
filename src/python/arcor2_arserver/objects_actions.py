@@ -38,10 +38,10 @@ def get_types_dict() -> TypesDict:
 
 def get_obj_type_name(object_id: str) -> str:
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     try:
-        return glob.SCENE.object(object_id).type
+        return glob.LOCK.scene.object(object_id).type
     except KeyError:
         raise Arcor2Exception("Unknown object id.")
 
@@ -152,7 +152,7 @@ async def get_object_types() -> None:
     :return:
     """
 
-    assert glob.SCENE is None
+    assert glob.LOCK.scene is None
 
     initialization = False
 

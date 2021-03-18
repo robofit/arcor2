@@ -36,6 +36,7 @@ from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.lock.notifications import run_lock_notification_worker
 from arcor2_arserver_data import events as evts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.rpc import objects as obj_rpc
@@ -60,8 +61,10 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
             if "event" in msg:
 
-                if glob.INTERFACES:
-                    await asyncio.gather(*[ws_server.send_json_to_client(intf, message) for intf in glob.INTERFACES])
+                if glob.USERS.interfaces:
+                    await asyncio.gather(
+                        *[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces]
+                    )
 
                 try:
                     evt = event_mapping[msg["event"]].from_dict(msg)
@@ -155,6 +158,8 @@ async def _initialize_server() -> None:
     glob.logger.info("Server initialized.")
     await asyncio.wait([websockets.serve(bound_handler, "0.0.0.0", glob.PORT)])
 
+    asyncio.create_task(run_lock_notification_worker())
+
 
 async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_rpc.ListMeshes.Response:
     return obj_rpc.ListMeshes.Response(data=await storage.get_meshes())
@@ -163,15 +168,15 @@ async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_r
 async def register(websocket: WsClient) -> None:
 
     glob.logger.info("Registering new ui")
-    glob.INTERFACES.add(websocket)
+    glob.USERS.add_interface(websocket)
 
-    if glob.PROJECT:
-        assert glob.SCENE
+    if glob.LOCK.project:
+        assert glob.LOCK.scene
         await notif.event(
-            websocket, evts.p.OpenProject(evts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project))
+            websocket, evts.p.OpenProject(evts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
         )
-    elif glob.SCENE:
-        await notif.event(websocket, evts.s.OpenScene(evts.s.OpenScene.Data(glob.SCENE.scene)))
+    elif glob.LOCK.scene:
+        await notif.event(websocket, evts.s.OpenScene(evts.s.OpenScene.Data(glob.LOCK.scene.scene)))
     elif glob.PACKAGE_INFO:
 
         # this can't be done in parallel - ui expects this order of events
@@ -186,8 +191,10 @@ async def register(websocket: WsClient) -> None:
 
 
 async def unregister(websocket: WsClient) -> None:
+
     glob.logger.info("Unregistering ui")  # TODO print out some identifier
-    glob.INTERFACES.remove(websocket)
+    glob.USERS.logout(websocket)
+    await glob.LOCK.schedule_auto_release(glob.USERS.user_name(websocket))
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
         if websocket in registered_uis:

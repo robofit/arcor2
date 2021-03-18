@@ -35,8 +35,8 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 async def run_temp_package(package_id: str) -> None:
 
-    assert glob.PROJECT
-    project_id = glob.PROJECT.id
+    assert glob.LOCK.project
+    project_id = glob.LOCK.project.id
     glob.TEMPORARY_PACKAGE = True
 
     scene_online = scene_started()
@@ -62,10 +62,12 @@ async def run_temp_package(package_id: str) -> None:
 
     await project.open_project(project_id)
 
-    assert glob.SCENE
-    assert glob.PROJECT
+    assert glob.LOCK.scene
+    assert glob.LOCK.project
 
-    await notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
+    await notif.broadcast_event(
+        sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
+    )
 
     if scene_online:
         await start_scene()

@@ -40,11 +40,11 @@ async def notify_project_closed(project_id: str) -> None:
 
 async def close_project() -> None:
 
-    assert glob.PROJECT
+    assert glob.LOCK.project
 
-    project_id = glob.PROJECT.project.id
-    glob.SCENE = None
-    glob.PROJECT = None
+    project_id = glob.LOCK.project.project.id
+    glob.LOCK.scene = None
+    glob.LOCK.project = None
     PREV_RESULTS.clear()
     asyncio.ensure_future(notify_project_closed(project_id))
 
@@ -197,11 +197,11 @@ async def associated_projects(scene_id: str) -> Set[str]:
 
 async def remove_object_references_from_projects(obj_id: str) -> None:
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     updated_project_ids: Set[str] = set()
 
-    async for project in projects_using_object_as_parent(glob.SCENE.id, obj_id):
+    async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj_id):
 
         # action_ids: Set[str] = set()
 
@@ -290,10 +290,10 @@ async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIt
 
 async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> None:
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     # Invalidates robot joints if action point's parent has changed its pose.
-    async for project in projects_using_object_as_parent(glob.SCENE.id, obj.id):
+    async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj.id):
 
         for ap in project.action_points:
 
@@ -373,19 +373,19 @@ async def open_project(project_id: str) -> None:
 
     project = UpdateableCachedProject(await storage.get_project(project_id))
 
-    if glob.SCENE:
-        if glob.SCENE.id != project.scene_id:
+    if glob.LOCK.scene:
+        if glob.LOCK.scene.id != project.scene_id:
             raise Arcor2Exception("Required project is associated to another scene.")
     else:
         await open_scene(project.scene_id)
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
     for ap in project.action_points_with_parent:
 
         assert ap.parent
 
-        if ap.parent not in glob.SCENE.object_ids | project.action_points_ids:
-            glob.SCENE = None
+        if ap.parent not in glob.LOCK.scene.object_ids | project.action_points_ids:
+            glob.LOCK.scene = None
             raise Arcor2Exception(f"Action point's {ap.name} parent not available.")
 
-    glob.PROJECT = project
+    glob.LOCK.project = project

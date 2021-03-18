@@ -2,7 +2,7 @@ import json
 
 from arcor2.data.common import Parameter, Scene
 from arcor2.data.rpc.common import IdArgs
-from arcor2_arserver.tests.conftest import event, save_project
+from arcor2_arserver.tests.conftest import event, lock_object, save_project, unlock_object
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, uid
@@ -42,6 +42,8 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
         Parameter("bool_param", "boolean", json.dumps(True)),
     ]
 
+    lock_object(ars, soc.data.id)
+
     assert ars.call_rpc(
         rpc.s.UpdateObjectParameters.Request(
             uid(), rpc.s.UpdateObjectParameters.Request.Args(soc.data.id, parameters=req_params2)
@@ -53,6 +55,8 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     assert soc2.change_type == soc.change_type.UPDATE
     assert soc2.data.type == ObjectWithSettings.__name__
     assert soc2.data.parameters == req_params2
+
+    unlock_object(ars, soc.data.id)
 
     # let's continue with testing overrides
     assert ars.call_rpc(
@@ -86,6 +90,8 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Stopping
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Stopped
 
+    lock_object(ars, obj_id)
+
     override = Parameter("int_param", "integer", json.dumps(ObjectWithSettings.INT_PARAM_SPECIAL_VALUE))
 
     assert ars.call_rpc(
@@ -107,6 +113,8 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     ).result
 
     event(ars, events.o.OverrideUpdated)
+
+    unlock_object(ars, obj_id)
 
     save_project(ars)
 
