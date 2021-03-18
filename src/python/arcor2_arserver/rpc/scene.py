@@ -370,9 +370,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
 
     assert scene_object.pose
 
-    scene_object.pose.position.x = new_pose.position.x - position_delta.x
-    scene_object.pose.position.y = new_pose.position.y - position_delta.y
-    scene_object.pose.position.z = new_pose.position.z - position_delta.z
+    scene_object.pose.position = new_pose.position - position_delta
 
     scene_object.pose.orientation.set_from_quaternion(
         new_pose.orientation.as_quaternion() * quaternion.quaternion(0, 1, 0, 0)

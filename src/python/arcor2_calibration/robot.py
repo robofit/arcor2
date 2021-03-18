@@ -55,7 +55,7 @@ def calibrate_robot(
 
     fk = robot.visual_trimesh_fk(cfg={joint.name: joint.value for joint in robot_joints})
 
-    robot_tr_matrix = robot_pose.as_transformation_matrix()
+    robot_tr_matrix = robot_pose.as_tr_matrix()
 
     res_mesh = o3d.geometry.TriangleMesh()
 
@@ -72,7 +72,7 @@ def calibrate_robot(
 
     sim_pcd = res_mesh.sample_points_uniformly(int(1e5))
 
-    camera_tr_matrix = camera_pose.as_transformation_matrix()
+    camera_tr_matrix = camera_pose.as_tr_matrix()
     camera_matrix = camera_parameters.as_camera_matrix()
     depth = depth_image_to_np(depth_image)
 
@@ -147,7 +147,7 @@ def calibrate_robot(
         draw_registration_result(sim_pcd, real_pcd, trans_init, reg_p2p.transformation)
 
     robot_tr_matrix = np.dot(reg_p2p.transformation, robot_tr_matrix)
-    pose = Pose.from_transformation_matrix(robot_tr_matrix)
+    pose = Pose.from_tr_matrix(robot_tr_matrix)
 
     logger.info("Done")
 

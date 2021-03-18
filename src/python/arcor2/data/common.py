@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import copy
-import math
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -88,14 +87,15 @@ class Position(IterableIndexable):
     y: float = 0.0
     z: float = 0.0
 
-    def rotated(self, rot: Orientation, inverse: bool = False) -> Position:
+    def rotated(self, ori: Orientation, inverse: bool = False) -> Position:
 
-        q = rot.as_quaternion()
+        q = ori.as_quaternion()
 
         if inverse:
             q = q.inverse()
 
         rotated_vector = quaternion.rotate_vectors([q], [list(self)])[0][0]
+
         return Position(rotated_vector[0], rotated_vector[1], rotated_vector[2])
 
     def __eq__(self, other: object) -> bool:
@@ -103,15 +103,12 @@ class Position(IterableIndexable):
         if not isinstance(other, Position):
             return False
 
-        for my_val, other_val in zip(self, other):
-            if not math.isclose(my_val, other_val):
-                return False
-        return True
+        return np.allclose(list(self), list(other), rtol=1.0e-6)
 
     def __add__(self, other: object) -> Position:
 
         if not isinstance(other, Position):
-            raise ValueError
+            raise Arcor2Exception("Not a position.")
 
         return Position(self.x + other.x, self.y + other.y, self.z + other.z)
 
@@ -124,6 +121,13 @@ class Position(IterableIndexable):
         self.y += other.y
         self.z += other.z
         return self
+
+    def __sub__(self, other) -> Position:
+
+        if not isinstance(other, Position):
+            raise Arcor2Exception("Not a position.")
+
+        return Position(self.x - other.x, self.y - other.y, self.z - other.z)
 
 
 @dataclass
@@ -164,7 +168,7 @@ class Orientation(IterableIndexable):
         self.z = nq.z
         self.w = nq.w
 
-    def as_transformation_matrix(self) -> np.ndarray:
+    def as_tr_matrix(self) -> np.ndarray:
         """Returns 4x4 transformation matrix.
 
         :return:
@@ -180,7 +184,7 @@ class Orientation(IterableIndexable):
         if not isinstance(other, Orientation):
             return False
 
-        return cast(bool, quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.0e-8)[0])
+        return cast(bool, quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.0e-6)[0])
 
     def __mul__(self, other: object) -> Orientation:
 
@@ -253,7 +257,7 @@ class Pose(JsonSchemaMixin):
     position: Position = field(default_factory=Position)
     orientation: Orientation = field(default_factory=Orientation)
 
-    def as_transformation_matrix(self) -> np.ndarray:
+    def as_tr_matrix(self) -> np.ndarray:
 
         arr = np.empty((4, 4))
         arr[:3, :3] = quaternion.as_rotation_matrix(self.orientation.as_quaternion())
@@ -262,7 +266,7 @@ class Pose(JsonSchemaMixin):
         return arr
 
     @staticmethod
-    def from_transformation_matrix(matrix: np.ndarray) -> Pose:
+    def from_tr_matrix(matrix: np.ndarray) -> Pose:
 
         tvec = matrix[:3, 3]
         return Pose(
