@@ -4,7 +4,7 @@ apispec-webframeworks[tests]==0.5.2  # "tests" is used just to get dependency on
 apispec[yaml]==4.0.0
 autopep8==1.5.6
 Cython==0.29.22
-dataclasses-jsonschema-rereleased[fast-validation]==2.12.2
+dataclasses-jsonschema[fast-validation,apispec]==2.14.1
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
 Flask==1.1.1  # can't be updated because of apispec-webframeworks
