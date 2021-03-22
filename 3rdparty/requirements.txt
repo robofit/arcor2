@@ -2,21 +2,21 @@ aiologger==0.6.0
 aiorun==2020.12.1
 apispec-webframeworks[tests]==0.5.2  # "tests" is used just to get dependency on Flask (which is missing otherwise)
 apispec[yaml]==4.0.0
-autopep8==1.5.5
+autopep8==1.5.6
 Cython==0.29.22
 dataclasses-jsonschema-rereleased[fast-validation]==2.12.2
-flask_cors==3.0.8
+flask_cors==3.0.10
 flask-swagger-ui==3.36.0
-Flask==1.1.1
+Flask==1.1.1  # can't be updated because of apispec-webframeworks
 horast-rereleased==0.4.3
 lru-dict==1.1.7
-numpy-quaternion==2020.11.2.17.0.49
+numpy-quaternion==2021.3.17.16.51.43
 numpy==1.20.1
 openapi-spec-validator==0.3.0
 opencv-contrib-python==4.5.1.48
 open3d==0.12.0
 packaging==20.9
-Pillow==8.1.0
+Pillow==8.1.2
 pyhumps==1.6.1
 pyk4a==1.1.0
 pytest-randomly==3.5.0
@@ -31,5 +31,5 @@ typed-astunparse==2.1.4
 typed-ast==1.4.2
 typing-inspect==0.6.0
 urdfpy==0.0.22
-websocket-client==0.57.0
+websocket-client==0.58.0
 websockets==8.1
