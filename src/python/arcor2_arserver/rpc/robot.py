@@ -445,8 +445,6 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
         assert req.args.pose
         raise Arcor2Exception("Not supported yet.")
 
-    print(f"before: {tp.orientation}")
-
     if req.args.what == req.args.what.POSITION:
         if req.args.axis == req.args.axis.X:
             tp.position.x += req.args.step
@@ -456,16 +454,11 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
             tp.position.z += req.args.step
     elif req.args.what == req.args.what.ORIENTATION:
         if req.args.axis == req.args.axis.X:
-            print(common.Orientation.from_rotation_vector(x=req.args.step))
             tp.orientation *= common.Orientation.from_rotation_vector(x=req.args.step)
         elif req.args.axis == req.args.axis.Y:
-            print(common.Orientation.from_rotation_vector(y=req.args.step))
             tp.orientation *= common.Orientation.from_rotation_vector(y=req.args.step)
         elif req.args.axis == req.args.axis.Z:
-            print(common.Orientation.from_rotation_vector(z=req.args.step))
             tp.orientation *= common.Orientation.from_rotation_vector(z=req.args.step)
-
-    print(f"after: {tp.orientation}")
 
     if req.args.mode == req.args.mode.ROBOT:
         tp = tr.make_pose_abs(robot_inst.pose, tp)
@@ -487,11 +480,13 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
 async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWorld.Request, ui: WsClient) -> None:
 
     ensure_scene_started()
+
     await check_feature(req.args.robot_id, Robot.move_to_pose.__name__)
     await check_feature(req.args.robot_id, Robot.inverse_kinematics.__name__)
     await robot.check_robot_before_move(req.args.robot_id)
 
-    # TODO make it available only for articulated robots?
+    if req.dry_run:  # attempt to find suitable joints can take some time so it is not done for dry_run
+        return
 
     tp = await robot.get_end_effector_pose(req.args.robot_id, req.args.end_effector_id)
 
@@ -499,13 +494,14 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
     target_joints: Optional[List[common.Joint]] = None
     target_joints_diff: float = 0.0
 
+    # TODO call ik in parallel?
     # select best (closest joint configuration) reachable pose
-    for z_rot in np.linspace(-math.pi, math.pi, 100):
+    for z_rot in np.linspace(-math.pi, math.pi, 360):
         tp.orientation = common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(
             z=z_rot
         )
         try:
-            joints = await robot.ik(req.args.robot_id, req.args.end_effector_id, tp, avoid_collisions=req.args.safe)
+            joints = await robot.ik(req.args.robot_id, req.args.end_effector_id, tp, current_joints, req.args.safe)
         except Arcor2Exception:
             continue
 
@@ -526,8 +522,5 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
 
     if not target_joints:
         raise Arcor2Exception("Could not find reachable pose.")
-
-    if req.dry_run:
-        return
 
     asyncio.ensure_future(robot.move_to_joints(req.args.robot_id, target_joints, req.args.speed, req.args.safe))
