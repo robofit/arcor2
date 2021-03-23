@@ -1,40 +1,18 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
-import uuid
 from datetime import datetime, timezone
-from typing import Dict, Tuple, Union, cast
+from io import BytesIO
+from typing import Dict, Tuple
 
 import humps
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
-from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, Response, jsonify, request
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import jsonify, request, send_file
 
 from arcor2.data import common, object_type
+from arcor2.flask import RespT, create_app, run_app
 from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
-# Create an APISpec
-spec = APISpec(
-    title=f"{PROJECT_SERVICE_NAME} ({version()})",
-    version="0.4.0",
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
-)
-
-app = Flask(__name__)
-CORS(app)
-
-
-def get_id() -> int:
-    return uuid.uuid4().int
-
-
-RespT = Union[Response, Tuple[str, int]]
-
+app = create_app(__name__)
 
 SCENES: Dict[str, common.Scene] = {}
 PROJECTS: Dict[str, common.Project] = {}
@@ -43,6 +21,76 @@ OBJECT_TYPES: Dict[str, object_type.ObjectType] = {}
 BOXES: Dict[str, object_type.Box] = {}
 CYLINDERS: Dict[str, object_type.Cylinder] = {}
 SPHERES: Dict[str, object_type.Sphere] = {}
+
+MESHES: Dict[str, Tuple[BytesIO, str]] = {}
+
+
+@app.route("/models/<string:mesh_id>/mesh/file", methods=["PUT"])
+def put_mesh_file(mesh_id: str) -> RespT:
+    """Puts mesh file.
+    ---
+    put:
+        description: Puts mesh file.
+        tags:
+           - Models
+        parameters:
+            - name: mesh_id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        requestBody:
+              content:
+                multipart/form-data:
+                  schema:
+                    type: object
+                    required:
+                        - file
+                    properties:
+                      file:
+                        type: string
+                        format: binary
+        responses:
+            200:
+              description: Ok
+    """
+
+    buff = BytesIO()
+    fs = request.files["file"]
+    fs.save(buff)
+    MESHES[mesh_id] = buff, fs.filename
+    return "ok", 200
+
+
+@app.route("/models/<string:mesh_id>/mesh/file", methods=["GET"])
+def get_mesh_file(mesh_id: str) -> RespT:
+    """Gets mesh file by id.
+    ---
+    get:
+        tags:
+            - Models
+        summary: Gets mesh file by id.
+        parameters:
+            - name: mesh_id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                    schema:
+                        type: string
+                        format: binary
+    """
+
+    mesh_file, filename = MESHES[mesh_id]
+    mesh_file.seek(0)
+    return send_file(mesh_file, as_attachment=True, cache_timeout=0, attachment_filename=filename)
 
 
 @app.route("/project", methods=["PUT"])
@@ -67,7 +115,7 @@ def put_project() -> RespT:
     project.modified = datetime.now(tz=timezone.utc)
     project.int_modified = None
     PROJECTS[project.id] = project
-    return cast(Response, jsonify(project.modified.isoformat()))
+    return jsonify(project.modified.isoformat())
 
 
 @app.route("/project/<string:id>", methods=["GET"])
@@ -95,7 +143,7 @@ def get_project(id: str) -> RespT:
     """
 
     try:
-        return cast(Response, jsonify(PROJECTS[id].to_dict()))
+        return jsonify(PROJECTS[id].to_dict())
     except KeyError:
         return "Not found", 404
 
@@ -150,7 +198,7 @@ def get_projects() -> RespT:
     for proj in PROJECTS.values():
         ret.items.append(common.IdDesc(proj.id, proj.name, proj.desc))
 
-    return cast(Response, jsonify(ret.to_dict()))
+    return jsonify(ret.to_dict())
 
 
 @app.route("/scene", methods=["PUT"])
@@ -175,7 +223,7 @@ def put_scene() -> RespT:
     scene.modified = datetime.now(tz=timezone.utc)
     scene.int_modified = None
     SCENES[scene.id] = scene
-    return cast(Response, jsonify(scene.modified.isoformat()))
+    return jsonify(scene.modified.isoformat())
 
 
 @app.route("/scene/<string:id>", methods=["GET"])
@@ -203,7 +251,7 @@ def get_scene(id: str) -> RespT:
     """
 
     try:
-        return cast(Response, jsonify(SCENES[id].to_dict()))
+        return jsonify(SCENES[id].to_dict())
     except KeyError:
         return "Not found", 404
 
@@ -258,7 +306,7 @@ def get_scenes() -> RespT:
     for scene in SCENES.values():
         ret.items.append(common.IdDesc(scene.id, scene.name, scene.desc))
 
-    return cast(Response, jsonify(ret.to_dict()))
+    return jsonify(ret.to_dict())
 
 
 @app.route("/object_type", methods=["PUT"])
@@ -309,7 +357,7 @@ def get_object_type(id: str) -> RespT:
     """
 
     try:
-        return cast(Response, jsonify(OBJECT_TYPES[id].to_dict()))
+        return jsonify(OBJECT_TYPES[id].to_dict())
     except KeyError:
         return "Not found", 404
 
@@ -364,7 +412,7 @@ def get_object_types() -> RespT:
     for obj_type in OBJECT_TYPES.values():
         ret.items.append(common.IdDesc(obj_type.id, "", obj_type.desc))
 
-    return cast(Response, jsonify(ret.to_dict()))
+    return jsonify(ret.to_dict())
 
 
 @app.route("/models/box", methods=["PUT"])
@@ -416,7 +464,7 @@ def get_box(id: str) -> RespT:
     """
 
     try:
-        return cast(Response, jsonify(BOXES[id].to_dict()))
+        return jsonify(BOXES[id].to_dict())
     except KeyError:
         return "Not found", 404
 
@@ -469,7 +517,7 @@ def get_cylinder(id: str) -> RespT:
     """
 
     try:
-        return cast(Response, jsonify(CYLINDERS[id].to_dict()))
+        return jsonify(CYLINDERS[id].to_dict())
     except KeyError:
         return "Not found", 404
 
@@ -522,7 +570,7 @@ def get_sphere(id: str) -> RespT:
     """
 
     try:
-        return cast(Response, jsonify(SPHERES[id].to_dict()))
+        return jsonify(SPHERES[id].to_dict())
     except KeyError:
         return "Not found", 404
 
@@ -561,66 +609,29 @@ def delete_model(id: str) -> RespT:
     return "ok", 200
 
 
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
-
-
-spec.components.schema(common.Project.__name__, schema=common.Project)
-spec.components.schema(common.Scene.__name__, schema=common.Scene)
-spec.components.schema(common.IdDescList.__name__, schema=common.IdDescList)
-spec.components.schema(object_type.ObjectType.__name__, schema=object_type.ObjectType)
-spec.components.schema(object_type.Box.__name__, schema=object_type.Box)
-spec.components.schema(object_type.Cylinder.__name__, schema=object_type.Cylinder)
-spec.components.schema(object_type.Sphere.__name__, schema=object_type.Sphere)
-
-
-with app.test_request_context():
-
-    spec.path(view=put_project)
-    spec.path(view=get_project)
-    spec.path(view=delete_project)
-    spec.path(view=get_projects)
-
-    spec.path(view=put_scene)
-    spec.path(view=get_scene)
-    spec.path(view=delete_scene)
-    spec.path(view=get_scenes)
-
-    spec.path(view=put_object_type)
-    spec.path(view=get_object_type)
-    spec.path(view=delete_object_type)
-    spec.path(view=get_object_types)
-
-    spec.path(view=put_box)
-    spec.path(view=get_box)
-    spec.path(view=put_cylinder)
-    spec.path(view=get_cylinder)
-    spec.path(view=put_sphere)
-    spec.path(view=get_sphere)
-    spec.path(view=delete_model)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=PROJECT_SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     args = parser.parse_args()
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    run_app(
+        app,
+        PROJECT_SERVICE_NAME,
+        version(),
+        "0.4.0",
+        PROJECT_PORT,
+        [
+            common.Project,
+            common.Scene,
+            common.IdDescList,
+            object_type.ObjectType,
+            object_type.Box,
+            object_type.Cylinder,
+            object_type.Sphere,
+        ],
+        args.swagger,
     )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=PROJECT_PORT)
 
 
 if __name__ == "__main__":

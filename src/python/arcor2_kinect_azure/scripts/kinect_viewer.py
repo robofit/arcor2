@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 import pyk4a
 from pyk4a import Config, PyK4A
 
@@ -16,8 +15,7 @@ def main() -> None:
 
     while 1:
         capture = k4a.get_capture()
-        if np.any(capture.color):
-            assert capture.color is not None
+        if capture.color:
             cv2.imshow("k4a", capture.color[:, :, :3])
             key = cv2.waitKey(10)
             if key != -1:

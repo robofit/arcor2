@@ -14,23 +14,19 @@ from datetime import datetime
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Type
 
 import arcor2_execution_rest_proxy
 import websocket
-from apispec import APISpec
-from apispec_webframeworks.flask import FlaskPlugin
 from dataclasses_jsonschema import JsonSchemaMixin
-from dataclasses_jsonschema.apispec import DataclassesPlugin
-from flask import Flask, Response, jsonify, request, send_file
-from flask_cors import CORS
-from flask_swagger_ui import get_swaggerui_blueprint
+from flask import jsonify, request, send_file
 from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
 
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import PackageInfo, PackageState, ProjectException
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.package import PROJECT_PATH
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
 from arcor2_execution_data import URL as EXE_URL
@@ -41,9 +37,6 @@ SERVICE_NAME = "ARCOR2 Execution Service Proxy"
 
 DB_PATH = os.getenv("ARCOR2_EXECUTION_PROXY_DB_PATH", "/tmp")  # should be directory where DBs can be stored
 TOKENS_DB_PATH = os.path.join(DB_PATH, "tokens")
-
-
-RespT = Union[Response, Tuple[str, int]]
 
 
 class ExecutionState(Enum):
@@ -82,16 +75,7 @@ class Token(JsonSchemaMixin):
     access: bool = False
 
 
-# Create an APISpec
-spec = APISpec(
-    title=f"{SERVICE_NAME} ({arcor2_execution_rest_proxy.version()})",
-    version="0.4.0",
-    openapi_version="3.0.2",
-    plugins=[FlaskPlugin(), DataclassesPlugin()],
-)
-
-app = Flask(__name__)
-CORS(app)
+app = create_app(__name__)
 
 ws: Optional[websocket.WebSocket] = None
 
@@ -181,7 +165,7 @@ def package_exists(package_id: str) -> bool:
 
 
 @app.route("/tokens/create", methods=["POST"])
-def post_token() -> RespT:  # noqa
+def post_token() -> RespT:
     """post_token
     ---
     post:
@@ -673,67 +657,33 @@ def packages_executioninfo() -> RespT:
     return jsonify(ret.to_dict()), 200
 
 
-@app.route("/swagger/api/swagger.json", methods=["GET"])
-def get_swagger() -> str:
-    return json.dumps(spec.to_dict())
-
-
-spec.components.schema(SummaryPackage.__name__, schema=SummaryPackage)
-spec.components.schema(ExecutionInfo.__name__, schema=ExecutionInfo)
-spec.components.schema(Token.__name__, schema=Token)
-
-
-with app.test_request_context():
-    spec.path(view=put_package)
-    spec.path(view=get_package)
-    spec.path(view=get_packages)
-    spec.path(view=delete_package)
-    spec.path(view=package_start)
-    spec.path(view=packages_stop)
-    spec.path(view=packages_pause)
-    spec.path(view=packages_resume)
-    spec.path(view=packages_executioninfo)
-
-    spec.path(view=post_token)
-    spec.path(view=get_tokens)
-    spec.path(view=get_token_access)
-    spec.path(view=put_token_access)
-    spec.path(view=delete_token)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     args = parser.parse_args()
 
-    if args.swagger:
-        print(spec.to_yaml())
-        return
-
     global ws
 
-    while True:
+    while not args.swagger:
         try:
             ws = websocket.create_connection(EXE_URL, enable_multithread=True)
+            thread = Thread(target=ws_thread, daemon=True)
+            thread.start()
             break
         except ConnectionRefusedError:
             print("Connecting to the Execution service...")
             time.sleep(1.0)
 
-    thread = Thread(target=ws_thread, daemon=True)
-    thread.start()
-
-    SWAGGER_URL = "/swagger"
-
-    swaggerui_blueprint = get_swaggerui_blueprint(
-        SWAGGER_URL, "./api/swagger.json"  # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
+    run_app(
+        app,
+        SERVICE_NAME,
+        arcor2_execution_rest_proxy.version(),
+        "0.4.0",
+        PORT,
+        [SummaryPackage, ExecutionInfo, Token],
+        args.swagger,
     )
-
-    # Register blueprint at URL
-    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
-
-    app.run(host="0.0.0.0", port=PORT)
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ class Generic(metaclass=abc.ABCMeta):
         return parse_docstring(cls.__doc__)["short_description"]
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.name, self.__class__.__name__)
+        return SceneObject(self.name, self.__class__.__name__, id=self.id)
 
     def __repr__(self) -> str:
         return str(self.__dict__)
@@ -93,7 +93,7 @@ class GenericWithPose(Generic):
             scene_service.upsert_collision(self.collision_model, pose)
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.name, self.__class__.__name__, self._pose)
+        return SceneObject(self.name, self.__class__.__name__, self._pose, id=self.id)
 
     @property
     def pose(self) -> Pose:
@@ -141,6 +141,12 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         if self.move_in_progress:
             raise RobotException("Already moving.")
 
+        try:
+            if self.get_hand_teaching_mode():
+                raise RobotException("Can't move in hand teaching mode.")
+        except Arcor2NotImplemented:
+            pass
+
         return None
 
     def move_to_calibration_pose(self) -> None:
@@ -166,31 +172,33 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     def suctions(self) -> Set[str]:
         return set()
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
         """Move given robot's end effector to the selected pose.
 
         :param end_effector_id:
         :param target_pose:
         :param speed:
+        :param safe:
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
-        raise NotImplementedError("Robot does not support moving to pose.")
+        raise Arcor2NotImplemented("Robot does not support moving to pose.")
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
         """Sets target joint values.
 
         :param target_joints:
         :param speed:
+        :param safe:
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
-        raise NotImplementedError("Robot does not support moving to joints.")
+        raise Arcor2NotImplemented("Robot does not support moving to joints.")
 
     def stop(self) -> None:
-        raise NotImplementedError("The robot can't be stopped.")
+        raise Arcor2NotImplemented("The robot can't be stopped.")
 
     def inverse_kinematics(
         self,
@@ -207,7 +215,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         :param avoid_collisions: Return non-collision IK result if true
         :return: Inverse kinematics
         """
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
@@ -216,7 +224,17 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         :param joints: Input joint values
         :return: Pose of the given end effector
         """
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
+
+    def get_hand_teaching_mode(self) -> bool:
+        """
+        This is expected to be implemented if the robot supports set_hand_teaching_mode
+        :return:
+        """
+        raise Arcor2NotImplemented()
+
+    def set_hand_teaching_mode(self, enabled: bool) -> None:
+        raise Arcor2NotImplemented()
 
 
 class Camera(GenericWithPose, metaclass=abc.ABCMeta):
@@ -234,17 +252,17 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
 
         self.color_camera_params: Optional[CameraParameters] = None
 
-    def color_image(self) -> Image.Image:
-        raise NotImplementedError()
+    def color_image(self, *, an: Optional[str] = None) -> Image.Image:
+        raise Arcor2NotImplemented()
 
-    def depth_image(self, averaged_frames: int = 1) -> Image.Image:
+    def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
         """This should provide depth image transformed into color camera
         perspective.
 
         :return:
         """
 
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
 
 __all__ = [

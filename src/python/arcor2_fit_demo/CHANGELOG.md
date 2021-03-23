@@ -2,6 +2,29 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.5.1] - 2021-03-15
+
+### Fixed
+- Signatures of some robot methods.
+- Added temporal workaround to `AbstractDobot/pick`.
+
+## [0.5.0] - 2021-03-03
+
+### Changed
+- `pick`/`place` actions.
+- Hand teaching mode.
+- During initialization, stop the Dobot service if already started.
+- Raise exception on `safe=True` (not supported).
+
+## [0.4.0] - 2021-02-08
+
+### Changed
+- ObjectTypes are now just proxies to the Dobot service.
+- Added the mandatory `an` parameter to all actions.
+
+### Fixed
+- Dobot M1 model (rotation of parts).
+
 ## [0.3.0] - 2020-12-14
 
 ### Changed

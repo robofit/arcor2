@@ -25,23 +25,54 @@ def arcor2_setup_py(**kwargs):
     return setup_py(**kwargs)
 
 
-def arcor2_python_distribution(**kwargs):
+def arcor2_python_distribution(name: str, description: str, binaries=None, **kwargs):
+
+    python_library(
+        name=name,
+        dependencies=[
+            ":VERSION"
+        ]
+    )
+
+    resources(
+        name="py.typed",
+        sources=["py.typed"],
+    )
+
+    resources(
+        name="VERSION",
+        sources=["VERSION"],
+    )
 
     if "setup_py_commands" not in kwargs:
         kwargs["setup_py_commands"] = ["sdist", "bdist_wheel", "--python-tag", "py38"]
+
+    kwargs["name"] = f"{name}_dist"
+
+    if "dependencies" not in kwargs:
+        kwargs["dependencies"] = []
+
+    kwargs["dependencies"].append(":py.typed")
+    kwargs["dependencies"].append(f":{name}")
+
+    if binaries is None:
+        binaries={}
+
+    kwargs["provides"] = arcor2_setup_py(
+        name=name,
+        description=description
+    ).with_binaries(binaries)
+
 
     return python_distribution(**kwargs)
 
 
 def arcor2_pex_binary(**kwargs):
 
-    if "entry_point" not in kwargs:
-        kwargs["entry_point"] = ":main"
-
     if "zip_safe" not in kwargs:
         kwargs["zip_safe"] = False
 
-    if "sources" not in kwargs:
-        kwargs["sources"] = [f"{kwargs['name']}.py"]
+    if "entry_point" not in kwargs:
+        kwargs["entry_point"] = f"{kwargs['name']}.py:main"
 
     return pex_binary(**kwargs)

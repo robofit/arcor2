@@ -15,6 +15,7 @@ class RobotFeatures(JsonSchemaMixin):
     stop: bool = False
     forward_kinematics: bool = False
     inverse_kinematics: bool = False
+    hand_teaching: bool = False
 
 
 @dataclass

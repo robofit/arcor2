@@ -68,19 +68,6 @@ class ProjectException(Event):
 
 
 @dataclass
-class CurrentAction(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        action_id: str = ""
-        args: List[common.ActionParameter] = field(default_factory=list)
-
-    data: Data
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@dataclass
 class PackageState(Event):
     @dataclass
     class Data(JsonSchemaMixin):
@@ -117,18 +104,26 @@ class PackageInfo(Event):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-# TODO divide into ActionStateBefore (containing action parameters) and ActionStateAfter (containing results)
 @dataclass
-class ActionState(Event):
+class ActionStateBefore(Event):
     @dataclass
     class Data(JsonSchemaMixin):
-        class StateEnum(Enum):
-            BEFORE: str = "before"
-            AFTER: str = "after"
 
-        object_id: str
-        method: str
-        where: StateEnum = StateEnum.BEFORE
+        action_id: str
+        parameters: List[str]
+
+    data: Data
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class ActionStateAfter(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+
+        action_id: str
         results: Optional[List[str]] = None
 
     data: Data

@@ -1,14 +1,23 @@
 import abc
+import copy
 import json
-from typing import Any, Callable
+from typing import Any, Callable, List, NamedTuple, Optional
 
 import humps
 from typed_ast import ast3 as ast
+from typed_ast.ast3 import AST
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.object_type import ParameterMeta
+from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.parameter_plugins import ParameterPluginException, TypesDict
+
+
+class ImportTuple(NamedTuple):
+
+    module_name: str
+    class_name: str
 
 
 class ParameterPlugin(metaclass=abc.ABCMeta):
@@ -30,7 +39,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def type(cls) -> Any:
         """Returns python type."""
-        pass
+        raise Arcor2NotImplemented()
 
     @classmethod
     def type_name(cls) -> str:
@@ -78,7 +87,30 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
 
-        return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+        # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
+        return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
+
+    @classmethod
+    @abc.abstractmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> AST:
+        """Used for generating the main script logic.
+
+        :param type_defs:
+        :param scene:
+        :param project:
+        :param action_id:
+        :param parameter_id:
+        :return:
+        """
+        raise Arcor2NotImplemented()
+
+    @classmethod
+    def need_to_be_imported(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Optional[List[ImportTuple]]:
+        return None
 
     @classmethod
     def value_to_json(cls, value: Any) -> str:

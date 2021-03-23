@@ -43,41 +43,39 @@ def test_get_value() -> None:
     img = Image.new("RGB", (320, 240))
 
     scene = Scene("s1", "s1")
-    obj_id = "TestId"
-    scene.objects.append(SceneObject(obj_id, "test_name", TestObject.__name__))
-    project = Project("p1", "p1", "s1")
-    ap1 = ActionPoint("ap1", "ap1", Position(1, 0, 0))
+    obj = SceneObject("test_name", TestObject.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position(1, 0, 0))
     project.action_points.append(ap1)
 
     invalid_param_name = "invalid_param"
-    action_id = "ac1"
 
-    ap1.actions.append(
-        Action(
-            action_id,
-            action_id,
-            f"{obj_id}/{TestObject.action.__name__}",
-            [
-                ActionParameter(param_name, ImagePlugin.type_name(), ImagePlugin.value_to_json(img)),
-                ActionParameter(invalid_param_name, ImagePlugin.type_name(), json.dumps("non_sense")),
-            ],
-        )
+    ac1 = Action(
+        "ac1",
+        f"{obj.id}/{TestObject.action.__name__}",
+        parameters=[
+            ActionParameter(param_name, ImagePlugin.type_name(), ImagePlugin.value_to_json(img)),
+            ActionParameter(invalid_param_name, ImagePlugin.type_name(), json.dumps("non_sense")),
+        ],
     )
+
+    ap1.actions.append(ac1)
 
     cscene = CachedScene(scene)
     cproject = CachedProject(project)
 
     with pytest.raises(Arcor2Exception):
-        ImagePlugin.parameter_value(type_defs, cscene, cproject, action_id, "non_sense")
+        ImagePlugin.parameter_value(type_defs, cscene, cproject, ac1.id, "non_sense")
 
     with pytest.raises(Arcor2Exception):
         ImagePlugin.parameter_value(type_defs, cscene, cproject, "non_sense", param_name)
 
     with pytest.raises(ParameterPluginException):
-        ImagePlugin.parameter_value(type_defs, cscene, cproject, action_id, invalid_param_name)
+        ImagePlugin.parameter_value(type_defs, cscene, cproject, ac1.id, invalid_param_name)
 
-    value = ImagePlugin.parameter_value(type_defs, cscene, cproject, action_id, param_name)
-    exe_value = ImagePlugin.parameter_execution_value(type_defs, cscene, cproject, action_id, param_name)
+    value = ImagePlugin.parameter_value(type_defs, cscene, cproject, ac1.id, param_name)
+    exe_value = ImagePlugin.parameter_execution_value(type_defs, cscene, cproject, ac1.id, param_name)
 
     assert value == value
     assert value == exe_value

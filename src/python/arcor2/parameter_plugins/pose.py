@@ -1,5 +1,8 @@
+import copy
 import json
 from typing import Any, List
+
+from typed_ast.ast3 import Attribute, Load, Name
 
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject as CProject
@@ -17,14 +20,16 @@ class PosePlugin(ParameterPlugin):
         return Pose
 
     @classmethod
+    def orientation_id(cls, project: CProject, action_id: str, parameter_id: str) -> str:
+        return cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
+
+    @classmethod
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
         try:
-            ap, ori = project.bare_ap_and_orientation(
-                cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
-            )
+            ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
         except Arcor2Exception as e:
             raise ParameterPluginException("Failed to get scene/project data.") from e
         return Pose(ap.position, ori.orientation)
@@ -34,8 +39,9 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
-        return tr.abs_pose_from_ap_orientation(
-            scene, project, cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
+        # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
+        return copy.deepcopy(
+            tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
         )
 
     @classmethod
@@ -45,7 +51,26 @@ class PosePlugin(ParameterPlugin):
     @classmethod
     def uses_orientation(cls, project: CProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
 
-        return orientation_id == cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
+        return orientation_id == cls.orientation_id(project, action_id, parameter_id)
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Attribute:
+
+        ori_ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
+
+        return Attribute(
+            value=Attribute(
+                value=Attribute(
+                    value=Name(id="aps", ctx=Load()), attr=ori_ap.name, ctx=Load()  # TODO this should not be hardcoded
+                ),
+                attr="poses",  # TODO this should not be hardcoded
+                ctx=Load(),
+            ),
+            attr=ori.name,
+            ctx=Load(),
+        )
 
 
 class PoseListPlugin(ListParameterPlugin):
@@ -55,7 +80,7 @@ class PoseListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(PosePlugin)  # type: ignore
+        return get_type_name(PosePlugin)
 
     @classmethod
     def parameter_value(
@@ -80,13 +105,13 @@ class PoseListPlugin(ListParameterPlugin):
         ap, action = project.action_point_and_action(action_id)
 
         if not ap.parent:
-            return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+            return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 
         parameter = action.parameter(parameter_id)
         ret: List[Pose] = []
 
         for orientation_id in cls._param_value_list(parameter):
-            ret.append(tr.abs_pose_from_ap_orientation(scene, project, orientation_id))
+            ret.append(copy.deepcopy(tr.abs_pose_from_ap_orientation(scene, project, orientation_id)))
 
         return ret
 

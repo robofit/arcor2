@@ -1,5 +1,7 @@
 import inspect
 import json
+import os
+import shutil
 from dataclasses import is_dataclass
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
 
@@ -188,6 +190,25 @@ def iterate_over_actions(
             continue
 
         yield method_name, method
+
+
+def prepare_object_types_dir(path: str, module: str) -> None:
+    """Creates a fresh directory, where ObjectTypes will be placed.
+
+    :param path:
+    :param module:
+    :return:
+    """
+
+    full_path = os.path.join(path, module)
+
+    if os.path.exists(full_path):
+        shutil.rmtree(full_path)
+
+    os.makedirs(full_path)
+
+    with open(os.path.join(full_path, "__init__.py"), "w"):
+        pass
 
 
 __all__ = [

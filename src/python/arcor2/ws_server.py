@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 from collections import deque
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
@@ -11,6 +12,8 @@ from dataclasses_jsonschema import ValidationError
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import RPC
 from arcor2.exceptions import Arcor2Exception
+
+MAX_RPC_DURATION = float(os.getenv("ARCOR2_MAX_RPC_DURATION", 0.1))
 
 RPCT = TypeVar("RPCT", bound=RPC)
 ReqT = TypeVar("ReqT", bound=RPC.Request)
@@ -96,7 +99,12 @@ async def server(
                 else:
 
                     try:
+                        rpc_start = time.monotonic()
                         resp = await rpc_cb(req, client)
+                        rpc_dur = time.monotonic() - rpc_start
+                        if rpc_dur > MAX_RPC_DURATION:
+                            logger.warn(f"{req.request} callback took {rpc_dur:.3f}s.")
+
                     except Arcor2Exception as e:
                         logger.debug(e, exc_info=True)
                         resp = rpc_cls.Response(req.id, False, [str(e)])

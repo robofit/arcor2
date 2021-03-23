@@ -1,6 +1,6 @@
 import pytest
 
-from arcor2.data.common import Orientation
+from arcor2.data.common import NamedOrientation, Orientation
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -22,3 +22,14 @@ def test_invalid_orientation() -> None:
 
     with pytest.raises(Arcor2Exception):
         o.as_quaternion()
+
+
+def test_id_stuff() -> None:
+
+    no = NamedOrientation("name", Orientation())
+    assert no.id
+
+    no_copy = no.copy()
+    assert no_copy.id
+
+    assert no.id != no_copy.id

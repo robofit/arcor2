@@ -1,10 +1,15 @@
+import os
+
 import pytest
 
 from arcor2.data.common import Orientation, Pose, Position
 from arcor2_fit_demo.object_types.abstract_dobot import DobotException, DobotSettings
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 
+URL = os.getenv("ARCOR2_DOBOT_URL", "http://localhost:5018")
 
+
+@pytest.mark.skip(reason="Temporarily disabled (need to run the service).")
 @pytest.mark.parametrize(
     "pose",
     [
@@ -32,12 +37,13 @@ from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 )
 def test_ik_fk(pose) -> None:
 
-    dm = DobotMagician("id", "name", Pose(), DobotSettings(simulator=True))
+    dm = DobotMagician("id", "name", Pose(), DobotSettings(URL))
     joints = dm.inverse_kinematics("", pose)
     comp_pose = dm.forward_kinematics("", joints)
     assert pose == comp_pose
 
 
+@pytest.mark.skip(reason="Temporarily disabled (need to run the service).")
 @pytest.mark.parametrize(
     "pose",
     [
@@ -53,11 +59,12 @@ def test_ik_fk(pose) -> None:
 )
 def test_ik_fk_out_of_reach(pose) -> None:
 
-    dm = DobotMagician("id", "name", Pose(), DobotSettings(simulator=True))
+    dm = DobotMagician("id", "name", Pose(), DobotSettings(URL))
     with pytest.raises(DobotException):
         dm.inverse_kinematics("", pose)
 
 
+@pytest.mark.skip(reason="Temporarily disabled (need to run the service).")
 @pytest.mark.parametrize(
     "pose",
     [
@@ -73,6 +80,6 @@ def test_ik_fk_out_of_reach(pose) -> None:
 )
 def test_ik_fk_impossible_orientation(pose) -> None:
 
-    dm = DobotMagician("id", "name", Pose(), DobotSettings(simulator=True))
+    dm = DobotMagician("id", "name", Pose(), DobotSettings(URL))
     with pytest.raises(DobotException, match="Impossible orientation."):
         dm.inverse_kinematics("", pose)

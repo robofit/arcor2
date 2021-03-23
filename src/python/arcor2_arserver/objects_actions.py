@@ -9,14 +9,13 @@ from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
-from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources
+from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources, prepare_object_types_dir
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.object_types.source import prepare_object_types_dir
 from arcor2_arserver.object_types.utils import (
     ObjectTypeData,
     ObjectTypeDict,
@@ -45,6 +44,14 @@ def get_obj_type_name(object_id: str) -> str:
         return glob.SCENE.object(object_id).type
     except KeyError:
         raise Arcor2Exception("Unknown object id.")
+
+
+def get_obj_type_data(object_id: str) -> ObjectTypeData:
+
+    try:
+        return glob.OBJECT_TYPES[get_obj_type_name(object_id)]
+    except KeyError:
+        raise Arcor2Exception("Unknown object type.")
 
 
 def valid_object_types() -> ObjectTypeDict:
@@ -121,7 +128,15 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
         return
 
     if obj.model:
-        model = await storage.get_model(obj.model.id, obj.model.type)
+        try:
+            model = await storage.get_model(obj.model.id, obj.model.type)
+        except Arcor2Exception:
+            glob.logger.error(f"{obj.model.id}: failed to get collision model of type {obj.model.type}.")
+            meta.disabled = True
+            meta.problem = "Can't get collision model."
+            object_types[obj_id] = ObjectTypeData(meta)
+            return
+
         kwargs = {model.type().value.lower(): model}
         meta.object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
 
@@ -166,6 +181,8 @@ async def get_object_types() -> None:
     glob.logger.debug(f"New ids: {new_object_ids}")
 
     if not initialization and removed_object_ids:
+
+        # TODO remove it from sys.modules
 
         remove_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in removed_object_ids])
         remove_evt.change_type = Event.Type.REMOVE

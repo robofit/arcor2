@@ -1,10 +1,11 @@
 [GLOBAL]
-pants_version = "2.2.0.dev1"
+pants_version = "2.4.0.dev2"
 colors = true
+process_execution_local_parallelism = 4
 
 
 plugins = [
-  "packaging==20.4",
+  "packaging==20.9",
 ]
 
 backend_packages.add = [
@@ -29,13 +30,13 @@ root_patterns = [
 ]
 
 [python-setup]
-interpreter_constraints = ["==3.8.*"]
+interpreter_constraints = ["==3.8.*"]  # can't use 3.9 yet because of https://github.com/intel-isl/Open3D/issues/3065
 requirement_constraints = "3rdparty/constraints.txt"
 interpreter_search_paths = ["<PATH>", "/usr/bin/python3.8"]
 
 [flake8]
 config = ".flake8"
-version = "flake8==3.8.4"
+version = "flake8==3.9.0"
 extra_requirements.add = [
   "flake8-tidy-imports",
   "flake8-annotations-coverage",
@@ -45,9 +46,14 @@ extra_requirements.add = [
   "vulture"
 ]
 
+
 [mypy]
 config = "mypy.ini"
-version = "mypy==0.790"
+version = "mypy==0.812"
+# TODO enable this once numpy 1.21.0 is out
+# extra_requirements.add = [
+#  "numpy"
+#]
 
 [pytest]
 pytest_plugins.add = [

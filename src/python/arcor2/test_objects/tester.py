@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Optional
 
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import GenericWithPose
@@ -15,7 +15,9 @@ class Tester(GenericWithPose):
         self._cancel: bool = False
         self._param1: str = ""
 
-    def run_test(self, seq: List[float], seq_id: List[str], eqp_res: List[bool]) -> List[bool]:
+    def run_test(
+        self, seq: List[float], seq_id: List[str], eqp_res: List[bool], *, an: Optional[str] = None
+    ) -> List[bool]:
         """Run test with many parameters.
 
         :param seq:
@@ -25,7 +27,7 @@ class Tester(GenericWithPose):
         """
         return [bool(seq), bool(seq_id), bool(eqp_res)]
 
-    def long_running_action(self) -> None:
+    def long_running_action(self, *, an: Optional[str] = None) -> None:
         """This runs for long time.
 
         :return:
@@ -36,7 +38,7 @@ class Tester(GenericWithPose):
                 self._cancel = False
                 break
 
-    def long_running_action_with_params(self, param1: str) -> None:
+    def long_running_action_with_params(self, param1: str, *, an: Optional[str] = None) -> None:
         """Runs for long time.
 
         :param param1:
@@ -49,10 +51,10 @@ class Tester(GenericWithPose):
                 self._cancel = False
                 break
 
-    def simple_cancel(self) -> None:
+    def simple_cancel(self, *, an: Optional[str] = None) -> None:
         self._cancel = True
 
-    def cancel_with_param(self, param1: str) -> None:
+    def cancel_with_param(self, param1: str, *, an: Optional[str] = None) -> None:
         assert param1 == self._param1
         self._cancel = True
 

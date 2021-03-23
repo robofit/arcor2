@@ -52,6 +52,7 @@ class RobotMoveToPose(Event):
     class Data(RobotMoveToData):
         end_effector_id: str
         target_pose: common.Pose
+        safe: bool
         message: Optional[str] = None
 
     data: Data
@@ -65,6 +66,7 @@ class RobotMoveToJoints(Event):
     @dataclass
     class Data(RobotMoveToData):
         target_joints: List[common.Joint]
+        safe: bool
         message: Optional[str] = None
 
     data: Data
@@ -79,6 +81,7 @@ class RobotMoveToActionPointOrientation(Event):
     class Data(RobotMoveToData):
         end_effector_id: str
         orientation_id: str
+        safe: bool
         message: Optional[str] = None
 
     data: Data
@@ -92,6 +95,20 @@ class RobotMoveToActionPointJoints(Event):
     @dataclass
     class Data(RobotMoveToData):
         joints_id: str
+        safe: bool
         message: Optional[str] = None
+
+    data: Data
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class HandTeachingMode(Event):
+    @dataclass
+    class Data(JsonSchemaMixin):
+        robot_id: str
+        enabled: bool
 
     data: Data

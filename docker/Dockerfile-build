@@ -10,4 +10,7 @@ FROM arcor2/arcor2_dist_base:$version
 
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_build.scripts/build.pex /root/build.pex
 
+RUN apt-get update \
+        && apt-get install -y -q libgl1-mesa-glx libglib2.0-0
+
 COPY docker/start-build.sh ./start.sh

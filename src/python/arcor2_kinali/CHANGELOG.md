@@ -2,6 +2,37 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.1] - 2021-03-15
+
+### Fixed
+- Getting suction IDs was broken.
+- Fixed signatures of some robot methods.
+
+### Changed
+- Example scripts were updated with id-related changes.
+
+## [0.12.0] - 2021-03-03
+
+### Changed
+- Parameter `safe` added to the `Robot` interface.
+- Added an example using `RestHttpException`.
+
+### Fixed
+- `Simatic` robot was missing `move_to_joints` (moved to `AbstractRobot`).
+
+## [0.11.1] - 2021-02-09
+
+### Changed
+- Add Ict service 0.1.0
+
+## [0.11.0] - 2021-02-08
+
+### Changed
+- Added the mandatory `an` parameter to all actions.
+
+### Fixed
+- Invalid url in `move_relative_joints`.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

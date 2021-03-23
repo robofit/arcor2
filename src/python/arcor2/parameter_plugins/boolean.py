@@ -1,5 +1,7 @@
 from typing import Any, List
 
+from typed_ast.ast3 import NameConstant
+
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
@@ -28,6 +30,12 @@ class BooleanPlugin(ParameterPlugin):
     def _value_from_json(cls, value: str) -> bool:
         return super(BooleanPlugin, cls)._value_from_json(value)
 
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> NameConstant:
+        return NameConstant(value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id))
+
 
 class BooleanListPlugin(ListParameterPlugin):
     @classmethod
@@ -36,7 +44,7 @@ class BooleanListPlugin(ListParameterPlugin):
 
     @classmethod
     def type_name(cls) -> str:
-        return get_type_name(BooleanPlugin)  # type: ignore
+        return get_type_name(BooleanPlugin)
 
     @classmethod
     def parameter_value(

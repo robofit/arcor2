@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
+from typing import Any, AsyncIterator, Callable, Dict, List, Set, Tuple, Union
 
 from arcor2 import helpers as hlp
 from arcor2.action import results_to_json
@@ -18,7 +18,7 @@ from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import ProjectClosed
 from arcor2_arserver_data.objects import ObjectAction
 
-PREV_RESULTS: Dict[str, List[Any]] = {}
+PREV_RESULTS: Dict[str, Union[Tuple[Any], Any]] = {}
 
 
 def remove_prev_result(action_id: str) -> None:
@@ -49,7 +49,7 @@ async def close_project() -> None:
     asyncio.ensure_future(notify_project_closed(project_id))
 
 
-async def execute_action(action_method: Callable, params: Dict[str, Any]) -> None:
+async def execute_action(action_method: Callable, params: List[Any]) -> None:
 
     assert glob.RUNNING_ACTION
 
@@ -58,7 +58,7 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
     evt = ActionResult(ActionResult.Data(glob.RUNNING_ACTION))
 
     try:
-        action_result = await hlp.run_in_executor(action_method, *params.values())
+        action_result = await hlp.run_in_executor(action_method, *params)
     except (Arcor2Exception, AttributeError, TypeError) as e:
         glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
         glob.logger.debug(str(e), exc_info=True)
@@ -74,7 +74,7 @@ async def execute_action(action_method: Callable, params: Dict[str, Any]) -> Non
 
     if glob.RUNNING_ACTION is None:
         # action was cancelled, do not send any event
-        return
+        return  # type: ignore  # action could be cancelled during its execution
 
     await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None
@@ -151,8 +151,7 @@ def check_flows(
         raise Arcor2Exception("Number of the flow outputs does not match the number of action outputs.")
 
     for output in flow.outputs:
-        if not hlp.is_valid_identifier(output):
-            raise Arcor2Exception(f"Output {output} is not a valid Python identifier.")
+        hlp.is_valid_identifier(output)
 
     outputs: Set[str] = set()
 

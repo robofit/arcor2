@@ -96,7 +96,7 @@ def update_scene(scene: Scene) -> datetime:
 def update_project_sources(project_sources: ProjectSources) -> None:
 
     assert project_sources.id
-    rest.call(rest.Method.POST, f"{URL}/project/sources", body=project_sources)
+    rest.call(rest.Method.PUT, f"{URL}/sources", body=project_sources)
 
 
 @handle(ProjectServiceException, message="Failed to add or update the object type.")

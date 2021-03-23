@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Optional, Set
+from typing import List, Optional, Set
 
+from arcor2_calibration_data import MarkerCorners
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.camera import CameraParameters
@@ -30,7 +31,7 @@ class SystemInfo(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class Calibration(RPC):
+class GetCameraPose(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
@@ -44,3 +45,22 @@ class Calibration(RPC):
     class Response(RPC.Response):
 
         data: Optional[Pose] = None
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class MarkersCorners(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            camera_parameters: CameraParameters
+            image: str = field(metadata=dict(description="Base64 encoded image."))
+
+        args: Args
+
+    @dataclass
+    class Response(RPC.Response):
+
+        data: Optional[List[MarkerCorners]] = None

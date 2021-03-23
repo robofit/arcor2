@@ -1,5 +1,5 @@
 import math
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -9,30 +9,43 @@ from PIL import Image
 
 from arcor2.data.common import Orientation, Pose, Position
 
+aruco_dict = aruco.Dictionary_get(aruco.DICT_7X7_1000)
 
-def get_poses(
-    camera_matrix: List[List[float]], dist_matrix: List[float], image: Image.Image, marker_size: float
-) -> Dict[int, Pose]:
 
-    camera_matrix = np.array(camera_matrix)
-    dist_matrix = np.array(dist_matrix)
+def detect_corners(
+    camera_matrix: List[List[float]], dist_matrix: List[float], image: Image.Image, refine: bool = False
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+    camera_matrix_arr = np.array(camera_matrix)
+    dist_matrix_arr = np.array(dist_matrix)
 
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2GRAY)
 
-    ret: Dict[int, Pose] = {}
-
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_7X7_1000)
     parameters = aruco.DetectorParameters_create()
-    parameters.cornerRefinementMethod = aruco.CORNER_REFINE_APRILTAG  # default is none
+    if refine:  # takes 3x longer
+        parameters.cornerRefinementMethod = aruco.CORNER_REFINE_APRILTAG  # default is none
 
     corners, ids, _ = aruco.detectMarkers(
-        gray, aruco_dict, cameraMatrix=camera_matrix, distCoeff=dist_matrix, parameters=parameters
+        gray, aruco_dict, cameraMatrix=camera_matrix_arr, distCoeff=dist_matrix_arr, parameters=parameters
     )
+
+    return camera_matrix_arr, dist_matrix_arr, gray, corners, ids
+
+
+def estimate_camera_pose(
+    camera_matrix: List[List[float]], dist_matrix: List[float], image: Image.Image, marker_size: float
+) -> Dict[int, Pose]:
+
+    camera_matrix_arr, dist_matrix_arr, gray, corners, ids = detect_corners(
+        camera_matrix, dist_matrix, image, refine=True
+    )
+
+    ret: Dict[int, Pose] = {}
 
     if np.all(ids is None):
         return ret
 
-    rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix, dist_matrix)
+    rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix_arr, dist_matrix_arr)
 
     if __debug__:
         backtorgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
@@ -57,8 +70,7 @@ def get_poses(
 
         camera_trans_vector = np.matmul(-camera_rot_matrix, tvec[idx].reshape(3, 1)).flatten()
 
-        o = Orientation()
-        o.set_from_quaternion(quaternion.from_rotation_matrix(camera_rot_matrix))
+        o = Orientation.from_quaternion(quaternion.from_rotation_matrix(camera_rot_matrix))
         ret[mid[0]] = Pose(Position(camera_trans_vector[0], camera_trans_vector[1], camera_trans_vector[2]), o)
 
     return ret

@@ -2,6 +2,41 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.0] - 2021-03-15
+
+### Changed
+- Dependency on arcor2 0.13.0.
+- Generated `ActionPoints` class now returns copy of data (poses etc. can be freely modified within actions).
+
+
+## [0.12.1] - 2021-03-08
+
+### Fixed
+- Bump dependency to arcor2 0.12.1 which fixes code generation in the `Pose` plugin.
+- Check whether ObjectType id (class name) is the same as its models id.
+  - The assertion was turned into exception.
+
+## [0.12.0] - 2021-03-03
+
+### Changed
+- A new method `PUT /project/import` to import existing execution package.
+  - Import fails if data already exists and there is any difference.
+  - Import can be forced by setting `overwrite` parameter.
+
+### Fixed
+- Build now returns response messages in JSON.
+
+## [0.11.0] - 2021-02-08
+
+### Changed
+- Part of the code refactored into `arcor2/flask.py`.
+- Support for explicit parameters in the main script.
+  - `Actions` class is no longer generated (does not make sense now). 
+  - `Resources` class is no longer generated (used to have actions parameters as properties).
+  - Improved/adapted `ActionPoints` generated class.
+- Support for project constants (parameter type `constant`).
+- An action can now use a previous result as its parameter (parameter type `link`).
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

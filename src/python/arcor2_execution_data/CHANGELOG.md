@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.0] - 2021-02-08
+
+### Changed
+- `PackageState` RPC removed.
+
 ## [0.9.0] - 2020-10-22
 
 ### Changed

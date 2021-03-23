@@ -2,6 +2,60 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.0] - 2021-03-15
+
+### Changed
+- IDs (uuid) are now generated within the respective classes.
+  - If necessary, ID can be still provided from outside as before.
+  - IDs are prefixed so developers can easily check type of an object from its ID.
+  - Prefix always start with a character.
+
+### Fixed
+- Composite actions are now properly handled by the `@action` decorator.
+
+## [0.12.1] - 2021-03-08
+
+### Fixed
+- `Pose` parameter plugin fixed to generate correct code in a case when action on action point A uses orientation from action point B.
+
+## [0.12.0] - 2021-03-03
+
+### Fixed
+- Parameter plugins now return copy of the parameter in order to prevent changes in the project if the value is modified e.g. within an action.
+- Method `update_project_sources` of the Project service client was fixed.
+
+### Changed
+- Flask-based apps now don't log each API call by default.
+  - It can be turned on by setting `ARCOR2_REST_API_DEBUG`.
+- The `rest` module has a new exception type RestHttpException for getting HTTP error codes.
+- `is_valid_identifier` now behaves the same as `is_valid_type`, it does not insist on convention (PascalCase vs snake_case) and provides concrete error messages.
+- `Robot` API now has `safe` parameter.
+- `Robot` now has API for hand teaching mode.  
+- Line length of generated code changed from 80 to 120.
+
+## [0.11.1] - 2021-02-09
+
+### Fixed
+- `@action` decorator fixed.
+- `KeyError` was raised when `an` parameter was not given to an action.
+- This only happened in the "manual" script writing scenario and when `patch_object_actions` was used.
+
+## [0.11.0] - 2021-02-08
+
+### Changed
+- Explicit action parameters.
+  - `Resources` class now do not need to deal with parameters.
+  - Update of ObjectTypes (all actions now have the mandatory `an` parameter).
+- `CurrentAction` removed, `ActionState` divided into `ActionStateBefore` and `ActionStateAfter`.
+- New module with shared code for Flask-based apps.
+- Updates of 3rd party dependencies.
+- WS server now logs too long RPCs. 
+  - Max. duration could be configured using `ARCOR2_MAX_RPC_DURATION`.
+
+### Fixed
+- At a startup, the main script now checks if the scene is running before attempt to stop it.
+- `image_from_str` function fixed.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

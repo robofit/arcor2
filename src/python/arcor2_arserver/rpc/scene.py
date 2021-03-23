@@ -14,6 +14,7 @@ from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
+from arcor2.image import image_from_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
@@ -62,7 +63,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerato
         scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     if make_copy:
-        scene.id = common.uid()
+        scene.id = common.Scene.uid()
 
     try:
         yield scene
@@ -93,7 +94,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
         return None
 
     await get_object_types()  # TODO not ideal, may take quite long time
-    glob.SCENE = UpdateableCachedScene(common.Scene(common.uid(), req.args.name, desc=req.args.desc))
+    glob.SCENE = UpdateableCachedScene(common.Scene(req.args.name, desc=req.args.desc))
     asyncio.ensure_future(notif.broadcast_event(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.SCENE.scene))))
     asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
     return None
@@ -170,7 +171,7 @@ async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsCli
 
     can_modify_scene()
 
-    obj = common.SceneObject(common.uid(), req.args.name, req.args.type, req.args.pose, req.args.parameters)
+    obj = common.SceneObject(req.args.name, req.args.type, req.args.pose, req.args.parameters)
 
     await add_object_to_scene(obj, dry_run=req.dry_run)
 
@@ -369,9 +370,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
 
     assert scene_object.pose
 
-    scene_object.pose.position.x = new_pose.position.x - position_delta.x
-    scene_object.pose.position.y = new_pose.position.y - position_delta.y
-    scene_object.pose.position.z = new_pose.position.z - position_delta.z
+    scene_object.pose.position = new_pose.position - position_delta
 
     scene_object.pose.orientation.set_from_quaternion(
         new_pose.orientation.as_quaternion() * quaternion.quaternion(0, 1, 0, 0)
@@ -416,8 +415,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
         if obj_name == req.args.new_name:
             raise Arcor2Exception("Object name already exists.")
 
-    if not hlp.is_valid_identifier(req.args.new_name):
-        raise Arcor2Exception("Object name invalid (should be snake_case).")
+    hlp.is_valid_identifier(req.args.new_name)
 
     if req.dry_run:
         return None
@@ -505,10 +503,24 @@ async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
-async def calibration_cb(req: srpc.c.Calibration.Request, ui: WsClient) -> srpc.c.Calibration.Response:
+async def calibration_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srpc.c.GetCameraPose.Response:
 
-    return srpc.c.Calibration.Response(
-        data=await hlp.run_in_executor(calibration.estimate_camera_pose, req.args.camera_parameters, req.args.image)
+    # TODO estimated pose should be rather returned in an event (it is possibly a long-running process)
+    return srpc.c.GetCameraPose.Response(
+        data=await hlp.run_in_executor(
+            calibration.estimate_camera_pose, req.args.camera_parameters, image_from_str(req.args.image)
+        )
+    )
+
+
+# TODO maybe this would better fit into another category of RPCs? Like common/misc?
+async def marker_corners_cb(req: srpc.c.MarkersCorners.Request, ui: WsClient) -> srpc.c.MarkersCorners.Response:
+
+    # TODO should be rather returned in an event (it is possibly a long-running process)
+    return srpc.c.MarkersCorners.Response(
+        data=await hlp.run_in_executor(
+            calibration.markers_corners, req.args.camera_parameters, image_from_str(req.args.image)
+        )
     )
 
 

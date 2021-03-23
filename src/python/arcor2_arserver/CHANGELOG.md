@@ -2,6 +2,46 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - 2021-03-15
+
+### Changed
+- Improved logging for debugging robot features.
+- Suffix is added to copied AP/action instead of prefix.
+
+### Fixed
+- Names for orientations/joints were not checked as valid identifiers.
+- Action names were checked, but should not be.
+
+## [0.13.0] - 2021-03-03
+
+### Changed
+
+-  API to copy action point (including orientations, joints, child APs).
+- Robot-related API (MoveToPose, MoveToJoints, MoveToActionPoint) updated in order to contain `safe` parameter.
+- API to enable/disable robot hand teaching mode.  
+- Concrete and helpful error messages when a name entered by the user is refused.
+
+### Fixed
+- Only `BareActionPoint` was sent on parent change.
+
+## [0.12.0] - 2021-02-08
+
+### Changed
+- Improved scene-related messages.
+  - Error messages now contain the name of the object which caused the error.
+- New `MarkersCorners` RPC for getting markers corners.
+- Support for `an` parameter (explicit parameters).
+- Improved check of action signature and annotation.
+- New WS API for execution state reporting.
+- Support for project constants.
+  - Only basic types are supported so far.
+
+### Fixed
+- Better handling of missing collision model.
+  - If server can't get collision model of the object, the object is disabled.
+  - Previously, this situation caused crash of the server.
+- `GetCameraPose` callback fixed (used to be `Calibration`).
+
 ## [0.11.0] - 2020-12-14
 
 ### Changed

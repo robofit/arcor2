@@ -31,6 +31,14 @@ class RestException(Arcor2Exception):
     pass
 
 
+class RestHttpException(RestException):
+    """Exception with associated HTTP status (error) code."""
+
+    def __init__(self, *args, error_code: int):
+        super().__init__(*args)
+        self.error_code = error_code
+
+
 class Method(Enum):
     """Enumeration of supported HTTP methods."""
 
@@ -243,6 +251,13 @@ def call(
     else:
         params = {}
 
+    assert params is not None
+
+    # requests just simply stringifies parameters, which does not work for booleans
+    for param_name, param_value in params.items():
+        if isinstance(param_value, bool):
+            params[param_name] = "true" if param_value else "false"
+
     if timeout is None:
         timeout = Timeout()
 
@@ -253,7 +268,10 @@ def call(
             resp = method.value(url, data=json.dumps(d), timeout=timeout, headers=headers, params=params)
     except requests.exceptions.RequestException as e:
         logger.debug("Request failed.", exc_info=True)
-        raise RestException("Catastrophic system error.", str(e)) from e
+        # TODO would be good to provide more meaningful message but the original one could be very very long
+        raise RestException("Catastrophic system error.") from e
+
+    logger.debug(resp.url)  # to see if query parameters are ok
 
     _handle_response(resp)
 
@@ -320,17 +338,20 @@ def _handle_response(resp: requests.Response) -> None:
 
     try:
         resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
+    except requests.exceptions.HTTPError as e:
 
+        # here we try to handle different cases
         try:
             resp_body = json.loads(resp.content)
         except json.JSONDecodeError:
-            raise RestException(resp.content.decode("utf-8")) from e
+            # response contains invalid JSON
+            raise RestHttpException(resp.content.decode("utf-8"), error_code=e.response.status_code) from e
 
         try:
-            raise RestException(resp_body["message"]) from e
+            # this should be standard (body containing "message").
+            raise RestHttpException(resp_body["message"], error_code=e.response.status_code) from e
         except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestException(str(resp_body)) from e
+            raise RestHttpException(str(resp_body), error_code=e.response.status_code) from e
 
 
 def get_image(url: str) -> Image.Image:

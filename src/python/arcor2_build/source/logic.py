@@ -1,39 +1,85 @@
 import logging
 import os
-from typing import Dict, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Union
 
 import humps
-from typed_ast.ast3 import Compare, Continue, Eq, FunctionDef, If, Load, Module, Name, NameConstant, Pass, While
+from typed_ast.ast3 import (
+    AST,
+    Assign,
+    Compare,
+    Continue,
+    Eq,
+    FunctionDef,
+    If,
+    Load,
+    Module,
+    Name,
+    NameConstant,
+    Num,
+    Pass,
+    Store,
+    Str,
+    While,
+    expr,
+    keyword,
+)
 
-import arcor2.object_types
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
-from arcor2.data.common import Action, FlowTypes
+from arcor2.data.common import Action, ActionParameter, FlowTypes
+from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
+from arcor2.parameter_plugins.base import TypesDict
+from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2.source import SCRIPT_HEADER, SourceException
-from arcor2.source.utils import add_import, add_method_call, get_name_attr, tree_to_str
+from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
-from arcor2_build.source.utils import clean, empty_script_tree, main_loop
+from arcor2_build.source.utils import empty_script_tree, find_function, find_last_assign, main_loop
 
 logger = get_logger(__name__, logging.DEBUG if bool(os.getenv("ARCOR2_LOGIC_DEBUG", False)) else logging.INFO)
 
 
-def program_src(project: CProject, scene: CScene, built_in_objects: Set[str], add_logic: bool = True) -> str:
+def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logic: bool = True) -> str:
 
-    tree = empty_script_tree(add_main_loop=add_logic)
+    tree = empty_script_tree(project.id, add_main_loop=add_logic)
 
     # get object instances from resources object
+    main = find_function("main", tree)
+    last_assign = find_last_assign(main)
     for obj in scene.objects:
+        add_import(tree, "object_types." + humps.depascalize(obj.type), obj.type, try_to_import=False)
+        last_assign += 1
+        main.body.insert(last_assign, object_instance_from_res(obj.name, obj.id, obj.type))
 
-        if obj.type in built_in_objects:
-            add_import(tree, arcor2.object_types.__name__, obj.type, try_to_import=False)
-        else:
-            add_import(tree, "object_types." + humps.depascalize(obj.type), obj.type, try_to_import=False)
+    # TODO temporary solution - should be (probably) handled by plugin(s)
+    import json
 
-        object_instance_from_res(tree, obj.name, obj.id, obj.type)
+    # TODO should we put there even unused constants?
+    for const in project.constants:
+        val = json.loads(const.value)
+
+        aval: Optional[expr] = None
+
+        if isinstance(val, (int, float)):
+            aval = Num(n=val)
+        elif isinstance(val, bool):
+            aval = NameConstant(value=val)
+        elif isinstance(val, str):
+            aval = Str(s=val, kind="")
+
+        if not aval:
+            raise Arcor2Exception(f"Unsupported constant type ({const.type}) or value ({val}).")
+
+        last_assign += 1
+        main.body.insert(
+            last_assign,
+            Assign(  # TODO use rather AnnAssign?
+                targets=[Name(id=const.name, ctx=Store())], value=aval, type_comment=None
+            ),
+        )
 
     if add_logic:
-        add_logic_to_loop(tree, scene, project)
+        add_logic_to_loop(type_defs, tree, scene, project)
 
     return SCRIPT_HEADER + tree_to_str(tree)
 
@@ -41,7 +87,7 @@ def program_src(project: CProject, scene: CScene, built_in_objects: Set[str], ad
 Container = Union[FunctionDef, If, While]  # TODO remove While
 
 
-def add_logic_to_loop(tree: Module, scene: CScene, project: CProject) -> None:
+def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project: CProject) -> None:
 
     added_actions: Set[str] = set()
 
@@ -77,12 +123,52 @@ def add_logic_to_loop(tree: Module, scene: CScene, project: CProject) -> None:
         act = current_action.parse_type()
         ac_obj = scene.object(act.obj_id).name
 
+        args: List[AST] = []
+
+        # TODO make sure that the order of parameters is correct / re-order
+        for param in current_action.parameters:
+
+            if param.type == ActionParameter.TypeEnum.LINK:
+                parsed_link = param.parse_link()
+
+                parent_action = project.action(parsed_link.action_id)
+
+                # TODO add support for tuples
+                assert len(parent_action.flow(FlowTypes.DEFAULT).outputs) == 1, "Only one result is supported atm."
+                assert parsed_link.output_index == 0
+
+                res_name = parent_action.flow(FlowTypes.DEFAULT).outputs[0]
+
+                # make sure that the result already exists
+                if parent_action.id not in added_actions:
+                    raise SourceException(
+                        f"Action {current_action.name} attempts to use result {res_name} "
+                        f"of subsequent action {parent_action.name}."
+                    )
+
+                args.append(Name(id=res_name, ctx=Load()))
+
+            elif param.type == ActionParameter.TypeEnum.CONSTANT:
+                args.append(Name(id=project.constant(param.value).name, ctx=Load()))
+            else:
+
+                plugin = plugin_from_type_name(param.type)
+
+                args.append(plugin.parameter_ast(type_defs, scene, project, current_action.id, param.name))
+
+                list_of_imp_tup = plugin.need_to_be_imported(type_defs, scene, project, current_action.id, param.name)
+
+                if list_of_imp_tup:
+                    # TODO what if there are two same names?
+                    for imp_tup in list_of_imp_tup:
+                        add_import(tree, imp_tup.module_name, imp_tup.class_name, try_to_import=False)
+
         add_method_call(
             container.body,
             ac_obj,
             act.action_type,
-            [get_name_attr("res", clean(current_action.name))],
-            [],
+            args,
+            [keyword(arg="an", value=Str(s=current_action.name, kind=""))],
             current_action.flow(FlowTypes.DEFAULT).outputs,
         )
 

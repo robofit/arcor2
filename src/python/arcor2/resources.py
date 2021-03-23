@@ -1,7 +1,7 @@
 import importlib
 import json
 import os
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Dict, Optional, Type, TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
@@ -9,18 +9,17 @@ from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 import arcor2.object_types
 from arcor2 import package
 from arcor2 import transformations as tr
-from arcor2.action import patch_object_actions, print_event
+from arcor2.action import get_action_name_to_id, patch_object_actions, print_event
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import scene_service
 from arcor2.data.common import Project, Scene
-from arcor2.data.events import CurrentAction, PackageInfo
+from arcor2.data.events import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.runtime import print_exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
-from arcor2.parameter_plugins.utils import plugin_from_type_name
 
 
 class ResourcesException(Arcor2Exception):
@@ -48,8 +47,8 @@ class IntResources:
 
         built_in = built_in_types_names()
 
-        # workaround for possible 'An item with the same key has already been added.' problem
-        scene_service.stop()
+        if scene_service.started():
+            scene_service.stop()
 
         scene_service.delete_all_collisions()
 
@@ -59,16 +58,22 @@ class IntResources:
 
         for scene_obj in self.scene.objects:
 
-            if scene_obj.type in built_in:
-                module = importlib.import_module(arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj.type))
-            else:
-                module = importlib.import_module(
-                    ResourcesBase.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj.type)
-                )
+            if scene_obj.type not in self.type_defs:
 
-            cls = getattr(module, scene_obj.type)
-            patch_object_actions(cls)
-            self.type_defs[cls.__name__] = cls
+                if scene_obj.type in built_in:
+                    module = importlib.import_module(
+                        arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj.type)
+                    )
+                else:
+                    module = importlib.import_module(
+                        Resources.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj.type)
+                    )
+
+                cls = getattr(module, scene_obj.type)
+                patch_object_actions(cls, get_action_name_to_id(self.scene, self.project, cls.__name__))
+                self.type_defs[cls.__name__] = cls
+            else:
+                cls = self.type_defs[scene_obj.type]
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
@@ -103,13 +108,6 @@ class IntResources:
 
         print_event(package_info_event)
 
-    def make_all_poses_absolute(self) -> None:
-        """This is only needed when the main script is written fully manually
-        (actions are not defined in AR Editor).
-
-        :return:
-        """
-
         # make all poses absolute
         for aps in self.project.action_points_with_parent:
             # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
@@ -131,45 +129,17 @@ class IntResources:
 
         return True
 
-    def print_info(self, action_id: str, args: Dict[str, Any]) -> None:
-        """Helper method used to print out info about the action going to be
-        executed."""
-        # TODO to be used for parameters that are result of previous action(s)
-        # ...there is no need to send parameters that are already in the project
-        print_event(CurrentAction(CurrentAction.Data(action_id)))
-
-    def parameters(self, action_id: str) -> Dict[str, Any]:
-
-        try:
-            act = self.project.action(action_id)
-        except Arcor2Exception:
-            raise ResourcesException("Action_id {} not found in project {}.".format(action_id, self.project.id))
-
-        ret: Dict[str, Any] = {}
-
-        for param in act.parameters:
-            ret[param.name] = plugin_from_type_name(param.type).parameter_execution_value(
-                self.type_defs, self.scene, self.project, action_id, param.name
-            )
-
-        return ret
-
 
 T = TypeVar("T", bound=JsonSchemaMixin)
 
 
-def lower(s: str) -> str:
-
-    return s.lower()
-
-
-class ResourcesBase(IntResources):
+class Resources(IntResources):
     def read_project_data(self, file_name: str, cls: Type[T]) -> T:
 
         try:
 
             with open(os.path.join("data", file_name + ".json")) as scene_file:
-                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))  # type: ignore
+                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))
 
         except JsonSchemaValidationError as e:
             raise ResourcesException(f"Invalid project/scene: {e}")
@@ -194,4 +164,4 @@ class ResourcesBase(IntResources):
             except IOError:
                 models[obj.type] = None
 
-        super(ResourcesBase, self).__init__(scene, project, models)
+        super(Resources, self).__init__(scene, project, models)

@@ -14,13 +14,13 @@ class TimeActions(Generic):
         super(TimeActions, self).__init__(obj_id, name, settings)
         self._last_time: Optional[float] = None
 
-    def sleep(self, seconds: float = 1.0) -> None:
+    def sleep(self, seconds: float = 1.0, *, an: Optional[str] = None) -> None:
 
         assert 0.0 <= seconds <= 10.0e6
 
         time.sleep(seconds)
 
-    def rate(self, period: float = 1.0) -> None:
+    def rate(self, period: float = 1.0, *, an: Optional[str] = None) -> None:
         """Can be used to maintain desired rate of the loop. Should be the
         first action.
 
@@ -41,7 +41,7 @@ class TimeActions(Generic):
 
         self._last_time = now
 
-    def time_ns(self) -> int:
+    def time_ns(self, *, an: Optional[str] = None) -> int:
         """Returns nanoseconds since Unix Epoch.
 
         :return:

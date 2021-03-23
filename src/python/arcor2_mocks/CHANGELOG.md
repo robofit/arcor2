@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - 2021-03-03
+
+### Changed
+- Methods to store/get mesh files were added to the mock Project.
+
+## [0.11.0] - 2021-02-08
+
+### Changed
+- Part of the code refactored into `arcor2/flask.py`.
+- Update of 3rd party dependencies.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed

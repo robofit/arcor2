@@ -1,6 +1,7 @@
+python_library()
+
 arcor2_pex_binary(
-    name = "arserver",
-    dependencies = ["3rdparty:PyYAML", "3rdparty:Flask"]
+    name = "arserver"
 )
 
 arcor2_pex_binary(

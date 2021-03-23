@@ -1,16 +1,18 @@
+import inspect
 import json
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, Set, get_type_hints
+from typing import Any, Callable, List, Optional, Set, get_type_hints
 
 from dataclasses_jsonschema import JsonSchemaMixin
 from typed_ast import ast3 as ast
+from typed_ast.ast3 import Attribute, Load, Name
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import IntEnum
 from arcor2.data.object_type import ParameterMeta
-from arcor2.parameter_plugins.base import ParameterPlugin, ParameterPluginException, TypesDict
+from arcor2.parameter_plugins.base import ImportTuple, ParameterPlugin, ParameterPluginException, TypesDict
 
 # TODO move IntEnum definition here?
 
@@ -75,3 +77,26 @@ class IntegerEnumPlugin(ParameterPlugin):
             return ttype(json.loads(param.value))
         except ValueError:
             raise ParameterPluginException(f"Parameter {parameter_id} of action {action.name} has invalid value.")
+
+    @classmethod
+    def parameter_ast(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Attribute:
+
+        val = cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+
+        return Attribute(value=Name(id=val.__class__.__name__, ctx=Load()), attr=val.name, ctx=Load())
+
+    @classmethod
+    def need_to_be_imported(
+        cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
+    ) -> Optional[List[ImportTuple]]:
+
+        enum_cls = cls.parameter_value(type_defs, scene, project, action_id, parameter_id).__class__
+        # TODO does this work as expected in all cases?
+        module = inspect.getmodule(enum_cls)
+        if not module:
+            raise ParameterPluginException("Failed to get the module.")
+
+        # TODO enums are typically defined in the same module as a object type but could be def. elsewhere (arcor2.data)
+        return [ImportTuple(f"object_types.{module.__name__.split('.')[-1]}", enum_cls.__name__)]

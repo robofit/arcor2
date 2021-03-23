@@ -37,7 +37,7 @@ class CachedScene:
 
     @property
     def bare(self) -> cmn.BareScene:
-        return cmn.BareScene(self.id, self.name, self.desc, self.modified, self.int_modified)
+        return cmn.BareScene(self.name, self.desc, self.modified, self.int_modified, id=self.id)
 
     def object_names(self) -> Iterator[str]:
 
@@ -166,7 +166,7 @@ class CachedProject:
             if ap.id in self._action_points:
                 raise CachedProjectException(f"Duplicate AP id: {ap.id}.")
 
-            bare_ap = cmn.BareActionPoint(ap.id, ap.name, ap.position, ap.parent)
+            bare_ap = cmn.BareActionPoint(ap.name, ap.position, ap.parent, id=ap.id)
             self._action_points[ap.id] = bare_ap
 
             for ac in ap.actions:
@@ -242,7 +242,7 @@ class CachedProject:
 
     @property
     def bare(self) -> cmn.BareProject:
-        return cmn.BareProject(self.id, self.name, self.scene_id, self.desc, self.has_logic)
+        return cmn.BareProject(self.name, self.scene_id, self.desc, self.has_logic, id=self.id)
 
     @property
     def action_points(self) -> ValuesView[cmn.BareActionPoint]:
@@ -256,6 +256,10 @@ class CachedProject:
         """
 
         return [ap for ap in self._action_points.values() if ap.parent]
+
+    @property
+    def action_names(self) -> Set[str]:
+        return {act.name for act in self._actions.data.values()}
 
     @property
     def action_points_names(self) -> Set[str]:
@@ -285,6 +289,11 @@ class CachedProject:
             return self._orientations.parent[orientation_id], self._orientations.data[orientation_id]
         except KeyError:
             raise CachedProjectException("Unknown orientation.")
+
+    def pose(self, orientation_id: str) -> cmn.Pose:
+
+        ap, ori = self.bare_ap_and_orientation(orientation_id)
+        return cmn.Pose(ap.position, ori.orientation)
 
     def ap_orientations(self, ap_id: str) -> List[cmn.NamedOrientation]:
 
@@ -321,6 +330,9 @@ class CachedProject:
 
     def ap_joint_names(self, ap_id: str) -> Set[str]:
         return {joints.name for joints in self.ap_joints(ap_id)}
+
+    def ap_action_names(self, ap_id: str) -> Set[str]:
+        return {action.name for action in self.ap_actions(ap_id)}
 
     def orientation(self, orientation_id: str) -> cmn.NamedOrientation:
 
@@ -387,10 +399,7 @@ class CachedProject:
         return list(self._actions.data.values())
 
     def action_ids(self) -> Set[str]:
-        return {action.id for action in self.actions}
-
-    def action_user_names(self) -> Set[str]:
-        return {action.name for action in self.actions}
+        return {action.id for action in self._actions.data.values()}
 
     def bare_action_point(self, action_point_id: str) -> cmn.BareActionPoint:
 
@@ -529,7 +538,7 @@ class UpdateableCachedProject(CachedProject):
             ap.position = position
             ap.parent = parent
         except CachedProjectException:
-            ap = cmn.BareActionPoint(ap_id, name, position, parent)
+            ap = cmn.BareActionPoint(name, position, parent, id=ap_id)
             self._action_points[ap_id] = ap
         self.update_modified()
         return ap

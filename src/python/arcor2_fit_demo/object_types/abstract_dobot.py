@@ -1,13 +1,8 @@
-import math
-import time
 from dataclasses import dataclass
-from typing import List, Set, cast
+from typing import List, Optional, Set, cast
 
-import quaternion
-from pydobot import dobot
-
-import arcor2.transformations as tr
 from arcor2 import DynamicParamTuple as DPT
+from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
 from arcor2.object_types.abstract import Robot, RobotException, Settings
@@ -18,9 +13,8 @@ from arcor2.object_types.abstract import Robot, RobotException, Settings
 @dataclass
 class DobotSettings(Settings):
 
+    url: str
     port: str = "/dev/dobot"
-    calibrate_on_init: bool = False
-    simulator: bool = False
 
 
 class DobotException(RobotException):
@@ -34,13 +28,6 @@ class MoveType(StrEnum):
     LINEAR: str = "LINEAR"
 
 
-MOVE_TYPE_MAPPING = {
-    MoveType.JUMP: dobot.MODE_PTP.JUMP_XYZ,
-    MoveType.JOINTS: dobot.MODE_PTP.MOVJ_XYZ,
-    MoveType.LINEAR: dobot.MODE_PTP.MOVL_XYZ,
-}
-
-
 class AbstractDobot(Robot):
 
     robot_type = RobotType.SCARA
@@ -48,37 +35,30 @@ class AbstractDobot(Robot):
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: DobotSettings) -> None:
         super(AbstractDobot, self).__init__(obj_id, name, pose, settings)
 
-        if not self.settings.simulator:
+    def _started(self) -> bool:
+        return rest.call(rest.Method.GET, f"{self.settings.url}/started", return_type=bool)
 
-            try:
-                self._dobot = dobot.Dobot(self.settings.port)
-            except dobot.DobotException as e:
-                raise DobotException("Could not connect to the robot.") from e
+    def _stop(self) -> None:
+        rest.call(rest.Method.PUT, f"{self.settings.url}/stop")
 
-            if self.settings.calibrate_on_init:
-                self.home()
+    def _start(self, model: str) -> None:
 
-        else:
-            self._joint_values: List[Joint] = []  # has to be set to some initial value in derived classes
+        if self._started():
+            self._stop()
 
-    def alarms_to_exception(self) -> None:
-
-        try:
-            alarms = self._dobot.get_alarms()
-        except dobot.DobotException as e:
-            raise DobotException("Failed to get alarms.") from e
-
-        if alarms:
-            raise DobotException(f"Alarm(s): {','.join([alarm.name for alarm in alarms])}.")
+        rest.call(
+            rest.Method.PUT,
+            f"{self.settings.url}/start",
+            params={"model": model, "port": self.settings.port},
+            body=self.pose,
+        )
 
     @property
     def settings(self) -> DobotSettings:
         return cast(DobotSettings, super(AbstractDobot, self).settings)
 
     def cleanup(self):
-
-        if not self.settings.simulator:
-            self._dobot.close()
+        self._stop()
 
     def get_end_effectors_ids(self) -> Set[str]:
         return {"default"}
@@ -89,84 +69,33 @@ class AbstractDobot(Robot):
     def suctions(self) -> Set[str]:
         return {"default"}
 
-    def _inverse_kinematics(self, pose: Pose) -> List[Joint]:
-        raise NotImplementedError()
-
-    def _handle_pose_out(self, pose: Pose) -> None:
-        """This is called (only for a real robot) from `get_end_effector_pose`
-        so derived classes can do custom changes to the pose.
-
-        :param pose:
-        :return:
-        """
-
-        pass
-
-    def _handle_pose_in(self, pose: Pose) -> None:
-        """This is called (only for a real robot) from `move` so derived
-        classes can do custom changes to the pose.
-
-        :param pose:
-        :return:
-        """
-
-        pass
-
-    def _check_orientation(self, pose: Pose) -> None:
-
-        x = math.sin(math.atan2(pose.orientation.x, pose.orientation.w))
-        y = math.sin(math.atan2(pose.orientation.y, pose.orientation.w))
-
-        eps = 1e-6
-
-        if (abs(x) > eps and 1 - abs(x) > eps) or 1 - abs(y) > eps:
-            raise DobotException("Impossible orientation.")
-
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
+        return rest.call(rest.Method.GET, f"{self.settings.url}/eef/pose", return_type=Pose)
 
-        if self.settings.simulator:
-            return self.forward_kinematics("", self._joint_values)
-
-        try:
-            pos = self._dobot.get_pose()  # in mm
-        except dobot.DobotException as e:
-            raise DobotException("Failed to get pose.") from e
-
-        p = Pose()
-        p.position.x = pos.position.x / 1000.0
-        p.position.y = pos.position.y / 1000.0
-        p.position.z = pos.position.z / 1000.0
-        p.orientation.set_from_quaternion(
-            quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4 + pos.joints.j1))
-        )
-
-        self._handle_pose_out(p)
-        return tr.make_pose_abs(self.pose, p)
-
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
+        if safe:
+            raise DobotException("Dobot does not support safe moves.")
         self.move(target_pose, MoveType.LINEAR, speed * 100)
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
+        if safe:
+            raise DobotException("Dobot does not support safe moves.")
         self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
 
-    def home(self):
+    def home(self, *, an: Optional[str] = None) -> None:
         """Run the homing procedure."""
-
         with self._move_lock:
+            rest.call(rest.Method.PUT, f"{self.settings.url}/home")
 
-            if self.settings.simulator:
-                time.sleep(2.0)
-                return
-
-            try:
-                self._dobot.clear_alarms()
-                self._dobot.wait_for_cmd(self._dobot.home())
-            except dobot.DobotException as e:
-                raise DobotException("Homing failed.") from e
-
-        self.alarms_to_exception()
-
-    def move(self, pose: Pose, move_type: MoveType, velocity: float = 50.0, acceleration: float = 50.0) -> None:
+    def move(
+        self,
+        pose: Pose,
+        move_type: MoveType,
+        velocity: float = 50.0,
+        acceleration: float = 50.0,
+        *,
+        an: Optional[str] = None,
+    ) -> None:
         """Moves the robot's end-effector to a specific pose.
 
         :param pose: Target pose.
@@ -180,45 +109,88 @@ class AbstractDobot(Robot):
         assert 0.0 <= acceleration <= 100.0
 
         with self._move_lock:
+            rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/eef/pose",
+                body=pose,
+                params={"move_type": move_type, "velocity": velocity, "acceleration": acceleration},
+            )
 
-            rp = tr.make_pose_rel(self.pose, pose)
+    def suck(self, *, an: Optional[str] = None) -> None:
+        rest.call(rest.Method.PUT, f"{self.settings.url}/suck")
 
-            # prevent Dobot from moving when given an unreachable goal
-            try:
-                jv = self._inverse_kinematics(rp)
-            except NotImplementedError:  # TODO remove this once M1 has IK
-                pass
+    def release(self, *, an: Optional[str] = None) -> None:
+        rest.call(rest.Method.PUT, f"{self.settings.url}/release")
 
-            if self.settings.simulator:
-                self._joint_values = jv
-                time.sleep((100.0 - velocity) * 0.05)
-                return
+    def pick(self, pick_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+        """Picks an item from given pose.
 
-            self._handle_pose_in(rp)
+        :param pick_pose:
+        :param vertical_offset:
+        :return:
+        """
 
-            try:
-                self._dobot.clear_alarms()
+        pick_pose.position.z += vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+        pick_pose.position.z -= vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pick pose
+        self.suck()
+        pick_pose.position.z += vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
 
-                # TODO this is probably not working properly (use similar solution as in _check_orientation?)
-                rotation = math.degrees(quaternion.as_euler_angles(rp.orientation.as_quaternion())[2])
-                self._dobot.speed(velocity, acceleration)
+    def place(self, place_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+        """Places an item to a given pose.
 
-                self._dobot.wait_for_cmd(
-                    self._dobot.move_to(
-                        rp.position.x * 1000.0,
-                        rp.position.y * 1000.0,
-                        rp.position.z * 1000.0,
-                        rotation,
-                        MOVE_TYPE_MAPPING[move_type],
-                    )
-                )
-            except dobot.DobotException as e:
-                raise DobotException("Move failed.") from e
+        :param place_pose:
+        :param vertical_offset:
+        :return:
+        """
 
-        self.alarms_to_exception()
+        place_pose.position.z += vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+        place_pose.position.z -= vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # place pose
+        self.release()
+        place_pose.position.z += vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+
+    def robot_joints(self) -> List[Joint]:
+        return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
+
+    def inverse_kinematics(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
+    ) -> List[Joint]:
+        """Computes inverse kinematics.
+
+        :param end_effector_id: IK target pose end-effector
+        :param pose: IK target pose
+        :param start_joints: IK start joints (not supported)
+        :param avoid_collisions: Return non-collision IK result if true (not supported)
+        :return: Inverse kinematics
+        """
+
+        return rest.call(rest.Method.PUT, f"{self.settings.url}/ik", body=pose, list_return_type=Joint)
+
+    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
+        """Computes forward kinematics.
+
+        :param end_effector_id: Target end effector name
+        :param joints: Input joint values
+        :return: Pose of the given end effector
+        """
+
+        return rest.call(rest.Method.PUT, f"{self.settings.url}/fk", body=joints, return_type=Pose)
 
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    release.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    pick.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
+    place.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
 
 
 AbstractDobot.DYNAMIC_PARAMS = {

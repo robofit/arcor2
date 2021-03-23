@@ -2,13 +2,28 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import List
 
-from arcor2_calibration_data import CALIBRATION_URL
+from arcor2_calibration_data import CALIBRATION_URL, MarkerCorners
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL.Image import Image
 
 from arcor2 import rest
 from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Joint, Pose
+
+
+def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorners]:
+
+    with BytesIO() as buff:
+
+        image.save(buff, format="PNG")
+
+        return rest.call(
+            rest.Method.PUT,
+            f"{CALIBRATION_URL}/markers/corners",
+            params=camera.to_dict(),
+            list_return_type=MarkerCorners,
+            files={"image": buff.getvalue()},
+        )
 
 
 def estimate_camera_pose(camera: CameraParameters, image: Image) -> Pose:

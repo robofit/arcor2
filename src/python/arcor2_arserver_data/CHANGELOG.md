@@ -2,6 +2,19 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - 2021-03-03
+
+### Changed
+- `CopyActionPoint` RPC added.
+- `HandTeachingMode` RPC and event added.
+- `safe` added to `MoveToPose`, `MoveToJoints`, `MoveToActionPoint`.
+
+## [0.11.0] - 2021-02-08
+
+### Changed
+- `Calibration` RPC renamed to `GetCameraPose`.
+- New `MarkersCorners` RPC.
+
 ## [0.10.0] - 2020-12-14
 
 ### Changed
