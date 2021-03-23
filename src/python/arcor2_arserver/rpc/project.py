@@ -14,6 +14,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
 from arcor2.object_types.abstract import Robot
 from arcor2.parameter_plugins.base import ParameterPluginException
+from arcor2.parameter_plugins.pose import PosePlugin
 from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
@@ -879,6 +880,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
         for ori in glob.PROJECT.ap_orientations(orig_ap.id):
             new_ori = ori.copy()
+            old_ori_to_new_ori[ori.id] = new_ori.id
             glob.PROJECT.upsert_orientation(ap.id, new_ori)
 
             ori_added_evt = sevts.p.OrientationChanged(new_ori)
@@ -901,6 +903,23 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             new_act.name = make_name_unique(f"{act.name}_copy", action_names)
             glob.PROJECT.upsert_action(ap.id, new_act)
 
+            for param in new_act.parameters:
+
+                if param.type != PosePlugin.type_name():
+                    continue
+
+                old_ori_id = PosePlugin.orientation_id(glob.PROJECT, new_act.id, param.name)
+
+                # TODO this is hacky - plugins are missing methods to set/update parameters
+                import json
+
+                # TODO this won't work if action on AP is using orientation from AP's descendant
+                #  ...which is not in the mapping yet
+                try:
+                    param.value = json.dumps(old_ori_to_new_ori[old_ori_id])
+                except KeyError:
+                    glob.logger.error(f"Failed to find a new orientation ID for {old_ori_id}.")
+
             action_added_evt = sevts.p.ActionChanged(new_act)
             action_added_evt.change_type = Event.Type.ADD
             action_added_evt.parent_id = ap.id
@@ -915,6 +934,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
     if req.dry_run:
         return
 
+    old_ori_to_new_ori: Dict[str, str] = {}
     asyncio.ensure_future(copy_action_point(original_ap, position=req.args.position))
 
 
