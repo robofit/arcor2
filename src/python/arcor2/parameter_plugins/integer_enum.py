@@ -1,12 +1,12 @@
+import ast
 import inspect
 import json
+from ast import Attribute, Load, Name
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, List, Optional, Set, get_type_hints
 
 from dataclasses_jsonschema import JsonSchemaMixin
-from typed_ast import ast3 as ast
-from typed_ast.ast3 import Attribute, Load, Name
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene

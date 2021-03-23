@@ -1,6 +1,5 @@
+from ast import NameConstant
 from typing import Any, List
-
-from typed_ast.ast3 import NameConstant
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -34,7 +33,9 @@ class BooleanPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> NameConstant:
-        return NameConstant(value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id))
+        return NameConstant(
+            value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None
+        )
 
 
 class BooleanListPlugin(ListParameterPlugin):

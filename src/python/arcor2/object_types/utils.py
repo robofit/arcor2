@@ -1,3 +1,4 @@
+import ast
 import inspect
 import json
 import os
@@ -7,7 +8,6 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Ty
 
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
-from typed_ast.ast3 import Name
 
 import arcor2
 from arcor2.data.common import ActionMetadata, Parameter
@@ -173,7 +173,7 @@ def base_from_source(source: str, cls_name: str) -> Optional[str]:
 
     base_name = cls_def.bases[-1]  # allow usage of mixins e.g. class MyType(mixin, Generic)
 
-    assert isinstance(base_name, Name)
+    assert isinstance(base_name, ast.Name)
     return base_name.id
 
 

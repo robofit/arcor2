@@ -1,9 +1,6 @@
 import logging
 import os
-from typing import Dict, List, Optional, Set, Union
-
-import humps
-from typed_ast.ast3 import (
+from ast import (
     AST,
     Assign,
     Compare,
@@ -23,6 +20,9 @@ from typed_ast.ast3 import (
     expr,
     keyword,
 )
+from typing import Dict, List, Optional, Set, Union
+
+import humps
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -61,9 +61,9 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
         aval: Optional[expr] = None
 
         if isinstance(val, (int, float)):
-            aval = Num(n=val)
+            aval = Num(n=val, kind=None)
         elif isinstance(val, bool):
-            aval = NameConstant(value=val)
+            aval = NameConstant(value=val, kind=None)
         elif isinstance(val, str):
             aval = Str(s=val, kind="")
 
@@ -229,7 +229,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
                 import json
 
                 condition_value = json.loads(output.condition.value)
-                comp = NameConstant(value=condition_value)
+                comp = NameConstant(value=condition_value, kind=None)
                 what = output.condition.parse_what()
                 output_name = project.action(what.action_id).flow(what.flow_name).outputs[what.output_index]
 

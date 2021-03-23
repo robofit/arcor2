@@ -1,3 +1,4 @@
+astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unparse is there)
 aiologger==0.6.0
 aiorun==2020.12.1
 apispec-webframeworks[tests]==0.5.2  # "tests" is used just to get dependency on Flask (which is missing otherwise)
@@ -8,7 +9,6 @@ dataclasses-jsonschema[fast-validation,apispec]==2.14.1
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
 Flask==1.1.1  # can't be updated because of apispec-webframeworks
-horast-rereleased==0.4.3
 lru-dict==1.1.7
 numpy-quaternion==2021.3.17.16.51.43
 numpy==1.20.1
@@ -26,9 +26,6 @@ pyserial==3.5
 PyYAML==5.4.1
 requests==2.25.1
 sqlitedict==1.7.0
-static-typing==0.2.7
-typed-astunparse==2.1.4
-typed-ast==1.4.2
 typing-inspect==0.6.0
 urdfpy==0.0.22
 websocket-client==0.58.0

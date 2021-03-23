@@ -1,7 +1,6 @@
 import inspect
+from ast import AST
 from typing import List, Optional, Set, Type
-
-from typed_ast.ast3 import AST
 
 import arcor2.helpers as hlp
 from arcor2.data import common

@@ -1,5 +1,6 @@
+from ast import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
+
 import humps
-from typed_ast.ast3 import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConstant, Pass, Store, alias
 
 import arcor2.object_types
 from arcor2.exceptions import Arcor2NotImplemented
@@ -27,7 +28,13 @@ def new_object_type(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> AST:
         name=child.type,
         bases=[get_name(parent.type)],
         keywords=[],
-        body=[Assign(targets=[Name(id="_ABSTRACT", ctx=Store())], value=NameConstant(value=False), type_comment=None)],
+        body=[
+            Assign(
+                targets=[Name(id="_ABSTRACT", ctx=Store())],
+                value=NameConstant(value=False, kind=None),
+                type_comment=None,
+            )
+        ],
         decorator_list=[],
     )
 
