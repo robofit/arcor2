@@ -1,11 +1,11 @@
 import abc
+import ast
 import copy
 import json
+from ast import AST
 from typing import Any, Callable, List, NamedTuple, Optional
 
 import humps
-from typed_ast import ast3 as ast
-from typed_ast.ast3 import AST
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene

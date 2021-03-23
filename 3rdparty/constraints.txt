@@ -1,9 +1,8 @@
+astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unparse is there)
 aiologger==0.6.0
 aiorun==2020.12.1
 apispec-webframeworks==0.5.2
 apispec==4.0.0
-asttokens==2.0.4
-astunparse==1.6.3
 attrs==20.3.0
 autopep8==1.5.6
 certifi==2020.12.5
@@ -16,7 +15,6 @@ flask-swagger-ui==3.36.0
 Flask==1.1.1
 gitdb==4.0.5
 GitPython==3.1.14
-horast-rereleased==0.4.3
 chardet==4.0.0
 idna==2.5
 iniconfig==1.1.1
@@ -59,11 +57,8 @@ setuptools==54.1.2
 six==1.15.0
 smmap==3.0.4
 sqlitedict==1.7.0
-static-typing==0.2.7
 toml==0.10.2
 trimesh==3.9.9
-typed-astunparse==2.1.4
-typed-ast==1.4.2
 typing-extensions==3.7.4.3
 typing-inspect==0.6.0
 urdfpy==0.0.22

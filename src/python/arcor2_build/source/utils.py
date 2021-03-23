@@ -1,8 +1,5 @@
 import copy
-from typing import List, Union
-
-import humps
-from typed_ast.ast3 import (
+from ast import (
     AnnAssign,
     Assign,
     Attribute,
@@ -32,6 +29,9 @@ from typed_ast.ast3 import (
     stmt,
     withitem,
 )
+from typing import List, Union
+
+import humps
 
 import arcor2.data.common
 import arcor2.exceptions.runtime
@@ -72,7 +72,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
     ]
 
     if add_main_loop:
-        main_body.append(While(test=NameConstant(value=True), body=[Pass()], orelse=[]))
+        main_body.append(While(test=NameConstant(value=True, kind=None), body=[Pass()], orelse=[]))
     else:
         """put there "pass" in order to make code valid even if there is no
         other statement (e.g. no object from resources)"""
@@ -94,7 +94,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                 ),
                 body=main_body,
                 decorator_list=[],
-                returns=NameConstant(value=None),
+                returns=NameConstant(value=None, kind=None),
                 type_comment=None,
             ),
             If(

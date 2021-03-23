@@ -1,7 +1,7 @@
+from ast import stmt
 from typing import Any
 
 from PIL.Image import Image
-from typed_ast.ast3 import stmt
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene

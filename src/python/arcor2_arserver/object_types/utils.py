@@ -1,12 +1,12 @@
 import copy
 import inspect
 import os
+from ast import AST
 from typing import Dict, List, Optional, Type, get_type_hints
 
 import humps
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin
-from typed_ast.ast3 import AST
 
 from arcor2.data.common import ActionMetadata
 from arcor2.data.object_type import ParameterMeta

@@ -1,9 +1,9 @@
+import ast
+from ast import Num
 from dataclasses import dataclass
 from typing import Any, Callable, List, Tuple, Type
 
 from dataclasses_jsonschema import JsonSchemaMixin
-from typed_ast import ast3 as ast
-from typed_ast.ast3 import Num
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -101,7 +101,7 @@ class IntegerPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Num:
-        return Num(n=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id))
+        return Num(n=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None)
 
 
 class IntegerListPlugin(ListParameterPlugin):
