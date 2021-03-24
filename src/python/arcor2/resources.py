@@ -118,7 +118,7 @@ class IntResources:
 
     def __exit__(self, ex_type, ex_value, traceback) -> bool:
 
-        if ex_type:  # TODO ignore when script is stopped correctly (e.g. KeyboardInterrupt, ??)
+        if ex_type != KeyboardInterrupt:
             print_exception(ex_type(ex_value))
 
         scene_service.stop()
