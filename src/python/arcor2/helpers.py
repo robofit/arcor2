@@ -98,14 +98,16 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
     type_file = humps.depascalize(type_name)
 
     try:
+
         module = importlib.import_module(f"{module_name}.{type_file}")
+
+        # reload is necessary for cases when the module is already loaded
+        path_to_file = os.path.abspath(module.__file__)
+        assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
+        importlib.reload(module)
+
     except ImportError as e:
         raise ImportClsException(f"Failed to import '{module_name}.{type_file}'. {str(e).capitalize()}.") from e
-
-    # reload is necessary for cases when the module is already loaded
-    path_to_file = os.path.abspath(module.__file__)
-    assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
-    importlib.reload(module)
 
     try:
         cls = getattr(module, type_name)
