@@ -99,8 +99,8 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
 
     try:
         module = importlib.import_module(f"{module_name}.{type_file}")
-    except ModuleNotFoundError:
-        raise ImportClsException(f"Module '{module_name}' not found.")
+    except ImportError as e:
+        raise ImportClsException(f"Failed to import '{module_name}.{type_file}'. {str(e).capitalize()}.") from e
 
     # reload is necessary for cases when the module is already loaded
     path_to_file = os.path.abspath(module.__file__)
