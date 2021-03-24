@@ -79,6 +79,9 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     with open(f"{full_path}.py", "w") as file:
         file.write(source)
 
+    # open should call flush but still it sometimes happened that written file could not be found by import_type_def
+    os.sync()
+
     return import_type_def(type_name, output_type, path, module_name)
 
 
