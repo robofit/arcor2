@@ -257,7 +257,8 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
     # having 'while True' default loop is temporary solution until there will be support for functions/loops
     loop = main_loop(tree)
     _add_logic(loop, current_action)
-    assert added_actions == project.action_ids(), "Not all actions were added."
+
+    logger.debug(f"Unused actions: {[project.action(act_id).name for act_id in project.action_ids() - added_actions]}")
 
     if loop and isinstance(loop.body[0], Pass):
         # pass is not necessary now
