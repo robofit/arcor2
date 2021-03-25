@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.15.0] - 2021-03-25
+
+### Changed
+- New RPC `SetEefPerpendicularToWorld`.
+- New RPC `StepRobotEef`.
+
+### Fixed
+- `CopyActionPoint` RPC: update action parameters to use copied orientations.
+- Scene now goes offline before execution and to the original state after it.
+- Scene-related messages adapted to a new terminology.
+
 ## [0.14.0] - 2021-03-15
 
 ### Changed
