@@ -82,14 +82,14 @@ def can_modify_scene() -> None:
     """Raises exception if modifications to scene/project are not possible."""
 
     if _scene_state != SceneState.Data.StateEnum.Stopped:
-        raise Arcor2Exception("Modification can be only done in stopped state.")
+        raise Arcor2Exception("Modifications can be only done offline.")
 
 
 def ensure_scene_started() -> None:
     """" Raises exception if scene is not started."""
 
     if _scene_state != SceneState.Data.StateEnum.Started:
-        raise Arcor2Exception("Scene not started.")
+        raise Arcor2Exception("Scene offline.")
 
 
 async def scenes() -> AsyncIterator[CachedScene]:
@@ -273,7 +273,7 @@ async def stop_scene(message: Optional[str] = None) -> None:
         try:
             await scene_srv.stop()
         except Arcor2Exception as e:
-            glob.logger.exception("Failed to stop the scene.")
+            glob.logger.exception("Failed to go offline.")
             await set_scene_state(SceneState.Data.StateEnum.Started, str(e))
             return
 
@@ -328,7 +328,7 @@ async def start_scene() -> None:
     try:
         await scene_srv.start()
     except Arcor2Exception as e:
-        glob.logger.exception("Failed to start scene.")
+        glob.logger.exception("Failed to go online.")
         await stop_scene(str(e))
         return
 
