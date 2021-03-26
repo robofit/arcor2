@@ -33,7 +33,7 @@ from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
 from arcor2_build.source.utils import global_action_points_class
-from arcor2_build_data import SERVICE_NAME, URL
+from arcor2_build_data import SERVICE_NAME, URL, ImportedPackage
 
 OBJECT_TYPE_MODULE = "arcor2_object_types"
 
@@ -184,7 +184,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 logger.exception("Failed to generate script.")
                 raise FlaskException(str(e), error_code=501)
 
-    logger.debug("Execution package finished.")
+    logger.info(f"Done with {package_name} (scene {scene.name}, project {project.name}).")
     mem_zip.seek(0)
     return send_file(mem_zip, as_attachment=True, cache_timeout=0, attachment_filename="arcor2_project.zip")
 
@@ -269,7 +269,7 @@ def project_import() -> RespT:
           content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: ImportedPackage
         400:
           description: Some other error occurred.
           content:
@@ -452,13 +452,12 @@ def project_import() -> RespT:
     if not project.has_logic:
         ps.update_project_sources(ProjectSources(project.id, script))
 
-    return (
-        json.dumps(
-            f"Imported project {project.name} (scene {scene.name}), with {len(objects)} "
-            f"object type(s) and {len(models)} model(s)."
-        ),
-        200,
+    logger.info(
+        f"Imported project {project.name} (scene {scene.name}), with {len(objects)} "
+        f"object type(s) and {len(models)} model(s)."
     )
+
+    return ImportedPackage(scene.id, project.id).to_json(), 200
 
 
 def main() -> None:
@@ -478,7 +477,13 @@ def main() -> None:
     logger.setLevel(args.debug)
 
     run_app(
-        app, SERVICE_NAME, arcor2_build.version(), arcor2_build.version(), port_from_url(URL), print_spec=args.swagger
+        app,
+        SERVICE_NAME,
+        arcor2_build.version(),
+        "0.5.0",
+        port_from_url(URL),
+        [ImportedPackage],
+        print_spec=args.swagger,
     )
 
 
