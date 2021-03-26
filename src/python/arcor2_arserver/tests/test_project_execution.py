@@ -118,7 +118,12 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     ps2 = wait_for_event(ars, arcor2_events.PackageState).data
     assert ps2
     assert ps2.package_id == package.id
-    assert ps2.state == ps.state.STOPPED
+    assert ps2.state == ps.state.STOPPING
+
+    ps3 = wait_for_event(ars, arcor2_events.PackageState).data
+    assert ps3
+    assert ps3.package_id == package.id
+    assert ps3.state == ps.state.STOPPED
 
     show_main_screen_event = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event.data

@@ -46,6 +46,7 @@ class ExecutionState(Enum):
     Completed: str = "Completed"
     Faulted: str = "Faulted"
     Paused: str = "Paused"
+    Pending: str = "Pending"
 
 
 @dataclass
@@ -645,6 +646,8 @@ def packages_executioninfo() -> RespT:
         ret = ExecutionInfo(ExecutionState.Running, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.PAUSED:
         ret = ExecutionInfo(ExecutionState.Paused, package_state.package_id)
+    elif package_state.state in (PackageState.Data.StateEnum.PAUSING, PackageState.Data.StateEnum.STOPPING):
+        ret = ExecutionInfo(ExecutionState.Pending, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.STOPPED:
 
         if exception_message:
@@ -679,7 +682,7 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_execution_rest_proxy.version(),
-        "0.4.0",
+        "0.5.0",
         PORT,
         [SummaryPackage, ExecutionInfo, Token],
         args.swagger,

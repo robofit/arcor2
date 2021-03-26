@@ -211,6 +211,8 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
     assert PROCESS is not None
     assert TASK is not None
 
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.STOPPING, RUNNING_PACKAGE_ID)))
+
     logger.info("Terminating process")
     PROCESS.send_signal(signal.SIGINT)  # the same as when a user presses ctrl+c
     logger.info("Waiting for process to finish...")
@@ -230,6 +232,7 @@ async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
     if PACKAGE_STATE_EVENT.data.state != PackageState.Data.StateEnum.RUNNING:
         raise Arcor2Exception("Cannot pause.")
 
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSING, RUNNING_PACKAGE_ID)))
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
     return None
