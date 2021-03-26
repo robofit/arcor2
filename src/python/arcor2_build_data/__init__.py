@@ -10,7 +10,7 @@ URL = os.getenv("ARCOR2_BUILD_URL", "http://0.0.0.0:5008")
 
 
 @dataclass
-class ImportedPackage(JsonSchemaMixin):
+class ImportResult(JsonSchemaMixin):
 
     # TODO this should be rather snake_case and automatically converted to camelCase when generating OpenAPI
     sceneId: str

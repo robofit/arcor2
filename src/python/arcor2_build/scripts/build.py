@@ -33,7 +33,7 @@ from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
 from arcor2_build.source.utils import global_action_points_class
-from arcor2_build_data import SERVICE_NAME, URL, ImportedPackage
+from arcor2_build_data import SERVICE_NAME, URL, ImportResult
 
 OBJECT_TYPE_MODULE = "arcor2_object_types"
 
@@ -269,7 +269,7 @@ def project_import() -> RespT:
           content:
                 application/json:
                   schema:
-                    $ref: ImportedPackage
+                    $ref: ImportResult
         400:
           description: Some other error occurred.
           content:
@@ -457,7 +457,7 @@ def project_import() -> RespT:
         f"object type(s) and {len(models)} model(s)."
     )
 
-    return ImportedPackage(scene.id, project.id).to_json(), 200
+    return ImportResult(scene.id, project.id).to_json(), 200
 
 
 def main() -> None:
@@ -482,7 +482,7 @@ def main() -> None:
         arcor2_build.version(),
         "0.5.0",
         port_from_url(URL),
-        [ImportedPackage],
+        [ImportResult],
         print_spec=args.swagger,
     )
 
