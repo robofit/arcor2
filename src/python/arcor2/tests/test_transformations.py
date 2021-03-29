@@ -101,17 +101,19 @@ def test_make_pose_rel_and_abs_again_random() -> None:
     c = random_pose()
 
     # make it relative
-    c1 = make_pose_rel(p1, c)
-    c2 = make_pose_rel(p2, c1)
-    c3 = make_pose_rel(p3, c2)
+    c1 = make_pose_rel(p1, c)  # c1 = c relative to p1
+    c2 = make_pose_rel(p2, c1)  # c2 = c relative to p2
+    c3 = make_pose_rel(p3, c2)  # c3 = c relative to p3
 
     # make it absolute again
     cc2 = make_pose_abs(p3, c3)
-    cc1 = make_pose_abs(p2, cc2)
-    cc = make_pose_abs(p1, cc1)
+    assert cc2 == c2
 
-    # now it should be the same
-    assert c == cc
+    cc1 = make_pose_abs(p2, cc2)
+    assert cc1 == c1
+
+    cc = make_pose_abs(p1, cc1)
+    assert cc == c
 
 
 def test_make_relative_ap_global_and_relative_again() -> None:
