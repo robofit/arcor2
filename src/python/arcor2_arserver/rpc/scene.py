@@ -508,7 +508,10 @@ async def calibration_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srp
     # TODO estimated pose should be rather returned in an event (it is possibly a long-running process)
     return srpc.c.GetCameraPose.Response(
         data=await hlp.run_in_executor(
-            calibration.estimate_camera_pose, req.args.camera_parameters, image_from_str(req.args.image)
+            calibration.estimate_camera_pose,
+            req.args.camera_parameters,
+            image_from_str(req.args.image),
+            req.args.inverse,
         )
     )
 

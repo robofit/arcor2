@@ -26,16 +26,26 @@ def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorner
         )
 
 
-def estimate_camera_pose(camera: CameraParameters, image: Image) -> Pose:
+def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool = False) -> Pose:
+    """Returns camera pose with respect to the origin.
+
+    :param camera: Camera parameters.
+    :param image: Image.
+    :param inverse: When set, the method returns pose of the origin wrt. the camera.
+    :return:
+    """
 
     with BytesIO() as buff:
 
         image.save(buff, format="PNG")
 
+        params = camera.to_dict()
+        params["inverse"] = inverse
+
         return rest.call(
             rest.Method.PUT,
             f"{CALIBRATION_URL}/calibrate/camera",
-            params=camera.to_dict(),
+            params=params,
             return_type=Pose,
             files={"image": buff.getvalue()},
         )
