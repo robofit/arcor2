@@ -192,10 +192,15 @@ def get_calibration() -> RespT:
     """Get calibration (camera pose wrt. marker)
     ---
     put:
-        description: Get calibration
+        description: Returns camera pose with respect to the origin.
         tags:
            - Camera
         parameters:
+            - in: query
+              name: inverse
+              schema:
+                type: boolean
+              description: When set, the method returns pose of the origin wrt. the camera.
             - in: query
               name: fx
               schema:
@@ -270,6 +275,11 @@ def get_calibration() -> RespT:
             pose = poses[MARKER_ID]  # TODO this is just temporary (single-marker) solution
         except KeyError:
             return "Marker not found", 404
+
+    inverse = request.args.get("inverse", default="false") == "true"
+
+    if inverse:
+        pose = pose.inversed()
 
     return jsonify(pose), 200
 

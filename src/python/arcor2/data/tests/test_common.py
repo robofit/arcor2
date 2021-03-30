@@ -1,6 +1,6 @@
 import pytest
 
-from arcor2.data.common import NamedOrientation, Orientation
+from arcor2.data.common import NamedOrientation, Orientation, Pose, Position
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -33,3 +33,11 @@ def test_id_stuff() -> None:
     assert no_copy.id
 
     assert no.id != no_copy.id
+
+
+def test_pose_inv() -> None:
+
+    p = Pose(Position(1, 1, 1), Orientation(0.707, 0, 0, 0.707))
+    pi = p.inversed()
+    assert pi == Pose(Position(-1, -1, 1), Orientation(-0.707, 0, 0, 0.707))
+    assert p == pi.inversed()
