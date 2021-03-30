@@ -7,8 +7,6 @@ from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
 from arcor2.object_types.abstract import Robot, RobotException, Settings
 
-# TODO jogging
-
 
 @dataclass
 class DobotSettings(Settings):
@@ -156,34 +154,6 @@ class AbstractDobot(Robot):
 
     def robot_joints(self) -> List[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
-
-    def inverse_kinematics(
-        self,
-        end_effector_id: str,
-        pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
-        avoid_collisions: bool = True,
-    ) -> List[Joint]:
-        """Computes inverse kinematics.
-
-        :param end_effector_id: IK target pose end-effector
-        :param pose: IK target pose
-        :param start_joints: IK start joints (not supported)
-        :param avoid_collisions: Return non-collision IK result if true (not supported)
-        :return: Inverse kinematics
-        """
-
-        return rest.call(rest.Method.PUT, f"{self.settings.url}/ik", body=pose, list_return_type=Joint)
-
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
-        """Computes forward kinematics.
-
-        :param end_effector_id: Target end effector name
-        :param joints: Input joint values
-        :return: Pose of the given end effector
-        """
-
-        return rest.call(rest.Method.PUT, f"{self.settings.url}/fk", body=joints, return_type=Pose)
 
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
