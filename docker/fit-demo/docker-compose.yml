@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.14.0
+    image: arcor2/arcor2_arserver:0.15.0
     container_name: arserver
     depends_on:
       - project
@@ -29,7 +29,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:0.13.0
+    image: arcor2/arcor2_build:0.14.0
     container_name: build
     depends_on:
       - project
@@ -40,7 +40,7 @@ services:
     networks:           
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.11.1
+    image: arcor2/arcor2_execution:0.12.1
     container_name: execution
     networks:
       - testitoff-execution-network
@@ -64,7 +64,7 @@ services:
       - ARCOR2_KINECT_SIMULATOR=true
 
   calibration:
-    image: arcor2/arcor2_calibration:0.2.0
+    image: arcor2/arcor2_calibration:0.3.0
     container_name: calibration
     networks:
       - testitoff-calibration-network
