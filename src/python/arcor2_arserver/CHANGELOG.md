@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.15.0] - 2021-03-29
+## [0.15.0] - 2021-03-30
 
 ### Changed
 - New RPC `SetEefPerpendicularToWorld`.
