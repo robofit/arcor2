@@ -1,8 +1,7 @@
 import copy
 import json
+from ast import Attribute, Load, Name
 from typing import Any, List
-
-from typed_ast.ast3 import Attribute, Load, Name
 
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject as CProject

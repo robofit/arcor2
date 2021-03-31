@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - 2021-03-30
+
+### Changed
+- Dependency on arcor2 0.14.0.
+- Reporting `paussing` before `paused` and `stopping` before `stopped`. 
+
+### Fixed
+- Script was stopped using a wrong signal.
+  - Execution used SIGTERM instead of SIGINT.
+  - Because of this, the script was not stopped gracefully.
+
 ## [0.11.1] - 2021-03-15
 
 ### Fixed

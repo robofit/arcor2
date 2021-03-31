@@ -1,4 +1,4 @@
-from typed_ast.ast3 import AnnAssign, Index, Load, Name, Store, Str, Subscript
+from ast import AnnAssign, Index, Load, Name, Store, Str, Subscript
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import is_valid_identifier, is_valid_type

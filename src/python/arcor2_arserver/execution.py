@@ -16,6 +16,7 @@ from arcor2_arserver import events as server_events
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
+from arcor2_arserver.scene import scene_started, start_scene, stop_scene
 from arcor2_arserver_data import events as sevts
 from arcor2_build_data import URL as BUILD_URL
 from arcor2_execution_data import URL as EXE_URL
@@ -38,6 +39,11 @@ async def run_temp_package(package_id: str) -> None:
     project_id = glob.PROJECT.id
     glob.TEMPORARY_PACKAGE = True
 
+    scene_online = scene_started()
+
+    if scene_online:
+        await stop_scene()  # the package will start it on its own
+
     await project.close_project()
     req = erpc.RunPackage.Request
     exe_req = req(uuid.uuid4().int, args=req.Args(package_id, cleanup_after_run=False))
@@ -59,9 +65,10 @@ async def run_temp_package(package_id: str) -> None:
     assert glob.SCENE
     assert glob.PROJECT
 
-    asyncio.ensure_future(
-        notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
-    )
+    await notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
+
+    if scene_online:
+        await start_scene()
 
 
 async def build_and_upload_package(project_id: str, package_name: str) -> str:

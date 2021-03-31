@@ -137,9 +137,8 @@ class Dobot(metaclass=ABCMeta):
         p.position.y = pos.position.y / 1000.0
         p.position.z = pos.position.z / 1000.0
         p.orientation.set_from_quaternion(
-            quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4 + pos.joints.j1))
+            quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4 - pos.joints.j1))
         )
-
         self._handle_pose_out(p)
         return tr.make_pose_abs(self.pose, p)
 

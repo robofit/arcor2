@@ -171,6 +171,6 @@ def test_robot_meta(start_processes: None, ars: ARServer) -> None:
     assert m1.features.move_to_pose
     assert m1.features.move_to_joints
     assert m1.features.hand_teaching
-    assert m1.features.inverse_kinematics
-    assert m1.features.forward_kinematics
+    assert not m1.features.inverse_kinematics
+    assert not m1.features.forward_kinematics
     assert not m1.features.stop

@@ -129,6 +129,13 @@ class Position(IterableIndexable):
 
         return Position(self.x - other.x, self.y - other.y, self.z - other.z)
 
+    def __mul__(self, other: object) -> Position:
+
+        if not isinstance(other, (float, int)):
+            raise ValueError
+
+        return Position(self.x * other, self.y * other, self.z * other)
+
 
 @dataclass
 class Orientation(IterableIndexable):
@@ -155,6 +162,12 @@ class Orientation(IterableIndexable):
             raise Arcor2Exception("Invalid quaternion.")
 
         return nq
+
+    def inverse(self) -> None:
+        self.set_from_quaternion(self.as_quaternion().inverse())
+
+    def inversed(self) -> Orientation:
+        return self.from_quaternion(self.as_quaternion().inverse())
 
     def as_quaternion(self) -> quaternion.quaternion:
         return self._normalized(quaternion.quaternion(self.w, self.x, self.y, self.z))
@@ -273,6 +286,11 @@ class Pose(JsonSchemaMixin):
             Position(tvec[0], tvec[1], tvec[2]),
             Orientation.from_quaternion(quaternion.from_rotation_matrix(matrix[:3, :3])),
         )
+
+    def inversed(self) -> Pose:
+
+        inv = self.orientation.inversed()
+        return Pose((self.position * -1).rotated(inv), inv)
 
 
 class RelativePose(Pose):

@@ -38,6 +38,7 @@ class GetCameraPose(RPC):
         class Args(JsonSchemaMixin):
             camera_parameters: CameraParameters
             image: str = field(metadata=dict(description="Base64 encoded image."))
+            inverse: bool = False
 
         args: Args
 

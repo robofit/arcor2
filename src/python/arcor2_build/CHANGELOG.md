@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - 2021-03-30
+
+### Changed
+- Considerably faster builds and imports.
+- Allow unused actions.
+- Import run returns `ImportedPackage` containing scene and project IDs.
+
 ## [0.13.0] - 2021-03-15
 
 ### Changed

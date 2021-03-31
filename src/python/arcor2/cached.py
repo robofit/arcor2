@@ -242,7 +242,9 @@ class CachedProject:
 
     @property
     def bare(self) -> cmn.BareProject:
-        return cmn.BareProject(self.name, self.scene_id, self.desc, self.has_logic, id=self.id)
+        return cmn.BareProject(
+            self.name, self.scene_id, self.desc, self.has_logic, self.modified, self._int_modified, id=self.id
+        )
 
     @property
     def action_points(self) -> ValuesView[cmn.BareActionPoint]:

@@ -168,7 +168,7 @@ def action(f: F) -> F:
                 if _executed_action is None:
                     _executed_action = action_id, f
 
-            handle_stdin_commands()
+        handle_stdin_commands()
 
         try:
             res = f(*args, an=an, **kwargs)

@@ -2,6 +2,21 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - 2021-03-30
+
+### Changed
+- Improved code for transforming poses.
+- Use monkey patching instead of custom released version of dataclasses_jsonschema.
+- Switched to builtin ast module instead of horast - much faster builds, etc.
+- Added states `Stopping` and `Pausing` to `PackageState.Data.StateEnum`.
+  - This is because it may take some time to pause or stop a package.
+  - Other operations (as e.g. resume) are almost instant.
+
+### Fixed
+- `Resources` are now not sending `KeyboardInterrupt` as event.
+- `import_type_def` now provides better error messages when import fails.
+- Save and import of ObjectType was randomly failing.
+
 ## [0.13.0] - 2021-03-15
 
 ### Changed

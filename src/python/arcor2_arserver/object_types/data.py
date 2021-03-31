@@ -1,7 +1,6 @@
+from ast import AST
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Type
-
-from typed_ast.ast3 import AST
 
 from arcor2.object_types.abstract import Generic
 from arcor2_arserver_data.objects import ObjectAction, ObjectTypeMeta
