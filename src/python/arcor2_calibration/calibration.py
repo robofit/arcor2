@@ -50,7 +50,7 @@ def estimate_camera_pose(
     if __debug__:
         backtorgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
         aruco.drawDetectedMarkers(backtorgb, corners)  # Draw A square around the markers
-        aruco.drawAxis(backtorgb, camera_matrix, dist_matrix, rvec, tvec, 0.15)
+        aruco.drawAxis(backtorgb, camera_matrix_arr, dist_matrix_arr, rvec, tvec, 0.15)
 
         cv2.imwrite("marker.jpg", backtorgb)
 
