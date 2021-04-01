@@ -52,3 +52,6 @@ jobs:
     - name: Test
       run: |
         ./pants --changed-since=origin/master --changed-dependees=transitive test
+    - name: Packages
+      run: |
+        ./pants filter --target-type=python_distribution :: | xargs ./pants package

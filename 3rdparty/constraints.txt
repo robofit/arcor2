@@ -53,7 +53,7 @@ pyserial==3.5
 py==1.10.0
 requests==2.25.1
 scipy==1.6.1
-setuptools==54.1.2
+setuptools==53.1.0  # has to be 53.x.x because of Pants
 six==1.15.0
 smmap==3.0.4
 sqlitedict==1.7.0
