@@ -11,7 +11,7 @@ flask-swagger-ui==3.36.0
 Flask==1.1.1  # can't be updated because of apispec-webframeworks
 lru-dict==1.1.7
 numpy-quaternion==2021.3.17.16.51.43
-numpy==1.20.1
+numpy==1.20.2
 openapi-spec-validator==0.3.0
 opencv-contrib-python==4.5.1.48
 open3d==0.12.0
