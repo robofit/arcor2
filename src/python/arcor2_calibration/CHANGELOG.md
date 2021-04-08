@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.4.0] - WIP
+### Changed
+- The service now requires YAML configuration file where placement of markers is specified.
+- There might be 1-n markers in an arbitrary pose.
+- At least one of the configured markers should be visible.
+- Un-configured markers are ignored.  
+- Estimated poses of the camera from multiple detected markers are so far simply averaged.
+- The average is weighted according to the camera-marker distance.
+
 ## [0.3.0] - 2021-03-30
 ### Changed
 - `PUT /calibrate/camera` now has `inverse` parameter. 
