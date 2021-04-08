@@ -10,7 +10,7 @@ flask_cors==3.0.10
 flask-swagger-ui==3.36.0
 Flask==1.1.1  # can't be updated because of apispec-webframeworks
 lru-dict==1.1.7
-numpy-quaternion==2021.3.17.16.51.43
+numpy-quaternion[scipy,numba]==2021.4.5.14.42.35
 numpy==1.20.2
 openapi-spec-validator==0.3.0
 opencv-contrib-python==4.5.1.48

@@ -136,6 +136,17 @@ class Position(IterableIndexable):
 
         return Position(self.x * other, self.y * other, self.z * other)
 
+    def __imul__(self, other: object) -> Position:
+
+        if not isinstance(other, (float, int)):
+            raise ValueError
+
+        self.x *= other
+        self.y *= other
+        self.z *= other
+
+        return self
+
 
 @dataclass
 class Orientation(IterableIndexable):
