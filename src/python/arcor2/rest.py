@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from enum import Enum
 from functools import partial
 from io import BytesIO
@@ -11,6 +10,7 @@ import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError
 
+from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 
@@ -73,7 +73,7 @@ OptTimeout = Optional[Timeout]
 
 
 # module-level variables
-debug: bool = bool(os.getenv("ARCOR2_REST_DEBUG", False))
+debug = env.get_bool("ARCOR2_REST_DEBUG", False)
 headers = {"accept": "application/json", "content-type": "application/json"}
 session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
