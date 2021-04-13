@@ -236,7 +236,17 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
 
     resp = srpc.p.ListProjects.Response()
     tasks = [project_info(project_iddesc.id, scenes_lock, scenes) for project_iddesc in projects.items]
-    resp.data = await asyncio.gather(*tasks)
+
+    resp.data = []
+    for res in await asyncio.gather(*tasks, return_exceptions=True):
+
+        if isinstance(res, Arcor2Exception):
+            glob.logger.error(str(res))
+        elif isinstance(res, Exception):
+            raise res  # zero toleration for other exceptions
+        else:
+            resp.data.append(res)
+
     return resp
 
 
