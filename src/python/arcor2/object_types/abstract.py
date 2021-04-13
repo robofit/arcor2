@@ -87,6 +87,7 @@ class GenericWithPose(Generic):
 
         self._pose = pose
         self.collision_model = copy.deepcopy(collision_model)
+        self._enabled = True
         if self.collision_model:
             # originally, each model has id == object type (e.g. BigBox) but here we need to set it to something unique
             self.collision_model.id = self.id
@@ -97,20 +98,48 @@ class GenericWithPose(Generic):
 
     @property
     def pose(self) -> Pose:
+        """Returns pose of the object.
+
+        When set, pose of the collision model is updated on the Scene service.
+        :return:
+        """
         return self._pose
 
     @pose.setter
     def pose(self, pose: Pose) -> None:
         self._pose = pose
-        if self.collision_model:
+        if self.collision_model and self._enabled:
             scene_service.upsert_collision(self.collision_model, pose)
+
+    @property
+    def enabled(self) -> bool:
+        """If the object has a collision model, this indicates whether the
+        model is enabled (set on the Scene service).
+
+        When set, it updates the state of the model on the Scene service.
+        :return:
+        """
+
+        if self.collision_model:
+            assert self.id in scene_service.collision_ids() == self._enabled
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool) -> None:
+
+        if self.collision_model:
+            if not self._enabled and enabled:
+                assert self.id not in scene_service.collision_ids()
+                scene_service.upsert_collision(self.collision_model, self.pose)
+            if self._enabled and not enabled:
+                assert self.id in scene_service.collision_ids()
+                scene_service.delete_collision_id(self.id)
+        self._enabled = enabled
 
     def cleanup(self) -> None:
 
         super(GenericWithPose, self).cleanup()
-
-        if self.collision_model:
-            scene_service.delete_collision_id(self.collision_model.id)
+        self.enabled = False
 
 
 class RobotException(Arcor2Exception):
