@@ -1,5 +1,4 @@
 import logging
-import os
 from ast import (
     AST,
     Assign,
@@ -24,6 +23,7 @@ from typing import Dict, List, Optional, Set, Union
 
 import humps
 
+from arcor2 import env
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import Action, ActionParameter, FlowTypes
@@ -36,7 +36,7 @@ from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
 from arcor2_build.source.utils import empty_script_tree, find_function, find_last_assign, main_loop
 
-logger = get_logger(__name__, logging.DEBUG if bool(os.getenv("ARCOR2_LOGIC_DEBUG", False)) else logging.INFO)
+logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
 
 def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logic: bool = True) -> str:

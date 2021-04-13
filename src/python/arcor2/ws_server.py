@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import time
 from collections import deque
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
@@ -9,11 +8,12 @@ import websockets
 from aiologger.levels import LogLevel
 from dataclasses_jsonschema import ValidationError
 
+from arcor2 import env
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import RPC
 from arcor2.exceptions import Arcor2Exception
 
-MAX_RPC_DURATION = float(os.getenv("ARCOR2_MAX_RPC_DURATION", 0.1))
+MAX_RPC_DURATION = env.get_float("ARCOR2_MAX_RPC_DURATION", 0.1)
 
 RPCT = TypeVar("RPCT", bound=RPC)
 ReqT = TypeVar("ReqT", bound=RPC.Request)
