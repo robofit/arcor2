@@ -77,16 +77,17 @@ class AbstractRobot(Robot):
         force: float = 0.5,
         *,
         an: Optional[str] = None,
-    ) -> None:
+    ) -> bool:
 
         assert 0.0 <= position <= 1.0
         assert 0.0 <= speed <= 1.0
         assert 0.0 <= force <= 1.0
 
-        rest.call(
+        return rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/grippers/{gripper_id}/grip",
             params={"position": position, "speed": speed, "force": force},
+            return_type=bool,
         )
 
     def set_opening(
