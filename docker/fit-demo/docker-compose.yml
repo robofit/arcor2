@@ -108,6 +108,8 @@ services:
     container_name: mocks
     networks:
           - testitoff-robot-network
+    ports:
+      - "5013:5013"
 
   project:
     image: registry.gitlab.com/kinalisoft/test-it-off/project:0.5.0
