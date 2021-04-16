@@ -7,7 +7,7 @@ import quaternion
 from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
 
 import arcor2.transformations as tr
-from arcor2.data.common import Joint, Pose, StrEnum
+from arcor2.data.common import Joint, Orientation, Pose, StrEnum
 from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.helpers import NonBlockingLock
 from arcor2.object_types.abstract import RobotException
@@ -34,6 +34,10 @@ MOVE_TYPE_MAPPING = {
 
 
 class Dobot(metaclass=ABCMeta):
+
+    ROTATE_EEF = Orientation.from_rotation_vector(y=math.pi)
+    UNROTATE_EEF = ROTATE_EEF.inversed()
+
     def __init__(self, pose: Pose, port: str = "/dev/dobot", simulator: bool = False) -> None:
 
         self.pose = pose
@@ -114,12 +118,11 @@ class Dobot(metaclass=ABCMeta):
 
     def _check_orientation(self, pose: Pose) -> None:
 
-        x = math.sin(math.atan2(pose.orientation.x, pose.orientation.w))
-        y = math.sin(math.atan2(pose.orientation.y, pose.orientation.w))
+        unrotated = self.UNROTATE_EEF * pose.orientation
 
         eps = 1e-6
 
-        if (abs(x) > eps and 1 - abs(x) > eps) or 1 - abs(y) > eps:
+        if abs(unrotated.x) > eps or abs(unrotated.y) > eps:
             raise DobotApiException("Impossible orientation.")
 
     def get_end_effector_pose(self) -> Pose:
@@ -136,9 +139,8 @@ class Dobot(metaclass=ABCMeta):
         p.position.x = pos.position.x / 1000.0
         p.position.y = pos.position.y / 1000.0
         p.position.z = pos.position.z / 1000.0
-        p.orientation.set_from_quaternion(
-            quaternion.from_euler_angles(0, math.pi, math.radians(pos.joints.j4 - pos.joints.j1))
-        )
+        p.orientation = self.ROTATE_EEF * Orientation.from_rotation_vector(z=math.radians(pos.position.r))
+
         self._handle_pose_out(p)
         return tr.make_pose_abs(self.pose, p)
 
@@ -194,9 +196,8 @@ class Dobot(metaclass=ABCMeta):
 
             try:
                 self._dobot.clear_alarms()
-
-                # TODO this is probably not working properly (use similar solution as in _check_orientation?)
-                rotation = math.degrees(quaternion.as_euler_angles(rp.orientation.as_quaternion())[2])
+                unrotated = self.UNROTATE_EEF * rp.orientation
+                rotation = math.degrees(quaternion.as_rotation_vector(unrotated.as_quaternion())[2])
                 self._dobot.speed(velocity, acceleration)
 
                 self._dobot.wait_for_cmd(
