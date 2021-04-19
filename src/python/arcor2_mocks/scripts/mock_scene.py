@@ -8,6 +8,7 @@ from typing import Dict
 import humps
 from flask import jsonify, request
 
+from arcor2 import env
 from arcor2.data import common, object_type, scene
 from arcor2.flask import RespT, create_app, run_app
 from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
@@ -16,6 +17,18 @@ app = create_app(__name__)
 
 collision_objects: Dict[str, object_type.Models] = {}
 started: bool = False
+
+delay_mean = env.get_float("ARCOR2_MOCK_SCENE_DELAY_MEAN", 0)
+delay_sigma = env.get_float("ARCOR2_MOCK_SCENE_DELAY_SIGMA", 0)
+
+
+def delay() -> None:
+    """This is to simulate the long-starting Scene service.
+
+    Could be useful to uncover specific kind of bugs.
+    :return:
+    """
+    time.sleep(random.normalvariate(delay_mean, delay_sigma))
 
 
 @app.route("/collisions/box", methods=["PUT"])
@@ -284,7 +297,7 @@ def put_start() -> RespT:
     """
 
     global started
-    time.sleep(random.uniform(0.5, 5.0))
+    delay()
     started = True
     return jsonify("ok"), 200
 
@@ -307,7 +320,7 @@ def put_stop() -> RespT:
     """
 
     global started
-    time.sleep(random.uniform(0.5, 5.0))
+    delay()
     started = False
     return jsonify("ok"), 200
 
