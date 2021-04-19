@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.15.1] - WIP
+## [0.15.1] - 2021-04-19
 
 ### Fixed
 - Dependency on bugfix release of arcor2.
