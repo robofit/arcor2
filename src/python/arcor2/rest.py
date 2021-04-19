@@ -336,22 +336,20 @@ def _handle_response(resp: requests.Response) -> None:
     :return:
     """
 
-    try:
-        resp.raise_for_status()
-    except requests.exceptions.HTTPError as e:
+    if resp.status_code >= 400:
 
         # here we try to handle different cases
         try:
             resp_body = json.loads(resp.content)
         except json.JSONDecodeError:
             # response contains invalid JSON
-            raise RestHttpException(resp.content.decode("utf-8"), error_code=e.response.status_code) from e
+            raise RestHttpException(resp.content.decode("utf-8"), error_code=resp.status_code)
 
         try:
-            # this should be standard (body containing "message").
-            raise RestHttpException(resp_body["message"], error_code=e.response.status_code) from e
+            # this is the case for Project service (StorageError model)
+            raise RestHttpException(resp_body["message"], error_code=resp.status_code)
         except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestHttpException(str(resp_body), error_code=e.response.status_code) from e
+            raise RestHttpException(str(resp_body), error_code=resp.status_code)
 
 
 def get_image(url: str) -> Image.Image:
