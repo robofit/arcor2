@@ -98,7 +98,7 @@ def check_action_params(
 
         if param.type == common.ActionParameter.TypeEnum.CONSTANT:
 
-            const = project.constant(param.value)
+            const = project.constant(param.str_from_value())
 
             param_meta = object_action.parameter(param.name)
             if param_meta.type != const.type:

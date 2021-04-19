@@ -149,7 +149,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
                 args.append(Name(id=res_name, ctx=Load()))
 
             elif param.type == ActionParameter.TypeEnum.CONSTANT:
-                args.append(Name(id=project.constant(param.value).name, ctx=Load()))
+                args.append(Name(id=project.constant(param.str_from_value()).name, ctx=Load()))
             else:
 
                 plugin = plugin_from_type_name(param.type)

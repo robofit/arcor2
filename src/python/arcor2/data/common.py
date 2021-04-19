@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import copy
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -420,9 +421,23 @@ class ActionParameter(Parameter):
         CONSTANT: str = "constant"
         LINK: str = "link"
 
+    def str_from_value(self) -> str:
+
+        try:
+            val = json.loads(self.value)
+        except ValueError as e:
+            raise Arcor2Exception("Value should be JSON.") from e
+
+        if not isinstance(val, str):
+            raise Arcor2Exception("Value should be string.")
+
+        return val
+
     def parse_link(self) -> LinkToActionOutput:
-        assert self.type == self.TypeEnum.LINK
-        return parse_link(self.value)
+        if self.type != self.TypeEnum.LINK:
+            raise Arcor2Exception("Not a link.")
+
+        return parse_link(self.str_from_value())
 
     def is_value(self) -> bool:
         return self.type not in self.TypeEnum.set()

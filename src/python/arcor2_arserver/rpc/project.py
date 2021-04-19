@@ -147,7 +147,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 params.append(results)
 
         elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
-            const = glob.PROJECT.constant(param.value)
+            const = glob.PROJECT.constant(param.str_from_value())
             # TODO use plugin to get the value
             import json
 
@@ -1309,7 +1309,7 @@ async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -
     # check for usage
     for act in glob.PROJECT.actions:
         for param in act.parameters:
-            if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.value == const.id:
+            if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.str_from_value() == const.id:
                 raise Arcor2Exception("Constant used as action parameter.")
 
     if req.dry_run:
