@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.1] - WIP
+
+### Fixed
+- Save and import of ObjectType was randomly failing because of [race condition](https://docs.python.org/3.8/library/importlib.html#importlib.machinery.FileFinder).
+
 ## [0.14.0] - 2021-03-30
 
 ### Changed

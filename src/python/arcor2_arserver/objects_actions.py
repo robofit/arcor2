@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import Optional, Type
+from typing import List, Optional, Set, Type, Union
 
 from arcor2 import helpers as hlp
 from arcor2.clients import aio_persistent_storage as ps
@@ -165,7 +165,13 @@ async def get_object_types() -> None:
 
     updated_object_types: ObjectTypeDict = {}
 
-    object_type_ids = {it.id for it in (await storage.get_object_type_ids()).items}
+    object_type_ids: Union[Set[str], List[str]] = {it.id for it in (await storage.get_object_type_ids()).items}
+
+    if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
+        import random
+
+        object_type_ids = list(object_type_ids)
+        random.shuffle(object_type_ids)
 
     for obj_id in object_type_ids:
         await get_object_data(updated_object_types, obj_id)

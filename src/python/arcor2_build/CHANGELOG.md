@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.1] - WIP
+
+### Fixed
+- Dependency on a bugfix release of arcor2.
+
 ## [0.14.0] - 2021-03-30
 
 ### Changed
