@@ -110,6 +110,11 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 obj_types = set(cached_scene.object_types)
                 obj_types_with_models: Set[str] = set()
 
+                if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
+                    import random
+
+                    random.shuffle(scene.objects)
+
                 for scene_obj in scene.objects:
 
                     if scene_obj.type in types_dict:
@@ -141,7 +146,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                     )
 
             except Arcor2Exception as e:
-                logger.exception("Failed to get something from the project service.")
+                logger.exception(f"Failed to prepare package content. {str(e)}")
                 raise FlaskException(str(e), error_code=404)
 
             script_path = "script.py"
