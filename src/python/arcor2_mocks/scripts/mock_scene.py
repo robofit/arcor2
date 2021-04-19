@@ -64,7 +64,7 @@ def put_box() -> RespT:
     box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
 
     collision_objects[box.id] = box
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/collisions/sphere", methods=["PUT"])
@@ -98,7 +98,7 @@ def put_sphere() -> RespT:
     args = humps.decamelize(request.args.to_dict())
     sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
     collision_objects[sphere.id] = sphere
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/collisions/cylinder", methods=["PUT"])
@@ -137,7 +137,7 @@ def put_cylinder() -> RespT:
     args = humps.decamelize(request.args.to_dict())
     cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
     collision_objects[cylinder.id] = cylinder
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/collisions/mesh", methods=["PUT"])
@@ -188,7 +188,7 @@ def put_mesh() -> RespT:
     args = humps.decamelize(request.args.to_dict())
     mesh = object_type.Mesh(args["mesh_id"], args["uri"])
     collision_objects[mesh.id] = mesh
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/collisions/<string:collisionId>", methods=["DELETE"])
@@ -214,9 +214,9 @@ def delete_collision(collisionId: str) -> RespT:
     try:
         del collision_objects[collisionId]
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/collisions", methods=["GET"])
@@ -268,22 +268,67 @@ def put_focus() -> RespT:
 
 @app.route("/system/start", methods=["PUT"])
 def put_start() -> RespT:
+    """Starts the system.
+    ---
+    put:
+        tags:
+            - System
+        description: Starts the system.
+        responses:
+            200:
+              description: Ok
+              content:
+                  application/json:
+                      schema:
+                        type: string
+    """
+
     global started
     time.sleep(random.uniform(0.5, 5.0))
     started = True
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/system/stop", methods=["PUT"])
 def put_stop() -> RespT:
+    """Stops the system.
+    ---
+    put:
+        tags:
+            - System
+        description: Stops the system.
+        responses:
+            200:
+              description: Ok
+              content:
+                  application/json:
+                      schema:
+                        type: string
+    """
+
     global started
     time.sleep(random.uniform(0.5, 5.0))
     started = False
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/system/running", methods=["GET"])
 def get_started() -> RespT:
+    """Gets system state.
+    ---
+    get:
+        tags:
+            - System
+        description: Gets system state.
+        responses:
+            200:
+              description: Ok
+              content:
+                  application/json:
+                      schema:
+                        type: boolean
+    """
+
     return jsonify(started)
 
 
