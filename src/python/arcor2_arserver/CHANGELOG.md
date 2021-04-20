@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.16.0] - WIP
+## [0.16.0] - 2021-04-20
 
 ### Fixed
 - Action can't use its own result as a parameter (link parameter type).
