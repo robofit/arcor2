@@ -9,7 +9,11 @@ set -e
 PYTHON_BIN=python3.8
 VIRTUALENV=build-support/.venv
 PIP="${VIRTUALENV}/bin/pip"
+REQUIREMENTS_FILE=3rdparty/requirements.txt
+CONSTRAINTS_FILE=3rdparty/constraints.txt
+
 
 "${PYTHON_BIN}" -m venv "${VIRTUALENV}"
 "${PIP}" install pip --upgrade
-"${PIP}" install -r <(./pants dependencies --type=3rdparty ::)
+"${PIP}" install -r "${REQUIREMENTS_FILE}" \
+                 -c "${CONSTRAINTS_FILE}"
