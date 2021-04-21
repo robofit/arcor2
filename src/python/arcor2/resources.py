@@ -1,6 +1,7 @@
 import importlib
 import json
 import os
+from types import TracebackType
 from typing import Dict, Optional, Type, TypeVar
 
 import humps
@@ -116,10 +117,10 @@ class IntResources:
     def __enter__(self: R) -> R:
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback) -> bool:
+    def __exit__(self, ex_type: Type[Exception], ex_value: Exception, traceback: TracebackType) -> bool:
 
         if ex_type != KeyboardInterrupt:
-            print_exception(ex_type(ex_value))
+            print_exception(ex_value)
 
         scene_service.stop()
         scene_service.delete_all_collisions()
