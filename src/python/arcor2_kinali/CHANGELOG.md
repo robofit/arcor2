@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - Class `AbstractRobot` updated for Robot 0.10.0
+- Class `Aubo` (inverse_kinematics) updated for Robot 0.11.0
 
 ## [0.12.1] - 2021-03-15
 
