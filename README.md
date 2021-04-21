@@ -181,7 +181,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_kinali/README.md) | [CHANGELOG](src/python/arcor2_kinali/CHANGELOG.md)
 
-- 2021-03-15: [0.12.1](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.12.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.12.1), [pypi](https://pypi.org/project/arcor2-kinali/0.12.1/)).
+- 2021-04-21: [0.13.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinali%2F0.13.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_kinali/tags?page=1&ordering=last_updated&name=0.13.0), [pypi](https://pypi.org/project/arcor2-kinali/0.13.0/)).
   
 ### arcor2_kinect_azure
 
