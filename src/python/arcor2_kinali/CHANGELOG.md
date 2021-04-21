@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.13.0] - WIP
+## [0.13.0] - 2021-04-21
 
 ### Changed
 - Class `AbstractRobot` updated for Robot 0.10.0
