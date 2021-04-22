@@ -70,7 +70,11 @@ Other services as Project and Scene (this repo provides [mocks](src/python/arcor
  
 ## Development
 
-We use [Pants](https://www.pantsbuild.org/docs) to build the sources into Python distribution packages, run tests, etc. Packages do not contain ```setup.py``` file - this is generated during the build process.
+- We use [Pants](https://www.pantsbuild.org/docs) to build the sources into Python distribution packages, run tests, etc. Packages do not contain ```setup.py``` file - this is generated during the build process.
+- A virtual environment with all the dependencies can be generated using `./build-support/setup-venv.sh`. Use `source ./build-support/.venv/bin/activate` to enter it. 
+- The `arcor2_kinect_azure` package requires some extra care:
+  - Who need it, please use `./build-support/install_kinect_prerequisites.sh`. Beware that this works only on Ubuntu 18.04 (blame M$).
+  - Who don't need it, please remove the directory and (optionally) remove `pyk4a` from `3rparty/requirements.txt` (should be only needed to make a virtual environment). Please make sure to don't commit these changes.
 
 ## Contributing
 
