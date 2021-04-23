@@ -494,30 +494,36 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
     target_joints: Optional[List[common.Joint]] = None
     target_joints_diff: float = 0.0
 
-    # TODO call ik in parallel?
     # select best (closest joint configuration) reachable pose
-    for z_rot in np.linspace(-math.pi, math.pi, 360):
-        tp.orientation = common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(
-            z=z_rot
-        )
-        try:
-            joints = await robot.ik(req.args.robot_id, req.args.end_effector_id, tp, current_joints, req.args.safe)
-        except Arcor2Exception:
+    tasks = [
+        robot.ik(req.args.robot_id, req.args.end_effector_id, pose, current_joints, req.args.safe)
+        for pose in [
+            common.Pose(
+                tp.position,
+                common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(z=z_rot),
+            )
+            for z_rot in np.linspace(-math.pi, math.pi, 360)
+        ]
+    ]
+
+    for res in await asyncio.gather(*tasks, return_exceptions=True):
+
+        if not isinstance(res, list):
             continue
 
         if not target_joints:
-            target_joints = joints
+            target_joints = res
             for f, b in zip(current_joints, target_joints):
                 assert f.name == b.name
                 target_joints_diff += (f.value - b.value) ** 2
         else:
             diff = 0.0
-            for f, b in zip(current_joints, joints):
+            for f, b in zip(current_joints, res):
                 assert f.name == b.name
                 diff += (f.value - b.value) ** 2
 
             if diff < target_joints_diff:
-                target_joints = joints
+                target_joints = res
                 target_joints_diff = diff
 
     if not target_joints:
