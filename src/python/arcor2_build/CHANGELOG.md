@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.15.0] - WIP
+
+### Changed
+- `overwrite` flag divided into: `overwriteScene`, `overwriteProject`, `overwriteObjectTypes`, `overwriteProjectSources`, `overwriteCollisionModels`.
+
 ## [0.14.1] - 2021-04-19
 
 ### Fixed
