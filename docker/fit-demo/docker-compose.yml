@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.15.1
+    image: arcor2/arcor2_arserver:0.16.0
     container_name: arserver
     depends_on:
       - project
@@ -40,7 +40,7 @@ services:
     networks:           
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.12.0
+    image: arcor2/arcor2_execution:0.13.0
     container_name: execution
     networks:
       - testitoff-execution-network
