@@ -148,7 +148,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_calibration/README.md) | [CHANGELOG](src/python/arcor2_calibration/CHANGELOG.md)
 
- - 2021-03-30: [0.3.0](https://github.com/robofit/arcor2/releases/tag/arcor2_calibration%2F0.3.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_calibration/tags?page=1&ordering=last_updated&name=0.3.0), ([pypi](https://pypi.org/project/arcor2-calibration/0.3.0/)).
+ - 2021-04-26: [0.4.0](https://github.com/robofit/arcor2/releases/tag/arcor2_calibration%2F0.4.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_calibration/tags?page=1&ordering=last_updated&name=0.4.0), ([pypi](https://pypi.org/project/arcor2-calibration/0.4.0/)).
 
 ### arcor2_calibration_data
 
