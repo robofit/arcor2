@@ -64,7 +64,7 @@ services:
       - ARCOR2_KINECT_SIMULATOR=true
 
   calibration:
-    image: arcor2/arcor2_calibration:0.3.0
+    image: arcor2/arcor2_calibration:0.4.0
     container_name: calibration
     networks:
       - testitoff-calibration-network
@@ -72,6 +72,7 @@ services:
       - "5020:5014"
     environment:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
+      - ARCOR2_CALIBRATION_SIMULATOR=true
 
   dobot:
     image: arcor2/arcor2_dobot:0.2.2
