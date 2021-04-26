@@ -29,8 +29,8 @@ class MoveRelativeJointsParameters(JsonSchemaMixin):
 @dataclass
 class IKPoseJointsParameters(JsonSchemaMixin):
 
-    pose: Pose
-    joints: List[Joint]
+    target_pose: Pose
+    start_joints: List[Joint]
 
 
 class Aubo(AbstractRobot):
