@@ -53,7 +53,7 @@ async def calibrate_camera(camera: Camera) -> None:
     await notif.broadcast_event(ProcessState(ProcessState.Data(CAMERA_CALIB, ProcessState.Data.StateEnum.Started)))
     try:
         img = await run_in_executor(camera.color_image)
-        pose = await run_in_executor(calib_client.estimate_camera_pose, camera.color_camera_params, img)
+        estimated_pose = await run_in_executor(calib_client.estimate_camera_pose, camera.color_camera_params, img)
     except Arcor2Exception as e:
         await notif.broadcast_event(
             ProcessState(ProcessState.Data(CAMERA_CALIB, ProcessState.Data.StateEnum.Failed, str(e)))
@@ -61,7 +61,7 @@ async def calibrate_camera(camera: Camera) -> None:
         glob.logger.exception("Failed to calibrate the camera.")
         return
 
-    await update_scene_object_pose(glob.SCENE.object(camera.id), pose, camera)
+    await update_scene_object_pose(glob.SCENE.object(camera.id), estimated_pose.pose, camera)
     await notif.broadcast_event(ProcessState(ProcessState.Data(CAMERA_CALIB, ProcessState.Data.StateEnum.Finished)))
 
 
