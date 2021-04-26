@@ -110,6 +110,11 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 obj_types = set(cached_scene.object_types)
                 obj_types_with_models: Set[str] = set()
 
+                if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
+                    import random
+
+                    random.shuffle(scene.objects)
+
                 for scene_obj in scene.objects:
 
                     if scene_obj.type in types_dict:
@@ -141,7 +146,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                     )
 
             except Arcor2Exception as e:
-                logger.exception("Failed to get something from the project service.")
+                logger.exception(f"Failed to prepare package content. {str(e)}")
                 raise FlaskException(str(e), error_code=404)
 
             script_path = "script.py"
@@ -248,7 +253,27 @@ def project_import() -> RespT:
       description: Imports a project from execution package.
       parameters:
             - in: query
-              name: overwrite
+              name: overwriteScene
+              schema:
+                type: boolean
+                default: false
+            - in: query
+              name: overwriteProject
+              schema:
+                type: boolean
+                default: false
+            - in: query
+              name: overwriteObjectTypes
+              schema:
+                type: boolean
+                default: false
+            - in: query
+              name: overwriteProjectSources
+              schema:
+                type: boolean
+                default: false
+            - in: query
+              name: overwriteCollisionModels
               schema:
                 type: boolean
                 default: false
@@ -297,7 +322,12 @@ def project_import() -> RespT:
     """
 
     file = request.files["executionPackage"]
-    overwrite = request.args.get("overwrite", default="false") == "true"
+
+    overwrite_scene = request.args.get("overwriteScene", default="false") == "true"
+    overwrite_project = request.args.get("overwriteProject", default="false") == "true"
+    overwrite_object_types = request.args.get("overwriteObjectTypes", default="false") == "true"
+    overwrite_project_sources = request.args.get("overwriteProjectSources", default="false") == "true"
+    overwrite_collision_models = request.args.get("overwriteCollisionModels", default="false") == "true"
 
     objects: Dict[str, ObjectType] = {}
     models: Dict[str, Models] = {}
@@ -409,37 +439,61 @@ def project_import() -> RespT:
             except Arcor2Exception:
                 raise FlaskException("Invalid code of the main script.", error_code=401)
 
-    if not overwrite:  # check that we are not going to overwrite something
+    # check that we are not going to overwrite something
+    if not overwrite_scene:
 
         try:
-            if ps.get_scene(scene.id) != scene:
+            ps_scene = ps.get_scene(scene.id)
+        except ps.ProjectServiceException:
+            pass
+        else:
+
+            ps_scene.modified = scene.modified  # modified is updated with each PUT
+
+            if ps_scene != scene:
                 raise FlaskException("Scene difference detected. Overwrite needed.", error_code=402)
-        except ps.ProjectServiceException:
-            pass
+
+    if not overwrite_project:
 
         try:
-            if ps.get_project(project.id) != project:
-                raise FlaskException("Project difference detected. Overwrite needed.", error_code=402)
+            ps_project = ps.get_project(project.id)
         except ps.ProjectServiceException:
             pass
+        else:
+
+            ps_project.modified = project.modified
+
+            if ps_project != project:
+                raise FlaskException("Project difference detected. Overwrite needed.", error_code=402)
+
+    if not overwrite_object_types:
 
         for obj_type in objects.values():
 
             try:
                 if ps.get_object_type(obj_type.id) != obj_type:
-                    raise FlaskException("Scene difference detected. Overwrite needed.", error_code=402)
+                    raise FlaskException(
+                        f"Difference detected for {obj_type.id} object type. Overwrite needed.", error_code=402
+                    )
             except ps.ProjectServiceException:
                 pass
 
-        if not project.has_logic:
+    if not overwrite_project_sources and not project.has_logic:
 
+        try:
+            if ps.get_project_sources(project.id).script != script:
+                raise FlaskException("Script difference detected. Overwrite needed.", error_code=402)
+        except ps.ProjectServiceException:
+            pass
+
+    if not overwrite_collision_models:
+
+        for model in models.values():
             try:
-                if ps.get_project_sources(project.id).script != script:
-                    raise FlaskException("Script difference detected. Overwrite needed.", error_code=402)
+                if model != ps.get_model(model.id, model.type()):
+                    raise FlaskException("Collision model difference detected. Overwrite needed.", error_code=402)
             except ps.ProjectServiceException:
                 pass
-
-        # TODO check also models?
 
     for model in models.values():
         ps.put_model(model)
@@ -480,7 +534,7 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_build.version(),
-        "0.5.0",
+        "0.6.0",
         port_from_url(URL),
         [ImportResult],
         print_spec=args.swagger,

@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from enum import Enum
 from functools import partial
 from io import BytesIO
@@ -11,6 +10,7 @@ import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError
 
+from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 
@@ -73,7 +73,7 @@ OptTimeout = Optional[Timeout]
 
 
 # module-level variables
-debug: bool = bool(os.getenv("ARCOR2_REST_DEBUG", False))
+debug = env.get_bool("ARCOR2_REST_DEBUG", False)
 headers = {"accept": "application/json", "content-type": "application/json"}
 session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
@@ -336,22 +336,20 @@ def _handle_response(resp: requests.Response) -> None:
     :return:
     """
 
-    try:
-        resp.raise_for_status()
-    except requests.exceptions.HTTPError as e:
+    if resp.status_code >= 400:
 
         # here we try to handle different cases
         try:
             resp_body = json.loads(resp.content)
         except json.JSONDecodeError:
             # response contains invalid JSON
-            raise RestHttpException(resp.content.decode("utf-8"), error_code=e.response.status_code) from e
+            raise RestHttpException(resp.content.decode("utf-8"), error_code=resp.status_code)
 
         try:
-            # this should be standard (body containing "message").
-            raise RestHttpException(resp_body["message"], error_code=e.response.status_code) from e
+            # this is the case for Project service (StorageError model)
+            raise RestHttpException(resp_body["message"], error_code=resp.status_code)
         except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestHttpException(str(resp_body), error_code=e.response.status_code) from e
+            raise RestHttpException(str(resp_body), error_code=resp.status_code)
 
 
 def get_image(url: str) -> Image.Image:

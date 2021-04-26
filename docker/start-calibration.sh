@@ -1,4 +1,8 @@
 #!/bin/bash  
 
 cd /root || exit
-./calibration.pex
+if [ "$ARCOR2_CALIBRATION_SIMULATOR" = true ] ; then
+    ./calibration.pex --mock
+else
+    ./calibration.pex
+fi

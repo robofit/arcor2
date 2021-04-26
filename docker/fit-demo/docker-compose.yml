@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.15.0
+    image: arcor2/arcor2_arserver:0.16.0
     container_name: arserver
     depends_on:
       - project
@@ -29,7 +29,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:0.14.0
+    image: arcor2/arcor2_build:0.14.1
     container_name: build
     depends_on:
       - project
@@ -40,7 +40,7 @@ services:
     networks:           
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.12.0
+    image: arcor2/arcor2_execution:0.13.0
     container_name: execution
     networks:
       - testitoff-execution-network
@@ -64,14 +64,14 @@ services:
       - ARCOR2_KINECT_SIMULATOR=true
 
   calibration:
-    image: arcor2/arcor2_calibration:0.3.0
-    container_name: calibration
+    image: arcor2/arcor2_calibration:0.4.0
     networks:
       - testitoff-calibration-network
     ports:
-      - "5020:5014"
+      - 5014
     environment:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
+      - ARCOR2_CALIBRATION_SIMULATOR=true
 
   dobot:
     image: arcor2/arcor2_dobot:0.2.2
@@ -108,6 +108,8 @@ services:
     container_name: mocks
     networks:
           - testitoff-robot-network
+    ports:
+      - "5013:5013"
 
   project:
     image: registry.gitlab.com/kinalisoft/test-it-off/project:0.5.0

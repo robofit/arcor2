@@ -80,7 +80,7 @@ def test_prev_result() -> None:
         "ac2",
         f"{obj.id}/{Test.test_par.__name__}",
         flows=[Flow()],
-        parameters=[ActionParameter("param", ActionParameter.TypeEnum.LINK, f"{ac1.id}/default/0")],
+        parameters=[ActionParameter("param", ActionParameter.TypeEnum.LINK, json.dumps(f"{ac1.id}/default/0"))],
     )
     ap1.actions.append(ac2)
 
@@ -121,7 +121,7 @@ def test_constant() -> None:
         "ac1",
         f"{obj.id}/test_par",
         flows=[Flow()],
-        parameters=[ActionParameter("param", ActionParameter.TypeEnum.CONSTANT, const.id)],
+        parameters=[ActionParameter("param", ActionParameter.TypeEnum.CONSTANT, json.dumps(const.id))],
     )
 
     ap1.actions.append(ac1)

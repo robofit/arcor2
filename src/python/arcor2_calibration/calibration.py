@@ -45,17 +45,20 @@ def estimate_camera_pose(
     if np.all(ids is None):
         return ret
 
+    # TODO do not perform estimation for un-configured markers
     rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix_arr, dist_matrix_arr)
+
+    rvec = rvec.reshape(len(ids), 3)
+    tvec = tvec.reshape(len(ids), 3)
 
     if __debug__:
         backtorgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
         aruco.drawDetectedMarkers(backtorgb, corners)  # Draw A square around the markers
-        aruco.drawAxis(backtorgb, camera_matrix, dist_matrix, rvec, tvec, 0.15)
+
+        for idx in range(len(ids)):
+            aruco.drawAxis(backtorgb, camera_matrix_arr, dist_matrix_arr, rvec[idx], tvec[idx], 0.15)
 
         cv2.imwrite("marker.jpg", backtorgb)
-
-    rvec = rvec.reshape(len(ids), 3)
-    tvec = tvec.reshape(len(ids), 3)
 
     for idx, mid in enumerate(ids):
 

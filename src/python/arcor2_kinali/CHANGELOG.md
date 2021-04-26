@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.1] - WIP
+
+### Fixed
+- `Aubo` had wrong XML child names for inverse kinematics call
+
+## [0.13.0] - 2021-04-21
+
+### Changed
+- Class `AbstractRobot` updated for Robot 0.10.0
+- Class `Aubo` (inverse_kinematics) updated for Robot 0.11.0
+
 ## [0.12.1] - 2021-03-15
 
 ### Fixed

@@ -79,9 +79,6 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     with open(f"{full_path}.py", "w") as file:
         file.write(source)
 
-    # open should call flush but still it sometimes happened that written file could not be found by import_type_def
-    os.sync()
-
     return import_type_def(type_name, output_type, path, module_name)
 
 
@@ -100,6 +97,8 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
 
     type_file = humps.depascalize(type_name)
 
+    importlib.invalidate_caches()  # otherwise import might fail randomly (not sure why exactly)
+
     try:
 
         module = importlib.import_module(f"{module_name}.{type_file}")
@@ -107,7 +106,7 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
         # reload is necessary for cases when the module is already loaded
         path_to_file = os.path.abspath(module.__file__)
         assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
-        importlib.reload(module)
+        module = importlib.reload(module)  # TODO does this really solve anything?
 
     except ImportError as e:
         raise ImportClsException(f"Failed to import '{module_name}.{type_file}'. {str(e).capitalize()}.") from e

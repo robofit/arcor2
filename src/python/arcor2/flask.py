@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from typing import List, Optional, Tuple, Type, Union
 
 from apispec import APISpec
@@ -11,6 +10,7 @@ from flask import Flask, Response, jsonify
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 
+from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 
 RespT = Union[Response, Tuple[str, int]]
@@ -80,7 +80,7 @@ def run_app(
     # Register blueprint at URL
     app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-    if not os.getenv("ARCOR2_REST_API_DEBUG", False):
+    if not env.get_bool("ARCOR2_REST_API_DEBUG", False):
         # turn off logging each endpoint call by default
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)

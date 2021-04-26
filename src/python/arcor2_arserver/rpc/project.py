@@ -147,7 +147,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 params.append(results)
 
         elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
-            const = glob.PROJECT.constant(param.value)
+            const = glob.PROJECT.constant(param.str_from_value())
             # TODO use plugin to get the value
             import json
 
@@ -236,7 +236,17 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
 
     resp = srpc.p.ListProjects.Response()
     tasks = [project_info(project_iddesc.id, scenes_lock, scenes) for project_iddesc in projects.items]
-    resp.data = await asyncio.gather(*tasks)
+
+    resp.data = []
+    for res in await asyncio.gather(*tasks, return_exceptions=True):
+
+        if isinstance(res, Arcor2Exception):
+            glob.logger.error(str(res))
+        elif isinstance(res, Exception):
+            raise res  # zero toleration for other exceptions
+        else:
+            resp.data.append(res)
+
     return resp
 
 
@@ -1299,7 +1309,7 @@ async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -
     # check for usage
     for act in glob.PROJECT.actions:
         for param in act.parameters:
-            if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.value == const.id:
+            if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.str_from_value() == const.id:
                 raise Arcor2Exception("Constant used as action parameter.")
 
     if req.dry_run:

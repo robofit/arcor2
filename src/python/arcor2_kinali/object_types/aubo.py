@@ -26,6 +26,13 @@ class MoveRelativeJointsParameters(JsonSchemaMixin):
     orientation: Orientation
 
 
+@dataclass
+class IKPoseJointsParameters(JsonSchemaMixin):
+
+    target_pose: Pose
+    start_joints: List[Joint]
+
+
 class Aubo(AbstractRobot):
     """REST interface to the robot service (0.7.0)."""
 
@@ -189,11 +196,13 @@ class Aubo(AbstractRobot):
         if start_joints is None:
             start_joints = self.robot_joints()
 
+        body = IKPoseJointsParameters(pose, start_joints)
+
         return rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",
-            params={"startJoints": [joint.to_dict() for joint in start_joints], "avoidCollisions": avoid_collisions},
-            body=pose,
+            params={"avoidCollisions": avoid_collisions},
+            body=body,
             list_return_type=Joint,
         )
 

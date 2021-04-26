@@ -2,6 +2,22 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.16.0] - 2021-04-20
+
+### Fixed
+- Action can't use its own result as a parameter (link parameter type).
+
+### Changed
+- Dependency on arcor2 0.15.0 with updated REST client.
+- Action parameter value is now always JSON.
+  - It used to be a string for link/constant special types.
+
+
+## [0.15.1] - 2021-04-19
+
+### Fixed
+- Dependency on bugfix release of arcor2.
+
 ## [0.15.0] - 2021-03-30
 
 ### Changed

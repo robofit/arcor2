@@ -98,7 +98,7 @@ def check_action_params(
 
         if param.type == common.ActionParameter.TypeEnum.CONSTANT:
 
-            const = project.constant(param.value)
+            const = project.constant(param.str_from_value())
 
             param_meta = object_action.parameter(param.name)
             if param_meta.type != const.type:
@@ -107,6 +107,10 @@ def check_action_params(
         elif param.type == common.ActionParameter.TypeEnum.LINK:
 
             parsed_link = param.parse_link()
+
+            if parsed_link.action_id == action.id:
+                raise Arcor2Exception("Can't use own result as a parameter.")
+
             outputs = project.action(parsed_link.action_id).flow(parsed_link.flow_name).outputs
 
             assert len(outputs) == len(object_action.returns)
