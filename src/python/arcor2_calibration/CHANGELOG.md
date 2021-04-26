@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.4.0] - WIP
+## [0.4.0] - 2021-04-26
 ### Changed
 - The service now requires YAML configuration file where placement of markers is specified.
 - There might be 1-n markers in an arbitrary pose.
