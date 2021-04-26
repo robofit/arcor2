@@ -65,11 +65,10 @@ services:
 
   calibration:
     image: arcor2/arcor2_calibration:0.4.0
-    container_name: calibration
     networks:
       - testitoff-calibration-network
     ports:
-      - "5020:5014"
+      - 5014
     environment:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
       - ARCOR2_CALIBRATION_SIMULATOR=true
