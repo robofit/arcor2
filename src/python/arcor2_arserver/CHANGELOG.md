@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - WIP
+
+### Changed
+
+- Return value of `GetCameraPose` RPC updated.
+
 ## [0.16.0] - 2021-04-20
 
 ### Fixed
