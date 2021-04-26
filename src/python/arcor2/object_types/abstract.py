@@ -35,6 +35,7 @@ class Generic(metaclass=abc.ABCMeta):
     DYNAMIC_PARAMS: DynamicParamDict = {}
     CANCEL_MAPPING: CancelDict = {}
     _ABSTRACT = True
+    INIT_PRIORITY = 0  # OT with the highest priority will be initialized first
 
     def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
 
@@ -132,7 +133,8 @@ class GenericWithPose(Generic):
                 assert self.id not in scene_service.collision_ids()
                 scene_service.upsert_collision(self.collision_model, self.pose)
             if self._enabled and not enabled:
-                assert self.id in scene_service.collision_ids()
+                # TODO not sure if it's intentional, but stopped scene service 0.4.2 returns empty list of collision IDs
+                # assert self.id in scene_service.collision_ids()
                 scene_service.delete_collision_id(self.id)
         self._enabled = enabled
 

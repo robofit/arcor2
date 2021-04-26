@@ -1,5 +1,6 @@
 import asyncio
-from typing import AsyncIterator, Dict, List, Optional, Set
+from collections import defaultdict
+from typing import AsyncIterator, DefaultDict, Dict, List, Optional, Set
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -308,22 +309,33 @@ async def start_scene() -> None:
     if glob.PROJECT:
         object_overrides = glob.PROJECT.overrides
 
-    # object initialization could take some time - let's do it in parallel
-    tasks = [
-        asyncio.ensure_future(
-            create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
-        )
-        for obj in glob.SCENE.objects
-    ]
+    prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
 
-    try:
-        await asyncio.gather(*tasks)
-    except Arcor2Exception as e:
-        for t in tasks:
-            t.cancel()
-        glob.logger.exception("Failed to create instances.")
-        await stop_scene(str(e))
-        return
+    for obj in glob.SCENE.objects:
+        type_def = glob.OBJECT_TYPES[obj.type].type_def
+        assert type_def
+        prio_dict[type_def.INIT_PRIORITY].append(obj)
+
+    for prio in sorted(prio_dict.keys(), reverse=True):
+
+        assert prio_dict[prio]
+
+        # object initialization could take some time - let's do it in parallel (grouped by priority)
+        tasks = [
+            asyncio.ensure_future(
+                create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
+            )
+            for obj in prio_dict[prio]
+        ]
+
+        try:
+            await asyncio.gather(*tasks)
+        except Arcor2Exception as e:
+            for t in tasks:
+                t.cancel()
+            glob.logger.exception("Failed to create instances.")
+            await stop_scene(str(e))
+            return
 
     try:
         await scene_srv.start()

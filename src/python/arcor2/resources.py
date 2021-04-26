@@ -1,6 +1,7 @@
 import importlib
 import json
 import os
+from types import TracebackType
 from typing import Dict, Optional, Type, TypeVar
 
 import humps
@@ -56,24 +57,29 @@ class IntResources:
         package_meta = package.read_package_meta(package_id)
         package_info_event = PackageInfo(PackageInfo.Data(package_id, package_meta.name, scene, project))
 
-        for scene_obj in self.scene.objects:
+        for scene_obj_type in self.scene.object_types:  # get all type-defs
 
-            if scene_obj.type not in self.type_defs:
+            assert scene_obj_type not in self.type_defs
 
-                if scene_obj.type in built_in:
-                    module = importlib.import_module(
-                        arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj.type)
-                    )
-                else:
-                    module = importlib.import_module(
-                        Resources.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj.type)
-                    )
-
-                cls = getattr(module, scene_obj.type)
-                patch_object_actions(cls, get_action_name_to_id(self.scene, self.project, cls.__name__))
-                self.type_defs[cls.__name__] = cls
+            if scene_obj_type in built_in:
+                module = importlib.import_module(arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj_type))
             else:
-                cls = self.type_defs[scene_obj.type]
+                module = importlib.import_module(
+                    Resources.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type)
+                )
+
+            cls = getattr(module, scene_obj_type)
+            patch_object_actions(cls, get_action_name_to_id(self.scene, self.project, cls.__name__))
+            self.type_defs[cls.__name__] = cls
+
+        scene_objects = list(self.scene.objects)
+
+        # sort according to OT initialization priority (highest is initialized first)
+        scene_objects.sort(key=lambda x: self.type_defs[x.type].INIT_PRIORITY, reverse=True)
+
+        for scene_obj in scene_objects:
+
+            cls = self.type_defs[scene_obj.type]
 
             assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
@@ -116,10 +122,10 @@ class IntResources:
     def __enter__(self: R) -> R:
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback) -> bool:
+    def __exit__(self, ex_type: Type[Exception], ex_value: Exception, traceback: TracebackType) -> bool:
 
         if ex_type != KeyboardInterrupt:
-            print_exception(ex_type(ex_value))
+            print_exception(ex_value)
 
         scene_service.stop()
         scene_service.delete_all_collisions()
