@@ -74,7 +74,7 @@ Other services as Project and Scene (this repo provides [mocks](src/python/arcor
 - A virtual environment with all the dependencies can be generated using `./build-support/setup-venv.sh`. Use `source ./build-support/.venv/bin/activate` to enter it. 
 - The `arcor2_kinect_azure` package requires some extra care:
   - Who need it, please use `./build-support/install_kinect_prerequisites.sh`. Beware that this works only on Ubuntu 18.04 (blame M$).
-  - Who don't need it, please remove the directory and (optionally) remove `pyk4a` from `3rparty/requirements.txt` (should be only needed to make a virtual environment). Please make sure to don't commit these changes.
+  - Who don't need it, please remove the directory and remove `pyk4a` from `3rdparty/requirements.txt` and from `3rdparty/constraints.txt`. Please make sure to don't commit these changes.
 
 ## Contributing
 
