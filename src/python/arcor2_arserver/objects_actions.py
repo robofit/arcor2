@@ -7,6 +7,7 @@ from arcor2.clients import aio_persistent_storage as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import convert_line_endings_to_unix
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
 from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources, prepare_object_types_dir
@@ -90,7 +91,11 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
         stored_type_def = glob.OBJECT_TYPES[obj_id].type_def
         assert stored_type_def
-        if hash(get_containing_module_sources(stored_type_def)) == hash(obj.source):
+
+        # the code we get from type_def has Unix line endings, while the code from Project service might have Windows...
+        obj.source = convert_line_endings_to_unix(obj.source)
+
+        if get_containing_module_sources(stored_type_def) == obj.source:
             glob.logger.debug(f"No need to update {obj_id}.")
             return
 
