@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 - `PUT /calibrate/camera` now returns `EstimatedPose` (pose + quality).
 
+### Fixed
+- Command line arguments fixed.
+  - It is mandatory to provide `-c` (path to a configuration file) or one of `-s` (prints OpenAPI) or `-m` (start as mock).
+
 ## [0.4.0] - 2021-04-26
 ### Changed
 - The service now requires YAML configuration file where placement of markers is specified.

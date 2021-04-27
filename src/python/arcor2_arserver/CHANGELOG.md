@@ -7,6 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Return value of `GetCameraPose` RPC updated.
+- Objects initialization order.
+  - Object initialization order can be set using class-level `INIT_PRIORITY` variable.
+  - The higher priority, the sooner are objects of that type initialized.
+  - Initialization happens in parallel (for objects of the same priority).
+- `SetEefPerpendicularToWorld` now calls IK in parallel.
+  - This provides almost 100% speed-up even when the robot service proceeds requests one by one.
+- Created a lock module that allows to read/write lock existing or special objects. The module contains:
+  - lock object with all necessary methods;
+  - structures for keeping data about locked objects;
+  - locking-related exceptions;
+  - queue and task for notifying UI about lock data;
+  - methods for auto-unlocking after timeout when user logouts.
+- Base tests of locking structure.
+- RPCs for (un)locking object, registering user name.
+- Events for (un)locking object.
+- Created a class for maintaining connected UIs.
+- Project methods to get object by ID, object parent and object children.
+
+- All RPCs that requires some kind of locking are now lock-guarded.
+- Updated existing tests to work with newly implemented locking.
+- Global variables `SCENE`, `PROJECT` and `INTERFACES` moved to new classes.
 
 ## [0.16.0] - 2021-04-20
 
