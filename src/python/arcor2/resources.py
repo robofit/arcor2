@@ -122,9 +122,15 @@ class IntResources:
     def __enter__(self: R) -> R:
         return self
 
-    def __exit__(self, ex_type: Type[Exception], ex_value: Exception, traceback: TracebackType) -> bool:
+    def __exit__(
+        self,
+        ex_type: Optional[Type[BaseException]],
+        ex_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> bool:
 
-        if ex_type != KeyboardInterrupt:
+        if isinstance(ex_value, Exception):
+            # this intentionally ignores KeyboardInterrupt (derived from BaseException)
             print_exception(ex_value)
 
         scene_service.stop()
