@@ -345,8 +345,7 @@ def get_calibration() -> RespT:
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
-    parser.add_argument("-s", "--swagger", action="store_true", default=False)
-    parser.add_argument("-m", "--mock", action="store_true", default=False)
+
     parser.add_argument(
         "-d",
         "--debug",
@@ -356,15 +355,18 @@ def main() -> None:
         default=logging.INFO,
     )
 
-    group = parser.add_mutually_exclusive_group()
+    group = parser.add_mutually_exclusive_group(required=True)
+
     group.add_argument(
         "--config-file",
         "-c",
         type=argparse.FileType("r"),
-        default=sys.stdin,
         help="Config file name containing a valid YAML configuration.",
     )
-    group.add_argument("yaml-config", nargs="?", type=str, help="Input string containing a valid YAML configuration.")
+
+    sub_group = group.add_mutually_exclusive_group()
+    sub_group.add_argument("-s", "--swagger", action="store_true", default=False)
+    sub_group.add_argument("-m", "--mock", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -372,10 +374,7 @@ def main() -> None:
 
     if not (args.swagger or args.mock):
 
-        try:
-            data = args.config_file.read()
-        except AttributeError:
-            data = args.yaml_config
+        data = args.config_file.read()
 
         global MARKER_SIZE
         global MIN_DIST
