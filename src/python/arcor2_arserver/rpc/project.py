@@ -1333,7 +1333,9 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
         asyncio.ensure_future(notif.broadcast_event(evt))
 
         await glob.LOCK.write_unlock(
-            [item for item in (logic_item.start, logic_item.end) if item not in to_lock], glob.USERS.user_name(ui)
+            [item for item in (logic_item.start, logic_item.end) if item not in to_lock],
+            glob.USERS.user_name(ui),
+            notify=True,
         )
         return None
 
