@@ -192,9 +192,14 @@ async def register(websocket: WsClient) -> None:
 
 async def unregister(websocket: WsClient) -> None:
 
-    glob.logger.info("Unregistering ui")  # TODO print out some identifier
+    try:
+        user_name = glob.USERS.user_name(websocket)
+        await glob.LOCK.schedule_auto_release(user_name)
+        glob.logger.info(f"Unregistering ui {user_name}")
+    except KeyError:
+        glob.logger.info("Unregistering ui")
+
     glob.USERS.logout(websocket)
-    await glob.LOCK.schedule_auto_release(glob.USERS.user_name(websocket))
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
         if websocket in registered_uis:
