@@ -5,9 +5,10 @@ import keyword
 import os
 import socket
 import sys
+from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Callable, Type, TypeVar
+from typing import Callable, Optional, Type, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -64,8 +65,8 @@ def is_valid_type(value: str) -> None:
 S = TypeVar("S")
 
 
-async def run_in_executor(func: Callable[..., S], *args) -> S:
-    return await asyncio.get_event_loop().run_in_executor(None, func, *args)
+async def run_in_executor(func: Callable[..., S], *args, executor: Optional[futures.Executor] = None) -> S:
+    return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
 
 
 T = TypeVar("T")
