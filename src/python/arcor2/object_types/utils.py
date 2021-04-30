@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 from dataclasses import is_dataclass
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, get_type_hints
 
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
@@ -20,7 +20,7 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-def get_containing_module_sources(type_def: Type[Generic]) -> str:
+def get_containing_module_sources(type_def: Type[object]) -> str:
     """Returns sources of the whole containing module.
 
     ...whereas inspect.getsource(type_def) returns just source of the class itself
@@ -165,16 +165,31 @@ def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
     return settings_cls
 
 
-def base_from_source(source: str, cls_name: str) -> Optional[str]:
+def base_from_source(source: Union[str, ast.AST], cls_name: str) -> List[str]:
+    """Returns list, where the first element is name of the base class and
+    others are mixins.
 
-    cls_def = find_class_def(cls_name, parse(source))
+    :param source:
+    :param cls_name:
+    :return:
+    """
+
+    if isinstance(source, str):
+        cls_def = find_class_def(cls_name, parse(source))
+    else:
+        cls_def = find_class_def(cls_name, source)
+
     if not cls_def.bases:
-        return None
+        return []
 
-    base_name = cls_def.bases[-1]  # allow usage of mixins e.g. class MyType(mixin, Generic)
+    ret: List[str] = []
 
-    assert isinstance(base_name, ast.Name)
-    return base_name.id
+    for base in reversed(cls_def.bases):
+
+        assert isinstance(base, ast.Name)
+        ret.append(base.id)
+
+    return ret
 
 
 def iterate_over_actions(
