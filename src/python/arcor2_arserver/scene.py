@@ -24,6 +24,7 @@ _scene_state: SceneState.Data.StateEnum = SceneState.Data.StateEnum.Stopped
 
 
 async def update_scene_object_pose(
+    scene: UpdateableCachedScene,
     obj: SceneObject,
     pose: Optional[Pose] = None,
     obj_inst: Optional[GenericWithPose] = None,
@@ -38,8 +39,6 @@ async def update_scene_object_pose(
     :return:
     """
 
-    assert glob.LOCK.scene
-
     if pose:
         # SceneObject pose was not updated before
         obj.pose = pose
@@ -47,7 +46,7 @@ async def update_scene_object_pose(
         # SceneObject pose was already updated
         pose = obj.pose
 
-    glob.LOCK.scene.update_modified()
+    scene.update_modified()
 
     evt = SceneObjectChanged(obj)
     evt.change_type = Event.Type.UPDATE
@@ -127,10 +126,9 @@ def check_object_parameters(obj_type: ObjectTypeData, parameters: List[Parameter
     # TODO check types of parameters, ranges, etc.
 
 
-def check_object(obj: SceneObject, new_one: bool = False) -> None:
+def check_object(scene: CachedScene, obj: SceneObject, new_one: bool = False) -> None:
     """Checks if object can be added into the scene."""
 
-    assert glob.LOCK.scene
     assert not obj.children
 
     if obj.type not in glob.OBJECT_TYPES:
@@ -158,16 +156,16 @@ def check_object(obj: SceneObject, new_one: bool = False) -> None:
 
     if new_one:
 
-        if obj.id in glob.LOCK.scene.object_ids:
+        if obj.id in scene.object_ids:
             raise Arcor2Exception("Object/service with that id already exists.")
 
-        if obj.name in glob.LOCK.scene.object_names():
+        if obj.name in scene.object_names():
             raise Arcor2Exception("Name is already used.")
 
     hlp.is_valid_identifier(obj.name)
 
 
-async def add_object_to_scene(obj: SceneObject, dry_run: bool = False) -> None:
+async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dry_run: bool = False) -> None:
     """
 
     :param obj:
@@ -175,14 +173,12 @@ async def add_object_to_scene(obj: SceneObject, dry_run: bool = False) -> None:
     :return:
     """
 
-    assert glob.LOCK.scene
-
-    check_object(obj, new_one=True)
+    check_object(scene, obj, new_one=True)
 
     if dry_run:
         return None
 
-    glob.LOCK.scene.upsert_object(obj)
+    scene.upsert_object(obj)
     glob.logger.debug(f"Object {obj.id} ({obj.type}) added to scene.")
 
 
@@ -246,7 +242,7 @@ async def open_scene(scene_id: str) -> None:
 
     try:
         for obj in glob.LOCK.scene.objects:
-            check_object(obj)
+            check_object(glob.LOCK.scene, obj)
     except Arcor2Exception as e:
         glob.LOCK.scene = None
         raise Arcor2Exception(f"Failed to open scene. {str(e)}") from e
@@ -296,12 +292,10 @@ async def stop_scene(message: Optional[str] = None) -> None:
     glob.SCENE_OBJECT_INSTANCES.clear()
 
 
-async def start_scene() -> None:
+async def start_scene(scene: CachedScene) -> None:
     """Creates instances of scene objects."""
 
     glob.logger.info("Starting the scene.")
-
-    assert glob.LOCK.scene
 
     await set_scene_state(SceneState.Data.StateEnum.Starting)
 
@@ -318,7 +312,7 @@ async def start_scene() -> None:
 
     prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
 
-    for obj in glob.LOCK.scene.objects:
+    for obj in scene.objects:
         type_def = glob.OBJECT_TYPES[obj.type].type_def
         assert type_def
         prio_dict[type_def.INIT_PRIORITY].append(obj)

@@ -3,6 +3,7 @@ import os
 from typing import List, Optional, Set, Type, Union
 
 from arcor2 import helpers as hlp
+from arcor2.cached import CachedScene
 from arcor2.clients import aio_persistent_storage as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
@@ -37,20 +38,10 @@ def get_types_dict() -> TypesDict:
     return {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None}
 
 
-def get_obj_type_name(object_id: str) -> str:
-
-    assert glob.LOCK.scene
+def get_obj_type_data(scene: CachedScene, object_id: str) -> ObjectTypeData:
 
     try:
-        return glob.LOCK.scene.object(object_id).type
-    except KeyError:
-        raise Arcor2Exception("Unknown object id.")
-
-
-def get_obj_type_data(object_id: str) -> ObjectTypeData:
-
-    try:
-        return glob.OBJECT_TYPES[get_obj_type_name(object_id)]
+        return glob.OBJECT_TYPES[scene.object(object_id).type]
     except KeyError:
         raise Arcor2Exception("Unknown object type.")
 
