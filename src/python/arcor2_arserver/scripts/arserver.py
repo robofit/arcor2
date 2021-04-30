@@ -194,12 +194,15 @@ async def unregister(websocket: WsClient) -> None:
 
     try:
         user_name = glob.USERS.user_name(websocket)
+    except Arcor2Exception:
+        glob.logger.info("Unregistering ui")
+    else:
         await glob.LOCK.schedule_auto_release(user_name)
         glob.logger.info(f"Unregistering ui {user_name}")
-    except KeyError:
-        glob.logger.info("Unregistering ui")
 
     glob.USERS.logout(websocket)
+
+    glob.logger.debug(f"Known user names: {glob.USERS.user_names}")
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
         if websocket in registered_uis:
