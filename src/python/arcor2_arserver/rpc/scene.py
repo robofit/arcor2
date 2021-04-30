@@ -80,7 +80,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
     :return:
     """
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE_NAME, glob.USERS.user_name(ui), dry_run=req.dry_run):
+    async with glob.LOCK.get_lock(dry_run=req.dry_run):
         if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
             raise Arcor2Exception("Can't create scene while package runs.")
 

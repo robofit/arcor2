@@ -79,8 +79,4 @@ async def get_unlocked_objects(obj_ids: Union[str, List[str]], owner: str) -> Li
     if isinstance(obj_ids, str):
         obj_ids = [obj_ids]
 
-    ret: List[str] = []
-    for obj_id in obj_ids:
-        if not await glob.LOCK.is_write_locked(obj_id, owner):
-            ret.append(obj_id)
-    return ret
+    return [obj_id for obj_id in obj_ids if not await glob.LOCK.is_write_locked(obj_id, owner)]

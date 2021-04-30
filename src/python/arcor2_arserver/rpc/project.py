@@ -424,7 +424,7 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         if req.dry_run:
             return
 
-        # Apply parent change to lock structure
+        # Save root of current AP and apply it to structure after successful update
         current_root = await glob.LOCK.get_root_id(ap.id)
 
         if not ap.parent and req.args.new_parent_id:
@@ -756,7 +756,6 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
         glob.LOCK.project = UpdateableCachedProject(
             common.Project(req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
         )
-        glob.LOCK.project = glob.LOCK.project
 
         assert glob.LOCK.scene
 
