@@ -221,7 +221,7 @@ async def move_to_pose(
             sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_id, end_effector_id, pose, safe))
         )
     finally:
-        await glob.LOCK.read_unlock(robot_id, lock_owner)
+        await glob.LOCK.write_unlock(robot_id, lock_owner)
 
 
 async def move_to_ap_orientation(

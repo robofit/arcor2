@@ -75,6 +75,9 @@ class Lock:
         """Get lock for data structure, method should be used for operation
         with whole scene/project, no others."""
 
+        if dry_run and self._ui_user_locks:
+            raise CannotLock("Cannot acquire lock")
+
         yielded = False
         try:
             for _ in range(self.LOCK_RETRIES):
@@ -250,7 +253,7 @@ class Lock:
             if obj_id in lock_record.write and owner in lock_record.write[obj_id].owners:
                 return True
 
-            if lock_record.tree and set(lock_record.write).intersection(self.get_all_parents(obj_id)):
+            if lock_record.tree:
                 return True
             return False
 
@@ -383,7 +386,7 @@ class Lock:
             unlocked.update(write.values())
 
         if unlocked:
-            self.notifications_q.put_nowait(LockEventData(list(unlocked), owner))
+            self.notifications_q.put_nowait(LockEventData(unlocked, owner))
 
     async def get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:
         """Finds which locks belongs to owner

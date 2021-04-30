@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -11,9 +11,12 @@ class LockEventData:
     __slots__ = "obj_ids", "owner", "lock", "client"
 
     def __init__(
-        self, obj_ids: Union[List[str], str], owner: str, lock: bool = False, client: Optional[WsClient] = None
+        self, obj_ids: Union[Iterable[str], str], owner: str, lock: bool = False, client: Optional[WsClient] = None
     ):
-        self.obj_ids = obj_ids
+        if isinstance(obj_ids, str):
+            self.obj_ids = [obj_ids]
+        else:
+            self.obj_ids = list(obj_ids)
         self.owner = owner
         self.lock = lock
         self.client = client

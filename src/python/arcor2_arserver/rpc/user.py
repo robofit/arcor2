@@ -14,10 +14,10 @@ async def register_user_cb(req: srpc.u.RegisterUser.Request, ui: WsClient) -> No
 
     for user, user_objects in glob.LOCK.all_ui_locks.items():
         if user != req.args.user_name:
-            glob.LOCK.notifications_q.put_nowait(LockEventData(list(user_objects), user, True, ui))
+            glob.LOCK.notifications_q.put_nowait(LockEventData(user_objects, user, True, ui))
 
     _, user_write_locks = await glob.LOCK.get_owner_locks(req.args.user_name)
     if user_write_locks:
-        glob.LOCK.notifications_q.put_nowait(LockEventData(list(user_write_locks), req.args.user_name, True, ui))
+        glob.LOCK.notifications_q.put_nowait(LockEventData(user_write_locks, req.args.user_name, True, ui))
 
     return None
