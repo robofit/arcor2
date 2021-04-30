@@ -4,7 +4,7 @@ from typing import Dict, List
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
-from arcor2.cached import CachedScene
+from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
 from arcor2.data.common import Parameter, Pose, Position, SceneObject
@@ -18,7 +18,6 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.helpers import ctx_read_lock, ensure_locked
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
@@ -45,14 +44,18 @@ def clean_up_after_focus(obj_id: str) -> None:
         pass
 
 
-@scene_needed
-@no_project
 async def focus_object_start_cb(req: srpc.o.FocusObjectStart.Request, ui: WsClient) -> None:
 
     # TODO this event should take long time, notify UI that robot is locked
     async with ctx_read_lock(
         [req.args.object_id, req.args.robot.robot_id], glob.USERS.user_name(ui), auto_unlock=False
     ):
+
+        scene = glob.LOCK.scene_or_exception()
+
+        if glob.LOCK.project:
+            raise Arcor2Exception("Project has to be closed first.")
+
         ensure_scene_started()
 
         obj_id = req.args.object_id
@@ -68,7 +71,7 @@ async def focus_object_start_cb(req: srpc.o.FocusObjectStart.Request, ui: WsClie
         robot_type = glob.OBJECT_TYPES[inst.__class__.__name__]
         assert robot_type.robot_meta
 
-        obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
+        obj_type = glob.OBJECT_TYPES[scene.object(obj_id).type].meta
 
         if not obj_type.has_pose:
             raise Arcor2Exception("Only available for objects with pose.")
@@ -89,17 +92,22 @@ async def focus_object_start_cb(req: srpc.o.FocusObjectStart.Request, ui: WsClie
         return None
 
 
-@no_project
 async def focus_object_cb(req: srpc.o.FocusObject.Request, ui: WsClient) -> srpc.o.FocusObject.Response:
 
     async with ctx_read_lock(req.args.object_id, glob.USERS.user_name(ui), auto_unlock=False):
+
+        scene = glob.LOCK.scene_or_exception()
+
+        if glob.LOCK.project:
+            raise Arcor2Exception("Project has to be closed first.")
+
         obj_id = req.args.object_id
         pt_idx = req.args.point_idx
 
         if obj_id not in glob.SCENE_OBJECT_INSTANCES:
             raise Arcor2Exception("Unknown object_id.")
 
-        obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
+        obj_type = glob.OBJECT_TYPES[scene.object(obj_id).type].meta
 
         assert obj_type.has_pose
         assert obj_type.object_model
@@ -125,9 +133,12 @@ async def focus_object_cb(req: srpc.o.FocusObject.Request, ui: WsClient) -> srpc
         return r
 
 
-@scene_needed
-@no_project
 async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient) -> None:
+
+    scene = glob.LOCK.scene_or_exception()
+
+    if glob.LOCK.project:
+        raise Arcor2Exception("Project has to be closed first.")
 
     obj_id = req.args.id
 
@@ -136,7 +147,7 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
 
     await ensure_locked(req.args.id, ui)
 
-    obj_type = glob.OBJECT_TYPES[osa.get_obj_type_name(obj_id)].meta
+    obj_type = glob.OBJECT_TYPES[scene.object(obj_id).type].meta
 
     assert obj_type.object_model
     assert obj_type.object_model.mesh
@@ -148,9 +159,7 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
     if len(FOCUS_OBJECT[obj_id]) < len(focus_points):
         raise Arcor2Exception("Not all points were done.")
 
-    assert glob.LOCK.scene
-
-    obj = glob.LOCK.scene.object(obj_id)
+    obj = scene.object(obj_id)
     assert obj.pose
 
     obj_inst = glob.SCENE_OBJECT_INSTANCES[obj_id]
@@ -185,7 +194,7 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
 
     clean_up_after_focus(obj_id)
 
-    asyncio.ensure_future(update_scene_object_pose(obj, new_pose, obj_inst, glob.USERS.user_name(ui)))
+    asyncio.ensure_future(update_scene_object_pose(scene, obj, new_pose, obj_inst, glob.USERS.user_name(ui)))
 
     return None
 
@@ -326,12 +335,11 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
         asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-def check_override(obj_id: str, override: Parameter, add_new_one: bool = False) -> SceneObject:
+def check_override(
+    scene: CachedScene, project: CachedProject, obj_id: str, override: Parameter, add_new_one: bool = False
+) -> SceneObject:
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
-
-    obj = glob.LOCK.scene.object(obj_id)
+    obj = scene.object(obj_id)
 
     for par in glob.OBJECT_TYPES[obj.type].meta.settings:
         if par.name == override.name:
@@ -343,16 +351,16 @@ def check_override(obj_id: str, override: Parameter, add_new_one: bool = False) 
 
     if add_new_one:
         try:
-            for existing_override in glob.LOCK.project.overrides[obj.id]:
+            for existing_override in project.overrides[obj.id]:
                 if override.name == existing_override.name:
                     raise Arcor2Exception("Override already exists.")
         except KeyError:
             pass
     else:
-        if obj.id not in glob.LOCK.project.overrides:
+        if obj.id not in project.overrides:
             raise Arcor2Exception("There are no overrides for the object.")
 
-        for override in glob.LOCK.project.overrides[obj.id]:
+        for override in project.overrides[obj.id]:
             if override.name == override.name:
                 break
         else:
@@ -361,23 +369,23 @@ def check_override(obj_id: str, override: Parameter, add_new_one: bool = False) 
     return obj
 
 
-@project_needed
 async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    scene = glob.LOCK.scene_or_exception()
+    project = glob.LOCK.project_or_exception()
 
-    obj = check_override(req.args.id, req.args.override, add_new_one=True)
+    obj = check_override(scene, project, req.args.id, req.args.override, add_new_one=True)
 
     await ensure_locked(req.args.id, ui)
 
     if req.dry_run:
         return
 
-    if obj.id not in glob.LOCK.project.overrides:
-        glob.LOCK.project.overrides[obj.id] = []
+    if obj.id not in project.overrides:
+        project.overrides[obj.id] = []
 
-    glob.LOCK.project.overrides[obj.id].append(req.args.override)
-    glob.LOCK.project.update_modified()
+    project.overrides[obj.id].append(req.args.override)
+    project.update_modified()
 
     evt = sevts.o.OverrideUpdated(req.args.override)
     evt.change_type = events.Event.Type.ADD
@@ -385,22 +393,22 @@ async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-@project_needed
 async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    scene = glob.LOCK.scene_or_exception()
+    project = glob.LOCK.project_or_exception()
 
-    obj = check_override(req.args.id, req.args.override)
+    obj = check_override(scene, project, req.args.id, req.args.override)
 
     await ensure_locked(req.args.id, ui)
 
     if req.dry_run:
         return
 
-    for override in glob.LOCK.project.overrides[obj.id]:
+    for override in project.overrides[obj.id]:
         if override.name == override.name:
             override.value = req.args.override.value
-    glob.LOCK.project.update_modified()
+    project.update_modified()
 
     evt = sevts.o.OverrideUpdated(req.args.override)
     evt.change_type = events.Event.Type.UPDATE
@@ -408,26 +416,24 @@ async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-@project_needed
 async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    scene = glob.LOCK.scene_or_exception()
+    project = glob.LOCK.project_or_exception()
 
-    obj = check_override(req.args.id, req.args.override)
+    obj = check_override(scene, project, req.args.id, req.args.override)
 
     await ensure_locked(req.args.id, ui)
 
     if req.dry_run:
         return
 
-    glob.LOCK.project.overrides[obj.id] = [
-        ov for ov in glob.LOCK.project.overrides[obj.id] if ov.name != req.args.override.name
-    ]
+    project.overrides[obj.id] = [ov for ov in project.overrides[obj.id] if ov.name != req.args.override.name]
 
-    if not glob.LOCK.project.overrides[obj.id]:
-        del glob.LOCK.project.overrides[obj.id]
+    if not project.overrides[obj.id]:
+        del project.overrides[obj.id]
 
-    glob.LOCK.project.update_modified()
+    project.update_modified()
 
     evt = sevts.o.OverrideUpdated(req.args.override)
     evt.change_type = events.Event.Type.REMOVE

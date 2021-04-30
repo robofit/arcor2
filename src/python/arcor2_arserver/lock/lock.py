@@ -43,6 +43,15 @@ class Lock:
     def scene(self, scene: Optional[UpdateableCachedScene] = None) -> None:
         self._scene = scene
 
+    def scene_or_exception(self, ensure_project_closed: bool = False) -> UpdateableCachedScene:
+        if not self._scene:
+            raise Arcor2Exception("Scene not opened.")
+
+        if ensure_project_closed and self._project:
+            raise Arcor2Exception("Project has to be closed first.")
+
+        return self._scene
+
     @property
     def project(self) -> Optional[UpdateableCachedProject]:
         return self._project
@@ -50,6 +59,12 @@ class Lock:
     @project.setter
     def project(self, project: Optional[UpdateableCachedProject] = None) -> None:
         self._project = project
+
+    def project_or_exception(self) -> UpdateableCachedProject:
+        if not self._project:
+            raise Arcor2Exception("Project not opened.")
+
+        return self._project
 
     @property
     def all_ui_locks(self) -> Dict[str, Set[str]]:
@@ -259,6 +274,7 @@ class Lock:
     async def get_locked_roots_count(self) -> int:
 
         async with self._lock:
+            print(self._locked_objects)
             return len(self._locked_objects)
 
     async def get_write_locks_count(self) -> int:

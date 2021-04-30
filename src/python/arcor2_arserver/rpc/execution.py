@@ -3,7 +3,6 @@ import asyncio
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.exceptions import Arcor2Exception
-from arcor2_arserver import decorators
 from arcor2_arserver import globals as glob
 from arcor2_arserver.execution import build_and_upload_package, run_temp_package
 from arcor2_arserver.helpers import ctx_write_lock
@@ -26,18 +25,16 @@ async def build_project_cb(req: rpc.b.BuildProject.Request, ui: WsClient) -> rpc
         return resp
 
 
-@decorators.project_needed
 async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: WsClient) -> None:
 
     async with glob.LOCK.get_lock():
-        assert glob.LOCK.project
 
-        if glob.LOCK.project.has_changes:
+        project = glob.LOCK.project_or_exception()
+
+        if project.has_changes:
             raise Arcor2Exception("Project has unsaved changes.")
 
-        package_id = await build_and_upload_package(
-            glob.LOCK.project.id, f"Temporary package for project '{glob.LOCK.project.name}'."
-        )
+        package_id = await build_and_upload_package(project.id, f"Temporary package for project '{project.name}'.")
 
         asyncio.ensure_future(run_temp_package(package_id))
         return None

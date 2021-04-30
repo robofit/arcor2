@@ -70,7 +70,7 @@ async def run_temp_package(package_id: str) -> None:
     )
 
     if scene_online:
-        await start_scene()
+        await start_scene(glob.LOCK.scene)
 
 
 async def build_and_upload_package(project_id: str, package_name: str) -> str:

@@ -3,6 +3,7 @@ from ast import AST
 from typing import List, Optional, Set, Type
 
 import arcor2.helpers as hlp
+from arcor2.cached import CachedScene
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Robot
@@ -155,9 +156,11 @@ async def fk(robot_id: str, end_effector_id: str, joints: List[common.Joint]) ->
     return await hlp.run_in_executor(robot_inst.forward_kinematics, end_effector_id, joints)
 
 
-async def check_reachability(robot_id: str, end_effector_id: str, pose: common.Pose, safe: bool = True) -> None:
+async def check_reachability(
+    scene: CachedScene, robot_id: str, end_effector_id: str, pose: common.Pose, safe: bool = True
+) -> None:
 
-    otd = osa.get_obj_type_data(robot_id)
+    otd = osa.get_obj_type_data(scene, robot_id)
     if otd.robot_meta and otd.robot_meta.features.inverse_kinematics:
         try:
             await ik(robot_id, end_effector_id, pose, avoid_collisions=safe)

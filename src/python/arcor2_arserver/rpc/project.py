@@ -7,7 +7,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2 import transformations as tr
-from arcor2.cached import CachedProjectException, CachedScene, UpdateableCachedProject
+from arcor2.cached import CachedProject, CachedProjectException, CachedScene, UpdateableCachedProject
 from arcor2.data import common
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
@@ -20,7 +20,6 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.decorators import no_project, project_needed, scene_needed
 from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked, get_unlocked_objects, unique_name
 from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.project import (
@@ -63,21 +62,19 @@ async def managed_project(project_id: str, make_copy: bool = False) -> AsyncGene
             asyncio.ensure_future(storage.update_project(project.project))
 
 
-@scene_needed
-@project_needed
 async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
     if not glob.RUNNING_ACTION:
         raise Arcor2Exception("No action is running.")
 
-    action = glob.LOCK.project.action(glob.RUNNING_ACTION)
+    action = proj.action(glob.RUNNING_ACTION)
     obj_id, action_name = action.parse_type()
     obj = get_instance(obj_id)
 
-    if not find_object_action(glob.LOCK.scene, action).meta.cancellable:
+    if not find_object_action(scene, action).meta.cancellable:
         raise Arcor2Exception("Action is not cancellable.")
 
     try:
@@ -108,13 +105,12 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
     glob.RUNNING_ACTION_PARAMS = None
 
 
-@scene_needed
-@project_needed
 async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> None:
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.RUNNING_ACTION, glob.USERS.user_name(ui)):
-        assert glob.LOCK.scene
-        assert glob.LOCK.project
+
+        scene = glob.LOCK.scene_or_exception()
+        proj = glob.LOCK.project_or_exception()
 
         ensure_scene_started()
 
@@ -123,7 +119,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 f"Action {glob.RUNNING_ACTION} is being executed. " f"Only one action can be executed at a time."
             )
 
-        action = glob.LOCK.project.action(req.args.action_id)
+        action = proj.action(req.args.action_id)
 
         obj_id, action_name = action.parse_type()
 
@@ -137,7 +133,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 try:
                     results = project.PREV_RESULTS[parsed_link.action_id]
                 except KeyError:
-                    prev_action = glob.LOCK.project.action(parsed_link.action_id)
+                    prev_action = proj.action(parsed_link.action_id)
                     raise Arcor2Exception(f"Action '{prev_action.name}' has to be executed first.")
 
                 # an action result could be a tuple or a single value
@@ -148,7 +144,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                     params.append(results)
 
             elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
-                const = glob.LOCK.project.constant(param.str_from_value())
+                const = proj.constant(param.str_from_value())
                 # TODO use plugin to get the value
                 import json
 
@@ -158,7 +154,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                 try:
                     params.append(
                         plugin_from_type_name(param.type).parameter_execution_value(
-                            get_types_dict(), glob.LOCK.scene, glob.LOCK.project, action.id, param.name
+                            get_types_dict(), scene, proj, action.id, param.name
                         )
                     )
                 except ParameterPluginException as e:
@@ -251,22 +247,20 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     return resp
 
 
-@scene_needed
-@project_needed
 async def add_action_point_joints_using_robot_cb(
     req: srpc.p.AddActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
+
+        proj = glob.LOCK.project_or_exception()
+
         ensure_scene_started()
 
-        assert glob.LOCK.scene
-        assert glob.LOCK.project
-
-        ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+        ap = proj.bare_action_point(req.args.action_point_id)
 
         hlp.is_valid_identifier(req.args.name)
-        unique_name(req.args.name, glob.LOCK.project.ap_joint_names(ap.id))
+        unique_name(req.args.name, proj.ap_joint_names(ap.id))
 
         new_joints = await get_robot_joints(req.args.robot_id)
 
@@ -276,7 +270,7 @@ async def add_action_point_joints_using_robot_cb(
             return None
 
         prj = common.ProjectRobotJoints(req.args.name, req.args.robot_id, new_joints, True)
-        glob.LOCK.project.upsert_joints(ap.id, prj)
+        proj.upsert_joints(ap.id, prj)
 
         evt = sevts.p.JointsChanged(prj)
         evt.change_type = Event.Type.ADD
@@ -285,18 +279,15 @@ async def add_action_point_joints_using_robot_cb(
         return None
 
 
-@scene_needed
-@project_needed
 async def update_action_point_joints_using_robot_cb(
     req: srpc.p.UpdateActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
 
+    proj = glob.LOCK.project_or_exception()
+
     ensure_scene_started()
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
-
-    ap, robot_joints = glob.LOCK.project.ap_and_joints(req.args.joints_id)
+    ap, robot_joints = proj.ap_and_joints(req.args.joints_id)
 
     async with ctx_read_lock(robot_joints.robot_id, glob.USERS.user_name(ui)):
         await ensure_locked(ap.id, ui)
@@ -304,7 +295,7 @@ async def update_action_point_joints_using_robot_cb(
         robot_joints.joints = await get_robot_joints(robot_joints.robot_id)
         robot_joints.is_valid = True
 
-        glob.LOCK.project.update_modified()
+        proj.update_modified()
 
         evt = sevts.p.JointsChanged(robot_joints)
         evt.change_type = Event.Type.UPDATE
@@ -312,14 +303,11 @@ async def update_action_point_joints_using_robot_cb(
         return None
 
 
-@scene_needed
-@project_needed
 async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
 
-    ap, robot_joints = glob.LOCK.project.ap_and_joints(req.args.joints_id)
+    ap, robot_joints = proj.ap_and_joints(req.args.joints_id)
 
     if {joint.name for joint in req.args.joints} != {joint.name for joint in robot_joints.joints}:
         raise Arcor2Exception("Joint names does not match the robot.")
@@ -329,7 +317,7 @@ async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Requ
     # TODO maybe joints values should be normalized? To <0, 2pi> or to <-pi, pi>?
     robot_joints.joints = req.args.joints
     robot_joints.is_valid = True
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.JointsChanged(robot_joints)
     evt.change_type = Event.Type.UPDATE
@@ -337,8 +325,6 @@ async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Requ
     return None
 
 
-@scene_needed
-@project_needed
 async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Request, ui: WsClient) -> None:
     """Removes joints from action point.
 
@@ -346,22 +332,19 @@ async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Requ
     :return:
     """
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
 
-    for act in glob.LOCK.project.actions:
+    for act in proj.actions:
         for param in act.parameters:
-            if plugin_from_type_name(param.type).uses_robot_joints(
-                glob.LOCK.project, act.id, param.name, req.args.joints_id
-            ):
+            if plugin_from_type_name(param.type).uses_robot_joints(proj, act.id, param.name, req.args.joints_id):
                 raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.name}).")
 
-    ap, _ = glob.LOCK.project.ap_and_joints(req.args.joints_id)
+    ap, _ = proj.ap_and_joints(req.args.joints_id)
     await ensure_locked(ap.id, ui)
 
-    joints_to_be_removed = glob.LOCK.project.remove_joints(req.args.joints_id)
+    joints_to_be_removed = proj.remove_joints(req.args.joints_id)
 
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.JointsChanged(joints_to_be_removed)
     evt.change_type = Event.Type.REMOVE
@@ -369,20 +352,17 @@ async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Requ
     return None
 
 
-@scene_needed
-@project_needed
 async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
 
-    ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+    ap = proj.bare_action_point(req.args.action_point_id)
 
     if req.args.new_name == ap.name:
         return None
 
     hlp.is_valid_identifier(req.args.new_name)
-    unique_name(req.args.new_name, glob.LOCK.project.action_points_names)
+    unique_name(req.args.new_name, proj.action_points_names)
 
     await ensure_locked(req.args.action_point_id, ui)
 
@@ -391,7 +371,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
 
     ap.name = req.args.new_name
 
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.ActionPointChanged(ap)
     evt.change_type = Event.Type.UPDATE_BASE
@@ -399,9 +379,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
     return None
 
 
-def detect_ap_loop(ap: common.BareActionPoint, new_parent_id: str) -> None:
-
-    assert glob.LOCK.project
+def detect_ap_loop(proj: CachedProject, ap: common.BareActionPoint, new_parent_id: str) -> None:
 
     visited_ids: Set[str] = set()
     ap = copy.deepcopy(ap)
@@ -417,21 +395,19 @@ def detect_ap_loop(ap: common.BareActionPoint, new_parent_id: str) -> None:
             break  # type: ignore  # this is certainly reachable
 
         try:
-            ap = glob.LOCK.project.bare_action_point(ap.parent)
+            ap = proj.bare_action_point(ap.parent)
         except Arcor2Exception:
             break
 
 
-@scene_needed
-@project_needed
 async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
     user_name = glob.USERS.user_name(ui)
 
-    ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+    ap = proj.bare_action_point(req.args.action_point_id)
 
     to_lock = await get_unlocked_objects(ap.parent, user_name) if ap.parent else []
     if req.args.new_parent_id:
@@ -442,8 +418,8 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         if req.args.new_parent_id == ap.parent:
             return None
 
-        check_ap_parent(req.args.new_parent_id)
-        detect_ap_loop(ap, req.args.new_parent_id)
+        check_ap_parent(scene, proj, req.args.new_parent_id)
+        detect_ap_loop(proj, ap, req.args.new_parent_id)
 
         if req.dry_run:
             return
@@ -453,23 +429,23 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
 
         if not ap.parent and req.args.new_parent_id:
             # AP position and all orientations will become relative to the parent
-            tr.make_global_ap_relative(glob.LOCK.scene, glob.LOCK.project, ap, req.args.new_parent_id)
+            tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
 
         elif ap.parent and not req.args.new_parent_id:
             # AP position and all orientations will become absolute
-            tr.make_relative_ap_global(glob.LOCK.scene, glob.LOCK.project, ap)
+            tr.make_relative_ap_global(scene, proj, ap)
         else:
 
             assert ap.parent
 
             # AP position and all orientations will become relative to another parent
-            tr.make_relative_ap_global(glob.LOCK.scene, glob.LOCK.project, ap)
-            tr.make_global_ap_relative(glob.LOCK.scene, glob.LOCK.project, ap, req.args.new_parent_id)
+            tr.make_relative_ap_global(scene, proj, ap)
+            tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
 
         await glob.LOCK.update_write_lock(ap.id, current_root, user_name)
 
         ap.parent = req.args.new_parent_id
-        glob.LOCK.project.update_modified()
+        proj.update_modified()
 
         await glob.LOCK.write_unlock(ap.id, user_name, notify=True)
 
@@ -478,13 +454,15 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         because UI would display orientations wrongly (for a short moment).
         """
         # 'ap' is BareActionPoint, that does not contain orientations
-        evt = sevts.p.ActionPointChanged(glob.LOCK.project.action_point(req.args.action_point_id))
+        evt = sevts.p.ActionPointChanged(proj.action_point(req.args.action_point_id))
         evt.change_type = Event.Type.UPDATE
         asyncio.ensure_future(notif.broadcast_event(evt))
         return None
 
 
-async def update_ap_position(ap: common.BareActionPoint, position: common.Position) -> None:
+async def update_ap_position(
+    proj: UpdateableCachedProject, ap: common.BareActionPoint, position: common.Position
+) -> None:
     """Updates position of an AP and sends notification about joints that
     become invalid because of it.
 
@@ -493,10 +471,8 @@ async def update_ap_position(ap: common.BareActionPoint, position: common.Positi
     :return:
     """
 
-    assert glob.LOCK.project
-
-    valid_joints = [joints for joints in glob.LOCK.project.ap_joints(ap.id) if joints.is_valid]
-    glob.LOCK.project.update_ap_position(ap.id, position)
+    valid_joints = [joints for joints in proj.ap_joints(ap.id) if joints.is_valid]
+    proj.update_ap_position(ap.id, position)
 
     for joints in valid_joints:  # those are now invalid, so let's notify UI about the change
 
@@ -512,46 +488,38 @@ async def update_ap_position(ap: common.BareActionPoint, position: common.Positi
     asyncio.ensure_future(notif.broadcast_event(ap_evt))
 
 
-@scene_needed
-@project_needed
 async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
-
-    ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+    proj = glob.LOCK.project_or_exception()
+    ap = proj.bare_action_point(req.args.action_point_id)
 
     await ensure_locked(req.args.action_point_id, ui)
 
     if req.dry_run:
         return
 
-    await update_ap_position(ap, req.args.new_position)
+    await update_ap_position(proj, ap, req.args.new_position)
 
 
-@scene_needed
-@project_needed
 async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingRobot.Request, ui: WsClient) -> None:
 
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
     ensure_scene_started()
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
-
-    ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+    ap = proj.bare_action_point(req.args.action_point_id)
     await ensure_locked(ap.id, ui)
 
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
         new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
         if ap.parent:
-            new_pose = tr.make_pose_rel_to_parent(glob.LOCK.scene, glob.LOCK.project, new_pose, ap.parent)
+            new_pose = tr.make_pose_rel_to_parent(scene, proj, new_pose, ap.parent)
 
-        await update_ap_position(glob.LOCK.project.bare_action_point(req.args.action_point_id), new_pose.position)
+        await update_ap_position(proj, proj.bare_action_point(req.args.action_point_id), new_pose.position)
         return None
 
 
-@scene_needed
-@project_needed
 async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.Request, ui: WsClient) -> None:
     """Adds orientation and joints to the action point.
 
@@ -559,12 +527,11 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
     :return:
     """
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
 
-    ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+    ap = proj.bare_action_point(req.args.action_point_id)
     hlp.is_valid_identifier(req.args.name)
-    unique_name(req.args.name, glob.LOCK.project.ap_orientation_names(ap.id))
+    unique_name(req.args.name, proj.ap_orientation_names(ap.id))
 
     await ensure_locked(req.args.action_point_id, ui)
 
@@ -572,7 +539,7 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
         return None
 
     orientation = common.NamedOrientation(req.args.name, req.args.orientation)
-    glob.LOCK.project.upsert_orientation(ap.id, orientation)
+    proj.upsert_orientation(ap.id, orientation)
 
     evt = sevts.p.OrientationChanged(orientation)
     evt.change_type = Event.Type.ADD
@@ -581,8 +548,6 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
     return None
 
 
-@scene_needed
-@project_needed
 async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrientation.Request, ui: WsClient) -> None:
     """Updates orientation of the action point.
 
@@ -590,15 +555,13 @@ async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrient
     :return:
     """
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
-
-    orientation = glob.LOCK.project.orientation(req.args.orientation_id)
+    proj = glob.LOCK.project_or_exception()
+    orientation = proj.orientation(req.args.orientation_id)
     await ensure_locked(orientation.id, ui)
 
     orientation.orientation = req.args.orientation
 
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.OrientationChanged(orientation)
     evt.change_type = Event.Type.UPDATE
@@ -606,8 +569,6 @@ async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrient
     return None
 
 
-@scene_needed
-@project_needed
 async def add_action_point_orientation_using_robot_cb(
     req: srpc.p.AddActionPointOrientationUsingRobot.Request, ui: WsClient
 ) -> None:
@@ -618,14 +579,14 @@ async def add_action_point_orientation_using_robot_cb(
     """
 
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
+
+        scene = glob.LOCK.scene_or_exception()
+        proj = glob.LOCK.project_or_exception()
         ensure_scene_started()
 
-        assert glob.LOCK.scene
-        assert glob.LOCK.project
-
-        ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+        ap = proj.bare_action_point(req.args.action_point_id)
         hlp.is_valid_identifier(req.args.name)
-        unique_name(req.args.name, glob.LOCK.project.ap_orientation_names(ap.id))
+        unique_name(req.args.name, proj.ap_orientation_names(ap.id))
 
         await ensure_locked(req.args.action_point_id, ui)
 
@@ -635,10 +596,10 @@ async def add_action_point_orientation_using_robot_cb(
         new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
         if ap.parent:
-            new_pose = tr.make_pose_rel_to_parent(glob.LOCK.scene, glob.LOCK.project, new_pose, ap.parent)
+            new_pose = tr.make_pose_rel_to_parent(scene, proj, new_pose, ap.parent)
 
         orientation = common.NamedOrientation(req.args.name, new_pose.orientation)
-        glob.LOCK.project.upsert_orientation(ap.id, orientation)
+        proj.upsert_orientation(ap.id, orientation)
 
         evt = sevts.p.OrientationChanged(orientation)
         evt.change_type = Event.Type.ADD
@@ -647,8 +608,6 @@ async def add_action_point_orientation_using_robot_cb(
         return None
 
 
-@scene_needed
-@project_needed
 async def update_action_point_orientation_using_robot_cb(
     req: srpc.p.UpdateActionPointOrientationUsingRobot.Request, ui: WsClient
 ) -> None:
@@ -659,23 +618,24 @@ async def update_action_point_orientation_using_robot_cb(
     """
 
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
+
+        scene = glob.LOCK.scene_or_exception()
+        proj = glob.LOCK.project_or_exception()
+
         ensure_scene_started()
 
-        assert glob.LOCK.scene
-        assert glob.LOCK.project
-
-        ap, ori = glob.LOCK.project.bare_ap_and_orientation(req.args.orientation_id)
+        ap, ori = proj.bare_ap_and_orientation(req.args.orientation_id)
 
         await ensure_locked(ori.id, ui)
 
         new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
 
         if ap.parent:
-            new_pose = tr.make_pose_rel_to_parent(glob.LOCK.scene, glob.LOCK.project, new_pose, ap.parent)
+            new_pose = tr.make_pose_rel_to_parent(scene, proj, new_pose, ap.parent)
 
         ori.orientation = new_pose.orientation
 
-        glob.LOCK.project.update_modified()
+        proj.update_modified()
 
         evt = sevts.p.OrientationChanged(ori)
         evt.change_type = Event.Type.UPDATE
@@ -683,8 +643,6 @@ async def update_action_point_orientation_using_robot_cb(
         return None
 
 
-@scene_needed
-@project_needed
 async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrientation.Request, ui: WsClient) -> None:
     """Removes orientation.
 
@@ -692,17 +650,16 @@ async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrient
     :return:
     """
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
-
+    proj = glob.LOCK.project_or_exception()
     user_name = glob.USERS.user_name(ui)
-    ap, orientation = glob.LOCK.project.bare_ap_and_orientation(req.args.orientation_id)
+    ap, orientation = proj.bare_ap_and_orientation(req.args.orientation_id)
+
     to_lock = await get_unlocked_objects(orientation.id, user_name)
     async with ctx_write_lock(to_lock, user_name, auto_unlock=req.dry_run):
-        for act in glob.LOCK.project.actions:
+        for act in proj.actions:
             for param in act.parameters:
                 if plugin_from_type_name(param.type).uses_orientation(
-                    glob.LOCK.project, act.id, param.name, req.args.orientation_id
+                    proj, act.id, param.name, req.args.orientation_id
                 ):
                     raise Arcor2Exception(f"Orientation used in action {act.name} (parameter {param.name}).")
 
@@ -711,7 +668,7 @@ async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrient
 
         await glob.LOCK.write_unlock(orientation.id, user_name)
 
-        glob.LOCK.project.remove_orientation(req.args.orientation_id)
+        proj.remove_orientation(req.args.orientation_id)
 
         evt = sevts.p.OrientationChanged(orientation)
         evt.change_type = Event.Type.REMOVE
@@ -720,15 +677,21 @@ async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrient
 
 
 async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None:
+    """Opens a project. This can be done even when a scene or another project
+    is opened.
+
+    :param req:
+    :param ui:
+    :return:
+    """
 
     async with glob.LOCK.get_lock():
+
         if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
             raise Arcor2Exception("Can't open project while package runs.")
 
         # TODO validate using project_problems?
         await open_project(req.args.id)
-        glob.LOCK.scene = glob.LOCK.scene
-        glob.LOCK.project = glob.LOCK.project
 
         assert glob.LOCK.scene
         assert glob.LOCK.project
@@ -742,24 +705,27 @@ async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None
         return None
 
 
-@scene_needed
-@project_needed
 async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None:
 
     async with glob.LOCK.get_lock(req.dry_run):
-        assert glob.LOCK.scene
-        assert glob.LOCK.project
+
+        proj = glob.LOCK.project_or_exception()
+
+        if proj.modified and not proj.has_changes:
+            raise Arcor2Exception("No changes to save.")
 
         if req.dry_run:
             return None
 
-        glob.LOCK.project.modified = await storage.update_project(glob.LOCK.project.project)
+        proj.modified = await storage.update_project(proj.project)
         asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
         return None
 
 
-@no_project
 async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
+
+    if glob.LOCK.project:
+        raise Arcor2Exception("Project has to be closed first.")
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui), dry_run=req.dry_run):
         if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
@@ -802,16 +768,14 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
         return None
 
 
-@scene_needed
-@project_needed
 async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> None:
 
     async with glob.LOCK.get_lock(req.dry_run):
+
+        proj = glob.LOCK.project_or_exception()
         can_modify_scene()
 
-        assert glob.LOCK.project
-
-        if not req.args.force and glob.LOCK.project.has_changes:
+        if not req.args.force and proj.has_changes:
             raise Arcor2Exception("Project has unsaved changes.")
 
         if req.dry_run:
@@ -821,40 +785,33 @@ async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> No
         return None
 
 
-def check_ap_parent(parent: Optional[str]) -> None:
-
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: Optional[str]) -> None:
 
     if not parent:
         return
 
-    if parent in glob.LOCK.scene.object_ids:
-        if glob.LOCK.scene.object(parent).pose is None:
+    if parent in scene.object_ids:
+        if scene.object(parent).pose is None:
             raise Arcor2Exception("AP can't have object without pose as parent.")
-    elif parent not in glob.LOCK.project.action_points_ids:
+    elif parent not in proj.action_points_ids:
         raise Arcor2Exception("AP has invalid parent ID (not an object or another AP).")
 
 
-@scene_needed
-@project_needed
 async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.scene
-    assert glob.LOCK.project
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
-    async with ctx_write_lock(glob.LOCK.project.id, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(proj.id, glob.USERS.user_name(ui)):
 
         hlp.is_valid_identifier(req.args.name)
-        unique_name(req.args.name, glob.LOCK.project.action_points_names)
-        check_ap_parent(req.args.parent)
+        unique_name(req.args.name, proj.action_points_names)
+        check_ap_parent(scene, proj, req.args.parent)
 
         if req.dry_run:
             return None
 
-        ap = glob.LOCK.project.upsert_action_point(
-            common.ActionPoint.uid(), req.args.name, req.args.position, req.args.parent
-        )
+        ap = proj.upsert_action_point(common.ActionPoint.uid(), req.args.name, req.args.position, req.args.parent)
 
         evt = sevts.p.ActionPointChanged(ap)
         evt.change_type = Event.Type.ADD
@@ -862,25 +819,23 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
         return None
 
 
-@scene_needed
-@project_needed
 async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsClient) -> None:
 
     to_lock = await get_unlocked_objects(req.args.id, glob.USERS.user_name(ui))
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
-        assert glob.LOCK.project
 
-        ap = glob.LOCK.project.bare_action_point(req.args.id)
+        proj = glob.LOCK.project_or_exception()
+        ap = proj.bare_action_point(req.args.id)
 
-        for proj_ap in glob.LOCK.project.action_points_with_parent:
+        for proj_ap in proj.action_points_with_parent:
             if proj_ap.parent == ap.id:
                 raise Arcor2Exception(f"Can't remove parent of '{proj_ap.name}' AP.")
 
-        ap_action_ids = glob.LOCK.project.ap_action_ids(ap.id)
+        ap_action_ids = proj.ap_action_ids(ap.id)
 
         # check if AP's actions aren't involved in logic
         # TODO 'force' param to remove logical connections?
-        for logic in glob.LOCK.project.logic:
+        for logic in proj.logic:
             if (
                 logic.start in ap_action_ids
                 or logic.end in ap_action_ids
@@ -888,7 +843,7 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
             ):
                 raise Arcor2Exception("Remove logic connections first.")
 
-        for act in glob.LOCK.project.actions:
+        for act in proj.actions:
 
             if act.id in ap_action_ids:
                 continue
@@ -896,25 +851,21 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
             for param in act.parameters:
                 if param.type == common.ActionParameter.TypeEnum.LINK:
                     parsed_link = param.parse_link()
-                    linking_action = glob.LOCK.project.action(parsed_link.action_id)
+                    linking_action = proj.action(parsed_link.action_id)
                     if parsed_link.action_id in ap_action_ids:
                         raise Arcor2Exception(f"Result of '{act.name}' is linked from '{linking_action.name}'.")
 
                 if not param.is_value():
                     continue
 
-                for joints in glob.LOCK.project.ap_joints(ap.id):
-                    if plugin_from_type_name(param.type).uses_robot_joints(
-                        glob.LOCK.project, act.id, param.name, joints.id
-                    ):
+                for joints in proj.ap_joints(ap.id):
+                    if plugin_from_type_name(param.type).uses_robot_joints(proj, act.id, param.name, joints.id):
                         raise Arcor2Exception(
                             f"Joints {joints.name} used in action {act.name} (parameter {param.name})."
                         )
 
-                for ori in glob.LOCK.project.ap_orientations(ap.id):
-                    if plugin_from_type_name(param.type).uses_orientation(
-                        glob.LOCK.project, act.id, param.name, ori.id
-                    ):
+                for ori in proj.ap_orientations(ap.id):
+                    if plugin_from_type_name(param.type).uses_orientation(proj, act.id, param.name, ori.id):
                         raise Arcor2Exception(
                             f"Orientation {ori.name} used in action {act.name} (parameter {param.name})."
                         )
@@ -929,7 +880,7 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
 
         await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
 
-        glob.LOCK.project.remove_action_point(req.args.id)
+        proj.remove_action_point(req.args.id)
 
         evt = sevts.p.ActionPointChanged(ap)
         evt.change_type = Event.Type.REMOVE
@@ -937,11 +888,9 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
         return None
 
 
-@scene_needed
-@project_needed
 async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
 
     def make_name_unique(orig_name: str, names: Set[str]) -> str:
 
@@ -960,11 +909,9 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         position: Optional[common.Position] = None,
     ) -> None:
 
-        assert glob.LOCK.project
-
-        ap = glob.LOCK.project.upsert_action_point(
+        ap = proj.upsert_action_point(
             common.ActionPoint.uid(),
-            make_name_unique(f"{orig_ap.name}_copy", glob.LOCK.project.action_points_names),
+            make_name_unique(f"{orig_ap.name}_copy", proj.action_points_names),
             orig_ap.position if position is None else position,
             orig_ap.parent if new_parent_id is None else new_parent_id,
         )
@@ -973,37 +920,37 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         ap_added_evt.change_type = Event.Type.ADD
         await notif.broadcast_event(ap_added_evt)
 
-        for ori in glob.LOCK.project.ap_orientations(orig_ap.id):
+        for ori in proj.ap_orientations(orig_ap.id):
             new_ori = ori.copy()
             old_ori_to_new_ori[ori.id] = new_ori.id
-            glob.LOCK.project.upsert_orientation(ap.id, new_ori)
+            proj.upsert_orientation(ap.id, new_ori)
 
             ori_added_evt = sevts.p.OrientationChanged(new_ori)
             ori_added_evt.change_type = Event.Type.ADD
             ori_added_evt.parent_id = ap.id
             await notif.broadcast_event(ori_added_evt)
 
-        for joints in glob.LOCK.project.ap_joints(orig_ap.id):
+        for joints in proj.ap_joints(orig_ap.id):
             new_joints = joints.copy()
-            glob.LOCK.project.upsert_joints(ap.id, new_joints)
+            proj.upsert_joints(ap.id, new_joints)
 
             joints_added_evt = sevts.p.JointsChanged(new_joints)
             joints_added_evt.change_type = Event.Type.ADD
             joints_added_evt.parent_id = ap.id
             await notif.broadcast_event(joints_added_evt)
 
-        action_names = glob.LOCK.project.action_names  # action name has to be globally unique
-        for act in glob.LOCK.project.ap_actions(orig_ap.id):
+        action_names = proj.action_names  # action name has to be globally unique
+        for act in proj.ap_actions(orig_ap.id):
             new_act = act.copy()
             new_act.name = make_name_unique(f"{act.name}_copy", action_names)
-            glob.LOCK.project.upsert_action(ap.id, new_act)
+            proj.upsert_action(ap.id, new_act)
 
             for param in new_act.parameters:
 
                 if param.type != PosePlugin.type_name():
                     continue
 
-                old_ori_id = PosePlugin.orientation_id(glob.LOCK.project, new_act.id, param.name)
+                old_ori_id = PosePlugin.orientation_id(proj, new_act.id, param.name)
 
                 # TODO this is hacky - plugins are missing methods to set/update parameters
                 import json
@@ -1020,11 +967,11 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             action_added_evt.parent_id = ap.id
             await notif.broadcast_event(action_added_evt)
 
-        for child_ap in glob.LOCK.project.action_points_with_parent:
+        for child_ap in proj.action_points_with_parent:
             if child_ap.parent == orig_ap.id:
                 await copy_action_point(child_ap, ap.id)
 
-    original_ap = glob.LOCK.project.bare_action_point(req.args.id)
+    original_ap = proj.bare_action_point(req.args.id)
 
     await ensure_locked(req.args.id, ui)
 
@@ -1035,38 +982,36 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
     asyncio.ensure_future(copy_action_point(original_ap, position=req.args.position))
 
 
-@scene_needed
-@project_needed
 async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
     """Adds new action to project.
 
     Used also when duplicating action.
     """
 
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
     # When duplicating action AP cannot be removed, no need to lock
     to_lock = await get_unlocked_objects(req.args.action_point_id, glob.USERS.user_name(ui))
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
-        ap = glob.LOCK.project.bare_action_point(req.args.action_point_id)
+        ap = proj.bare_action_point(req.args.action_point_id)
 
-        unique_name(req.args.name, glob.LOCK.project.action_names)
+        unique_name(req.args.name, proj.action_names)
 
         new_action = common.Action(req.args.name, req.args.type, parameters=req.args.parameters, flows=req.args.flows)
 
-        action_meta = find_object_action(glob.LOCK.scene, new_action)
+        action_meta = find_object_action(scene, new_action)
 
-        updated_project = copy.deepcopy(glob.LOCK.project)
+        updated_project = copy.deepcopy(proj)
         updated_project.upsert_action(req.args.action_point_id, new_action)
 
         check_flows(updated_project, new_action, action_meta)
-        check_action_params(glob.LOCK.scene, updated_project, new_action, action_meta)
+        check_action_params(scene, updated_project, new_action, action_meta)
 
         if req.dry_run:
             return None
 
-        glob.LOCK.project.upsert_action(ap.id, new_action)
+        proj.upsert_action(ap.id, new_action)
 
         evt = sevts.p.ActionChanged(new_action)
         evt.change_type = Event.Type.ADD
@@ -1075,14 +1020,12 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
         return None
 
 
-@scene_needed
-@project_needed
 async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
-    updated_project = copy.deepcopy(glob.LOCK.project)
+    updated_project = copy.deepcopy(proj)
 
     updated_action = updated_project.action(req.args.action_id)
 
@@ -1091,19 +1034,19 @@ async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> No
     if req.args.flows is not None:
         updated_action.flows = req.args.flows
 
-    updated_action_meta = find_object_action(glob.LOCK.scene, updated_action)
+    updated_action_meta = find_object_action(scene, updated_action)
 
     check_flows(updated_project, updated_action, updated_action_meta)
-    check_action_params(glob.LOCK.scene, updated_project, updated_action, updated_action_meta)
+    check_action_params(scene, updated_project, updated_action, updated_action_meta)
 
     await ensure_locked(req.args.action_id, ui)
 
     if req.dry_run:
         return None
 
-    orig_action = glob.LOCK.project.action(req.args.action_id)
+    orig_action = proj.action(req.args.action_id)
     orig_action.parameters = updated_action.parameters
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.ActionChanged(updated_action)
     evt.change_type = Event.Type.UPDATE
@@ -1111,12 +1054,10 @@ async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> No
     return None
 
 
-def check_action_usage(action: common.Action) -> None:
-
-    assert glob.LOCK.project
+def check_action_usage(proj: CachedProject, action: common.Action) -> None:
 
     # check parameters
-    for act in glob.LOCK.project.actions:
+    for act in proj.actions:
         for param in act.parameters:
             if param.type == common.ActionParameter.TypeEnum.LINK:
                 link = param.parse_link()
@@ -1124,7 +1065,7 @@ def check_action_usage(action: common.Action) -> None:
                     raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.name}.")
 
     # check logic
-    for log in glob.LOCK.project.logic:
+    for log in proj.logic:
 
         if log.start == action.id or log.end == action.id:
             raise Arcor2Exception("Action used in logic.")
@@ -1136,24 +1077,21 @@ def check_action_usage(action: common.Action) -> None:
                 raise Arcor2Exception("Action used in condition.")
 
 
-@scene_needed
-@project_needed
 async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> None:
 
+    proj = glob.LOCK.project_or_exception()
     to_lock = await get_unlocked_objects(req.args.id, glob.USERS.user_name(ui))
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
-        assert glob.LOCK.project
-        assert glob.LOCK.scene
 
-        ap, action = glob.LOCK.project.action_point_and_action(req.args.id)
-        check_action_usage(action)
+        ap, action = proj.action_point_and_action(req.args.id)
+        check_action_usage(proj, action)
 
         if req.dry_run:
             return None
 
         await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
 
-        glob.LOCK.project.remove_action(req.args.id)
+        proj.remove_action(req.args.id)
         project.remove_prev_result(action.id)
 
         evt = sevts.p.ActionChanged(action.bare)
@@ -1162,15 +1100,13 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
         return None
 
 
-def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> None:
+def check_logic_item(scene: CachedScene, parent: LogicContainer, logic_item: common.LogicItem) -> None:
     """Checks if newly added/updated ProjectLogicItem is ok.
 
     :param parent:
     :param logic_item:
     :return:
     """
-
-    assert glob.LOCK.scene
 
     action_ids = parent.action_ids()
 
@@ -1205,7 +1141,7 @@ def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> No
         except IndexError:
             raise Arcor2Exception(f"Flow {flow.type} does not have output with index {what.output_index}.")
 
-        action_meta = find_object_action(glob.LOCK.scene, action)
+        action_meta = find_object_action(scene, action)
 
         try:
             return_type = action_meta.returns[what.output_index]
@@ -1250,28 +1186,26 @@ def check_logic_item(parent: LogicContainer, logic_item: common.LogicItem) -> No
                 raise Arcor2Exception("Junctions can't have the same start and end.")
 
 
-@scene_needed
-@project_needed
 async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
-
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
     user_name = glob.USERS.user_name(ui)
+
     to_lock = await get_unlocked_objects([req.args.start, req.args.end], user_name)
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
         logic_item = common.LogicItem(req.args.start, req.args.end, req.args.condition)
-        check_logic_item(glob.LOCK.project, logic_item)
+        check_logic_item(scene, proj, logic_item)
 
         if logic_item.start != logic_item.START:
-            updated_project = copy.deepcopy(glob.LOCK.project)
+            updated_project = copy.deepcopy(proj)
             updated_project.upsert_logic_item(logic_item)
             check_for_loops(updated_project, logic_item.parse_start().start_action_id)
 
         if req.dry_run:
             return
 
-        glob.LOCK.project.upsert_logic_item(logic_item)
+        proj.upsert_logic_item(logic_item)
 
         evt = sevts.p.LogicItemChanged(logic_item)
         evt.change_type = Event.Type.ADD
@@ -1283,22 +1217,20 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
         return None
 
 
-@scene_needed
-@project_needed
 async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient) -> None:
     # TODO lock RPC when used
 
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
-    updated_project = copy.deepcopy(glob.LOCK.project)
+    updated_project = copy.deepcopy(proj)
     updated_logic_item = updated_project.logic_item(req.args.logic_item_id)
 
     updated_logic_item.start = req.args.start
     updated_logic_item.end = req.args.end
     updated_logic_item.condition = req.args.condition
 
-    check_logic_item(updated_project, updated_logic_item)
+    check_logic_item(scene, updated_project, updated_logic_item)
 
     if updated_logic_item.start != updated_logic_item.START:
         check_for_loops(updated_project, updated_logic_item.parse_start().start_action_id)
@@ -1306,7 +1238,7 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient
     if req.dry_run:
         return
 
-    glob.LOCK.project.upsert_logic_item(updated_logic_item)
+    proj.upsert_logic_item(updated_logic_item)
 
     evt = sevts.p.LogicItemChanged(updated_logic_item)
     evt.change_type = Event.Type.UPDATE
@@ -1314,19 +1246,15 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient
     return None
 
 
-@scene_needed
-@project_needed
 async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
-
-    logic_item = glob.LOCK.project.logic_item(req.args.logic_item_id)
+    proj = glob.LOCK.project_or_exception()
+    logic_item = proj.logic_item(req.args.logic_item_id)
 
     to_lock = await get_unlocked_objects([logic_item.start, logic_item.end], glob.USERS.user_name(ui))
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
         # TODO is it necessary to check something here?
-        glob.LOCK.project.remove_logic_item(req.args.logic_item_id)
+        proj.remove_logic_item(req.args.logic_item_id)
 
         evt = sevts.p.LogicItemChanged(logic_item)
         evt.change_type = Event.Type.REMOVE
@@ -1340,13 +1268,11 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
         return None
 
 
-def check_constant(constant: common.ProjectConstant) -> None:
-
-    assert glob.LOCK.project
+def check_constant(proj: CachedProject, constant: common.ProjectConstant) -> None:
 
     hlp.is_valid_identifier(constant.name)
 
-    for const in glob.LOCK.project.constants:
+    for const in proj.constants:
 
         if constant.id == const.id:
             continue
@@ -1363,21 +1289,18 @@ def check_constant(constant: common.ProjectConstant) -> None:
         raise Arcor2Exception("Only basic types are supported so far.")
 
 
-@scene_needed
-@project_needed
 async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None:
 
     # TODO lock when used, missing information if action is triggered on locked object or not
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
+    proj = glob.LOCK.project_or_exception()
 
     const = common.ProjectConstant(req.args.name, req.args.type, req.args.value)
-    check_constant(const)
+    check_constant(proj, const)
 
     if req.dry_run:
         return
 
-    glob.LOCK.project.upsert_constant(const)
+    proj.upsert_constant(const)
 
     evt = sevts.p.ProjectConstantChanged(const)
     evt.change_type = Event.Type.ADD
@@ -1385,15 +1308,11 @@ async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None
     return None
 
 
-@scene_needed
-@project_needed
 async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -> None:
 
     # TODO lock when used, missing information if action is triggered on locked object or not
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
-
-    const = glob.LOCK.project.constant(req.args.constant_id)
+    proj = glob.LOCK.project_or_exception()
+    const = proj.constant(req.args.constant_id)
 
     updated_constant = copy.deepcopy(const)
 
@@ -1402,12 +1321,12 @@ async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -
     if req.args.value is not None:
         updated_constant.value = req.args.value
 
-    check_constant(const)
+    check_constant(proj, const)
 
     if req.dry_run:
         return
 
-    glob.LOCK.project.upsert_constant(updated_constant)
+    proj.upsert_constant(updated_constant)
 
     evt = sevts.p.ProjectConstantChanged(const)
     evt.change_type = Event.Type.UPDATE
@@ -1415,18 +1334,14 @@ async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -
     return None
 
 
-@scene_needed
-@project_needed
 async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -> None:
 
     # TODO lock when used, missing information if action is triggered on locked object or not
-    assert glob.LOCK.project
-    assert glob.LOCK.scene
-
-    const = glob.LOCK.project.constant(req.args.constant_id)
+    proj = glob.LOCK.project_or_exception()
+    const = proj.constant(req.args.constant_id)
 
     # check for usage
-    for act in glob.LOCK.project.actions:
+    for act in proj.actions:
         for param in act.parameters:
             if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.str_from_value() == const.id:
                 raise Arcor2Exception("Constant used as action parameter.")
@@ -1434,7 +1349,7 @@ async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -
     if req.dry_run:
         return
 
-    glob.LOCK.project.remove_constant(const.id)
+    proj.remove_constant(const.id)
 
     evt = sevts.p.ProjectConstantChanged(const)
     evt.change_type = Event.Type.REMOVE
@@ -1442,8 +1357,10 @@ async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -
     return None
 
 
-@no_project
 async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> None:
+
+    if glob.LOCK.project:
+        raise Arcor2Exception("Project has to be closed first.")
 
     async with ctx_write_lock(req.args.id, glob.USERS.user_name(ui), auto_unlock=False):
         project = UpdateableCachedProject(await storage.get_project(req.args.id))
@@ -1534,14 +1451,13 @@ async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogic.Request,
         return None
 
 
-@project_needed
 async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
+    ap, joints = proj.ap_and_joints(req.args.joints_id)
 
-    ap, joints = glob.LOCK.project.ap_and_joints(req.args.joints_id)
     hlp.is_valid_identifier(req.args.new_name)
-    unique_name(req.args.new_name, glob.LOCK.project.ap_joint_names(ap.id))
+    unique_name(req.args.new_name, proj.ap_joint_names(ap.id))
 
     await ensure_locked(ap.id, ui)
 
@@ -1549,7 +1465,7 @@ async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Requ
         return None
 
     joints.name = req.args.new_name
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.JointsChanged(joints)
     evt.change_type = Event.Type.UPDATE_BASE
@@ -1558,14 +1474,13 @@ async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Requ
     return None
 
 
-@project_needed
 async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrientation.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
+    ap, ori = proj.bare_ap_and_orientation(req.args.orientation_id)
 
-    ap, ori = glob.LOCK.project.bare_ap_and_orientation(req.args.orientation_id)
     hlp.is_valid_identifier(req.args.new_name)
-    unique_name(req.args.new_name, glob.LOCK.project.ap_orientation_names(ap.id))
+    unique_name(req.args.new_name, proj.ap_orientation_names(ap.id))
 
     await ensure_locked(ori.id, ui)
 
@@ -1573,7 +1488,7 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
         return None
 
     ori.name = req.args.new_name
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.OrientationChanged(ori)
     evt.change_type = Event.Type.UPDATE_BASE
@@ -1582,22 +1497,21 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
     return None
 
 
-@project_needed
 async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> None:
 
-    assert glob.LOCK.project
+    proj = glob.LOCK.project_or_exception()
 
-    unique_name(req.args.new_name, glob.LOCK.project.action_names)
+    unique_name(req.args.new_name, proj.action_names)
 
     await ensure_locked(req.args.action_id, ui)
 
     if req.dry_run:
         return None
 
-    act = glob.LOCK.project.action(req.args.action_id)
+    act = proj.action(req.args.action_id)
     act.name = req.args.new_name
 
-    glob.LOCK.project.update_modified()
+    proj.update_modified()
 
     evt = sevts.p.ActionChanged(act)
     evt.change_type = Event.Type.UPDATE_BASE
