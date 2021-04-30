@@ -20,6 +20,13 @@ class Urdf(NamedTuple):
     archive_name: str
 
 
+def upload_whatever(type_def: Type[object]) -> None:
+
+    obj_type = ObjectType(id=type_def.__name__, source=get_containing_module_sources(type_def))
+    print(f"Storing '{obj_type.id}'...")
+    storage.update_object_type(obj_type)
+
+
 def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Optional[Urdf] = None) -> None:
 
     if not issubclass(type_def, GenericWithPose) and model:

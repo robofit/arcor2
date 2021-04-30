@@ -91,11 +91,25 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             return
 
     try:
-        base = otu.base_from_source(obj.source, obj_id)
-        if base and base not in object_types.keys() | built_in_types_names():
-            glob.logger.debug(f"Getting base class {base} for {obj_id}.")
-            await get_object_data(object_types, base)
-    except Arcor2Exception:
+        bases = otu.base_from_source(obj.source, obj_id)
+        if bases and bases[0] not in object_types.keys() | built_in_types_names():
+            glob.logger.debug(f"Getting base class {bases[0]} for {obj_id}.")
+            await get_object_data(object_types, bases[0])
+
+        for mixin in bases[1:]:
+            mixin_obj = await storage.get_object_type(mixin)
+
+            await hlp.run_in_executor(
+                hlp.save_and_import_type_def,
+                mixin_obj.source,
+                mixin_obj.id,
+                object,
+                settings.OBJECT_TYPE_PATH,
+                settings.OBJECT_TYPE_MODULE,
+            )
+
+    except Arcor2Exception as e:
+        glob.logger.warn(f"Disabling object type {obj.id}: can't get a base. {str(e)}")
         object_types[obj_id] = ObjectTypeData(
             ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem="Can't get base.")
         )
@@ -112,7 +126,13 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             settings.OBJECT_TYPE_PATH,
             settings.OBJECT_TYPE_MODULE,
         )
-        assert issubclass(type_def, Generic)
+    except Arcor2Exception as e:
+        glob.logger.debug(f"{obj.id} is probably not an object type. {str(e)}")
+        return
+
+    assert issubclass(type_def, Generic)
+
+    try:
         meta = meta_from_def(type_def)
         otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:

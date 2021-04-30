@@ -130,7 +130,7 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
         raise ImportClsException(f"Class {type_name} not found in module '{module_name}'.")
 
     if not issubclass(cls, output_type):
-        raise ImportClsException("Not a required type.")
+        raise ImportClsException(f"{cls.__name__} is not subclass of {output_type.__name__}.")
 
     return cls
 
