@@ -129,8 +129,8 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
         for param in current_action.parameters:
 
             if param.type == ActionParameter.TypeEnum.LINK:
-                parsed_link = param.parse_link()
 
+                parsed_link = param.parse_link()
                 parent_action = project.action(parsed_link.action_id)
 
                 # TODO add support for tuples
