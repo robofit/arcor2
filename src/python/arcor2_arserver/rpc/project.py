@@ -131,7 +131,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
 
                 parsed_link = param.parse_link()
                 try:
-                    results = project.PREV_RESULTS[parsed_link.action_id]
+                    results = glob.PREV_RESULTS[parsed_link.action_id]
                 except KeyError:
                     prev_action = proj.action(parsed_link.action_id)
                     raise Arcor2Exception(f"Action '{prev_action.name}' has to be executed first.")
@@ -752,7 +752,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
             await open_scene(req.args.scene_id)
 
-        project.PREV_RESULTS.clear()
+        glob.PREV_RESULTS.clear()
         glob.LOCK.project = UpdateableCachedProject(
             common.Project(req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
         )
@@ -1092,7 +1092,7 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
         await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
 
         proj.remove_action(req.args.id)
-        project.remove_prev_result(action.id)
+        glob.remove_prev_result(action.id)
 
         evt = sevts.p.ActionChanged(action.bare)
         evt.change_type = Event.Type.REMOVE

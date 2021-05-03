@@ -290,6 +290,7 @@ async def stop_scene(message: Optional[str] = None) -> None:
         await set_scene_state(SceneState.Data.StateEnum.Stopped)
 
     glob.SCENE_OBJECT_INSTANCES.clear()
+    glob.PREV_RESULTS.clear()
 
 
 async def start_scene(scene: CachedScene) -> None:
