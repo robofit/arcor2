@@ -274,7 +274,6 @@ class Lock:
     async def get_locked_roots_count(self) -> int:
 
         async with self._lock:
-            print(self._locked_objects)
             return len(self._locked_objects)
 
     async def get_write_locks_count(self) -> int:
