@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, Union
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -44,3 +44,13 @@ OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 LOCK: Lock = Lock()
 
 USERS: Users = Users()
+
+PREV_RESULTS: Dict[str, Union[Tuple[Any], Any]] = {}
+
+
+def remove_prev_result(action_id: str) -> None:
+
+    try:
+        del PREV_RESULTS[action_id]
+    except KeyError:
+        pass

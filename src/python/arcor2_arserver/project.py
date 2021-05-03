@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncIterator, Callable, Dict, List, Set, Tuple, Union
+from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
 
 from arcor2 import helpers as hlp
 from arcor2.action import results_to_json
@@ -18,16 +18,6 @@ from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import ProjectClosed
 from arcor2_arserver_data.objects import ObjectAction
 
-PREV_RESULTS: Dict[str, Union[Tuple[Any], Any]] = {}
-
-
-def remove_prev_result(action_id: str) -> None:
-
-    try:
-        del PREV_RESULTS[action_id]
-    except KeyError:
-        pass
-
 
 async def notify_project_closed(project_id: str) -> None:
 
@@ -45,7 +35,7 @@ async def close_project() -> None:
     project_id = glob.LOCK.project.project.id
     glob.LOCK.scene = None
     glob.LOCK.project = None
-    PREV_RESULTS.clear()
+    glob.PREV_RESULTS.clear()
     asyncio.ensure_future(notify_project_closed(project_id))
 
 
@@ -65,7 +55,7 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
         evt.data.error = str(e)
     else:
         if action_result is not None:
-            PREV_RESULTS[glob.RUNNING_ACTION] = action_result
+            glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
 
         try:
             evt.data.results = results_to_json(action_result)
