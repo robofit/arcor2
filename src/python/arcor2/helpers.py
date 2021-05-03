@@ -83,9 +83,9 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     """
 
     type_file = humps.depascalize(type_name)
-    full_path = os.path.join(path, module_name, type_file)
+    full_path = f"{os.path.join(path, module_name, type_file)}.py"
 
-    with open(f"{full_path}.py", "w") as file:
+    with open(full_path, "w") as file:
         file.write(source)
 
     try:
