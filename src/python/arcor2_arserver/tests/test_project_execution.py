@@ -2,7 +2,15 @@ from arcor2.clients import persistent_storage
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.object_types.time_actions import TimeActions
-from arcor2_arserver.tests.conftest import LOGGER, add_logic_item, close_project, event, save_project, wait_for_event
+from arcor2_arserver.tests.conftest import (
+    LOGGER,
+    add_logic_item,
+    close_project,
+    event,
+    lock_object,
+    save_project,
+    wait_for_event,
+)
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, uid
 from arcor2_execution_data import events as eevents
@@ -65,7 +73,11 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert action is not None
 
     add_logic_item(ars, common.LogicItem.START, action.id)
+    event(ars, events.lk.ObjectsUnlocked)
+
+    lock_object(ars, action.id)
     add_logic_item(ars, action.id, common.LogicItem.END)
+    event(ars, events.lk.ObjectsUnlocked)
 
     save_project(ars)
 

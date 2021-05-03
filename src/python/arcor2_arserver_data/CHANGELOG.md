@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - WIP
+
+### Changed
+
+- Return value of `GetCameraPose` RPC updated.
+- Locking-related RPCs and events.
+
+### Fixed
+- ObjectType which source code contained Windows line endings was always evaluated as modified.
+
 ## [0.13.0] - 2021-03-30
 
 ### Changed

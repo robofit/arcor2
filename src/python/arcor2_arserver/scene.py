@@ -24,17 +24,21 @@ _scene_state: SceneState.Data.StateEnum = SceneState.Data.StateEnum.Stopped
 
 
 async def update_scene_object_pose(
-    obj: SceneObject, pose: Optional[Pose] = None, obj_inst: Optional[GenericWithPose] = None
+    obj: SceneObject,
+    pose: Optional[Pose] = None,
+    obj_inst: Optional[GenericWithPose] = None,
+    lock_owner: Optional[str] = None,
 ) -> None:
     """Performs all necessary actions when pose of an object is updated.
 
     :param obj:
     :param pose:
     :param obj_inst:
+    :param lock_owner: if present, object is unlocked at the end of function
     :return:
     """
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     if pose:
         # SceneObject pose was not updated before
@@ -43,7 +47,7 @@ async def update_scene_object_pose(
         # SceneObject pose was already updated
         pose = obj.pose
 
-    glob.SCENE.update_modified()
+    glob.LOCK.scene.update_modified()
 
     evt = SceneObjectChanged(obj)
     evt.change_type = Event.Type.UPDATE
@@ -62,6 +66,9 @@ async def update_scene_object_pose(
 
         # Object pose is property that might call scene service - that's why it has to be called using executor.
         await hlp.run_in_executor(setattr, obj_inst, "pose", pose)
+
+    if lock_owner:
+        await glob.LOCK.read_unlock(obj.id, lock_owner)
 
 
 async def set_scene_state(state: SceneState.Data.StateEnum, message: Optional[str] = None) -> None:
@@ -123,7 +130,7 @@ def check_object_parameters(obj_type: ObjectTypeData, parameters: List[Parameter
 def check_object(obj: SceneObject, new_one: bool = False) -> None:
     """Checks if object can be added into the scene."""
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
     assert not obj.children
 
     if obj.type not in glob.OBJECT_TYPES:
@@ -151,10 +158,10 @@ def check_object(obj: SceneObject, new_one: bool = False) -> None:
 
     if new_one:
 
-        if obj.id in glob.SCENE.object_ids:
+        if obj.id in glob.LOCK.scene.object_ids:
             raise Arcor2Exception("Object/service with that id already exists.")
 
-        if obj.name in glob.SCENE.object_names():
+        if obj.name in glob.LOCK.scene.object_names():
             raise Arcor2Exception("Name is already used.")
 
     hlp.is_valid_identifier(obj.name)
@@ -168,14 +175,14 @@ async def add_object_to_scene(obj: SceneObject, dry_run: bool = False) -> None:
     :return:
     """
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     check_object(obj, new_one=True)
 
     if dry_run:
         return None
 
-    glob.SCENE.upsert_object(obj)
+    glob.LOCK.scene.upsert_object(obj)
     glob.logger.debug(f"Object {obj.id} ({obj.type}) added to scene.")
 
 
@@ -235,13 +242,13 @@ async def open_scene(scene_id: str) -> None:
 
     await get_object_types()
     asyncio.ensure_future(scene_srv.delete_all_collisions())
-    glob.SCENE = UpdateableCachedScene(await storage.get_scene(scene_id))
+    glob.LOCK.scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     try:
-        for obj in glob.SCENE.objects:
+        for obj in glob.LOCK.scene.objects:
             check_object(obj)
     except Arcor2Exception as e:
-        glob.SCENE = None
+        glob.LOCK.scene = None
         raise Arcor2Exception(f"Failed to open scene. {str(e)}") from e
 
 
@@ -294,7 +301,7 @@ async def start_scene() -> None:
 
     glob.logger.info("Starting the scene.")
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     await set_scene_state(SceneState.Data.StateEnum.Starting)
 
@@ -306,12 +313,12 @@ async def start_scene() -> None:
 
     object_overrides: Dict[str, List[Parameter]] = {}
 
-    if glob.PROJECT:
-        object_overrides = glob.PROJECT.overrides
+    if glob.LOCK.project:
+        object_overrides = glob.LOCK.project.overrides
 
     prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
 
-    for obj in glob.SCENE.objects:
+    for obj in glob.LOCK.scene.objects:
         type_def = glob.OBJECT_TYPES[obj.type].type_def
         assert type_def
         prio_dict[type_def.INIT_PRIORITY].append(obj)

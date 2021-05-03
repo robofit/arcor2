@@ -172,8 +172,8 @@ async def check_robot_before_move(robot_id: str) -> None:
 
     if glob.RUNNING_ACTION:
 
-        assert glob.PROJECT
-        action = glob.PROJECT.action(glob.RUNNING_ACTION)
+        assert glob.LOCK.project
+        action = glob.LOCK.project.action(glob.RUNNING_ACTION)
         obj_id_str, _ = action.parse_type()
 
         if robot_id == obj_id_str:
@@ -192,28 +192,33 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
         raise
 
 
-async def move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, safe: bool) -> None:
-
-    Data = sevts.r.RobotMoveToPose.Data
-
-    await notif.broadcast_event(
-        sevts.r.RobotMoveToPose(Data(Data.MoveEventType.START, robot_id, end_effector_id, pose, safe))
-    )
+async def move_to_pose(
+    robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, safe: bool, lock_owner: str
+) -> None:
 
     try:
-        await _move_to_pose(robot_id, end_effector_id, pose, speed, safe)
+        Data = sevts.r.RobotMoveToPose.Data
 
-    except Arcor2Exception as e:
         await notif.broadcast_event(
-            sevts.r.RobotMoveToPose(
-                Data(Data.MoveEventType.FAILED, robot_id, end_effector_id, pose, safe, message=str(e))
-            )
+            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.START, robot_id, end_effector_id, pose, safe))
         )
-        return
 
-    await notif.broadcast_event(
-        sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_id, end_effector_id, pose, safe))
-    )
+        try:
+            await _move_to_pose(robot_id, end_effector_id, pose, speed, safe)
+
+        except Arcor2Exception as e:
+            await notif.broadcast_event(
+                sevts.r.RobotMoveToPose(
+                    Data(Data.MoveEventType.FAILED, robot_id, end_effector_id, pose, safe, message=str(e))
+                )
+            )
+            return
+
+        await notif.broadcast_event(
+            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_id, end_effector_id, pose, safe))
+        )
+    finally:
+        await glob.LOCK.read_unlock(robot_id, lock_owner)
 
 
 async def move_to_ap_orientation(
@@ -259,25 +264,28 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
         raise
 
 
-async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float, safe: bool) -> None:
-
-    Data = sevts.r.RobotMoveToJoints.Data
-
-    await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.START, robot_id, joints, safe)))
+async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float, safe: bool, lock_owner: str) -> None:
 
     try:
+        Data = sevts.r.RobotMoveToJoints.Data
 
-        await _move_to_joints(robot_id, joints, speed, safe)
+        await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.START, robot_id, joints, safe)))
 
-    except Arcor2Exception as e:
+        try:
 
-        await notif.broadcast_event(
-            sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.FAILED, robot_id, joints, safe, message=str(e)))
-        )
+            await _move_to_joints(robot_id, joints, speed, safe)
 
-        return
+        except Arcor2Exception as e:
 
-    await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_id, joints, safe)))
+            await notif.broadcast_event(
+                sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.FAILED, robot_id, joints, safe, message=str(e)))
+            )
+
+            return
+
+        await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_id, joints, safe)))
+    finally:
+        await glob.LOCK.read_unlock(robot_id, lock_owner)
 
 
 async def move_to_ap_joints(

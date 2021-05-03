@@ -2,6 +2,10 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.3.0] - WIP
+### Changed
+- `estimate_camera_pose` now returns `EstimatedPose` which includes pose and estimation of its precision (quality). 
+
 ## [0.2.0] - 2021-02-08
 ### Changed
 - API for getting pixel coordinates of markers corners.

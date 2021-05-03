@@ -5,9 +5,10 @@ import keyword
 import os
 import socket
 import sys
+from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Callable, Type, TypeVar
+from typing import Callable, Optional, Type, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -21,6 +22,14 @@ class ImportClsException(Arcor2Exception):
 
 class TypeDefException(Arcor2Exception):
     pass
+
+
+WINDOWS_LINE_ENDING = "\r\n"
+UNIX_LINE_ENDING = "\n"
+
+
+def convert_line_endings_to_unix(content: str) -> str:
+    return content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
 
 
 def is_valid_identifier(value: str) -> None:
@@ -56,8 +65,8 @@ def is_valid_type(value: str) -> None:
 S = TypeVar("S")
 
 
-async def run_in_executor(func: Callable[..., S], *args) -> S:
-    return await asyncio.get_event_loop().run_in_executor(None, func, *args)
+async def run_in_executor(func: Callable[..., S], *args, executor: Optional[futures.Executor] = None) -> S:
+    return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
 
 
 T = TypeVar("T")
@@ -79,7 +88,11 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     with open(f"{full_path}.py", "w") as file:
         file.write(source)
 
-    return import_type_def(type_name, output_type, path, module_name)
+    try:
+        return import_type_def(type_name, output_type, path, module_name)
+    except Arcor2Exception:
+        os.remove(full_path)
+        raise
 
 
 def import_type_def(type_name: str, output_type: Type[T], path: str, module_name: str) -> Type[T]:

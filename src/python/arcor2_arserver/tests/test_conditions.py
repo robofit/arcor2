@@ -2,7 +2,7 @@ import json
 
 from arcor2.data.common import Flow, FlowTypes, LogicItem, Position, ProjectLogicIf, Scene
 from arcor2.data.rpc.common import IdArgs
-from arcor2_arserver.tests.conftest import add_logic_item, event, save_project
+from arcor2_arserver.tests.conftest import add_logic_item, event, lock_object, save_project
 from arcor2_arserver.tests.objects.object_with_actions import ObjectWithActions
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, uid
@@ -72,9 +72,19 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     assert a2 is not None
 
     add_logic_item(ars, LogicItem.START, a1.id)
+    event(ars, events.lk.ObjectsUnlocked)
+
+    lock_object(ars, a1.id)
     add_logic_item(ars, a1.id, a2.id, ProjectLogicIf(f"{a1.id}/{FlowTypes.DEFAULT}/{0}", json.dumps(True)))
+    event(ars, events.lk.ObjectsUnlocked)
+
+    lock_object(ars, a2.id)
     add_logic_item(ars, a2.id, LogicItem.END)
+    event(ars, events.lk.ObjectsUnlocked)
+
+    lock_object(ars, a1.id)
     add_logic_item(ars, a1.id, LogicItem.END, ProjectLogicIf(f"{a1.id}/{FlowTypes.DEFAULT}/{0}", json.dumps(False)))
+    event(ars, events.lk.ObjectsUnlocked)
 
     # TODO try to add some invalid connections here?
 

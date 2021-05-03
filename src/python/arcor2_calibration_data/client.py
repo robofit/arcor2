@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import List
 
-from arcor2_calibration_data import CALIBRATION_URL, MarkerCorners
+from arcor2_calibration_data import CALIBRATION_URL, EstimatedPose, MarkerCorners
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL.Image import Image
 
@@ -26,7 +26,7 @@ def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorner
         )
 
 
-def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool = False) -> Pose:
+def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool = False) -> EstimatedPose:
     """Returns camera pose with respect to the origin.
 
     :param camera: Camera parameters.
@@ -46,7 +46,7 @@ def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool =
             rest.Method.PUT,
             f"{CALIBRATION_URL}/calibrate/camera",
             params=params,
-            return_type=Pose,
+            return_type=EstimatedPose,
             files={"image": buff.getvalue()},
         )
 

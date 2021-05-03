@@ -10,10 +10,10 @@ from arcor2_arserver import globals as glob
 
 async def broadcast_event(event: events.Event, exclude_ui: Optional[WebSocketServerProtocol] = None) -> None:
 
-    if (exclude_ui is None and glob.INTERFACES) or (exclude_ui and len(glob.INTERFACES) > 1):
+    if (exclude_ui is None and glob.USERS.interfaces) or (exclude_ui and len(glob.USERS.interfaces) > 1):
         message = event.to_json()
         await asyncio.gather(
-            *[ws_server.send_json_to_client(intf, message) for intf in glob.INTERFACES if intf != exclude_ui]
+            *[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces if intf != exclude_ui]
         )
 
 

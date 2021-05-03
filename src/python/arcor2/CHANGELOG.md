@@ -2,6 +2,18 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.16.0] - WIP
+
+### Changed
+- Objects initialization order (`Resources`):
+  - Object initialization order can be set using class-level `INIT_PRIORITY` variable.
+  - The higher priority, the sooner are objects of that type initialized.
+  - Objects are initialized serially.
+- `CachedProject` has new methods to deal with hierarchy (`get_by_id`, `get_parent_id`, `childs`).  
+
+### Fixed
+- Handling of context manager arguments in `Resources`.
+
 ## [0.15.0] - 2021-04-20
 
 ### Changed
