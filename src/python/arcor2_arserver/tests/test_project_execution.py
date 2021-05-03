@@ -1,16 +1,11 @@
+import json
+
 from arcor2.clients import persistent_storage
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
+from arcor2.object_types.random_actions import RandomActions
 from arcor2.object_types.time_actions import TimeActions
-from arcor2_arserver.tests.conftest import (
-    LOGGER,
-    add_logic_item,
-    close_project,
-    event,
-    lock_object,
-    save_project,
-    wait_for_event,
-)
+from arcor2_arserver.tests.conftest import LOGGER, add_logic_item, close_project, event, save_project, wait_for_event
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, uid
 from arcor2_execution_data import events as eevents
@@ -40,6 +35,16 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert obj
 
     assert ars.call_rpc(
+        rpc.s.AddObjectToScene.Request(
+            uid(), rpc.s.AddObjectToScene.Request.Args("random_actions", RandomActions.__name__)
+        ),
+        rpc.s.AddObjectToScene.Response,
+    ).result
+
+    obj2 = event(ars, events.s.SceneObjectChanged).data
+    assert obj2
+
+    assert ars.call_rpc(
         rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
         rpc.p.NewProject.Response,
     ).result
@@ -61,9 +66,12 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
             rpc.p.AddAction.Request.Args(
                 ap.id,
                 "test_action",
-                f"{obj.id}/{TimeActions.sleep.__name__}",
-                [common.ActionParameter("seconds", "double", "0.5")],
-                [common.Flow()],
+                f"{obj2.id}/{RandomActions.random_double.__name__}",
+                [
+                    common.ActionParameter("range_min", "double", "0.45"),
+                    common.ActionParameter("range_max", "double", "0.55"),
+                ],
+                [common.Flow(outputs=["random_value"])],
             ),
         ),
         rpc.p.AddAction.Response,
@@ -72,11 +80,36 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     action = event(ars, events.p.ActionChanged).data
     assert action is not None
 
+    assert ars.call_rpc(
+        rpc.p.AddAction.Request(
+            uid(),
+            rpc.p.AddAction.Request.Args(
+                ap.id,
+                "test_action2",
+                f"{obj.id}/{TimeActions.sleep.__name__}",
+                [
+                    common.ActionParameter(
+                        "seconds",
+                        common.ActionParameter.TypeEnum.LINK,
+                        json.dumps(f"{action.id}/{common.FlowTypes.DEFAULT}/0"),
+                    )
+                ],
+                [common.Flow()],
+            ),
+        ),
+        rpc.p.AddAction.Response,
+    ).result
+
+    action2 = event(ars, events.p.ActionChanged).data
+    assert action2 is not None
+
     add_logic_item(ars, common.LogicItem.START, action.id)
     event(ars, events.lk.ObjectsUnlocked)
 
-    lock_object(ars, action.id)
-    add_logic_item(ars, action.id, common.LogicItem.END)
+    add_logic_item(ars, action.id, action2.id)
+    event(ars, events.lk.ObjectsUnlocked)
+
+    add_logic_item(ars, action2.id, common.LogicItem.END)
     event(ars, events.lk.ObjectsUnlocked)
 
     save_project(ars)
@@ -110,18 +143,27 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert pi
     assert pi.package_id == package.id
 
+    # random_double action
     act_state_before = event(ars, arcor2_events.ActionStateBefore).data
     assert act_state_before
     assert act_state_before.action_id == action.id
-    assert len(act_state_before.parameters) == 1
-    # assert act_in.args[0].name == "seconds"
-    # assert act_in.args[0].type == "double"
-    # assert act_in.args[0].value == "0.1"
+    assert len(act_state_before.parameters) == 2
 
     act_state_after = event(ars, arcor2_events.ActionStateAfter).data
     assert act_state_after
     assert act_state_after.action_id == action.id
-    assert not act_state_after.results
+    assert act_state_after.results
+
+    # sleep action
+    act2_state_before = event(ars, arcor2_events.ActionStateBefore).data
+    assert act2_state_before
+    assert act2_state_before.action_id == action2.id
+    assert len(act2_state_before.parameters) == 1
+
+    act2_state_after = event(ars, arcor2_events.ActionStateAfter).data
+    assert act2_state_after
+    assert act2_state_after.action_id == action2.id
+    assert not act2_state_after.results
 
     # TODO pause, resume
 

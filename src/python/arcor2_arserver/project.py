@@ -111,13 +111,26 @@ def check_action_params(
             if parsed_link.action_id == action.id:
                 raise Arcor2Exception("Can't use own result as a parameter.")
 
-            outputs = project.action(parsed_link.action_id).flow(parsed_link.flow_name).outputs
+            parent_action = project.action(parsed_link.action_id)
+            source_action_pt = parent_action.parse_type()
 
-            assert len(outputs) == len(object_action.returns)
+            parent_action_meta = glob.OBJECT_TYPES[scene.object(source_action_pt.obj_id).type].actions[
+                source_action_pt.action_type
+            ]
+
+            if len(parent_action.flow(parsed_link.flow_name).outputs) != len(parent_action_meta.returns):
+                raise Arcor2Exception("Source action does not have outputs specified.")
 
             param_meta = object_action.parameter(param.name)
-            if param_meta.type != object_action.returns[parsed_link.output_index]:
-                raise Arcor2Exception("Param type does not match action output type.")
+
+            try:
+                if param_meta.type != parent_action_meta.returns[parsed_link.output_index]:
+                    raise Arcor2Exception("Param type does not match action output type.")
+            except IndexError:
+                raise Arcor2Exception(
+                    f"Index {parsed_link.output_index} is invalid for action {object_action.name},"
+                    f" which returns {len(object_action.returns)} values."
+                )
 
         else:
 
