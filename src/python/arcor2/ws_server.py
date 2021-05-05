@@ -81,7 +81,7 @@ async def server(
                 try:
                     await client.send(rpc_cls.Response(data["id"], False, messages=[str(e)]).to_json())
                     logger.debug(e, exc_info=True)
-                except KeyError:
+                except (KeyError, websockets.exceptions.ConnectionClosed):
                     pass
                 return
 
@@ -104,7 +104,10 @@ async def server(
                         assert isinstance(resp, rpc_cls.Response)
                         resp.id = req.id
 
-            await client.send(resp.to_json())
+            try:
+                await client.send(resp.to_json())
+            except websockets.exceptions.ConnectionClosed:
+                return
 
             if logger.level == LogLevel.DEBUG:
 
