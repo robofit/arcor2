@@ -67,8 +67,8 @@ async def update_project_sources(project_sources: ProjectSources) -> None:
     await run_in_executor(persistent_storage.update_project_sources, project_sources)
 
 
-async def update_object_type(object_type: ObjectType) -> None:
-    await run_in_executor(persistent_storage.update_object_type, object_type)
+async def update_object_type(object_type: ObjectType) -> datetime:
+    return await run_in_executor(persistent_storage.update_object_type, object_type)
 
 
 async def delete_object_type(object_type_id: str) -> None:

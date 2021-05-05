@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Set, Type, Union
 
@@ -107,8 +108,11 @@ class ObjectType(JsonSchemaMixin):
 
     id: str
     source: str
-    desc: Optional[str] = ""
+    desc: Optional[str] = None
     model: Optional[MetaModel3d] = None
+
+    created: Optional[datetime] = None
+    modified: Optional[datetime] = None
 
     def __post_init__(self) -> None:  # TODO workaround for bug (?) in Storage
 

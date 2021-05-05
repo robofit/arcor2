@@ -60,7 +60,7 @@ def put_mesh_file(mesh_id: str) -> RespT:
     fs = request.files["file"]
     fs.save(buff)
     MESHES[mesh_id] = buff, fs.filename
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/models/<string:mesh_id>/mesh/file", methods=["GET"])
@@ -114,6 +114,10 @@ def put_project() -> RespT:
     project = common.Project.from_dict(humps.decamelize(request.json))
     project.modified = datetime.now(tz=timezone.utc)
     project.int_modified = None
+
+    if project.id not in PROJECTS:
+        project.created = project.modified
+
     PROJECTS[project.id] = project
     return jsonify(project.modified.isoformat())
 
@@ -145,7 +149,7 @@ def get_project(id: str) -> RespT:
     try:
         return jsonify(PROJECTS[id].to_dict())
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
 
 @app.route("/project/<string:id>", methods=["DELETE"])
@@ -171,9 +175,9 @@ def delete_project(id: str) -> RespT:
     try:
         del PROJECTS[id]
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/projects", methods=["GET"])
@@ -196,7 +200,8 @@ def get_projects() -> RespT:
     ret = common.IdDescList()
 
     for proj in PROJECTS.values():
-        ret.items.append(common.IdDesc(proj.id, proj.name, proj.desc))
+        assert proj.modified
+        ret.items.append(common.IdDesc(proj.id, proj.name, proj.modified, proj.desc))
 
     return jsonify(ret.to_dict())
 
@@ -222,6 +227,10 @@ def put_scene() -> RespT:
     scene = common.Scene.from_dict(humps.decamelize(request.json))
     scene.modified = datetime.now(tz=timezone.utc)
     scene.int_modified = None
+
+    if scene.id not in SCENES:
+        scene.created = scene.modified
+
     SCENES[scene.id] = scene
     return jsonify(scene.modified.isoformat())
 
@@ -253,7 +262,7 @@ def get_scene(id: str) -> RespT:
     try:
         return jsonify(SCENES[id].to_dict())
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
 
 @app.route("/scene/<string:id>", methods=["DELETE"])
@@ -279,9 +288,9 @@ def delete_scene(id: str) -> RespT:
     try:
         del SCENES[id]
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/scenes", methods=["GET"])
@@ -304,7 +313,8 @@ def get_scenes() -> RespT:
     ret = common.IdDescList()
 
     for scene in SCENES.values():
-        ret.items.append(common.IdDesc(scene.id, scene.name, scene.desc))
+        assert scene.modified
+        ret.items.append(common.IdDesc(scene.id, scene.name, scene.modified, scene.desc))
 
     return jsonify(ret.to_dict())
 
@@ -328,8 +338,13 @@ def put_object_type() -> RespT:
     """
 
     obj_type = object_type.ObjectType.from_dict(humps.decamelize(request.json))
+    obj_type.modified = datetime.now(tz=timezone.utc)
+
+    if obj_type.id not in OBJECT_TYPES:
+        obj_type.created = obj_type.modified
+
     OBJECT_TYPES[obj_type.id] = obj_type
-    return "ok", 200
+    return jsonify(obj_type.modified.isoformat()), 200
 
 
 @app.route("/object_types/<string:id>", methods=["GET"])
@@ -359,7 +374,7 @@ def get_object_type(id: str) -> RespT:
     try:
         return jsonify(OBJECT_TYPES[id].to_dict())
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
 
 @app.route("/object_type/<string:id>", methods=["DELETE"])
@@ -385,9 +400,9 @@ def delete_object_type(id: str) -> RespT:
     try:
         del OBJECT_TYPES[id]
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/object_types", methods=["GET"])
@@ -410,7 +425,8 @@ def get_object_types() -> RespT:
     ret = common.IdDescList()
 
     for obj_type in OBJECT_TYPES.values():
-        ret.items.append(common.IdDesc(obj_type.id, "", obj_type.desc))
+        assert obj_type.modified
+        ret.items.append(common.IdDesc(obj_type.id, "", obj_type.modified, obj_type.desc))
 
     return jsonify(ret.to_dict())
 
@@ -436,7 +452,7 @@ def put_box() -> RespT:
     # box = object_type.Box.from_dict(humps.decamelize(request.json))  # TODO disabled because of bug in pyhumps
     box = object_type.Box(request.json["id"], request.json["sizeX"], request.json["sizeY"], request.json["sizeZ"])
     BOXES[box.id] = box
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/models/<string:id>/box", methods=["GET"])
@@ -466,7 +482,7 @@ def get_box(id: str) -> RespT:
     try:
         return jsonify(BOXES[id].to_dict())
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
 
 @app.route("/models/cylinder", methods=["PUT"])
@@ -489,7 +505,7 @@ def put_cylinder() -> RespT:
 
     cylinder = object_type.Cylinder.from_dict(humps.decamelize(request.json))
     CYLINDERS[cylinder.id] = cylinder
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/models/<string:id>/cylinder", methods=["GET"])
@@ -519,7 +535,7 @@ def get_cylinder(id: str) -> RespT:
     try:
         return jsonify(CYLINDERS[id].to_dict())
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
 
 @app.route("/models/sphere", methods=["PUT"])
@@ -542,7 +558,7 @@ def put_sphere() -> RespT:
 
     sphere = object_type.Sphere.from_dict(humps.decamelize(request.json))
     SPHERES[sphere.id] = sphere
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/models/<string:id>/sphere", methods=["GET"])
@@ -572,7 +588,7 @@ def get_sphere(id: str) -> RespT:
     try:
         return jsonify(SPHERES[id].to_dict())
     except KeyError:
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
 
 @app.route("/models/<string:id>", methods=["DELETE"])
@@ -604,9 +620,9 @@ def delete_model(id: str) -> RespT:
             try:
                 del SPHERES[id]
             except KeyError:
-                return "Not found", 404
+                return jsonify("Not found"), 404
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 def main() -> None:

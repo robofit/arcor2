@@ -83,6 +83,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
         stored_type_def = glob.OBJECT_TYPES[obj_id].type_def
         assert stored_type_def
 
+        # TODO do not compare sources but 'modified`
         # the code we get from type_def has Unix line endings, while the code from Project service might have Windows...
         obj.source = convert_line_endings_to_unix(obj.source)
 

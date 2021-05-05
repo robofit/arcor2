@@ -22,6 +22,7 @@ class CachedScene:
         self.id: str = scene.id
         self.name: str = scene.name
         self.desc: str = scene.desc
+        self.created: Optional[datetime] = scene.created
         self.modified: Optional[datetime] = scene.modified
         self.int_modified: Optional[datetime] = scene.int_modified
 
@@ -37,7 +38,7 @@ class CachedScene:
 
     @property
     def bare(self) -> cmn.BareScene:
-        return cmn.BareScene(self.name, self.desc, self.modified, self.int_modified, id=self.id)
+        return cmn.BareScene(self.name, self.desc, self.created, self.modified, self.int_modified, id=self.id)
 
     def object_names(self) -> Iterator[str]:
 
@@ -146,6 +147,7 @@ class CachedProject:
         self.scene_id: str = project.scene_id
         self.desc: str = project.desc
         self.has_logic: bool = project.has_logic
+        self.created: Optional[datetime] = project.created
         self.modified: Optional[datetime] = project.modified
         self._int_modified: Optional[datetime] = project.int_modified
 
@@ -249,7 +251,14 @@ class CachedProject:
     @property
     def bare(self) -> cmn.BareProject:
         return cmn.BareProject(
-            self.name, self.scene_id, self.desc, self.has_logic, self.modified, self._int_modified, id=self.id
+            self.name,
+            self.scene_id,
+            self.desc,
+            self.has_logic,
+            self.created,
+            self.modified,
+            self._int_modified,
+            id=self.id,
         )
 
     @property
