@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -126,7 +125,7 @@ class ListScenes(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(IdDesc):
-            modified: Optional[datetime] = None
+            pass
 
         data: Optional[List[Data]] = None
 

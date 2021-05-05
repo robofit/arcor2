@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -23,6 +24,7 @@ class ObjectTypeMeta(JsonSchemaMixin):
     disabled: bool = False
     problem: Optional[str] = None
     settings: List[ParameterMeta] = field(default_factory=list)
+    modified: Optional[datetime] = None
 
     def to_object_type(self) -> ObjectType:
 

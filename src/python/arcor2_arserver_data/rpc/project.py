@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionParameter, Flow, IdDesc, Joint, Orientation, Position, ProjectLogicIf
+from arcor2.data.common import ActionParameter, Flow, Joint, Orientation, Position, ProjectLogicIf
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg
 
 
@@ -82,12 +82,16 @@ class ListProjects(RPC):
     @dataclass
     class Response(RPC.Response):
         @dataclass
-        class Data(IdDesc):
+        class Data(JsonSchemaMixin):
+
+            id: str
             scene_id: str
+            name: str
+            modified: datetime
+            desc: Optional[str] = None
             valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
             executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
             problems: List[str] = field(default_factory=list)
-            modified: Optional[datetime] = None
 
         data: Optional[List[Data]] = None
 

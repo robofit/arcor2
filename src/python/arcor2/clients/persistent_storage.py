@@ -100,10 +100,10 @@ def update_project_sources(project_sources: ProjectSources) -> None:
 
 
 @handle(ProjectServiceException, message="Failed to add or update the object type.")
-def update_object_type(object_type: ObjectType) -> None:
+def update_object_type(object_type: ObjectType) -> datetime:
 
     assert object_type.id
-    rest.call(rest.Method.PUT, f"{URL}/object_type", body=object_type)
+    return datetime.fromisoformat(rest.call(rest.Method.PUT, f"{URL}/object_type", body=object_type, return_type=str))
 
 
 @handle(ProjectServiceException, message="Failed to delete the object type.")

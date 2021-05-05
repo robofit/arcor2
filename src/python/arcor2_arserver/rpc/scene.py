@@ -178,7 +178,8 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
     resp.data = []
 
     async for scene in scenes():
-        resp.data.append(resp.Data(scene.id, scene.name, scene.desc, scene.modified))
+        assert scene.modified
+        resp.data.append(resp.Data(scene.id, scene.name, scene.modified, scene.desc))
 
     return resp
 
