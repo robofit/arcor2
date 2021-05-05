@@ -718,8 +718,9 @@ async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None
             return None
 
         proj.modified = await storage.update_project(proj.project)
-        asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
-        return None
+
+    asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
+    return None
 
 
 async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
