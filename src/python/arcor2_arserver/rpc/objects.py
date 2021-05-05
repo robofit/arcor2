@@ -290,13 +290,14 @@ async def get_object_types_cb(req: srpc.o.GetObjectTypes.Request, ui: WsClient) 
 
 def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
 
-    if list(scene.objects_of_type(object_type)):
-        raise Arcor2Exception(f"Object type used in scene '{scene.name}'.")
+    for _ in scene.objects_of_type(object_type):
+        raise Arcor2Exception(f"Object type used in scene {scene.name}.")
 
 
 async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClient) -> None:
 
     async with glob.LOCK.get_lock(req.dry_run):
+
         try:
             obj_type = glob.OBJECT_TYPES[req.args.id]
         except KeyError:
@@ -328,7 +329,7 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
                 glob.logger.error(str(e))
 
         del glob.OBJECT_TYPES[req.args.id]
-        remove_object_type(req.args.id)
+        await hlp.run_in_executor(remove_object_type, req.args.id)
 
         evt = sevts.o.ChangedObjectTypes([obj_type.meta])
         evt.change_type = events.Event.Type.REMOVE
