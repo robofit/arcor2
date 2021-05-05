@@ -68,6 +68,7 @@ timeout_default = 600
 
 [test]
 use_coverage = false
+extra_env_vars = ["PYTHONDEVMODE=1"]  # "PYTHONWARNINGS=error" not useable due to DeprecationWarning in networkx-2.2
 
 [black]
 config = "pyproject.toml"
