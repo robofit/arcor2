@@ -574,11 +574,11 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
                     target_joints = res
                     target_joints_diff = diff
 
-            if not target_joints:
-                raise Arcor2Exception("Could not find reachable pose.")
+        if not target_joints:
+            raise Arcor2Exception("Could not find reachable pose.")
 
-            asyncio.ensure_future(
-                robot.move_to_joints(
-                    req.args.robot_id, target_joints, req.args.speed, req.args.safe, glob.USERS.user_name(ui)
-                )
+        asyncio.ensure_future(
+            robot.move_to_joints(
+                req.args.robot_id, target_joints, req.args.speed, req.args.safe, glob.USERS.user_name(ui)
             )
+        )

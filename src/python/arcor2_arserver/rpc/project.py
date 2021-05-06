@@ -971,15 +971,14 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             if child_ap.parent == orig_ap.id:
                 await copy_action_point(child_ap, ap.id)
 
-    original_ap = proj.bare_action_point(req.args.id)
+    async with ctx_read_lock(req.args.id, glob.USERS.user_name(ui)):
+        original_ap = proj.bare_action_point(req.args.id)
 
-    await ensure_locked(req.args.id, ui)
+        if req.dry_run:
+            return
 
-    if req.dry_run:
-        return
-
-    old_ori_to_new_ori: Dict[str, str] = {}
-    asyncio.ensure_future(copy_action_point(original_ap, position=req.args.position))
+        old_ori_to_new_ori: Dict[str, str] = {}
+        asyncio.ensure_future(copy_action_point(original_ap, position=req.args.position))
 
 
 async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
@@ -1512,6 +1511,8 @@ async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> No
     act.name = req.args.new_name
 
     proj.update_modified()
+
+    await glob.LOCK.write_unlock(req.args.action_id, glob.USERS.user_name(ui))
 
     evt = sevts.p.ActionChanged(act)
     evt.change_type = Event.Type.UPDATE_BASE

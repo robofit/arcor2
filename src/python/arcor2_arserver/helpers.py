@@ -25,7 +25,7 @@ async def ctx_write_lock(
     @retry(exc=CannotLock, tries=glob.LOCK.LOCK_RETRIES, delay=glob.LOCK.RETRY_WAIT)
     async def lock():
         if not await glob.LOCK.write_lock(obj_ids, owner):
-            raise CannotLock("Locking failed")
+            raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL)
 
     await lock()
     try:
@@ -46,7 +46,7 @@ async def ctx_read_lock(
     @retry(exc=CannotLock, tries=glob.LOCK.LOCK_RETRIES, delay=glob.LOCK.RETRY_WAIT)
     async def lock():
         if not await glob.LOCK.read_lock(obj_ids, owner):
-            raise CannotLock("Locking failed")
+            raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL)
 
     await lock()
     try:
@@ -67,7 +67,7 @@ async def ensure_locked(obj_id: str, ui: WsClient) -> None:
     """
 
     if not await glob.LOCK.is_write_locked(obj_id, glob.USERS.user_name(ui)):
-        raise LockingException(f"Object is not write locked <{obj_id}>")
+        raise LockingException(glob.LOCK.ErrMessages.NOT_LOCKED)
 
 
 async def get_unlocked_objects(obj_ids: Union[str, List[str]], owner: str) -> List[str]:

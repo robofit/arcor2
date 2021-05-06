@@ -72,19 +72,13 @@ class LockedObject:
             raise CannotUnlock(f"Object lock is not owned by '{owner}'")
 
         if self.read[obj_id].count > 1:
-            lock_data = self.read[obj_id]
-            try:
-                lock_data.owners.remove(owner)
-            except ValueError:
-                raise CannotUnlock(f"'{owner}' does not own read lock for object '{obj_id}'")
-
-            lock_data.dec_count()
+            self.read[obj_id].owners.remove(owner)
+            self.read[obj_id].dec_count()
         else:
             del self.read[obj_id]
 
     def write_lock(self, obj_id: str, owner: str, lock_tree: bool) -> bool:
 
-        # TODO maybe exception would be better?
         if self.tree or obj_id in self.write or obj_id in self.read:
             return False
 
