@@ -288,7 +288,7 @@ async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float
 
         await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_id, joints, safe)))
     finally:
-        await glob.LOCK.read_unlock(robot_id, lock_owner)
+        await glob.LOCK.write_unlock(robot_id, lock_owner)
 
 
 async def move_to_ap_joints(

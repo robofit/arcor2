@@ -20,11 +20,16 @@ class Lock:
 
         RUNNING_ACTION: str = "ACTION"
 
-    LOCK_TIMEOUT: int = 300  # 5 minutes
-    LOCK_RETRIES: int = 10
-    RETRY_WAIT: float = 0.2
+    class ErrMessages(cmn.StrEnum):
+        SOMETHING_LOCKED: str = "There are locked objects"
+        LOCK_FAIL: str = "Locking failed, try again"
+        NOT_LOCKED: str = "Object not locked"
 
-    def __init__(self) -> None:
+    LOCK_TIMEOUT: int = 300  # 5 minutes
+    LOCK_RETRIES: int = 13
+    RETRY_WAIT: float = 0.15
+
+    def __init__(self, testing: bool = False) -> None:
         self._scene: Optional[UpdateableCachedScene] = None
         self._project: Optional[UpdateableCachedProject] = None
 
@@ -34,6 +39,8 @@ class Lock:
 
         self.notifications_q: asyncio.Queue[LockEventData] = asyncio.Queue()
         self._ui_user_locks: Dict[str, Set[str]] = {}
+
+        self.testing = testing
 
     @property
     def scene(self) -> Optional[UpdateableCachedScene]:
@@ -75,8 +82,8 @@ class Lock:
         """Get lock for data structure, method should be used for operation
         with whole scene/project, no others."""
 
-        if dry_run and self._ui_user_locks:
-            raise CannotLock("Cannot acquire lock")
+        if self._ui_user_locks:
+            raise CannotLock(self.ErrMessages.LOCK_FAIL)
 
         yielded = False
         try:
@@ -84,7 +91,7 @@ class Lock:
                 try:
                     async with self._lock:
                         if self._get_write_locks_count():
-                            raise CannotLock("Cannot acquire lock")
+                            raise CannotLock(self.ErrMessages.LOCK_FAIL)
 
                         if not dry_run:
                             yielded = True
@@ -98,7 +105,7 @@ class Lock:
                     await asyncio.sleep(self.RETRY_WAIT)
         finally:
             if not yielded:
-                raise CannotLock("Cannot acquire lock")
+                raise CannotLock(self.ErrMessages.LOCK_FAIL)
 
     async def read_lock(self, obj_ids: Union[List[str], str], owner: str) -> bool:
 
@@ -175,12 +182,12 @@ class Lock:
             ret = self._write_lock(roots, obj_ids, owner, lock_tree)
 
         if ret and notify:
-            ui_locked = obj_ids
+            ui_locked = set(obj_ids)
             if lock_tree:
                 for obj_id in roots:  # TODO lock only tree from affected object
-                    ui_locked.extend(self.get_all_children(obj_id))
-                ui_locked += roots
-            self._upsert_user_locked_objects(owner, ui_locked)
+                    ui_locked.update(self.get_all_children(obj_id))
+                ui_locked.update(roots)
+            self._upsert_user_locked_objects(owner, list(ui_locked))
             self.notifications_q.put_nowait(LockEventData(ui_locked, owner, True))
         return ret
 
@@ -210,14 +217,14 @@ class Lock:
         async with self._lock:
             locked_trees = self._write_unlock(roots, obj_ids, owner)
 
-        ui_locked = obj_ids
+        ui_locked = set(obj_ids)
         for obj_id, locked_tree in zip(roots, locked_trees):  # TODO lock only tree from affected object
             if locked_tree:
-                ui_locked.extend(self.get_all_children(obj_id))
-                ui_locked.extend(roots)
+                ui_locked.update(self.get_all_children(obj_id))
+                ui_locked.update(roots)
 
         # Always try to remove locked objects from database, so it won't get messy when deleting too many objects
-        self._remove_user_locked_objects(owner, ui_locked)
+        self._remove_user_locked_objects(owner, list(ui_locked))
 
         if notify:
             self.notifications_q.put_nowait(LockEventData(ui_locked, owner))
@@ -322,11 +329,12 @@ class Lock:
             # TODO implement with scene object hierarchy
             return obj_id
 
-        # locking on dashboard, check if scene or project exists
-        if next((True for scene in (await storage.get_scenes()).items if scene.id == obj_id), False):
-            return obj_id
-        elif next((True for project in (await storage.get_projects()).items if project.id == obj_id), False):
-            return obj_id
+        if not self.testing:  # FIXME monkey patching
+            # locking on dashboard, check if scene or project exists
+            if next((True for scene in (await storage.get_scenes()).items if scene.id == obj_id), False):
+                return obj_id
+            elif next((True for project in (await storage.get_projects()).items if project.id == obj_id), False):
+                return obj_id
 
         raise Arcor2Exception(f"Unknown object '{obj_id}'")
 
@@ -376,21 +384,20 @@ class Lock:
 
         await asyncio.sleep(self.LOCK_TIMEOUT)
 
-        unlocked: Set[str] = set()
         async with self._lock:
             read, write = self._get_owner_locks(owner)
-
             self._read_unlock(list(read), list(read.values()), owner)
-            unlocked.update(read.values())
             self._write_unlock(list(write), list(write.values()), owner)
-            unlocked.update(write.values())
 
-        if unlocked:
-            self.notifications_q.put_nowait(LockEventData(unlocked, owner))
+        to_notify = self._ui_user_locks[owner].copy()
+        del self._ui_user_locks[owner]
+
+        if to_notify:
+            self.notifications_q.put_nowait(LockEventData(to_notify, owner))
 
     async def get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:
         """Finds which locks belongs to owner
-        :return: object_id: root id
+        :return: tuple of read and write locks in format object_id: root id
         """
 
         async with self._lock:
