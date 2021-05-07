@@ -126,7 +126,7 @@ async def focus_object_cb(req: srpc.o.FocusObject.Request, ui: WsClient) -> srpc
 
         robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
 
-        FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(robot_id, end_effector)
+        FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(await osa.get_robot_instance(robot_id), end_effector)
 
         r = srpc.o.FocusObject.Response()
         r.data = r.Data(finished_indexes=list(FOCUS_OBJECT[obj_id].keys()))

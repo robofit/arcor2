@@ -20,8 +20,15 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked, get_unlocked_objects, unique_name
-from arcor2_arserver.objects_actions import get_types_dict
+from arcor2_arserver.helpers import (
+    ctx_read_lock,
+    ctx_write_lock,
+    ensure_locked,
+    get_unlocked_objects,
+    make_name_unique,
+    unique_name,
+)
+from arcor2_arserver.objects_actions import get_robot_instance, get_types_dict
 from arcor2_arserver.project import (
     check_action_params,
     check_flows,
@@ -31,7 +38,7 @@ from arcor2_arserver.project import (
     project_names,
     project_problems,
 )
-from arcor2_arserver.robot import get_end_effector_pose, get_robot_joints
+from arcor2_arserver.robot import get_end_effector_pose, get_pose_and_joints, get_robot_joints
 from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, open_scene
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
@@ -107,10 +114,10 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
 
 async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> None:
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.RUNNING_ACTION, glob.USERS.user_name(ui)):
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
 
-        scene = glob.LOCK.scene_or_exception()
-        proj = glob.LOCK.project_or_exception()
+    async with ctx_write_lock(glob.LOCK.SpecialValues.RUNNING_ACTION, glob.USERS.user_name(ui)):
 
         ensure_scene_started()
 
@@ -247,22 +254,67 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     return resp
 
 
+async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClient) -> None:
+    async def notify(ap: common.BareActionPoint, ori: common.NamedOrientation, joi: common.ProjectRobotJoints) -> None:
+
+        ap_evt = sevts.p.ActionPointChanged(ap)
+        ap_evt.change_type = Event.Type.ADD
+        await notif.broadcast_event(ap_evt)
+
+        ori_evt = sevts.p.OrientationChanged(ori)
+        ori_evt.change_type = Event.Type.ADD
+        ori_evt.parent_id = ap.id
+
+        joi_evt = sevts.p.JointsChanged(joi)
+        joi_evt.change_type = Event.Type.ADD
+        joi_evt.parent_id = ap.id
+
+        await asyncio.gather(notif.broadcast_event(ori_evt), notif.broadcast_event(joi_evt))
+
+    hlp.is_valid_identifier(req.args.name)
+    proj = glob.LOCK.project_or_exception()
+
+    async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
+
+        ensure_scene_started()
+
+        unique_name(req.args.name, proj.action_points_names)
+
+        robot_inst = await get_robot_instance(req.args.robot_id, req.args.end_effector_id)
+
+        if req.dry_run:
+            return None
+
+        pose, joints = await get_pose_and_joints(robot_inst, req.args.end_effector_id)
+
+        ap = proj.upsert_action_point(common.ActionPoint.uid(), req.args.name, pose.position)
+        ori = common.NamedOrientation("default", pose.orientation)
+        proj.upsert_orientation(ap.id, ori)
+        joi = common.ProjectRobotJoints("default", req.args.robot_id, joints, True)
+        proj.upsert_joints(ap.id, joi)
+
+        asyncio.ensure_future(notify(ap, ori, joi))
+        return None
+
+
 async def add_action_point_joints_using_robot_cb(
     req: srpc.p.AddActionPointJointsUsingRobot.Request, ui: WsClient
 ) -> None:
 
-    async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
+    hlp.is_valid_identifier(req.args.name)
+    proj = glob.LOCK.project_or_exception()
 
-        proj = glob.LOCK.project_or_exception()
+    async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
 
         ensure_scene_started()
 
+        robot_inst = await get_robot_instance(req.args.robot_id)
+
         ap = proj.bare_action_point(req.args.action_point_id)
 
-        hlp.is_valid_identifier(req.args.name)
         unique_name(req.args.name, proj.ap_joint_names(ap.id))
 
-        new_joints = await get_robot_joints(req.args.robot_id)
+        new_joints = await get_robot_joints(robot_inst)
 
         await ensure_locked(ap.id, ui)
 
@@ -292,7 +344,7 @@ async def update_action_point_joints_using_robot_cb(
     async with ctx_read_lock(robot_joints.robot_id, glob.USERS.user_name(ui)):
         await ensure_locked(ap.id, ui)
 
-        robot_joints.joints = await get_robot_joints(robot_joints.robot_id)
+        robot_joints.joints = await get_robot_joints(await get_robot_instance(robot_joints.robot_id))
         robot_joints.is_valid = True
 
         proj.update_modified()
@@ -511,7 +563,8 @@ async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingR
     await ensure_locked(ap.id, ui)
 
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
-        new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
+        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
+        new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector)
 
         if ap.parent:
             new_pose = tr.make_pose_rel_to_parent(scene, proj, new_pose, ap.parent)
@@ -578,22 +631,24 @@ async def add_action_point_orientation_using_robot_cb(
     :return:
     """
 
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
+
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
 
-        scene = glob.LOCK.scene_or_exception()
-        proj = glob.LOCK.project_or_exception()
         ensure_scene_started()
 
         ap = proj.bare_action_point(req.args.action_point_id)
         hlp.is_valid_identifier(req.args.name)
         unique_name(req.args.name, proj.ap_orientation_names(ap.id))
+        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
 
         await ensure_locked(req.args.action_point_id, ui)
 
         if req.dry_run:
             return None
 
-        new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
+        new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector)
 
         if ap.parent:
             new_pose = tr.make_pose_rel_to_parent(scene, proj, new_pose, ap.parent)
@@ -617,18 +672,19 @@ async def update_action_point_orientation_using_robot_cb(
     :return:
     """
 
+    scene = glob.LOCK.scene_or_exception()
+    proj = glob.LOCK.project_or_exception()
+
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
 
-        scene = glob.LOCK.scene_or_exception()
-        proj = glob.LOCK.project_or_exception()
-
         ensure_scene_started()
+        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
 
         ap, ori = proj.bare_ap_and_orientation(req.args.orientation_id)
 
         await ensure_locked(ori.id, ui)
 
-        new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
+        new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector)
 
         if ap.parent:
             new_pose = tr.make_pose_rel_to_parent(scene, proj, new_pose, ap.parent)
@@ -821,10 +877,11 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
 
 async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsClient) -> None:
 
+    proj = glob.LOCK.project_or_exception()
+
     to_lock = await get_unlocked_objects(req.args.id, glob.USERS.user_name(ui))
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
 
-        proj = glob.LOCK.project_or_exception()
         ap = proj.bare_action_point(req.args.id)
 
         for proj_ap in proj.action_points_with_parent:
@@ -891,17 +948,6 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
 async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
-
-    def make_name_unique(orig_name: str, names: Set[str]) -> str:
-
-        cnt = 1
-        name = orig_name
-
-        while name in names:
-            name = f"{orig_name}_{cnt}"
-            cnt += 1
-
-        return name
 
     async def copy_action_point(
         orig_ap: common.BareActionPoint,

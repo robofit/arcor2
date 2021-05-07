@@ -18,6 +18,18 @@ def unique_name(name: str, existing_names: Set[str]) -> None:
         raise Arcor2Exception("Name already exists.")
 
 
+def make_name_unique(orig_name: str, names: Set[str]) -> str:
+
+    cnt = 1
+    name = orig_name
+
+    while name in names:
+        name = f"{orig_name}_{cnt}"
+        cnt += 1
+
+    return name
+
+
 @asynccontextmanager
 async def ctx_write_lock(
     obj_ids: Union[str, List[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
