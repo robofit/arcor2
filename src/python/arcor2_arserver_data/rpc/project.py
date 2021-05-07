@@ -184,6 +184,26 @@ class CopyActionPoint(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class AddApUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            end_effector_id: str
+            name: str
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 class AddActionPointJointsUsingRobot(RPC):
     @dataclass
     class Request(RPC.Request):

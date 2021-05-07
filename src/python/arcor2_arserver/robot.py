@@ -1,6 +1,7 @@
+import asyncio
 import inspect
 from ast import AST
-from typing import List, Optional, Set, Type
+from typing import List, Optional, Set, Tuple, Type
 
 import arcor2.helpers as hlp
 from arcor2.cached import CachedScene
@@ -20,54 +21,57 @@ class RobotPoseException(Arcor2Exception):
     pass
 
 
-async def get_end_effectors(robot_id: str) -> Set[str]:
+async def get_end_effectors(robot_inst: Robot) -> Set[str]:
     """
     :param robot_id:
     :return: IDs of existing end effectors.
     """
 
-    robot_inst = await osa.get_robot_instance(robot_id)
     return await hlp.run_in_executor(robot_inst.get_end_effectors_ids)
 
 
-async def get_grippers(robot_id: str) -> Set[str]:
+async def get_grippers(robot_inst: Robot) -> Set[str]:
     """
     :param robot_id:
     :return: IDs of existing grippers.
     """
 
-    robot_inst = await osa.get_robot_instance(robot_id)
     return await hlp.run_in_executor(robot_inst.grippers)
 
 
-async def get_suctions(robot_id: str) -> Set[str]:
+async def get_suctions(robot_inst: Robot) -> Set[str]:
     """
     :param robot_id:
     :return: IDs of existing suctions.
     """
 
-    robot_inst = await osa.get_robot_instance(robot_id)
     return await hlp.run_in_executor(robot_inst.suctions)
 
 
-async def get_end_effector_pose(robot_id: str, end_effector: str) -> common.Pose:
+async def get_pose_and_joints(robot_inst: Robot, end_effector: str) -> Tuple[common.Pose, List[common.Joint]]:
+
+    return await asyncio.gather(
+        hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector),
+        hlp.run_in_executor(robot_inst.robot_joints),
+    )
+
+
+async def get_end_effector_pose(robot_inst: Robot, end_effector: str) -> common.Pose:
     """
     :param robot_id:
     :param end_effector:
     :return: Global pose
     """
 
-    robot_inst = await osa.get_robot_instance(robot_id, end_effector)
     return await hlp.run_in_executor(robot_inst.get_end_effector_pose, end_effector)
 
 
-async def get_robot_joints(robot_id: str) -> List[common.Joint]:
+async def get_robot_joints(robot_inst: Robot) -> List[common.Joint]:
     """
     :param robot_id:
     :return: List of joints
     """
 
-    robot_inst = await osa.get_robot_instance(robot_id)
     return await hlp.run_in_executor(robot_inst.robot_joints)
 
 
@@ -125,9 +129,7 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
         obj_type.robot_meta.urdf_package_filename = obj_type.type_def.urdf_package_name
 
 
-async def stop(robot_id: str) -> None:
-
-    robot_inst = await osa.get_robot_instance(robot_id)
+async def stop(robot_inst: Robot) -> None:
 
     if not robot_inst.move_in_progress:
         raise Arcor2Exception("Robot is not moving.")
@@ -136,41 +138,37 @@ async def stop(robot_id: str) -> None:
 
 
 async def ik(
-    robot_id: str,
+    robot_inst: Robot,
     end_effector_id: str,
     pose: common.Pose,
     start_joints: Optional[List[common.Joint]] = None,
     avoid_collisions: bool = True,
 ) -> List[common.Joint]:
 
-    robot_inst = await osa.get_robot_instance(robot_id)
-
     return await hlp.run_in_executor(
         robot_inst.inverse_kinematics, end_effector_id, pose, start_joints, avoid_collisions
     )
 
 
-async def fk(robot_id: str, end_effector_id: str, joints: List[common.Joint]) -> common.Pose:
+async def fk(robot_inst: Robot, end_effector_id: str, joints: List[common.Joint]) -> common.Pose:
 
-    robot_inst = await osa.get_robot_instance(robot_id)
     return await hlp.run_in_executor(robot_inst.forward_kinematics, end_effector_id, joints)
 
 
 async def check_reachability(
-    scene: CachedScene, robot_id: str, end_effector_id: str, pose: common.Pose, safe: bool = True
+    scene: CachedScene, robot_inst: Robot, end_effector_id: str, pose: common.Pose, safe: bool = True
 ) -> None:
 
-    otd = osa.get_obj_type_data(scene, robot_id)
+    otd = osa.get_obj_type_data(scene, robot_inst.id)
     if otd.robot_meta and otd.robot_meta.features.inverse_kinematics:
         try:
-            await ik(robot_id, end_effector_id, pose, avoid_collisions=safe)
+            await ik(robot_inst, end_effector_id, pose, avoid_collisions=safe)
         except Arcor2Exception as e:
             raise Arcor2Exception("Unreachable pose.") from e
 
 
-async def check_robot_before_move(robot_id: str) -> None:
+async def check_robot_before_move(robot_inst: Robot) -> None:
 
-    robot_inst = await osa.get_robot_instance(robot_id)
     robot_inst.check_if_ready_to_move()
 
     if glob.RUNNING_ACTION:
@@ -179,14 +177,12 @@ async def check_robot_before_move(robot_id: str) -> None:
         action = glob.LOCK.project.action(glob.RUNNING_ACTION)
         obj_id_str, _ = action.parse_type()
 
-        if robot_id == obj_id_str:
+        if robot_inst.id == obj_id_str:
             raise Arcor2Exception("Robot is executing action.")
 
 
-async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, safe: bool) -> None:
+async def _move_to_pose(robot_inst: Robot, end_effector_id: str, pose: common.Pose, speed: float, safe: bool) -> None:
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
-
-    robot_inst = await osa.get_robot_instance(robot_id, end_effector_id)
 
     try:
         await hlp.run_in_executor(robot_inst.move_to_pose, end_effector_id, pose, speed, safe)
@@ -196,69 +192,67 @@ async def _move_to_pose(robot_id: str, end_effector_id: str, pose: common.Pose, 
 
 
 async def move_to_pose(
-    robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, safe: bool, lock_owner: str
+    robot_inst: Robot, end_effector_id: str, pose: common.Pose, speed: float, safe: bool, lock_owner: str
 ) -> None:
 
     try:
         Data = sevts.r.RobotMoveToPose.Data
 
         await notif.broadcast_event(
-            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.START, robot_id, end_effector_id, pose, safe))
+            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.START, robot_inst.id, end_effector_id, pose, safe))
         )
 
         try:
-            await _move_to_pose(robot_id, end_effector_id, pose, speed, safe)
+            await _move_to_pose(robot_inst, end_effector_id, pose, speed, safe)
 
         except Arcor2Exception as e:
             await notif.broadcast_event(
                 sevts.r.RobotMoveToPose(
-                    Data(Data.MoveEventType.FAILED, robot_id, end_effector_id, pose, safe, message=str(e))
+                    Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, pose, safe, message=str(e))
                 )
             )
             return
 
         await notif.broadcast_event(
-            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_id, end_effector_id, pose, safe))
+            sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, pose, safe))
         )
     finally:
-        await glob.LOCK.write_unlock(robot_id, lock_owner)
+        await glob.LOCK.write_unlock(robot_inst.id, lock_owner)
 
 
 async def move_to_ap_orientation(
-    robot_id: str, end_effector_id: str, pose: common.Pose, speed: float, orientation_id: str, safe: bool
+    robot_inst: Robot, end_effector_id: str, pose: common.Pose, speed: float, orientation_id: str, safe: bool
 ) -> None:
 
     Data = sevts.r.RobotMoveToActionPointOrientation.Data
 
     await notif.broadcast_event(
         sevts.r.RobotMoveToActionPointOrientation(
-            Data(Data.MoveEventType.START, robot_id, end_effector_id, orientation_id, safe)
+            Data(Data.MoveEventType.START, robot_inst.id, end_effector_id, orientation_id, safe)
         )
     )
 
     try:
-        await _move_to_pose(robot_id, end_effector_id, pose, speed, safe)
+        await _move_to_pose(robot_inst, end_effector_id, pose, speed, safe)
 
     except Arcor2Exception as e:
         await notif.broadcast_event(
             sevts.r.RobotMoveToActionPointOrientation(
-                Data(Data.MoveEventType.FAILED, robot_id, end_effector_id, orientation_id, safe, message=str(e))
+                Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, orientation_id, safe, message=str(e))
             )
         )
         return
 
     await notif.broadcast_event(
         sevts.r.RobotMoveToActionPointOrientation(
-            Data(Data.MoveEventType.END, robot_id, end_effector_id, orientation_id, safe)
+            Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, orientation_id, safe)
         )
     )
 
 
-async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: float, safe: bool) -> None:
+async def _move_to_joints(robot_inst: Robot, joints: List[common.Joint], speed: float, safe: bool) -> None:
 
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
-
-    robot_inst = await osa.get_robot_instance(robot_id)
 
     try:
         await hlp.run_in_executor(robot_inst.move_to_joints, joints, speed, safe)
@@ -267,54 +261,60 @@ async def _move_to_joints(robot_id: str, joints: List[common.Joint], speed: floa
         raise
 
 
-async def move_to_joints(robot_id: str, joints: List[common.Joint], speed: float, safe: bool, lock_owner: str) -> None:
+async def move_to_joints(
+    robot_inst: Robot, joints: List[common.Joint], speed: float, safe: bool, lock_owner: str
+) -> None:
 
     try:
         Data = sevts.r.RobotMoveToJoints.Data
 
-        await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.START, robot_id, joints, safe)))
+        await notif.broadcast_event(
+            sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.START, robot_inst.id, joints, safe))
+        )
 
         try:
 
-            await _move_to_joints(robot_id, joints, speed, safe)
+            await _move_to_joints(robot_inst, joints, speed, safe)
 
         except Arcor2Exception as e:
 
             await notif.broadcast_event(
-                sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.FAILED, robot_id, joints, safe, message=str(e)))
+                sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.FAILED, robot_inst.id, joints, safe, message=str(e)))
             )
 
             return
 
-        await notif.broadcast_event(sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_id, joints, safe)))
+        await notif.broadcast_event(
+            sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_inst.id, joints, safe))
+        )
     finally:
-        await glob.LOCK.write_unlock(robot_id, lock_owner)
+        await glob.LOCK.write_unlock(robot_inst.id, lock_owner)
 
 
 async def move_to_ap_joints(
-    robot_id: str, joints: List[common.Joint], speed: float, joints_id: str, safe: bool
+    robot_inst: Robot, joints: List[common.Joint], speed: float, joints_id: str, safe: bool
 ) -> None:
 
     Data = sevts.r.RobotMoveToActionPointJoints.Data
 
     await notif.broadcast_event(
-        sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.START, robot_id, joints_id, safe))
+        sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.START, robot_inst.id, joints_id, safe))
     )
 
     try:
 
-        await _move_to_joints(robot_id, joints, speed, safe)
+        await _move_to_joints(robot_inst, joints, speed, safe)
 
     except Arcor2Exception as e:
 
         await notif.broadcast_event(
             sevts.r.RobotMoveToActionPointJoints(
-                Data(Data.MoveEventType.FAILED, robot_id, joints_id, safe, message=str(e))
+                Data(Data.MoveEventType.FAILED, robot_inst.id, joints_id, safe, message=str(e))
             )
         )
 
         return
 
     await notif.broadcast_event(
-        sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.END, robot_id, joints_id, safe))
+        sevts.r.RobotMoveToActionPointJoints(Data(Data.MoveEventType.END, robot_inst.id, joints_id, safe))
     )

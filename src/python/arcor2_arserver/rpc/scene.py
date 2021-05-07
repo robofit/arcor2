@@ -20,7 +20,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked, get_unlocked_objects, unique_name
 from arcor2_arserver.lock.exceptions import LockingException
-from arcor2_arserver.objects_actions import get_object_types
+from arcor2_arserver.objects_actions import get_object_types, get_robot_instance
 from arcor2_arserver.project import (
     associated_projects,
     invalidate_joints_using_object_as_parent,
@@ -348,6 +348,9 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     :return:
     """
 
+    if req.args.id == req.args.robot.robot_id:
+        raise Arcor2Exception("Robot cannot update its own pose.")
+
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
 
     to_lock = await get_unlocked_objects(
@@ -356,8 +359,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
         ensure_scene_started()
 
-        if req.args.id == req.args.robot.robot_id:
-            raise Arcor2Exception("Robot cannot update its own pose.")
+        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
 
         scene_object = scene.object(req.args.id)
 
@@ -375,7 +377,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
         elif req.args.pivot != req.args.PivotEnum.MIDDLE:
             raise Arcor2Exception("Only middle pivot point is supported for objects without collision model.")
 
-        new_pose = await get_end_effector_pose(req.args.robot.robot_id, req.args.robot.end_effector)
+        new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector)
 
         position_delta = common.Position()
 
