@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, List, Optional, Set, Tuple, Union
+from typing import AsyncGenerator, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from arcor2.cached import CachedProjectException, UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import common as cmn
@@ -10,6 +10,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.lock.structures import LockedObject, LockEventData
+from arcor2_arserver_data.rpc.lock import UpdateType
 
 
 class Lock:
@@ -19,9 +20,11 @@ class Lock:
         PROJECT_NAME: str = "PROJECT"
 
         RUNNING_ACTION: str = "ACTION"
+        ADDING_OBJECT: str = "ADDING_OBJECT"
 
     class ErrMessages(cmn.StrEnum):
         SOMETHING_LOCKED: str = "There are locked objects"
+        SOMETHING_LOCKED_IN_TREE: str = "Part of tree is locked"
         LOCK_FAIL: str = "Locking failed, try again"
         NOT_LOCKED: str = "Object not locked"
 
@@ -29,7 +32,7 @@ class Lock:
     LOCK_RETRIES: int = 13
     RETRY_WAIT: float = 0.15
 
-    def __init__(self, testing: bool = False) -> None:
+    def __init__(self) -> None:
         self._scene: Optional[UpdateableCachedScene] = None
         self._project: Optional[UpdateableCachedProject] = None
 
@@ -39,8 +42,6 @@ class Lock:
 
         self.notifications_q: asyncio.Queue[LockEventData] = asyncio.Queue()
         self._ui_user_locks: Dict[str, Set[str]] = {}
-
-        self.testing = testing
 
     @property
     def scene(self) -> Optional[UpdateableCachedScene]:
@@ -107,7 +108,7 @@ class Lock:
             if not yielded:
                 raise CannotLock(self.ErrMessages.LOCK_FAIL)
 
-    async def read_lock(self, obj_ids: Union[List[str], str], owner: str) -> bool:
+    async def read_lock(self, obj_ids: Union[Iterable[str], str], owner: str) -> bool:
 
         if isinstance(obj_ids, str):
             obj_ids = [obj_ids]
@@ -117,7 +118,7 @@ class Lock:
         async with self._lock:
             return self._read_lock(roots, obj_ids, owner)
 
-    def _read_lock(self, roots: List[str], obj_ids: List[str], owner: str) -> bool:
+    def _read_lock(self, roots: List[str], obj_ids: Iterable[str], owner: str) -> bool:
 
         assert self._lock.locked()
 
@@ -133,10 +134,12 @@ class Lock:
                 return False
         return True
 
-    async def read_unlock(self, obj_ids: Union[List[str], str], owner: str) -> None:
+    async def read_unlock(self, obj_ids: Union[Iterable[str], str], owner: str) -> None:
 
         if isinstance(obj_ids, str):
             obj_ids = [obj_ids]
+        else:
+            obj_ids = list(obj_ids)
 
         roots = [await self.get_root_id(obj_id) for obj_id in obj_ids]
 
@@ -160,7 +163,7 @@ class Lock:
                 self._check_and_clean_root(roots[i])
 
     async def write_lock(
-        self, obj_ids: Union[List[str], str], owner: str, lock_tree: bool = False, notify: bool = False
+        self, obj_ids: Union[Iterable[str], str], owner: str, lock_tree: bool = False, notify: bool = False
     ) -> bool:
         """Lock object or list of objects for writing, possible to lock whole
         tree where object(s) is located.
@@ -191,7 +194,7 @@ class Lock:
             self.notifications_q.put_nowait(LockEventData(ui_locked, owner, True))
         return ret
 
-    def _write_lock(self, roots: List[str], obj_ids: List[str], owner: str, lock_tree: bool = False) -> bool:
+    def _write_lock(self, roots: List[str], obj_ids: Iterable[str], owner: str, lock_tree: bool = False) -> bool:
 
         assert self._lock.locked()
 
@@ -207,10 +210,12 @@ class Lock:
                 return False
         return True
 
-    async def write_unlock(self, obj_ids: Union[List[str], str], owner: str, notify: bool = False) -> None:
+    async def write_unlock(self, obj_ids: Union[Iterable[str], str], owner: str, notify: bool = False) -> None:
 
         if isinstance(obj_ids, str):
             obj_ids = [obj_ids]
+        else:
+            obj_ids = list(obj_ids)
 
         roots = [await self.get_root_id(obj_id) for obj_id in obj_ids]
 
@@ -253,16 +258,22 @@ class Lock:
         root_id = await self.get_root_id(obj_id)
 
         async with self._lock:
-            lock_record = self._locked_objects.get(root_id)
-            if not lock_record:
-                return False
+            return self._is_write_locked(root_id, obj_id, owner)
 
-            if obj_id in lock_record.write and owner in lock_record.write[obj_id].owners:
-                return True
+    def _is_write_locked(self, root_id: str, obj_id: str, owner: str) -> bool:
 
-            if lock_record.tree:
-                return True
+        assert self._lock.locked()
+
+        lock_record = self._locked_objects.get(root_id)
+        if not lock_record:
             return False
+
+        if obj_id in lock_record.write and owner in lock_record.write[obj_id].owners:
+            return True
+
+        if lock_record.tree and owner in next(v for v in iter(lock_record.write.values())).owners:
+            return True
+        return False
 
     async def is_read_locked(self, obj_id: str, owner: str) -> bool:
 
@@ -304,6 +315,7 @@ class Lock:
             self.SpecialValues.SCENE_NAME,
             self.SpecialValues.PROJECT_NAME,
             self.SpecialValues.RUNNING_ACTION,
+            self.SpecialValues.ADDING_OBJECT,
         ):
             return obj_id
 
@@ -329,12 +341,11 @@ class Lock:
             # TODO implement with scene object hierarchy
             return obj_id
 
-        if not self.testing:  # FIXME monkey patching
-            # locking on dashboard, check if scene or project exists
-            if next((True for scene in (await storage.get_scenes()).items if scene.id == obj_id), False):
-                return obj_id
-            elif next((True for project in (await storage.get_projects()).items if project.id == obj_id), False):
-                return obj_id
+        # locking on dashboard, check if scene or project exists
+        if next((True for scene in (await storage.get_scenes()).items if scene.id == obj_id), False):
+            return obj_id
+        elif next((True for project in (await storage.get_projects()).items if project.id == obj_id), False):
+            return obj_id
 
         raise Arcor2Exception(f"Unknown object '{obj_id}'")
 
@@ -423,7 +434,7 @@ class Lock:
 
         return read, write
 
-    def _upsert_user_locked_objects(self, owner: str, obj_ids: List[str]) -> None:
+    def _upsert_user_locked_objects(self, owner: str, obj_ids: Iterable[str]) -> None:
         """Add objects where lock is visible in UI.
 
         :param owner: user name of locks owner
@@ -435,7 +446,7 @@ class Lock:
 
         self._ui_user_locks[owner].update(obj_ids)
 
-    def _remove_user_locked_objects(self, owner: str, obj_ids: List[str]) -> None:
+    def _remove_user_locked_objects(self, owner: str, obj_ids: Iterable[str]) -> None:
         """Remove items where lock is visible in UI.
 
         :param owner: user name of locks owner
@@ -476,7 +487,7 @@ class Lock:
         """Check if object can be removed, e.g. no child locked, not in locked
         tree."""
 
-        def check_owner(_root: str, obj_ids: Set[str], read: bool = False) -> bool:
+        def check_children(_root: str, obj_ids: Set[str], read: bool = False) -> bool:
             lock_item = self._locked_objects[_root]
             for _obj_id in obj_ids:
                 if read:
@@ -489,15 +500,21 @@ class Lock:
                         return False
             return True
 
-        root = await self.get_root_id(obj_id)
+        root_id = await self.get_root_id(obj_id)
         children = self.get_all_children(obj_id)
 
         async with self._lock:
-            if root in self._locked_objects:
-                if not check_owner(root, children.intersection(self._locked_objects[root].write)):
-                    return False
-                if not check_owner(root, children.intersection(self._locked_objects[root].read), True):
-                    return False
+            lock_record = self._locked_objects.get(root_id)
+            if not lock_record:
+                return False
+
+            if lock_record.tree and owner not in next(v for v in iter(lock_record.write.values())).owners:
+                return False
+
+            if not check_children(root_id, children.intersection(lock_record.write)):
+                return False
+            if not check_children(root_id, children.intersection(lock_record.read), True):
+                return False
             return True
 
     def get_by_id(
@@ -515,3 +532,36 @@ class Lock:
                 return self.scene.object(obj_id)
 
         raise Arcor2Exception(f"Object ID {obj_id} not found.")
+
+    async def update_lock(self, obj_id: str, owner: str, upgrade_type: UpdateType) -> None:
+
+        root_id = await self.get_root_id(obj_id)
+
+        async with self._lock:
+            if root_id not in self._locked_objects:
+                raise LockingException(self.ErrMessages.NOT_LOCKED.value)
+
+            lock_record = self._get_lock_record(root_id)
+            if upgrade_type == UpdateType.TREE:
+                lock_record.check_upgrade(obj_id, owner)
+                lock_record.tree = True
+
+            elif upgrade_type == UpdateType.OBJECT:
+                lock_record.check_downgrade(obj_id, owner)
+                lock_record.tree = False
+            else:
+                raise Arcor2Exception("Unknown type of lock upgrade")
+
+    async def check_lock_tree(self, obj_id: str) -> None:
+
+        root_id = await self.get_root_id(obj_id)
+        children = self.get_all_children(root_id)
+        children.add(root_id)
+
+        async with self._lock:
+            lock_record = self._locked_objects.get(root_id)
+            if not lock_record:
+                return
+
+            if children.intersection(lock_record.write) or children.intersection(lock_record.read):
+                raise CannotLock(self.ErrMessages.SOMETHING_LOCKED_IN_TREE)

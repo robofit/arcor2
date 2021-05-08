@@ -461,9 +461,9 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
 
     ap = proj.bare_action_point(req.args.action_point_id)
 
-    to_lock = await get_unlocked_objects(ap.parent, user_name) if ap.parent else []
+    to_lock = await get_unlocked_objects(ap.parent, user_name) if ap.parent else set()
     if req.args.new_parent_id:
-        to_lock.append(req.args.new_parent_id)
+        to_lock.add(req.args.new_parent_id)
 
     async with ctx_write_lock(to_lock, user_name):
 
@@ -545,7 +545,10 @@ async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.
     proj = glob.LOCK.project_or_exception()
     ap = proj.bare_action_point(req.args.action_point_id)
 
-    await ensure_locked(req.args.action_point_id, ui)
+    if req.dry_run:
+        await glob.LOCK.check_lock_tree(req.args.action_point_id)
+    else:
+        await ensure_locked(req.args.action_point_id, ui)
 
     if req.dry_run:
         return

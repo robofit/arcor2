@@ -4,7 +4,7 @@ from typing import Dict, Iterable, List, Optional, Union
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2_arserver.lock.exceptions import CannotUnlock
+from arcor2_arserver.lock.exceptions import CannotUnlock, LockingException
 
 
 class LockEventData:
@@ -104,3 +104,30 @@ class LockedObject:
     def is_empty(self) -> bool:
 
         return not self.read and not self.write
+
+    def check_upgrade(self, obj_id: str, owner: str) -> None:
+
+        raise_msg = f"Object lock is not owned by '{owner}'"
+        if obj_id not in self.write:
+            raise LockingException(raise_msg)
+
+        if len(self.write) > 1:
+            raise LockingException(raise_msg)
+
+        if owner not in self.write[obj_id].owners:
+            raise LockingException(raise_msg)
+
+        if self.tree:
+            raise LockingException("Nothing to upgrade")
+
+    def check_downgrade(self, obj_id: str, owner: str) -> None:
+
+        raise_msg = f"Object lock is not owned by '{owner}'"
+        if obj_id not in self.write:
+            raise LockingException(raise_msg)
+
+        if owner not in self.write[obj_id].owners:
+            raise LockingException(raise_msg)
+
+        if not self.tree:
+            raise LockingException("Nothing to downgrade")
