@@ -395,7 +395,7 @@ async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.F
         return resp
 
 
-async def calibrate_robot(robot_inst: Robot, camera_inst: Camera, move_to_calibration_pose: bool, ui: WsClient) -> None:
+async def calibrate_robot(robot_inst: Robot, camera_inst: Camera, move_to_calibration_pose: bool) -> None:
 
     scene = glob.LOCK.scene_or_exception()
 
@@ -460,7 +460,7 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
 
         await ensure_locked(req.args.robot_id, ui)
 
-        asyncio.ensure_future(calibrate_robot(robot_inst, camera_inst, req.args.move_to_calibration_pose, ui))
+        asyncio.ensure_future(calibrate_robot(robot_inst, camera_inst, req.args.move_to_calibration_pose))
 
         return None
 

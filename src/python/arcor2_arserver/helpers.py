@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, List, Set, Union
+from typing import AsyncGenerator, Iterable, List, Set, Union
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -32,12 +32,12 @@ def make_name_unique(orig_name: str, names: Set[str]) -> str:
 
 @asynccontextmanager
 async def ctx_write_lock(
-    obj_ids: Union[str, List[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
+    obj_ids: Union[str, Iterable[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
 ) -> AsyncGenerator[None, None]:
     @retry(exc=CannotLock, tries=glob.LOCK.LOCK_RETRIES, delay=glob.LOCK.RETRY_WAIT)
     async def lock():
         if not await glob.LOCK.write_lock(obj_ids, owner):
-            raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL)
+            raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)
 
     await lock()
     try:
@@ -53,12 +53,12 @@ async def ctx_write_lock(
 
 @asynccontextmanager
 async def ctx_read_lock(
-    obj_ids: Union[str, List[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
+    obj_ids: Union[str, Iterable[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
 ) -> AsyncGenerator[None, None]:
     @retry(exc=CannotLock, tries=glob.LOCK.LOCK_RETRIES, delay=glob.LOCK.RETRY_WAIT)
     async def lock():
         if not await glob.LOCK.read_lock(obj_ids, owner):
-            raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL)
+            raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)
 
     await lock()
     try:
@@ -79,10 +79,10 @@ async def ensure_locked(obj_id: str, ui: WsClient) -> None:
     """
 
     if not await glob.LOCK.is_write_locked(obj_id, glob.USERS.user_name(ui)):
-        raise LockingException(glob.LOCK.ErrMessages.NOT_LOCKED)
+        raise LockingException(glob.LOCK.ErrMessages.NOT_LOCKED.value)
 
 
-async def get_unlocked_objects(obj_ids: Union[str, List[str]], owner: str) -> List[str]:
+async def get_unlocked_objects(obj_ids: Union[str, List[str]], owner: str) -> Set[str]:
     """Check if objects are write locked.
 
     :return: list of objects that are not write locked
@@ -91,4 +91,4 @@ async def get_unlocked_objects(obj_ids: Union[str, List[str]], owner: str) -> Li
     if isinstance(obj_ids, str):
         obj_ids = [obj_ids]
 
-    return [obj_id for obj_id in obj_ids if not await glob.LOCK.is_write_locked(obj_id, owner)]
+    return {obj_id for obj_id in obj_ids if not await glob.LOCK.is_write_locked(obj_id, owner)}

@@ -18,7 +18,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import settings
 from arcor2_arserver.clients import persistent_storage as storage
-from arcor2_arserver.helpers import ctx_read_lock, ensure_locked
+from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
@@ -201,7 +201,7 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
 
 async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) -> None:
 
-    async with glob.LOCK.get_lock(req.dry_run):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.ADDING_OBJECT, ui):
         meta = req.args
 
         if meta.type in glob.OBJECT_TYPES:

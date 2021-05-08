@@ -214,6 +214,72 @@ def scene(ars: ARServer) -> common.Scene:
     return scene_evt.data.scene
 
 
+@pytest.fixture()
+def project(ars: ARServer, scene: common.Scene) -> common.Project:
+    """Creates project with following objects:
+
+    ap - global AP
+    ap_ap - child of ap
+    ap_ap_ap - child of ap_ap
+    ori - ap_ap_ap orientation
+    """
+
+    test = "Test project"
+
+    assert ars.call_rpc(
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, test, test)), rpc.p.NewProject.Response
+    ).result
+
+    project_evt = event(ars, events.p.OpenProject)
+    assert project_evt.data
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap", common.Position(0, 0, 0))),
+        rpc.p.AddActionPoint.Response,
+    ).result
+    ap_evt = event(ars, events.p.ActionPointChanged)
+    assert ap_evt.data
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPoint.Request(
+            uid(), rpc.p.AddActionPoint.Request.Args("ap_ap", common.Position(0, 0, 1), ap_evt.data.id)
+        ),
+        rpc.p.AddActionPoint.Response,
+    ).result
+    ap_ap_evt = event(ars, events.p.ActionPointChanged)
+    assert ap_ap_evt.data
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPoint.Request(
+            uid(), rpc.p.AddActionPoint.Request.Args("ap_ap_ap", common.Position(0, 0, 2), ap_ap_evt.data.id)
+        ),
+        rpc.p.AddActionPoint.Response,
+    ).result
+    ap_ap_ap_evt = event(ars, events.p.ActionPointChanged)
+    assert ap_ap_ap_evt.data
+
+    lock_object(ars, ap_ap_ap_evt.data.id)
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPointOrientation.Request(
+            uid(), rpc.p.AddActionPointOrientation.Request.Args(ap_ap_ap_evt.data.id, common.Orientation(), "ori")
+        ),
+        rpc.p.AddActionPointOrientation.Response,
+    ).result
+    ori_evt = event(ars, events.p.OrientationChanged)
+    assert ori_evt.data
+
+    unlock_object(ars, ap_ap_ap_evt.data.id)
+
+    assert ars.call_rpc(rpc.p.SaveProject.Request(uid()), rpc.p.SaveProject.Response).result
+    event(ars, events.p.ProjectSaved)
+    assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
+    event(ars, events.p.ProjectClosed)
+    event(ars, events.c.ShowMainScreen)
+
+    return project_evt.data.project
+
+
 E = TypeVar("E", bound=Event)
 
 

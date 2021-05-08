@@ -521,7 +521,7 @@ class UpdateableCachedProject(CachedProject):
         else:
             self._actions.data[action.id] = action
             self._actions.parent[action.id] = ap
-        self._upsert_child(ap.parent, ap.id)
+        self._upsert_child(ap.id, action.id)
         self.update_modified()
 
     def remove_action(self, action_id: str) -> cmn.Action:
@@ -529,6 +529,8 @@ class UpdateableCachedProject(CachedProject):
         try:
             self._remove_child(self._actions.parent[action_id].id, action_id)
             action = self._actions.data.pop(action_id)
+            ap = self._actions.parent[action_id]
+            self._remove_child(ap.id, action_id)
             del self._actions.parent[action_id]  # TODO KeyError here might be probably ignored? (it should not happen)
         except KeyError as e:
             raise CachedProjectException("Action not found.") from e

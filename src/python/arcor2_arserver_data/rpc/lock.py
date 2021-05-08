@@ -2,7 +2,16 @@ from dataclasses import dataclass
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2.data.common import StrEnum
 from arcor2.data.rpc.common import RPC
+
+
+class UpdateType(StrEnum):
+    TREE: str = "TREE"
+    OBJECT: str = "OBJECT"
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class ReadLock(RPC):
@@ -63,6 +72,24 @@ class WriteUnlock(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             object_id: str
+
+        args: Args
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class UpdateLock(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            object_id: str
+            new_type: UpdateType
 
         args: Args
 

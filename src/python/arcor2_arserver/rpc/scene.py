@@ -121,7 +121,7 @@ async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
         can_modify_scene()  # can't close scene while started
 
         if await glob.LOCK.get_locked_roots_count() > 1:
-            raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED)
+            raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED.value)
 
         if req.dry_run:
             return None
@@ -578,7 +578,7 @@ async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
         raise Arcor2Exception("Scene not stopped.")
 
     if await glob.LOCK.get_write_locks_count():
-        raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED)
+        raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED.value)
 
     if req.dry_run:
         return
@@ -594,7 +594,7 @@ async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
         raise Arcor2Exception("Scene not started.")
 
     if await glob.LOCK.get_write_locks_count():
-        raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED)
+        raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED.value)
 
     if req.dry_run:
         return
