@@ -1,9 +1,9 @@
 import asyncio
 import time
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Set
 
 from lru import LRU
 
@@ -27,8 +27,8 @@ from arcor2.exceptions import Arcor2Exception
 @dataclass
 class CachedListing:
 
-    listing: Dict[str, IdDesc]
-    ts: float
+    listing: Dict[str, IdDesc] = field(default_factory=dict)
+    ts: float = 0
 
     def time_to_update(self) -> bool:
         return time.monotonic() - self.ts > 1.0
@@ -46,9 +46,9 @@ _cache_projects = max(env.get_int("ARCOR2_ARSERVER_CACHE_PROJECTS", 64), 1)
 _cache_object_types = max(env.get_int("ARCOR2_ARSERVER_CACHE_OBJECT_TYPES", 64), 1)
 
 # here we need to know all the items
-_scenes_list = CachedListing({}, 0)
-_projects_list = CachedListing({}, 0)
-_object_type_list = CachedListing({}, 0)
+_scenes_list = CachedListing()
+_projects_list = CachedListing()
+_object_type_list = CachedListing()
 
 # here we can forget least used items
 if TYPE_CHECKING:
@@ -61,60 +61,66 @@ else:
     _object_types = LRU(_cache_object_types)
 
 
-async def _update_projects_list() -> None:
+async def _update_list(
+    getter: Callable[..., Awaitable[IdDescList]], cached_listing: CachedListing, cache: Dict[str, Any]
+) -> None:
 
-    _projects_list.listing.clear()
-    for it in (await ps.get_projects()).items:
-        _projects_list.listing[it.id] = it
-    _projects_list.ts = time.monotonic()
+    if not cached_listing.time_to_update():
+        return
 
-
-async def _update_scenes_list() -> None:
-
-    _scenes_list.listing.clear()
-    for it in (await ps.get_scenes()).items:
-        _scenes_list.listing[it.id] = it
-    _scenes_list.ts = time.monotonic()
-
-
-async def _update_object_types_list() -> None:
-
-    _object_type_list.listing.clear()
-    for it in (await ps.get_object_type_ids()).items:
-        _object_type_list.listing[it.id] = it
-    _object_type_list.ts = time.monotonic()
+    updated = {it.id: it for it in (await getter()).items}
+    for deleted in cached_listing.listing.keys() - updated.keys():  # remove outdated items from the cache
+        cache.pop(deleted, None)
+    cached_listing.listing = updated
+    cached_listing.ts = time.monotonic()
 
 
 async def initialize_module() -> None:
 
-    await asyncio.gather(*[_update_projects_list(), _update_scenes_list(), _update_object_types_list()])
+    await asyncio.gather(
+        _update_list(ps.get_projects, _projects_list, _projects),
+        _update_list(ps.get_scenes, _scenes_list, _scenes),
+        _update_list(ps.get_object_type_ids, _object_type_list, _object_types),
+    )
 
     _scenes.clear()
     _projects.clear()
     _object_types.clear()
 
 
+async def get_project_ids() -> Set[str]:
+
+    await _update_list(ps.get_projects, _projects_list, _projects)
+    return set(_projects_list.listing.keys())
+
+
 async def get_projects() -> IdDescList:
 
-    if not _projects_list or _projects_list.time_to_update():
-        await _update_projects_list()
-
+    await _update_list(ps.get_projects, _projects_list, _projects)
     return IdDescList(items=list(_projects_list.listing.values()))
+
+
+async def get_scene_ids() -> Set[str]:
+
+    await _update_list(ps.get_scenes, _scenes_list, _scenes)
+    return set(_scenes_list.listing.keys())
 
 
 async def get_scenes() -> IdDescList:
 
-    if not _scenes_list or _scenes_list.time_to_update():
-        await _update_scenes_list()
-
+    await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return IdDescList(items=list(_scenes_list.listing.values()))
 
 
-async def get_object_type_ids() -> IdDescList:
+async def get_object_type_ids() -> Set[str]:
 
-    if not _object_type_list or _object_type_list.time_to_update():
-        await _update_object_types_list()
+    await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
+    return set(_object_type_list.listing.keys())
 
+
+async def get_object_types() -> IdDescList:
+
+    await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     return IdDescList(items=list(_object_type_list.listing.values()))
 
 
@@ -127,8 +133,7 @@ async def get_project(project_id: str) -> Project:
         project = await ps.get_project(project_id)
         _projects[project_id] = project
     else:
-        if _projects_list.time_to_update():
-            await _update_projects_list()
+        await _update_list(ps.get_projects, _projects_list, _projects)
 
         if project_id not in _projects_list.listing:
             del _projects[project_id]
@@ -151,8 +156,7 @@ async def get_scene(scene_id: str) -> Scene:
         scene = await ps.get_scene(scene_id)
         _scenes[scene_id] = scene
     else:
-        if not _scenes_list or _scenes_list.time_to_update():
-            await _update_scenes_list()
+        await _update_list(ps.get_scenes, _scenes_list, _scenes)
 
         if scene_id not in _scenes_list.listing:
             del _scenes[scene_id]
@@ -175,8 +179,7 @@ async def get_object_type(object_type_id: str) -> ObjectType:
         ot = await ps.get_object_type(object_type_id)
         _object_types[object_type_id] = ot
     else:
-        if not _object_type_list or _object_type_list.time_to_update():
-            await _update_object_types_list()
+        await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
 
         if object_type_id not in _object_type_list.listing:
             del _object_types[object_type_id]
@@ -193,7 +196,6 @@ async def get_object_type(object_type_id: str) -> ObjectType:
 async def update_project(project: Project) -> datetime:
 
     assert project.id
-    assert _projects_list
 
     ret = await ps.update_project(project)
     project.modified = ret
@@ -208,7 +210,6 @@ async def update_project(project: Project) -> datetime:
 async def update_scene(scene: Scene) -> datetime:
 
     assert scene.id
-    assert _scenes_list
 
     ret = await ps.update_scene(scene)
     scene.modified = ret
@@ -223,7 +224,6 @@ async def update_scene(scene: Scene) -> datetime:
 async def update_object_type(object_type: ObjectType) -> datetime:
 
     assert object_type.id
-    assert _object_type_list
 
     ret = await ps.update_object_type(object_type)
     object_type.modified = ret
@@ -280,7 +280,7 @@ __all__ = [
     get_project_sources.__name__,
     get_scene.__name__,
     get_object_type.__name__,
-    get_object_type_ids.__name__,
+    get_object_types.__name__,
     update_project.__name__,
     update_scene.__name__,
     update_project_sources.__name__,
@@ -289,4 +289,7 @@ __all__ = [
     delete_scene.__name__,
     delete_project.__name__,
     ProjectServiceException.__name__,
+    get_scene_ids.__name__,
+    get_project_ids.__name__,
+    get_object_type_ids.__name__,
 ]
