@@ -41,7 +41,7 @@ class AbstractDobot(FitCommonMixin, Robot):
 
         rest.call(
             rest.Method.PUT,
-            f"{self.settings.url}/start",
+            f"{self.settings.url}/state/start",
             params={"model": model, "port": self.settings.port},
             body=self.pose,
         )
