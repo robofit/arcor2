@@ -5,10 +5,9 @@ import io
 import os
 import zipfile
 from functools import wraps
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from arcor2_kinect_azure import get_data, version
-from arcor2_kinect_azure.kinect_azure import KinectAzure
 from flask import jsonify, request, send_file
 from PIL import Image
 
@@ -25,7 +24,10 @@ SERVICE_NAME = "Kinect Azure Service"
 
 app = create_app(__name__)
 
-_kinect: Optional[KinectAzure] = None
+if TYPE_CHECKING:
+    from arcor2_kinect_azure.kinect_azure import KinectAzure
+
+_kinect: Optional["KinectAzure"] = None
 _mock: bool = False
 _mock_started: bool = False
 
@@ -80,6 +82,10 @@ def put_start() -> RespT:
         global _mock_started
         _mock_started = True
     else:
+
+        # lazy import so mock mode can work without pyk4a installed
+        from arcor2_kinect_azure.kinect_azure import KinectAzure
+
         global _kinect
         assert _kinect is None
         _kinect = KinectAzure()
