@@ -42,7 +42,7 @@ def requires_started(f):
     return wrapped
 
 
-@app.route("/start", methods=["PUT"])
+@app.route("/state/start", methods=["PUT"])
 def put_start() -> RespT:
     """Start the robot.
     ---
@@ -94,7 +94,7 @@ def put_start() -> RespT:
     return jsonify("ok")
 
 
-@app.route("/stop", methods=["PUT"])
+@app.route("/state/stop", methods=["PUT"])
 @requires_started
 def put_stop() -> RespT:
     """Stop the robot.
@@ -117,7 +117,7 @@ def put_stop() -> RespT:
     return jsonify("ok")
 
 
-@app.route("/started", methods=["GET"])
+@app.route("/state/started", methods=["GET"])
 def get_started() -> RespT:
     """Get the current state.
     ---
