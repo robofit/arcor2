@@ -182,7 +182,7 @@ async def get_object_types() -> None:
 
     updated_object_types: ObjectTypeDict = {}
 
-    object_type_ids: Union[Set[str], List[str]] = {it.id for it in (await storage.get_object_type_ids()).items}
+    object_type_ids: Union[Set[str], List[str]] = {it.id for it in (await storage.get_object_types()).items}
 
     if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
         import random
