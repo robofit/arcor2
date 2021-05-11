@@ -395,11 +395,11 @@ async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.F
         return resp
 
 
-async def calibrate_robot(robot_inst: Robot, camera_inst: Camera, move_to_calibration_pose: bool) -> None:
-
-    scene = glob.LOCK.scene_or_exception()
+async def calibrate_robot(robot_inst: Robot, camera_inst: Camera, move_to_calibration_pose: bool, ui: WsClient) -> None:
 
     try:
+        scene = glob.LOCK.scene_or_exception()
+
         assert camera_inst.color_camera_params
 
         await notif.broadcast_event(ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Started)))
@@ -431,7 +431,7 @@ async def calibrate_robot(robot_inst: Robot, camera_inst: Camera, move_to_calibr
         await update_scene_object_pose(scene, scene.object(robot_inst.id), new_pose, robot_inst)
         await notif.broadcast_event(ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Finished)))
     finally:
-        await glob.LOCK.write_unlock(camera_inst.id, glob.LOCK.SpecialValues.SERVER_NAME)
+        await glob.LOCK.write_unlock(camera_inst.id, glob.USERS.user_name(ui))
 
 
 async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -> None:
@@ -460,7 +460,7 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
 
         await ensure_locked(req.args.robot_id, ui)
 
-        asyncio.ensure_future(calibrate_robot(robot_inst, camera_inst, req.args.move_to_calibration_pose))
+        asyncio.ensure_future(calibrate_robot(robot_inst, camera_inst, req.args.move_to_calibration_pose, ui))
 
         return None
 

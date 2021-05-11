@@ -425,6 +425,8 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
 
     proj.update_modified()
 
+    await glob.LOCK.write_unlock(req.args.action_point_id, glob.USERS.user_name(ui), True)
+
     evt = sevts.p.ActionPointChanged(ap)
     evt.change_type = Event.Type.UPDATE_BASE
     asyncio.ensure_future(notif.broadcast_event(evt))
@@ -473,11 +475,14 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         check_ap_parent(scene, proj, req.args.new_parent_id)
         detect_ap_loop(proj, ap, req.args.new_parent_id)
 
+        await ensure_locked(ap.id, ui)
+
         if req.dry_run:
             return
 
-        # Save root of current AP and apply it to structure after successful update
+        # Save root and parent of current AP and apply it to structures after successful update
         current_root = await glob.LOCK.get_root_id(ap.id)
+        old_parent = ap.parent
 
         if not ap.parent and req.args.new_parent_id:
             # AP position and all orientations will become relative to the parent
@@ -494,6 +499,7 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
             tr.make_relative_ap_global(scene, proj, ap)
             tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
 
+        proj.update_child(ap.id, old_parent, req.args.new_parent_id)
         await glob.LOCK.update_write_lock(ap.id, current_root, user_name)
 
         ap.parent = req.args.new_parent_id
@@ -546,9 +552,9 @@ async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.
     ap = proj.bare_action_point(req.args.action_point_id)
 
     if req.dry_run:
-        await glob.LOCK.check_lock_tree(req.args.action_point_id)
+        await glob.LOCK.check_lock_tree(req.args.action_point_id, glob.USERS.user_name(ui))
     else:
-        await ensure_locked(req.args.action_point_id, ui)
+        await ensure_locked(req.args.action_point_id, ui, True)
 
     if req.dry_run:
         return
@@ -1561,7 +1567,7 @@ async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> No
 
     proj.update_modified()
 
-    await glob.LOCK.write_unlock(req.args.action_id, glob.USERS.user_name(ui))
+    await glob.LOCK.write_unlock(req.args.action_id, glob.USERS.user_name(ui), notify=True)
 
     evt = sevts.p.ActionChanged(act)
     evt.change_type = Event.Type.UPDATE_BASE
