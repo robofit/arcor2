@@ -164,6 +164,8 @@ def scene(ars: ARServer) -> common.Scene:
     scene_evt = event(ars, events.s.OpenScene)
     assert scene_evt.data
 
+    event(ars, events.s.SceneState)
+
     test_type = "TestType"
 
     assert ars.call_rpc(
@@ -232,6 +234,8 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
 
     project_evt = event(ars, events.p.OpenProject)
     assert project_evt.data
+
+    event(ars, events.s.SceneState)
 
     assert ars.call_rpc(
         rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap", common.Position(0, 0, 0))),

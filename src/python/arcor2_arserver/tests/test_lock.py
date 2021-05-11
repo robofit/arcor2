@@ -21,6 +21,9 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
 
     assert ars.call_rpc(rpc.p.OpenProject.Request(uid(), IdArgs(project.id)), rpc.p.OpenProject.Response).result
     prj_evt = event(ars, events.p.OpenProject)
+
+    event(ars, events.s.SceneState)
+
     prj = prj_evt.data.project
 
     # get default project objects
@@ -34,6 +37,7 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
     # lock object and expect event about it on newly logged UI
     ars2 = ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping)
     event(ars2, events.p.OpenProject)
+    event(ars2, events.s.SceneState)
     second_ui = "ars2"
     assert ars2.call_rpc(
         rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args(second_ui)),
@@ -76,6 +80,7 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
     # register again and check if objects still locked
     ars2 = ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping)
     event(ars2, events.p.OpenProject)
+    event(ars2, events.s.SceneState)
     assert ars2.call_rpc(
         rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args("ars2")),
         rpc.u.RegisterUser.Response,

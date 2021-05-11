@@ -12,11 +12,19 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.objects_actions import get_types_dict
-from arcor2_arserver.scene import open_scene
+from arcor2_arserver.scene import get_scene_state, open_scene
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
 from arcor2_arserver_data.events.common import ShowMainScreen
-from arcor2_arserver_data.events.project import ProjectClosed
+from arcor2_arserver_data.events.project import OpenProject, ProjectClosed
 from arcor2_arserver_data.objects import ObjectAction
+
+
+async def notify_project_opened(evt: OpenProject) -> None:
+
+    await notif.broadcast_event(evt)
+    ss = get_scene_state()
+    assert ss.data.state == ss.Data.StateEnum.Stopped
+    await notif.broadcast_event(ss)
 
 
 async def notify_project_closed(project_id: str) -> None:

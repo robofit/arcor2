@@ -36,6 +36,7 @@ from arcor2_arserver.scene import (
     get_instance,
     get_scene_state,
     notify_scene_closed,
+    notify_scene_opened,
     open_scene,
     scene_names,
     scenes,
@@ -96,7 +97,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
 
         await get_object_types()  # TODO not ideal, may take quite long time
         glob.LOCK.scene = UpdateableCachedScene(common.Scene(req.args.name, desc=req.args.desc))
-        asyncio.ensure_future(notif.broadcast_event(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.LOCK.scene.scene))))
+        asyncio.ensure_future(notify_scene_opened(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.LOCK.scene.scene))))
         asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
         return None
 
@@ -167,7 +168,7 @@ async def open_scene_cb(req: srpc.s.OpenScene.Request, ui: WsClient) -> None:
         assert glob.LOCK.scene.int_modified is None
         assert not glob.LOCK.scene.has_changes()
         asyncio.ensure_future(
-            notif.broadcast_event(sevts.s.OpenScene(data=sevts.s.OpenScene.Data(glob.LOCK.scene.scene)))
+            notify_scene_opened(sevts.s.OpenScene(data=sevts.s.OpenScene.Data(glob.LOCK.scene.scene)))
         )
         return None
 
@@ -574,7 +575,7 @@ async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
 
     scene = glob.LOCK.scene_or_exception()
 
-    if get_scene_state() != sevts.s.SceneState.Data.StateEnum.Stopped:
+    if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Stopped:
         raise Arcor2Exception("Scene not stopped.")
 
     if await glob.LOCK.get_write_locks_count():
@@ -590,7 +591,7 @@ async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
 
     # TODO it should not be possible to stop scene while some action runs
 
-    if get_scene_state() != sevts.s.SceneState.Data.StateEnum.Started:
+    if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Started:
         raise Arcor2Exception("Scene not started.")
 
     if await glob.LOCK.get_write_locks_count():

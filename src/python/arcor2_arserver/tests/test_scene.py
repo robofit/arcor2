@@ -33,6 +33,8 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     assert open_scene_event.data.scene.desc == test
     assert not open_scene_event.data.scene.objects
 
+    event(ars, events.s.SceneState)
+
     # attempt to create a new scene while scene is open should fail
     assert not ars.call_rpc(
         rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args(test, test)), rpc.s.NewScene.Response
@@ -68,6 +70,8 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     open_scene_event_2 = event(ars, events.s.OpenScene)
     assert open_scene_event_2.data
     assert open_scene_event_2.data.scene.id == scene_id
+
+    event(ars, events.s.SceneState)
 
     assert ars.call_rpc(rpc.s.CloseScene.Request(uid()), rpc.s.CloseScene.Response).result
     event(ars, events.s.SceneClosed)

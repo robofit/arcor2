@@ -17,10 +17,10 @@ from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver_data.events.common import ShowMainScreen
-from arcor2_arserver_data.events.scene import SceneClosed, SceneObjectChanged, SceneState
+from arcor2_arserver_data.events.scene import OpenScene, SceneClosed, SceneObjectChanged, SceneState
 
 # TODO maybe this could be property of ARServerScene(CachedScene)?
-_scene_state: SceneState.Data.StateEnum = SceneState.Data.StateEnum.Stopped
+_scene_state: SceneState = SceneState(SceneState.Data(SceneState.Data.StateEnum.Stopped))
 
 
 async def update_scene_object_pose(
@@ -73,30 +73,38 @@ async def update_scene_object_pose(
 async def set_scene_state(state: SceneState.Data.StateEnum, message: Optional[str] = None) -> None:
 
     global _scene_state
-    _scene_state = state
-    await notif.broadcast_event(SceneState(SceneState.Data(state, message)))
+    _scene_state = SceneState(SceneState.Data(state, message))
+    await notif.broadcast_event(_scene_state)
 
 
-def get_scene_state() -> SceneState.Data.StateEnum:
+def get_scene_state() -> SceneState:
     return _scene_state
 
 
 def scene_started() -> bool:
-    return _scene_state == SceneState.Data.StateEnum.Started
+    return _scene_state.data.state == SceneState.Data.StateEnum.Started
 
 
 def can_modify_scene() -> None:
     """Raises exception if modifications to scene/project are not possible."""
 
-    if _scene_state != SceneState.Data.StateEnum.Stopped:
+    if _scene_state.data.state != SceneState.Data.StateEnum.Stopped:
         raise Arcor2Exception("Modifications can be only done offline.")
 
 
 def ensure_scene_started() -> None:
     """" Raises exception if scene is not started."""
 
-    if _scene_state != SceneState.Data.StateEnum.Started:
+    if _scene_state.data.state != SceneState.Data.StateEnum.Started:
         raise Arcor2Exception("Scene offline.")
+
+
+async def notify_scene_opened(evt: OpenScene) -> None:
+
+    await notif.broadcast_event(evt)
+    ss = get_scene_state()
+    assert ss.data.state == ss.Data.StateEnum.Stopped
+    await notif.broadcast_event(ss)
 
 
 async def scenes() -> AsyncIterator[CachedScene]:
@@ -110,6 +118,8 @@ async def scene_names() -> Set[str]:
 
 
 async def notify_scene_closed(scene_id: str) -> None:
+
+    assert get_scene_state().data.state == SceneState.Data.StateEnum.Stopped
 
     await notif.broadcast_event(SceneClosed())
     glob.MAIN_SCREEN = ShowMainScreen.Data(ShowMainScreen.Data.WhatEnum.ScenesList)
