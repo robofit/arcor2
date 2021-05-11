@@ -492,6 +492,11 @@ class CachedProject:
             if not self._childs[parent]:
                 del self._childs[parent]
 
+    def update_child(self, obj_id: str, old_parent: Optional[str], new_parent: Optional[str]) -> None:
+
+        self._remove_child(old_parent, obj_id)
+        self._upsert_child(new_parent, obj_id)
+
 
 class UpdateableCachedProject(CachedProject):
     def __init__(self, project: cmn.Project):

@@ -3,7 +3,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver_data import events as sevts
 
 
-async def run_lock_notification_worker():
+async def run_lock_notification_worker() -> None:
     while True:
         notif_data = await glob.LOCK.notifications_q.get()
         obj_ids = notif_data.obj_ids

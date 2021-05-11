@@ -72,13 +72,13 @@ async def ctx_read_lock(
             await glob.LOCK.read_unlock(obj_ids, owner)
 
 
-async def ensure_locked(obj_id: str, ui: WsClient) -> None:
+async def ensure_locked(obj_id: str, ui: WsClient, locked_tree: bool = False) -> None:
     """Check if object is write locked.
 
     Read lock check not needed yet.
     """
 
-    if not await glob.LOCK.is_write_locked(obj_id, glob.USERS.user_name(ui)):
+    if not await glob.LOCK.is_write_locked(obj_id, glob.USERS.user_name(ui), locked_tree):
         raise LockingException(glob.LOCK.ErrMessages.NOT_LOCKED.value)
 
 

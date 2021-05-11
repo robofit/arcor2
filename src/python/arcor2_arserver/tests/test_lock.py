@@ -380,9 +380,17 @@ async def test_lock_coverage_and_regression() -> None:
     # test function checking whether locking tree is possible
     await lock.write_lock(ap.id, test)
     with pytest.raises(CannotLock):
-        await lock.check_lock_tree(ap_ap.id)
+        await lock.check_lock_tree(ap_ap.id, "another_user")
+    assert await lock.check_lock_tree(ap_ap.id, test) is None
     await lock.write_unlock(ap.id, test)
-    assert await lock.check_lock_tree(ap_ap.id) is None
+    assert await lock.check_lock_tree(ap_ap.id, test) is None
+
+    await lock.read_lock(ap.id, test)
+    with pytest.raises(CannotLock):
+        await lock.check_lock_tree(ap_ap.id, "another_user")
+    assert await lock.check_lock_tree(ap_ap.id, test) is None
+    await lock.read_unlock(ap.id, test)
+    assert await lock.check_lock_tree(ap_ap.id, test) is None
 
     # test some other calls for scene only
     lock.project = None
