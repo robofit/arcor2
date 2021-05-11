@@ -13,6 +13,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     assert ars.call_rpc(rpc.s.OpenScene.Request(uid(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
 
     event(ars, events.s.OpenScene)
+    event(ars, events.s.SceneState)
 
     assert ars.call_rpc(
         rpc.s.AddObjectToScene.Request(uid(), rpc.s.AddObjectToScene.Request.Args("ows", ObjectWithActions.__name__)),
@@ -28,6 +29,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     ).result
 
     event(ars, events.p.OpenProject)
+    event(ars, events.s.SceneState)
 
     assert ars.call_rpc(
         rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap", Position())),

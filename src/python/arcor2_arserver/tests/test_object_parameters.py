@@ -13,6 +13,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     assert ars.call_rpc(rpc.s.OpenScene.Request(uid(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
 
     event(ars, events.s.OpenScene)
+    event(ars, events.s.SceneState)
 
     req_params = [  # TODO create settings_to_params and use it
         Parameter("str_param", "string", json.dumps("str_param")),
@@ -65,6 +66,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     ).result
 
     event(ars, events.p.OpenProject)
+    event(ars, events.s.SceneState)
 
     assert not ars.call_rpc(
         rpc.o.DeleteOverride.Request(

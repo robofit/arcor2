@@ -24,6 +24,7 @@ import arcor2_arserver_data
 import arcor2_execution_data
 from arcor2 import action as action_mod
 from arcor2 import ws_server
+from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins.utils import known_parameter_types
@@ -34,7 +35,7 @@ from arcor2_arserver import models
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
-from arcor2_arserver import settings
+from arcor2_arserver import scene, settings
 from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.lock.notifications import run_lock_notification_worker
 from arcor2_arserver_data import events as evts
@@ -140,7 +141,17 @@ async def _initialize_server() -> None:
             await storage.initialize_module()
             break
         except storage.ProjectServiceException as e:
-            print(str(e))
+            glob.logger.error(f"Failed to communicate with Project service. {str(e)}")
+            await asyncio.sleep(1)
+
+    while True:
+        try:
+            if await scene_srv.started():
+                glob.logger.warn("Scene already started, attempting to stop it...")
+                await scene_srv.stop()
+            break
+        except scene_srv.SceneServiceException as e:
+            glob.logger.error(f"Failed to communicate with Scene service. {str(e)}")
             await asyncio.sleep(1)
 
     await osa.get_object_types()
@@ -188,6 +199,9 @@ async def register(websocket: WsClient) -> None:
     else:
         assert glob.MAIN_SCREEN
         await notif.event(websocket, evts.c.ShowMainScreen(glob.MAIN_SCREEN))
+
+    if glob.LOCK.project or glob.LOCK.scene:
+        await notif.event(websocket, scene.get_scene_state())
 
 
 async def unregister(websocket: WsClient) -> None:

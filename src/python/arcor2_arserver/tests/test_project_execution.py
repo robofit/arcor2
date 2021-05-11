@@ -24,6 +24,8 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert scene_data
     scene = scene_data.scene
 
+    event(ars, events.s.SceneState)
+
     assert ars.call_rpc(
         rpc.s.AddObjectToScene.Request(
             uid(), rpc.s.AddObjectToScene.Request.Args("time_actions", TimeActions.__name__)
@@ -51,6 +53,8 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     proj = event(ars, events.p.OpenProject).data
     assert proj
+
+    event(ars, events.s.SceneState)
 
     assert ars.call_rpc(
         rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap1", common.Position())),

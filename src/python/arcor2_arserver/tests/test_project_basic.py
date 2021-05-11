@@ -33,6 +33,7 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
     ).result
 
     open_project_evt = event(ars, events.p.OpenProject)
+    event(ars, events.s.SceneState)
 
     assert open_project_evt.data
     assert open_project_evt.change_type is None

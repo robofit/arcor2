@@ -7,7 +7,7 @@ from typing import Dict, Iterator, Tuple, Type
 
 import pytest
 
-from arcor2.clients import persistent_storage
+from arcor2.clients import persistent_storage, scene_service
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import TypeArgs
 from arcor2.helpers import find_free_port
@@ -55,6 +55,12 @@ def start_processes() -> Iterator[None]:
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
         persistent_storage.URL = project_url
 
+        scene_port = find_free_port()
+        scene_url = f"http://0.0.0.0:{scene_port}"
+        my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
+        my_env["ARCOR2_SCENE_SERVICE_MOCK_PORT"] = str(scene_port)
+        scene_service.URL = scene_url
+
         my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
         my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
 
@@ -65,9 +71,12 @@ def start_processes() -> Iterator[None]:
 
         for cmd in (
             "./src.python.arcor2_mocks.scripts/mock_project.pex",
+            "./src.python.arcor2_mocks.scripts/mock_scene.pex",
             "./src.python.arcor2_execution.scripts/execution.pex",
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
+
+        scene_service.wait_for(60)
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):

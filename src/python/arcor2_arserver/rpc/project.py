@@ -34,6 +34,7 @@ from arcor2_arserver.project import (
     check_flows,
     close_project,
     find_object_action,
+    notify_project_opened,
     open_project,
     project_names,
     project_problems,
@@ -762,7 +763,7 @@ async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None
         assert glob.LOCK.project
 
         asyncio.ensure_future(
-            notif.broadcast_event(
+            notify_project_opened(
                 sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
             )
         )
@@ -826,7 +827,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
         assert glob.LOCK.scene
 
         asyncio.ensure_future(
-            notif.broadcast_event(
+            notify_project_opened(
                 sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
             )
         )
