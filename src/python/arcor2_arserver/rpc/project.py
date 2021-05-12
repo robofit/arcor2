@@ -412,7 +412,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
     ap = proj.bare_action_point(req.args.action_point_id)
 
     if req.args.new_name == ap.name:
-        return None
+        raise Arcor2Exception("Name unchanged")
 
     hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, proj.action_points_names)
@@ -426,7 +426,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
 
     proj.update_modified()
 
-    await glob.LOCK.write_unlock(req.args.action_point_id, glob.USERS.user_name(ui), True)
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_point_id, glob.USERS.user_name(ui), True))
 
     evt = sevts.p.ActionPointChanged(ap)
     evt.change_type = Event.Type.UPDATE_BASE
@@ -506,8 +506,6 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         ap.parent = req.args.new_parent_id
         proj.update_modified()
 
-        await glob.LOCK.write_unlock(ap.id, user_name, notify=True)
-
         """
         Can't send orientation changes and then ActionPointChanged/UPDATE_BASE (or vice versa)
         because UI would display orientations wrongly (for a short moment).
@@ -516,7 +514,10 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         evt = sevts.p.ActionPointChanged(proj.action_point(req.args.action_point_id))
         evt.change_type = Event.Type.UPDATE
         asyncio.ensure_future(notif.broadcast_event(evt))
-        return None
+
+    asyncio.create_task(glob.LOCK.write_unlock(ap.id, user_name, True))
+
+    return None
 
 
 async def update_ap_position(
@@ -889,8 +890,9 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
 
     proj = glob.LOCK.project_or_exception()
 
-    to_lock = await get_unlocked_objects(req.args.id, glob.USERS.user_name(ui))
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
+    user_name = glob.USERS.user_name(ui)
+    to_lock = await get_unlocked_objects(req.args.id, user_name)
+    async with ctx_write_lock(to_lock, user_name, auto_unlock=req.dry_run):
 
         ap = proj.bare_action_point(req.args.id)
 
@@ -939,7 +941,7 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
 
                 # TODO some hypothetical parameter type could use just bare ActionPoint (its position)
 
-        if not await glob.LOCK.check_remove(ap.id, glob.USERS.user_name(ui)):
+        if not await glob.LOCK.check_remove(ap.id, user_name):
             raise Arcor2Exception("Children locked")
 
         if req.dry_run:
@@ -1248,7 +1250,7 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
     user_name = glob.USERS.user_name(ui)
 
     to_lock = await get_unlocked_objects([req.args.start, req.args.end], user_name)
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(to_lock, user_name):
         logic_item = common.LogicItem(req.args.start, req.args.end, req.args.condition)
         check_logic_item(scene, proj, logic_item)
 
@@ -1266,10 +1268,12 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
         evt.change_type = Event.Type.ADD
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-        await glob.LOCK.write_unlock(
-            [item for item in (req.args.start, req.args.end) if item not in to_lock], user_name, notify=True
+    asyncio.create_task(
+        glob.LOCK.write_unlock(
+            [item for item in (req.args.start, req.args.end) if item not in to_lock], user_name, True
         )
-        return None
+    )
+    return None
 
 
 async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient) -> None:
@@ -1315,12 +1319,12 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
         evt.change_type = Event.Type.REMOVE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-        await glob.LOCK.write_unlock(
-            [item for item in (logic_item.start, logic_item.end) if item not in to_lock],
-            glob.USERS.user_name(ui),
-            notify=True,
+    asyncio.create_task(
+        glob.LOCK.write_unlock(
+            [item for item in (logic_item.start, logic_item.end) if item not in to_lock], glob.USERS.user_name(ui), True
         )
-        return None
+    )
+    return None
 
 
 def check_constant(proj: CachedProject, constant: common.ProjectConstant) -> None:
@@ -1445,7 +1449,8 @@ async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> 
         evt = sevts.p.ProjectChanged(project.bare)
         evt.change_type = Event.Type.UPDATE_BASE
         asyncio.ensure_future(notif.broadcast_event(evt))
-    await glob.LOCK.write_unlock(req.args.project_id, glob.USERS.user_name(ui))
+
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.project_id, glob.USERS.user_name(ui)))
     return None
 
 
@@ -1568,7 +1573,7 @@ async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> No
 
     proj.update_modified()
 
-    await glob.LOCK.write_unlock(req.args.action_id, glob.USERS.user_name(ui), notify=True)
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_id, glob.USERS.user_name(ui), True))
 
     evt = sevts.p.ActionChanged(act)
     evt.change_type = Event.Type.UPDATE_BASE

@@ -439,7 +439,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
     target_obj = scene.object(req.args.id)
 
     if target_obj.name == req.args.new_name:
-        return
+        raise Arcor2Exception("Name unchanged")
 
     for obj_name in scene.object_names():
         if obj_name == req.args.new_name:
@@ -459,6 +459,8 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
     evt = sevts.s.SceneObjectChanged(target_obj)
     evt.change_type = Event.Type.UPDATE
     asyncio.ensure_future(notif.broadcast_event(evt))
+
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui), True))
     return None
 
 
@@ -478,7 +480,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
         evt.change_type = Event.Type.UPDATE_BASE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui), True))
     return None
 
 
@@ -494,14 +496,14 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Opti
             resp = srpc.s.DeleteScene.Response(result=False)
             resp.messages = ["Scene has associated projects."]
             resp.data = assoc_projects
-            await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+            asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui)))
             return resp
 
         if req.dry_run:
             return None
 
         scene = UpdateableCachedScene(await storage.get_scene(req.args.id))
-        await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+        asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui)))
         await storage.delete_scene(req.args.id)
         evt = sevts.s.SceneChanged(scene.bare)
         evt.change_type = Event.Type.REMOVE

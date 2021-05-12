@@ -556,13 +556,18 @@ class Lock:
                 to_notify.add(root_id)
                 to_notify.remove(obj_id)
                 evt = LockEventData(to_notify, owner, True)
+
+                self._upsert_user_locked_objects(owner, to_notify)
             elif upgrade_type == UpdateType.OBJECT:
                 lock_record.check_downgrade(obj_id, owner)
                 lock_record.tree = False
 
                 to_notify = self.get_all_children(root_id)
+                to_notify.add(root_id)
                 to_notify -= {obj_id}
                 evt = LockEventData(to_notify, owner)
+
+                self._remove_user_locked_objects(owner, to_notify)
             else:
                 raise Arcor2Exception("Unknown type of lock upgrade")
 
