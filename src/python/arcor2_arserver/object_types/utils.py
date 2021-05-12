@@ -8,6 +8,7 @@ import humps
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2 import helpers as hlp
 from arcor2.data.common import ActionMetadata
 from arcor2.data.object_type import ParameterMeta
 from arcor2.docstring import parse_docstring
@@ -27,13 +28,13 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-def remove_object_type(obj_type_id: str) -> None:
+async def remove_object_type(obj_type_id: str) -> None:
 
     path = os.path.join(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE, f"{humps.depascalize(obj_type_id)}.py")
     glob.logger.debug(f"Deleting {path}.")
 
     try:
-        os.remove(path)
+        await hlp.run_in_executor(os.remove, path)
     except FileNotFoundError as e:
         raise Arcor2Exception(f"File for {obj_type_id} was not found.") from e
 
