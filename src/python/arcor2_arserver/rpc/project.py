@@ -784,7 +784,12 @@ async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None
         if req.dry_run:
             return None
 
+        # TODO temporary code to help debugging long lasting update of project
+        import time
+
+        start = time.monotonic()
         proj.modified = await storage.update_project(proj.project)
+        glob.logger.info(f"Updating the project took {time.monotonic()-start:.3f}s.")
 
     asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
     return None
