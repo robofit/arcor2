@@ -1,6 +1,5 @@
 import ast
 import inspect
-import json
 from ast import Attribute, Load, Name
 from dataclasses import dataclass
 from enum import Enum
@@ -8,6 +7,7 @@ from typing import Any, Callable, List, Optional, Set, get_type_hints
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import IntEnum
@@ -75,7 +75,7 @@ class IntegerEnumPlugin(ParameterPlugin):
 
         try:
             return ttype(json.loads(param.value))
-        except ValueError:
+        except (ValueError, json.JsonException):
             raise ParameterPluginException(f"Parameter {parameter_id} of action {action.name} has invalid value.")
 
     @classmethod

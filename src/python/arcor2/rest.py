@@ -1,4 +1,3 @@
-import json
 import logging
 from enum import Enum
 from functools import partial
@@ -10,7 +9,7 @@ import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError
 
-from arcor2 import env
+from arcor2 import env, json
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 
@@ -338,16 +337,18 @@ def _handle_response(resp: requests.Response) -> None:
 
     if resp.status_code >= 400:
 
+        decoded_content = resp.content.decode()
+
         # here we try to handle different cases
         try:
-            resp_body = json.loads(resp.content)
-        except json.JSONDecodeError:
+            resp_body = json.loads(decoded_content)
+        except json.JsonException:
             # response contains invalid JSON
-            raise RestHttpException(resp.content.decode("utf-8"), error_code=resp.status_code)
+            raise RestHttpException(decoded_content, error_code=resp.status_code)
 
         try:
             # this is the case for Project service (StorageError model)
-            raise RestHttpException(resp_body["message"], error_code=resp.status_code)
+            raise RestHttpException(resp_body["message"], error_code=resp.status_code)  # type: ignore
         except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
             raise RestHttpException(str(resp_body), error_code=resp.status_code)
 

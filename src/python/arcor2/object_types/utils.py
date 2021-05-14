@@ -1,6 +1,5 @@
 import ast
 import inspect
-import json
 import os
 import shutil
 from dataclasses import is_dataclass
@@ -10,6 +9,7 @@ import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 
 import arcor2
+from arcor2 import json
 from arcor2.data.common import ActionMetadata, Parameter
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, Settings
@@ -127,7 +127,7 @@ def settings_from_params(
                 settings_data[s.name] = json.loads(s.value)
             else:
                 settings_data[s.name] = setting_def(json.loads(s.value))
-        except (ValueError, ValidationError) as e:
+        except (json.JsonException, ValidationError) as e:
             raise Arcor2Exception(f"Parameter {s.name} has invalid value.") from e
 
     try:

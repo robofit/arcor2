@@ -2,7 +2,6 @@ import argparse
 import asyncio
 import base64
 import functools
-import json
 import os
 import shutil
 import signal
@@ -21,7 +20,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2_execution
 import arcor2_execution_data
-from arcor2 import ws_server
+from arcor2 import json, ws_server
 from arcor2.data import common, compile_json_schemas
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
@@ -91,7 +90,7 @@ async def read_proc_stdout() -> None:
 
         try:
             data = json.loads(stripped)
-        except json.decoder.JSONDecodeError:
+        except json.JsonException:
             printed_out.append(decoded)
             logger.error(decoded.strip())
             continue

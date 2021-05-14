@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import copy
-import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -14,6 +13,7 @@ import numpy as np
 import quaternion
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2 import json
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -424,10 +424,7 @@ class ActionParameter(Parameter):
 
     def str_from_value(self) -> str:
 
-        try:
-            val = json.loads(self.value)
-        except ValueError as e:
-            raise Arcor2Exception("Value should be JSON.") from e
+        val = json.loads(self.value)
 
         if not isinstance(val, str):
             raise Arcor2Exception("Value should be string.")

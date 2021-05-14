@@ -1,12 +1,12 @@
 import abc
 import ast
 import copy
-import json
 from ast import AST
 from typing import Any, Callable, List, NamedTuple, Optional
 
 import humps
 
+from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.object_type import ParameterMeta
@@ -79,7 +79,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
 
         try:
             return json.loads(value)
-        except ValueError as e:
+        except json.JsonException as e:
             raise ParameterPluginException(f"Invalid value '{value}'.") from e
 
     @classmethod

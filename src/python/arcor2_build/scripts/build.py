@@ -2,7 +2,6 @@
 
 import argparse
 import ast
-import json
 import logging
 import os
 import sys
@@ -10,7 +9,6 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from io import BytesIO
-from json.decoder import JSONDecodeError
 from typing import Dict, Set, Type, TypeVar
 
 import humps
@@ -18,6 +16,7 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from flask import request, send_file
 
 import arcor2_build
+from arcor2 import json
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import persistent_storage as ps
 from arcor2.data.common import Project, ProjectSources, Scene
@@ -389,14 +388,14 @@ def project_import() -> RespT:
             project = read_dc_from_zip(zip_file, "data/project.json", Project)
         except KeyError:
             raise FlaskException("Could not find project.json.", error_code=404)
-        except (JSONDecodeError, ValidationError) as e:
+        except (json.JsonException, ValidationError) as e:
             raise FlaskException(f"Failed to process project.json. {str(e)}", error_code=401)
 
         try:
             scene = read_dc_from_zip(zip_file, "data/scene.json", Scene)
         except KeyError:
             raise FlaskException("Could not find scene.json.", error_code=404)
-        except (JSONDecodeError, ValidationError) as e:
+        except (json.JsonException, ValidationError) as e:
             return json.dumps(f"Failed to process scene.json. {str(e)}"), 401
 
         if project.scene_id != scene.id:
