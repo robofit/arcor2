@@ -1,5 +1,4 @@
 import importlib
-import json
 import os
 from types import TracebackType
 from typing import Dict, Optional, Type, TypeVar
@@ -8,7 +7,7 @@ import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
-from arcor2 import package
+from arcor2 import json, package
 from arcor2 import transformations as tr
 from arcor2.action import get_action_name_to_id, patch_object_actions, print_event
 from arcor2.cached import CachedProject, CachedScene

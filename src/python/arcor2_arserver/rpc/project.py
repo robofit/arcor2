@@ -154,7 +154,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
             elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
                 const = proj.constant(param.str_from_value())
                 # TODO use plugin to get the value
-                import json
+                from arcor2 import json
 
                 params.append(json.loads(const.value))
             else:
@@ -1011,7 +1011,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
                 old_ori_id = PosePlugin.orientation_id(proj, new_act.id, param.name)
 
                 # TODO this is hacky - plugins are missing methods to set/update parameters
-                import json
+                from arcor2 import json
 
                 # TODO this won't work if action on AP is using orientation from AP's descendant
                 #  ...which is not in the mapping yet
@@ -1216,7 +1216,7 @@ def check_logic_item(scene: CachedScene, parent: LogicContainer, logic_item: com
 
         # check that condition value is ok, actual value is not interesting
         # TODO perform this check using plugin
-        import json
+        from arcor2 import json
 
         if not isinstance(json.loads(logic_item.condition.value), bool):
             raise Arcor2Exception("Invalid condition value.")
@@ -1340,7 +1340,7 @@ def check_constant(proj: CachedProject, constant: common.ProjectConstant) -> Non
             raise Arcor2Exception("Name has to be unique.")
 
     # TODO check using (constant?) plugin
-    import json
+    from arcor2 import json
 
     val = json.loads(constant.value)
 

@@ -1,4 +1,3 @@
-import json
 import time
 import uuid
 from queue import Empty, Queue
@@ -7,6 +6,7 @@ from typing import Dict, Optional, Type, TypeVar
 import websocket
 from dataclasses_jsonschema import ValidationError
 
+from arcor2 import json
 from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
@@ -87,6 +87,10 @@ class ARServer:
             except websocket.WebSocketTimeoutException:
                 raise ARServerClientException("RPC timeouted.")
 
+            if not isinstance(recv_dict, dict):
+                self._logger.debug(f"Invalid data received: {recv_dict}")
+                continue
+
             if "response" in recv_dict:
                 break
             elif "event" in recv_dict:
@@ -116,6 +120,9 @@ class ARServer:
                 recv_dict = json.loads(self._ws.recv())
             except websocket.WebSocketTimeoutException:
                 raise ARServerClientException("Timeouted.")
+
+            if not isinstance(recv_dict, dict):
+                raise ARServerClientException(f"Invalid data received: {recv_dict}")
 
             if "event" not in recv_dict:
                 raise ARServerClientException(f"Expected event, got: {recv_dict}")

@@ -1,8 +1,8 @@
 import copy
-import json
 from ast import Attribute, Load, Name
 from typing import Any, List
 
+from arcor2 import json
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
