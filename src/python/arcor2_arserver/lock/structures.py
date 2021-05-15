@@ -34,6 +34,7 @@ class LockedObject:
         self.tree: bool = False
 
     def read_lock(self, obj_id: str, owner: str) -> bool:
+        """Perform all necessary check if object can be locked and locks it."""
 
         if self.tree:
             return False
@@ -49,6 +50,8 @@ class LockedObject:
         return True
 
     def read_unlock(self, obj_id: str, owner: str) -> None:
+        """Perform all necessary check if object can be unlocked and unlocks
+        it."""
 
         if obj_id not in self.read:
             raise CannotUnlock(f"Object is not read locked by '{owner}'")
@@ -62,6 +65,7 @@ class LockedObject:
             del self.read[obj_id]
 
     def write_lock(self, obj_id: str, owner: str, lock_tree: bool) -> bool:
+        """Perform all necessary check if object can be locked and locks it."""
 
         if self.tree or obj_id in self.write or obj_id in self.read:
             return False
@@ -74,6 +78,8 @@ class LockedObject:
         return True
 
     def write_unlock(self, obj_id: str, owner: str) -> None:
+        """Perform all necessary check if object can be unlocked and unlocks
+        it."""
 
         if obj_id not in self.write:
             raise CannotUnlock(f"Object is not write locked by '{owner}'")
@@ -86,10 +92,12 @@ class LockedObject:
         del self.write[obj_id]
 
     def is_empty(self) -> bool:
+        """Check if there are any locked objects in current tree."""
 
         return not self.read and not self.write
 
     def check_upgrade(self, obj_id: str, owner: str) -> None:
+        """Check if lock can be upgraded to whole locked tree."""
 
         raise_msg = f"Object lock is not owned by '{owner}'"
         if obj_id not in self.write:
@@ -105,6 +113,7 @@ class LockedObject:
             raise LockingException("Nothing to upgrade")
 
     def check_downgrade(self, obj_id: str, owner: str) -> None:
+        """Check if lock can be downgraded to single object lock."""
 
         raise_msg = f"Object lock is not owned by '{owner}'"
         if obj_id not in self.write:

@@ -12,7 +12,7 @@ from arcor2_arserver.object_types.data import ObjectTypeDict
 from arcor2_arserver.user import Users
 from arcor2_arserver_data.events.common import ShowMainScreen
 
-logger = get_aiologger("ARServer")
+logger = get_aiologger("ARServer")  # TODO move logger to separate file
 VERBOSE: bool = False
 
 PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))

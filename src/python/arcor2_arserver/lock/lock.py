@@ -15,14 +15,19 @@ from arcor2_arserver_data.rpc.lock import UpdateType
 
 class Lock:
     class SpecialValues(cmn.StrEnum):
+        """Values for special locking cases e.g. global variable access
+        SERVER_NAME can be used only as lock owner substitution."""
+
         SERVER_NAME: str = "SERVER"
+
         SCENE_NAME: str = "SCENE"
         PROJECT_NAME: str = "PROJECT"
-
         RUNNING_ACTION: str = "ACTION"
         ADDING_OBJECT: str = "ADDING_OBJECT"
 
     class ErrMessages(cmn.StrEnum):
+        """Lock general error messages."""
+
         SOMETHING_LOCKED: str = "There are locked objects"
         SOMETHING_LOCKED_IN_TREE: str = "Part of tree is locked"
         LOCK_FAIL: str = "Locking failed, try again"
@@ -76,19 +81,27 @@ class Lock:
 
     @property
     def all_ui_locks(self) -> Dict[str, Set[str]]:
+        """All lock grayed-out in editor in format user: {obj_ids}"""
+
         return self._ui_user_locks
 
     @asynccontextmanager
     async def get_lock(self, dry_run: bool = False) -> AsyncGenerator[Optional[asyncio.Lock], None]:
         """Get lock for data structure, method should be used for operation
-        with whole scene/project, no others."""
+        with whole scene/project e.g. saving project, where no changes should
+        be made during this operation.
+
+        :param dry_run: self._lock is not acquired/blocked when set
+        """
 
         if self._ui_user_locks:
             raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
 
+        i = 0
         yielded = False
         try:
             for _ in range(self.LOCK_RETRIES):
+                i += 1
                 try:
                     async with self._lock:
                         if self._get_write_locks_count():
@@ -105,10 +118,21 @@ class Lock:
                 except CannotLock:
                     await asyncio.sleep(self.RETRY_WAIT)
         finally:
+            if i > self.LOCK_RETRIES * 0.25:
+                from arcor2_arserver.globals import logger
+
+                logger.warn(f"Retry took {i * self.LOCK_TIMEOUT}")
+
             if not yielded:
                 raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
 
     async def read_lock(self, obj_ids: Union[Iterable[str], str], owner: str) -> bool:
+        """Lock object ids by owner if all checks pass. No object is locked
+        otherwise.
+
+        :param obj_ids: object identifiers to be locked
+        :param owner: lock owner name
+        """
 
         if isinstance(obj_ids, str):
             obj_ids = [obj_ids]
@@ -119,6 +143,7 @@ class Lock:
             return self._read_lock(roots, obj_ids, owner)
 
     def _read_lock(self, roots: List[str], obj_ids: Iterable[str], owner: str) -> bool:
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -135,6 +160,11 @@ class Lock:
         return True
 
     async def read_unlock(self, obj_ids: Union[Iterable[str], str], owner: str) -> None:
+        """Check real lock owner and delete records from lock database.
+
+        :param obj_ids: object identifiers to be unlocked
+        :param owner: lock owner name
+        """
 
         if isinstance(obj_ids, str):
             obj_ids = [obj_ids]
@@ -147,7 +177,7 @@ class Lock:
             self._read_unlock(roots, obj_ids, owner)
 
     def _read_unlock(self, roots: List[str], obj_ids: List[str], owner: str) -> None:
-        """Internal function when lock is acquired."""
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -196,6 +226,7 @@ class Lock:
         return ret
 
     def _write_lock(self, roots: List[str], obj_ids: Iterable[str], owner: str, lock_tree: bool = False) -> bool:
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -212,6 +243,12 @@ class Lock:
         return True
 
     async def write_unlock(self, obj_ids: Union[Iterable[str], str], owner: str, notify: bool = False) -> None:
+        """Check object lock real owner and remove it from lock database.
+
+        :param obj_ids: object identifiers to be locked
+        :param owner: lock owner name
+        :param notify: if set, send-out notification about unlocked objects
+        """
 
         if isinstance(obj_ids, str):
             obj_ids = [obj_ids]
@@ -236,7 +273,7 @@ class Lock:
             self.notifications_q.put_nowait(LockEventData(ui_locked, owner))
 
     def _write_unlock(self, roots: List[str], obj_ids: List[str], owner: str) -> List[bool]:
-        """Internal function when lock is acquired."""
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -255,6 +292,12 @@ class Lock:
         return ret
 
     async def is_write_locked(self, obj_id: str, owner: str, check_tree_locked: bool = False) -> bool:
+        """Checks if object is write locked.
+
+        :param obj_id: object identifiers to be locked
+        :param owner: lock owner name
+        :param check_tree_locked: if set, checks also if whole tree is locked
+        """
 
         root_id = await self.get_root_id(obj_id)
 
@@ -262,6 +305,7 @@ class Lock:
             return self._is_write_locked(root_id, obj_id, owner, check_tree_locked)
 
     def _is_write_locked(self, root_id: str, obj_id: str, owner: str, check_tree_locked: bool) -> bool:
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -284,6 +328,11 @@ class Lock:
         return False
 
     async def is_read_locked(self, obj_id: str, owner: str) -> bool:
+        """Checks if object is locked for read.
+
+        :param obj_id: object identifier to check
+        :param owner: user name which must own lock record
+        """
 
         root_id = await self.get_root_id(obj_id)
 
@@ -291,6 +340,7 @@ class Lock:
             return self._is_read_locked(root_id, obj_id, owner)
 
     def _is_read_locked(self, root_id: str, obj_id: str, owner: str) -> bool:
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -301,23 +351,30 @@ class Lock:
         return obj_id in lock_record.read and owner in lock_record.read[obj_id]
 
     async def get_locked_roots_count(self) -> int:
+        """Count and return number of total locked roots."""
 
         async with self._lock:
             return len(self._locked_objects)
 
     async def get_write_locks_count(self) -> int:
+        """Count and return total number of write locks."""
 
         async with self._lock:
             return self._get_write_locks_count()
 
     def _get_write_locks_count(self) -> int:
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
         return sum(len(lock.write) for lock in self._locked_objects.values())
 
     async def get_root_id(self, obj_id: str) -> str:
-        """Retrieve root object id for given object."""
+        """Retrieve root object id for given object. Works also for project and
+        scene ID.
+
+        :param obj_id: object to search root for
+        """
 
         if obj_id in (
             self.SpecialValues.SCENE_NAME,
@@ -381,6 +438,8 @@ class Lock:
             self._write_lock([new_root_id], [locked_obj_id], owner)
 
     def _check_and_clean_root(self, root: str) -> None:
+        """Removes top level lock record if read and write attributes are
+        empty."""
 
         assert self._lock.locked()
 
@@ -388,16 +447,29 @@ class Lock:
             del self._locked_objects[root]
 
     async def schedule_auto_release(self, owner: str) -> None:
+        """Creates task for releasing all user locks.
+
+        :param owner: affected user
+        """
 
         self._release_tasks[owner] = asyncio.create_task(self._release_all_owner_locks(owner))
 
     async def cancel_auto_release(self, owner: str) -> None:
+        """Cancel task releasing user locks after timeout. Used after login.
+
+        :param owner: affected user name
+        """
 
         if owner in self._release_tasks:
             self._release_tasks[owner].cancel()
             del self._release_tasks[owner]
 
     async def _release_all_owner_locks(self, owner: str) -> None:
+        """Task planned after user logout. Release all its lock after timeout
+        and notify UIs.
+
+        :param owner: unregistered user
+        """
 
         await asyncio.sleep(self.LOCK_TIMEOUT)
 
@@ -413,7 +485,9 @@ class Lock:
             self.notifications_q.put_nowait(LockEventData(to_notify, owner))
 
     async def get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:
-        """Finds which locks belongs to owner
+        """Finds which locks belongs to owner.
+
+        :param owner: user name
         :return: tuple of read and write locks in format object_id: root id
         """
 
@@ -421,9 +495,7 @@ class Lock:
             return self._get_owner_locks(owner)
 
     def _get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:
-        """Finds which locks belongs to owner
-        :return: tuple of dict(object_id: root_id), first one represents read locks, second one write locks
-        """
+        """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
@@ -441,7 +513,7 @@ class Lock:
         return read, write
 
     def _upsert_user_locked_objects(self, owner: str, obj_ids: Iterable[str]) -> None:
-        """Add objects where lock is visible in UI.
+        """Add objects where lock is visible in UI to related database.
 
         :param owner: user name of locks owner
         :param obj_ids: objects to be added to user lock database
@@ -453,7 +525,7 @@ class Lock:
         self._ui_user_locks[owner].update(obj_ids)
 
     def _remove_user_locked_objects(self, owner: str, obj_ids: Iterable[str]) -> None:
-        """Remove items where lock is visible in UI.
+        """Remove items where lock is visible in UI from related database.
 
         :param owner: user name of locks owner
         :param obj_ids: objects to be removed from user lock database
@@ -466,6 +538,10 @@ class Lock:
                 del self._ui_user_locks[owner]
 
     def get_all_children(self, obj_id: str) -> Set[str]:
+        """Recursively find all children of object.
+
+        :param obj_id: parent of all found children
+        """
 
         ret: List[str] = []
         if self.project:
@@ -477,6 +553,10 @@ class Lock:
         return set(ret)
 
     def get_all_parents(self, obj_id: str) -> Set[str]:
+        """Recursively find all parents in tree.
+
+        :param obj_id: object to search parents for
+        """
 
         parents: Set[str] = set()
         if self.project:
@@ -491,7 +571,11 @@ class Lock:
 
     async def check_remove(self, obj_id: str, owner: str) -> bool:
         """Check if object can be removed, e.g. no child locked, not in locked
-        tree."""
+        tree.
+
+        :param obj_id: object id to be checked
+        :param owner: user who tries to remove object, returns true if user owns affected lock
+        """
 
         def check_children(_root: str, obj_ids: Set[str], read: bool = False) -> bool:
             lock_item = self._locked_objects[_root]
@@ -508,6 +592,7 @@ class Lock:
 
         root_id = await self.get_root_id(obj_id)
         children = self.get_all_children(obj_id)
+        children.add(obj_id)
 
         async with self._lock:
             lock_record = self._locked_objects.get(root_id)
@@ -526,6 +611,7 @@ class Lock:
     def get_by_id(
         self, obj_id: str
     ) -> Union[cmn.SceneObject, cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action]:
+        """Retrive object by it's ID."""
 
         if self.project:
             try:
@@ -540,6 +626,13 @@ class Lock:
         raise Arcor2Exception(f"Object ID {obj_id} not found.")
 
     async def update_lock(self, obj_id: str, owner: str, upgrade_type: UpdateType) -> None:
+        """Upgrades lock to locked whole tree or downgrades lock to simple
+        object lock.
+
+        :param obj_id: objects which is locked and updated
+        :param owner: owner of current lock
+        :param upgrade_type: one of available type
+        """
 
         root_id = await self.get_root_id(obj_id)
 
@@ -574,6 +667,11 @@ class Lock:
             self.notifications_q.put_nowait(evt)
 
     async def check_lock_tree(self, obj_id: str, owner: str) -> None:
+        """Checks if locking whole tree is possible.
+
+        :param obj_id: object id to dry run locking for
+        :param owner: owner of dry run lock
+        """
 
         root_id = await self.get_root_id(obj_id)
         children = self.get_all_children(root_id)
