@@ -469,138 +469,132 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
 
     glob.LOCK.scene_or_exception()
 
-    async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
-        ensure_scene_started()
-        robot_inst = await osa.get_robot_instance(req.args.robot_id)
+    ensure_scene_started()
+    robot_inst = await osa.get_robot_instance(req.args.robot_id)
 
-        await check_feature(robot_inst, Robot.set_hand_teaching_mode.__name__)
+    await check_feature(robot_inst, Robot.set_hand_teaching_mode.__name__)
 
-        hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode)
+    hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode)
 
-        if req.args.enable == hand_teaching_mode:
-            raise Arcor2Exception("That's the current state.")
+    if req.args.enable == hand_teaching_mode:
+        raise Arcor2Exception("That's the current state.")
 
-        if req.dry_run:
-            return
+    await ensure_locked(req.args.robot_id, ui)
 
-        await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable)
-        evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable))
-        asyncio.ensure_future(notif.broadcast_event(evt))
+    if req.dry_run:
+        return
+
+    await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable)
+    evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable))
+    asyncio.ensure_future(notif.broadcast_event(evt))
 
 
 async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> None:
 
     scene = glob.LOCK.scene_or_exception()
 
-    async with ctx_write_lock(req.args.robot_id, glob.USERS.user_name(ui), auto_unlock=False):
+    ensure_scene_started()
+    robot_inst = await osa.get_robot_instance(req.args.robot_id)
 
-        ensure_scene_started()
-        robot_inst = await osa.get_robot_instance(req.args.robot_id)
+    await check_feature(robot_inst, Robot.move_to_pose.__name__)
+    await robot.check_robot_before_move(robot_inst)
 
-        await check_feature(robot_inst, Robot.move_to_pose.__name__)
-        await robot.check_robot_before_move(robot_inst)
+    tp = await robot.get_end_effector_pose(robot_inst, req.args.end_effector_id)
 
-        tp = await robot.get_end_effector_pose(robot_inst, req.args.end_effector_id)
+    if req.args.mode == req.args.mode.ROBOT:
+        tp = tr.make_pose_rel(robot_inst.pose, tp)
+    elif req.args.mode == req.args.mode.RELATIVE:
+        assert req.args.pose
+        tp = tr.make_pose_rel(req.args.pose, tp)
+    elif req.args.mode == req.args.mode.USER:
+        assert req.args.pose
+        raise Arcor2Exception("Not supported yet.")
 
-        if req.args.mode == req.args.mode.ROBOT:
-            tp = tr.make_pose_rel(robot_inst.pose, tp)
-        elif req.args.mode == req.args.mode.RELATIVE:
-            assert req.args.pose
-            tp = tr.make_pose_rel(req.args.pose, tp)
-        elif req.args.mode == req.args.mode.USER:
-            assert req.args.pose
-            raise Arcor2Exception("Not supported yet.")
+    if req.args.what == req.args.what.POSITION:
+        if req.args.axis == req.args.axis.X:
+            tp.position.x += req.args.step
+        elif req.args.axis == req.args.axis.Y:
+            tp.position.y += req.args.step
+        elif req.args.axis == req.args.axis.Z:
+            tp.position.z += req.args.step
+    elif req.args.what == req.args.what.ORIENTATION:
+        if req.args.axis == req.args.axis.X:
+            tp.orientation *= common.Orientation.from_rotation_vector(x=req.args.step)
+        elif req.args.axis == req.args.axis.Y:
+            tp.orientation *= common.Orientation.from_rotation_vector(y=req.args.step)
+        elif req.args.axis == req.args.axis.Z:
+            tp.orientation *= common.Orientation.from_rotation_vector(z=req.args.step)
 
-        if req.args.what == req.args.what.POSITION:
-            if req.args.axis == req.args.axis.X:
-                tp.position.x += req.args.step
-            elif req.args.axis == req.args.axis.Y:
-                tp.position.y += req.args.step
-            elif req.args.axis == req.args.axis.Z:
-                tp.position.z += req.args.step
-        elif req.args.what == req.args.what.ORIENTATION:
-            if req.args.axis == req.args.axis.X:
-                tp.orientation *= common.Orientation.from_rotation_vector(x=req.args.step)
-            elif req.args.axis == req.args.axis.Y:
-                tp.orientation *= common.Orientation.from_rotation_vector(y=req.args.step)
-            elif req.args.axis == req.args.axis.Z:
-                tp.orientation *= common.Orientation.from_rotation_vector(z=req.args.step)
+    if req.args.mode == req.args.mode.ROBOT:
+        tp = tr.make_pose_abs(robot_inst.pose, tp)
+    elif req.args.mode == req.args.mode.RELATIVE:
+        assert req.args.pose
+        tp = tr.make_pose_abs(req.args.pose, tp)
 
-        if req.args.mode == req.args.mode.ROBOT:
-            tp = tr.make_pose_abs(robot_inst.pose, tp)
-        elif req.args.mode == req.args.mode.RELATIVE:
-            assert req.args.pose
-            tp = tr.make_pose_abs(req.args.pose, tp)
+    await robot.check_reachability(scene, robot_inst, req.args.end_effector_id, tp, req.args.safe)
 
-        await robot.check_reachability(scene, robot_inst, req.args.end_effector_id, tp, req.args.safe)
+    await ensure_locked(req.args.robot_id, ui)
 
-        if req.dry_run:
-            return
+    if req.dry_run:
+        return
 
-        asyncio.ensure_future(
-            robot.move_to_pose(
-                robot_inst, req.args.end_effector_id, tp, req.args.speed, req.args.safe, glob.USERS.user_name(ui)
-            )
-        )
+    asyncio.ensure_future(robot.move_to_pose(robot_inst, req.args.end_effector_id, tp, req.args.speed, req.args.safe))
 
 
 async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWorld.Request, ui: WsClient) -> None:
 
     glob.LOCK.scene_or_exception()
 
-    async with ctx_write_lock(req.args.robot_id, glob.USERS.user_name(ui), auto_unlock=False):
+    ensure_scene_started()
+    robot_inst = await osa.get_robot_instance(req.args.robot_id)
 
-        ensure_scene_started()
-        robot_inst = await osa.get_robot_instance(req.args.robot_id)
+    await check_feature(robot_inst, Robot.move_to_pose.__name__)
+    await check_feature(robot_inst, Robot.inverse_kinematics.__name__)
+    await robot.check_robot_before_move(robot_inst)
 
-        await check_feature(robot_inst, Robot.move_to_pose.__name__)
-        await check_feature(robot_inst, Robot.inverse_kinematics.__name__)
-        await robot.check_robot_before_move(robot_inst)
+    await ensure_locked(req.args.robot_id, ui)
 
-        if req.dry_run:  # attempt to find suitable joints can take some time so it is not done for dry_run
-            return
+    if req.dry_run:  # attempt to find suitable joints can take some time so it is not done for dry_run
+        return
 
-        tp, current_joints = await robot.get_pose_and_joints(robot_inst, req.args.end_effector_id)
+    tp, current_joints = await robot.get_pose_and_joints(robot_inst, req.args.end_effector_id)
 
-        target_joints: Optional[List[common.Joint]] = None
-        target_joints_diff: float = 0.0
+    target_joints: Optional[List[common.Joint]] = None
+    target_joints_diff: float = 0.0
 
-        # select best (closest joint configuration) reachable pose
-        tasks = [
-            robot.ik(robot_inst, req.args.end_effector_id, pose, current_joints, req.args.safe)
-            for pose in [
-                common.Pose(
-                    tp.position,
-                    common.Orientation.from_rotation_vector(y=math.pi)
-                    * common.Orientation.from_rotation_vector(z=z_rot),
-                )
-                for z_rot in np.linspace(-math.pi, math.pi, 360)
-            ]
+    # select best (closest joint configuration) reachable pose
+    tasks = [
+        robot.ik(robot_inst, req.args.end_effector_id, pose, current_joints, req.args.safe)
+        for pose in [
+            common.Pose(
+                tp.position,
+                common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(z=z_rot),
+            )
+            for z_rot in np.linspace(-math.pi, math.pi, 360)
         ]
+    ]
 
-        for res in await asyncio.gather(*tasks, return_exceptions=True):
+    for res in await asyncio.gather(*tasks, return_exceptions=True):
 
-            if not isinstance(res, list):
-                continue
-
-            if not target_joints:
-                target_joints = res
-                for f, b in zip(current_joints, target_joints):
-                    assert f.name == b.name
-                    target_joints_diff += (f.value - b.value) ** 2
-            else:
-                diff = 0.0
-                for f, b in zip(current_joints, res):
-                    assert f.name == b.name
-                    diff += (f.value - b.value) ** 2
-
-                if diff < target_joints_diff:
-                    target_joints = res
-                    target_joints_diff = diff
+        if not isinstance(res, list):
+            continue
 
         if not target_joints:
-            raise Arcor2Exception("Could not find reachable pose.")
+            target_joints = res
+            for f, b in zip(current_joints, target_joints):
+                assert f.name == b.name
+                target_joints_diff += (f.value - b.value) ** 2
+        else:
+            diff = 0.0
+            for f, b in zip(current_joints, res):
+                assert f.name == b.name
+                diff += (f.value - b.value) ** 2
 
-        asyncio.ensure_future(
-            robot.move_to_joints(robot_inst, target_joints, req.args.speed, req.args.safe, glob.USERS.user_name(ui))
-        )
+            if diff < target_joints_diff:
+                target_joints = res
+                target_joints_diff = diff
+
+    if not target_joints:
+        raise Arcor2Exception("Could not find reachable pose.")
+
+    asyncio.ensure_future(robot.move_to_joints(robot_inst, target_joints, req.args.speed, req.args.safe))

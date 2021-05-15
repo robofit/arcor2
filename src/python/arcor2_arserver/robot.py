@@ -192,7 +192,12 @@ async def _move_to_pose(robot_inst: Robot, end_effector_id: str, pose: common.Po
 
 
 async def move_to_pose(
-    robot_inst: Robot, end_effector_id: str, pose: common.Pose, speed: float, safe: bool, lock_owner: str
+    robot_inst: Robot,
+    end_effector_id: str,
+    pose: common.Pose,
+    speed: float,
+    safe: bool,
+    lock_owner: Optional[str] = None,
 ) -> None:
 
     try:
@@ -217,7 +222,8 @@ async def move_to_pose(
             sevts.r.RobotMoveToPose(Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, pose, safe))
         )
     finally:
-        await glob.LOCK.write_unlock(robot_inst.id, lock_owner)
+        if lock_owner:
+            await glob.LOCK.write_unlock(robot_inst.id, lock_owner)
 
 
 async def move_to_ap_orientation(
@@ -262,7 +268,7 @@ async def _move_to_joints(robot_inst: Robot, joints: List[common.Joint], speed: 
 
 
 async def move_to_joints(
-    robot_inst: Robot, joints: List[common.Joint], speed: float, safe: bool, lock_owner: str
+    robot_inst: Robot, joints: List[common.Joint], speed: float, safe: bool, lock_owner: Optional[str] = None
 ) -> None:
 
     try:
@@ -288,7 +294,8 @@ async def move_to_joints(
             sevts.r.RobotMoveToJoints(Data(Data.MoveEventType.END, robot_inst.id, joints, safe))
         )
     finally:
-        await glob.LOCK.write_unlock(robot_inst.id, lock_owner)
+        if lock_owner:
+            await glob.LOCK.write_unlock(robot_inst.id, lock_owner)
 
 
 async def move_to_ap_joints(

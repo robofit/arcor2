@@ -24,13 +24,13 @@ def retry(exc: Type[Exception] = LockingException, tries: int = 1, delay: float 
         while _tries:
             try:
                 ret = await coro(*args, **kwargs)
-                if _tries != tries:
-                    glob.logger.debug(f"Retry timeout took {(tries - _tries) * delay}")
+                if _tries < tries * 0.75:
+                    glob.logger.warn(f"Retry timeout took {(tries - _tries) * delay}")
                 return ret
             except exc:
                 _tries -= 1
                 if _tries == 0:
-                    glob.logger.debug("Retry raised")
+                    glob.logger.warn("Retry raised")
                     raise
 
                 if delay > 0:
