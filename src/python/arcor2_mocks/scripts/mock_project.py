@@ -3,13 +3,14 @@
 import argparse
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import humps
 from flask import jsonify, request, send_file
 
 from arcor2.data import common, object_type
 from arcor2.flask import RespT, create_app, run_app
+from arcor2.json import JsonType
 from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
 app = create_app(__name__)
@@ -194,16 +195,19 @@ def get_projects() -> RespT:
               content:
                 application/json:
                   schema:
-                    $ref: IdDescList
+                    type: array
+                    items:
+                      $ref: IdDesc
     """
 
-    ret = common.IdDescList()
+    ret: List[JsonType] = []
 
     for proj in PROJECTS.values():
+        assert proj.created
         assert proj.modified
-        ret.items.append(common.IdDesc(proj.id, proj.name, proj.modified, proj.desc))
+        ret.append(common.IdDesc(proj.id, proj.name, proj.created, proj.modified, proj.description).to_dict())
 
-    return jsonify(ret.to_dict())
+    return jsonify(ret)
 
 
 @app.route("/scene", methods=["PUT"])
@@ -307,16 +311,19 @@ def get_scenes() -> RespT:
               content:
                 application/json:
                   schema:
-                    $ref: IdDescList
+                    type: array
+                    items:
+                      $ref: IdDesc
     """
 
-    ret = common.IdDescList()
+    ret: List[JsonType] = []
 
     for scene in SCENES.values():
+        assert scene.created
         assert scene.modified
-        ret.items.append(common.IdDesc(scene.id, scene.name, scene.modified, scene.desc))
+        ret.append(common.IdDesc(scene.id, scene.name, scene.created, scene.modified, scene.description).to_dict())
 
-    return jsonify(ret.to_dict())
+    return jsonify(ret)
 
 
 @app.route("/object_type", methods=["PUT"])
@@ -419,16 +426,19 @@ def get_object_types() -> RespT:
               content:
                 application/json:
                   schema:
-                    $ref: IdDescList
+                    type: array
+                    items:
+                      $ref: IdDesc
     """
 
-    ret = common.IdDescList()
+    ret: List[JsonType] = []
 
     for obj_type in OBJECT_TYPES.values():
+        assert obj_type.created
         assert obj_type.modified
-        ret.items.append(common.IdDesc(obj_type.id, "", obj_type.modified, obj_type.desc))
+        ret.append(common.IdDesc(obj_type.id, "", obj_type.created, obj_type.modified, obj_type.description).to_dict())
 
-    return jsonify(ret.to_dict())
+    return jsonify(ret)
 
 
 @app.route("/models/box", methods=["PUT"])
@@ -640,7 +650,7 @@ def main() -> None:
         [
             common.Project,
             common.Scene,
-            common.IdDescList,
+            common.IdDesc,
             object_type.ObjectType,
             object_type.Box,
             object_type.Cylinder,

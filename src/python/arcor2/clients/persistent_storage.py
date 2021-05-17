@@ -1,8 +1,9 @@
 import os
 from datetime import datetime
+from typing import List
 
 from arcor2 import rest
-from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
+from arcor2.data.common import IdDesc, Project, ProjectSources, Scene
 from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, Model, Model3dType, ObjectType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.helpers import handle
@@ -44,13 +45,13 @@ def delete_model(model_id: str) -> None:
 
 
 @handle(ProjectServiceException, message="Failed to list projects.")
-def get_projects() -> IdDescList:
-    return rest.call(rest.Method.GET, f"{URL}/projects", return_type=IdDescList)
+def get_projects() -> List[IdDesc]:
+    return rest.call(rest.Method.GET, f"{URL}/projects", list_return_type=IdDesc)
 
 
 @handle(ProjectServiceException, message="Failed to list scenes.")
-def get_scenes() -> IdDescList:
-    return rest.call(rest.Method.GET, f"{URL}/scenes", return_type=IdDescList)
+def get_scenes() -> List[IdDesc]:
+    return rest.call(rest.Method.GET, f"{URL}/scenes", list_return_type=IdDesc)
 
 
 @handle(ProjectServiceException, message="Failed to get the project.")
@@ -74,8 +75,8 @@ def get_object_type(object_type_id: str) -> ObjectType:
 
 
 @handle(ProjectServiceException, message="Failed to list object types.")
-def get_object_type_ids() -> IdDescList:
-    return rest.call(rest.Method.GET, f"{URL}/object_types", return_type=IdDescList)
+def get_object_type_ids() -> List[IdDesc]:
+    return rest.call(rest.Method.GET, f"{URL}/object_types", list_return_type=IdDesc)
 
 
 @handle(ProjectServiceException, message="Failed to add or update the project.")

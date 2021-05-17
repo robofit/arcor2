@@ -199,7 +199,7 @@ def find_object_action(scene: CachedScene, action: common.Action) -> ObjectActio
 
 
 async def project_names() -> Set[str]:
-    return {proj.name for proj in (await storage.get_projects()).items}
+    return {proj.name for proj in (await storage.get_projects())}
 
 
 async def associated_projects(scene_id: str) -> Set[str]:
@@ -246,9 +246,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
 async def projects(scene_id: str) -> AsyncIterator[UpdateableCachedProject]:
 
-    id_list = await storage.get_projects()
-
-    for project_meta in id_list.items:
+    for project_meta in await storage.get_projects():
 
         project = await storage.get_project(project_meta.id)
 

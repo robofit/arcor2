@@ -341,16 +341,10 @@ def _handle_response(resp: requests.Response) -> None:
 
         # here we try to handle different cases
         try:
-            resp_body = json.loads(decoded_content)
+            raise RestHttpException(str(json.loads(decoded_content)), error_code=resp.status_code)
         except json.JsonException:
             # response contains invalid JSON
             raise RestHttpException(decoded_content, error_code=resp.status_code)
-
-        try:
-            # this is the case for Project service (StorageError model)
-            raise RestHttpException(resp_body["message"], error_code=resp.status_code)  # type: ignore
-        except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestHttpException(str(resp_body), error_code=resp.status_code)
 
 
 def get_image(url: str) -> Image.Image:

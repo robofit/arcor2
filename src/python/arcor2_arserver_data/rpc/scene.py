@@ -139,7 +139,7 @@ class NewScene(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             name: str
-            desc: str = field(default_factory=str)
+            description: str = field(default_factory=str)
 
         args: Args
         dry_run: bool = False

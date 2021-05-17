@@ -1,8 +1,9 @@
 from datetime import datetime
+from typing import List
 
 from arcor2.clients import persistent_storage
 from arcor2.clients.persistent_storage import ProjectServiceException  # noqa
-from arcor2.data.common import IdDescList, Project, ProjectSources, Scene
+from arcor2.data.common import IdDesc, Project, ProjectSources, Scene
 from arcor2.data.object_type import Mesh, MeshList, Model, Model3dType, ObjectType
 from arcor2.helpers import run_in_executor
 
@@ -27,11 +28,11 @@ async def delete_model(model_id: str) -> None:
     await run_in_executor(persistent_storage.delete_model, model_id)
 
 
-async def get_projects() -> IdDescList:
+async def get_projects() -> List[IdDesc]:
     return await run_in_executor(persistent_storage.get_projects)
 
 
-async def get_scenes() -> IdDescList:
+async def get_scenes() -> List[IdDesc]:
     return await run_in_executor(persistent_storage.get_scenes)
 
 
@@ -51,7 +52,7 @@ async def get_object_type(object_type_id: str) -> ObjectType:
     return await run_in_executor(persistent_storage.get_object_type, object_type_id)
 
 
-async def get_object_type_ids() -> IdDescList:
+async def get_object_type_ids() -> List[IdDesc]:
     return await run_in_executor(persistent_storage.get_object_type_ids)
 
 

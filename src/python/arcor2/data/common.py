@@ -376,7 +376,7 @@ class SceneObject(JsonSchemaMixin, ModelMixin):
 class BareScene(JsonSchemaMixin, ModelMixin):
 
     name: str
-    desc: str = field(default_factory=str)
+    description: str = field(default_factory=str)
     created: Optional[datetime] = None
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
@@ -401,7 +401,7 @@ class Scene(BareScene):
 
     @staticmethod
     def from_bare(bare: BareScene) -> Scene:
-        return Scene(bare.name, bare.desc, bare.created, bare.modified, bare.int_modified, id=bare.id)
+        return Scene(bare.name, bare.description, bare.created, bare.modified, bare.int_modified, id=bare.id)
 
 
 @dataclass
@@ -649,7 +649,7 @@ class BareProject(JsonSchemaMixin, ModelMixin):
 
     name: str
     scene_id: str
-    desc: str = field(default_factory=str)
+    description: str = field(default_factory=str)
     has_logic: bool = True
     created: Optional[datetime] = None
     modified: Optional[datetime] = None
@@ -682,7 +682,7 @@ class Project(BareProject):
         return Project(
             bare.name,
             bare.scene_id,
-            bare.desc,
+            bare.description,
             bare.has_logic,
             bare.created,
             bare.modified,
@@ -702,14 +702,9 @@ class ProjectSources(JsonSchemaMixin):
 class IdDesc(JsonSchemaMixin):
     id: str
     name: str
+    created: datetime
     modified: datetime
-    desc: Optional[str] = None
-
-
-@dataclass
-class IdDescList(JsonSchemaMixin):
-
-    items: List[IdDesc] = field(default_factory=list)
+    description: Optional[str] = None
 
 
 @dataclass
