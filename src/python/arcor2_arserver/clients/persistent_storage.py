@@ -3,7 +3,7 @@ import time
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, Set
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Set
 
 from lru import LRU
 
@@ -19,7 +19,7 @@ from arcor2.clients.aio_persistent_storage import (
     update_project_sources,
 )
 from arcor2.clients.persistent_storage import ProjectServiceException
-from arcor2.data.common import IdDesc, IdDescList, Project, Scene
+from arcor2.data.common import IdDesc, Project, Scene
 from arcor2.data.object_type import ObjectType
 from arcor2.exceptions import Arcor2Exception
 
@@ -62,13 +62,13 @@ else:
 
 
 async def _update_list(
-    getter: Callable[..., Awaitable[IdDescList]], cached_listing: CachedListing, cache: Dict[str, Any]
+    getter: Callable[..., Awaitable[List[IdDesc]]], cached_listing: CachedListing, cache: Dict[str, Any]
 ) -> None:
 
     if not cached_listing.time_to_update():
         return
 
-    updated = {it.id: it for it in (await getter()).items}
+    updated = {it.id: it for it in (await getter())}
     for deleted in cached_listing.listing.keys() - updated.keys():  # remove outdated items from the cache
         cache.pop(deleted, None)
     cached_listing.listing = updated
@@ -91,37 +91,37 @@ async def initialize_module() -> None:
 async def get_project_ids() -> Set[str]:
 
     await _update_list(ps.get_projects, _projects_list, _projects)
-    return set(_projects_list.listing.keys())
+    return set(_projects_list.listing)
 
 
-async def get_projects() -> IdDescList:
+async def get_projects() -> List[IdDesc]:
 
     await _update_list(ps.get_projects, _projects_list, _projects)
-    return IdDescList(items=list(_projects_list.listing.values()))
+    return list(_projects_list.listing.values())
 
 
 async def get_scene_ids() -> Set[str]:
 
     await _update_list(ps.get_scenes, _scenes_list, _scenes)
-    return set(_scenes_list.listing.keys())
+    return set(_scenes_list.listing)
 
 
-async def get_scenes() -> IdDescList:
+async def get_scenes() -> List[IdDesc]:
 
     await _update_list(ps.get_scenes, _scenes_list, _scenes)
-    return IdDescList(items=list(_scenes_list.listing.values()))
+    return list(_scenes_list.listing.values())
 
 
 async def get_object_type_ids() -> Set[str]:
 
     await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
-    return set(_object_type_list.listing.keys())
+    return set(_object_type_list.listing)
 
 
-async def get_object_types() -> IdDescList:
+async def get_object_types() -> List[IdDesc]:
 
     await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
-    return IdDescList(items=list(_object_type_list.listing.values()))
+    return list(_object_type_list.listing.values())
 
 
 async def get_project(project_id: str) -> Project:
@@ -200,7 +200,12 @@ async def update_project(project: Project) -> datetime:
     ret = await ps.update_project(project)
     project.modified = ret
 
-    _projects_list.listing[project.id] = IdDesc(project.id, project.name, project.modified, project.desc)
+    if not project.created:
+        project.created = project.modified
+
+    _projects_list.listing[project.id] = IdDesc(
+        project.id, project.name, project.created, project.modified, project.description
+    )
     _projects[project.id] = deepcopy(project)
     _projects[project.id].int_modified = None
 
@@ -214,7 +219,10 @@ async def update_scene(scene: Scene) -> datetime:
     ret = await ps.update_scene(scene)
     scene.modified = ret
 
-    _scenes_list.listing[scene.id] = IdDesc(scene.id, scene.name, scene.modified, scene.desc)
+    if not scene.created:
+        scene.created = scene.modified
+
+    _scenes_list.listing[scene.id] = IdDesc(scene.id, scene.name, scene.created, scene.modified, scene.description)
     _scenes[scene.id] = deepcopy(scene)
     _scenes[scene.id].int_modified = None
 
@@ -228,7 +236,12 @@ async def update_object_type(object_type: ObjectType) -> datetime:
     ret = await ps.update_object_type(object_type)
     object_type.modified = ret
 
-    _object_type_list.listing[object_type.id] = IdDesc(object_type.id, "", object_type.modified, object_type.desc)
+    if not object_type.created:
+        object_type.created = object_type.modified
+
+    _object_type_list.listing[object_type.id] = IdDesc(
+        object_type.id, "", object_type.created, object_type.modified, object_type.description
+    )
     _object_types[object_type.id] = deepcopy(object_type)
 
     return ret

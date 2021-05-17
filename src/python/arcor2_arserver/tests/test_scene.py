@@ -30,7 +30,7 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     assert open_scene_event.data.scene.id
     scene_id = open_scene_event.data.scene.id
     assert open_scene_event.data.scene.name == test
-    assert open_scene_event.data.scene.desc == test
+    assert open_scene_event.data.scene.description == test
     assert not open_scene_event.data.scene.objects
 
     event(ars, events.s.SceneState)

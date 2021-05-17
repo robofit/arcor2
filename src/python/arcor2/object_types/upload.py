@@ -39,7 +39,7 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Op
         raise UploadException(f"There is something wrong with source code of '{type_def.__name__}'.")
 
     obj_type = ObjectType(
-        id=type_def.__name__, source=get_containing_module_sources(type_def), desc=type_def.description()
+        id=type_def.__name__, source=get_containing_module_sources(type_def), description=type_def.description()
     )
 
     if model:

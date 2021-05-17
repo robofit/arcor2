@@ -407,7 +407,7 @@ class Lock:
             return obj_id
 
         # locking on dashboard, check if scene or project exists
-        if obj_id in await storage.get_scene_ids() or obj_id in await storage.get_project_ids():
+        if obj_id in await storage.get_scene_ids() | await storage.get_project_ids():
             return obj_id
 
         raise Arcor2Exception(f"Unknown object '{obj_id}'")

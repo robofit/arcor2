@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionParameter, Flow, Joint, Orientation, Position, ProjectLogicIf
+from arcor2.data.common import ActionParameter, BareProject, Flow, Joint, Orientation, Position, ProjectLogicIf
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg
 
 
@@ -15,7 +14,7 @@ class NewProject(RPC):
         class Args(JsonSchemaMixin):
             scene_id: str
             name: str
-            desc: str = field(default_factory=str)
+            description: str = field(default_factory=str)
             has_logic: bool = True
 
         args: Args
@@ -82,13 +81,8 @@ class ListProjects(RPC):
     @dataclass
     class Response(RPC.Response):
         @dataclass
-        class Data(JsonSchemaMixin):
+        class Data(BareProject):
 
-            id: str
-            scene_id: str
-            name: str
-            modified: datetime
-            desc: Optional[str] = None
             valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
             executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
             problems: List[str] = field(default_factory=list)

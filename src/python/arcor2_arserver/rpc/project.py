@@ -197,10 +197,17 @@ async def project_info(
 
     project = await storage.get_project(project_id)
 
-    assert project.modified is not None
+    assert project.created
+    assert project.modified
 
     pd = srpc.p.ListProjects.Response.Data(
-        id=project.id, desc=project.desc, name=project.name, scene_id=project.scene_id, modified=project.modified
+        project.name,
+        project.scene_id,
+        project.description,
+        project.has_logic,
+        project.created,
+        project.modified,
+        id=project.id,
     )
 
     try:
@@ -234,13 +241,11 @@ async def project_info(
 
 async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> srpc.p.ListProjects.Response:
 
-    projects = await storage.get_projects()
-
     scenes_lock = asyncio.Lock()
     scenes: Dict[str, CachedScene] = {}
 
     resp = srpc.p.ListProjects.Response()
-    tasks = [project_info(project_iddesc.id, scenes_lock, scenes) for project_iddesc in projects.items]
+    tasks = [project_info(proj_id, scenes_lock, scenes) for proj_id in (await storage.get_project_ids())]
 
     resp.data = []
     for res in await asyncio.gather(*tasks, return_exceptions=True):
@@ -820,14 +825,16 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
                 glob.LOCK.scene.modified = await storage.update_scene(glob.LOCK.scene.scene)
         else:
 
-            if req.args.scene_id not in {scene.id for scene in (await storage.get_scenes()).items}:
+            if req.args.scene_id not in (await storage.get_scene_ids()):
                 raise Arcor2Exception("Unknown scene id.")
 
             await open_scene(req.args.scene_id)
 
         glob.PREV_RESULTS.clear()
         glob.LOCK.project = UpdateableCachedProject(
-            common.Project(req.args.name, req.args.scene_id, desc=req.args.desc, has_logic=req.args.has_logic)
+            common.Project(
+                req.args.name, req.args.scene_id, description=req.args.description, has_logic=req.args.has_logic
+            )
         )
 
         assert glob.LOCK.scene
@@ -1483,7 +1490,7 @@ async def update_project_description_cb(req: srpc.p.UpdateProjectDescription.Req
     async with ctx_write_lock(req.args.project_id, glob.USERS.user_name(ui)):
         async with managed_project(req.args.project_id) as project:
 
-            project.desc = req.args.new_description
+            project.description = req.args.new_description
             project.update_modified()
 
             evt = sevts.p.ProjectChanged(project.bare)

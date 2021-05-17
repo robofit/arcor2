@@ -88,7 +88,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
         if glob.LOCK.scene:
             raise Arcor2Exception("Scene has to be closed first.")
 
-        for scene_id in (await storage.get_scenes()).items:
+        for scene_id in await storage.get_scenes():
             if req.args.name == scene_id.name:
                 raise Arcor2Exception("Name already used.")
 
@@ -96,7 +96,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
             return None
 
         await get_object_types()  # TODO not ideal, may take quite long time
-        glob.LOCK.scene = UpdateableCachedScene(common.Scene(req.args.name, desc=req.args.desc))
+        glob.LOCK.scene = UpdateableCachedScene(common.Scene(req.args.name, description=req.args.description))
         asyncio.ensure_future(notify_scene_opened(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.LOCK.scene.scene))))
         asyncio.ensure_future(scene_srv.delete_all_collisions())  # just for sure
         return None
@@ -179,8 +179,9 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
     resp.data = []
 
     async for scene in scenes():
+        assert scene.created
         assert scene.modified
-        resp.data.append(resp.Data(scene.id, scene.name, scene.modified, scene.desc))
+        resp.data.append(resp.Data(scene.id, scene.name, scene.created, scene.modified, scene.description))
 
     return resp
 
@@ -525,7 +526,7 @@ async def update_scene_description_cb(req: srpc.s.UpdateSceneDescription.Request
 
     async with ctx_write_lock(req.args.scene_id, glob.USERS.user_name(ui)):
         async with managed_scene(req.args.scene_id) as scene:
-            scene.desc = req.args.new_description
+            scene.description = req.args.new_description
             scene.update_modified()
 
             evt = sevts.s.SceneChanged(scene.bare)
