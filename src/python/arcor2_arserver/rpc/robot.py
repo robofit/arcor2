@@ -243,8 +243,11 @@ async def check_feature(robot_inst: Robot, feature_name: str) -> None:
     if obj_type.robot_meta is None:
         raise Arcor2Exception("Not a robot.")
 
-    if not getattr(obj_type.robot_meta.features, feature_name):
-        raise Arcor2Exception(f"Robot does not support '{feature_name}' feature.")
+    try:
+        if not getattr(obj_type.robot_meta.features, feature_name):
+            raise Arcor2Exception(f"Robot does not support '{feature_name}' feature.")
+    except AttributeError:
+        raise Arcor2Exception(f"Unknown robot feature: {feature_name}.")
 
 
 async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
@@ -472,7 +475,8 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     ensure_scene_started()
     robot_inst = await osa.get_robot_instance(req.args.robot_id)
 
-    await check_feature(robot_inst, Robot.set_hand_teaching_mode.__name__)
+    # in this case, method name does not correspond to feature name
+    await check_feature(robot_inst, "hand_teaching")
 
     hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode)
 
