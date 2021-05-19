@@ -1,7 +1,7 @@
 import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, Iterator, List, Optional, Set, Tuple, Union, ValuesView
+from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Set, Tuple, Union, ValuesView
 
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
@@ -16,15 +16,53 @@ class CachedSceneException(Arcor2Exception):
     pass
 
 
-class CachedScene:
-    def __init__(self, scene: cmn.Scene):
+class CachedBase:
+    def __init__(self, data: Union[cmn.Scene, cmn.Project]) -> None:
 
-        self.id: str = scene.id
-        self.name: str = scene.name
-        self.description: str = scene.description
-        self.created: Optional[datetime] = scene.created
-        self.modified: Optional[datetime] = scene.modified
-        self.int_modified: Optional[datetime] = scene.int_modified
+        self.id: str = data.id
+        self.name: str = data.name
+        self.description: str = data.description
+
+        self.created: Optional[datetime] = data.created
+        self.modified: Optional[datetime] = data.modified
+        self._int_modified: Optional[datetime] = data.int_modified
+
+
+class UpdateableMixin:
+
+    if TYPE_CHECKING:
+        modified: Optional[datetime] = None
+        _int_modified: Optional[datetime] = None
+
+    def update_modified(self) -> None:
+        self._int_modified = datetime.now(tz=timezone.utc)
+
+    @property
+    def has_changes(self) -> bool:
+        """Returns whether the scene/project has some unsaved changes.
+
+        :return:
+        """
+
+        # this is true for a newly created scene/project
+        # it does not matter if there are changes or not - the scene/project was not saved yet
+        if self.modified is None:
+            return True
+
+        # this is true for scene/project that was loaded but there are not changes yet
+        if self._int_modified is None:
+            return False
+
+        # if the scene/project was already saved once (modified is not None)
+        # and there were some changes (int_modified is not None)
+        # let's compare if some change happened (int_modified) after saving to the Project service (modified)
+        return self._int_modified > self.modified
+
+
+class CachedScene(CachedBase):
+    def __init__(self, scene: cmn.Scene) -> None:
+
+        super().__init__(scene)
 
         # TODO deal with children
         self._objects: Dict[str, cmn.SceneObject] = {}
@@ -38,7 +76,7 @@ class CachedScene:
 
     @property
     def bare(self) -> cmn.BareScene:
-        return cmn.BareScene(self.name, self.description, self.created, self.modified, self.int_modified, id=self.id)
+        return cmn.BareScene(self.name, self.description, self.created, self.modified, self._int_modified, id=self.id)
 
     def object_names(self) -> Iterator[str]:
 
@@ -77,27 +115,14 @@ class CachedScene:
 
         sc = cmn.Scene.from_bare(self.bare)
         sc.modified = self.modified
-        sc.int_modified = self.int_modified
+        sc.int_modified = self._int_modified
         sc.objects = list(self.objects)
         return sc
 
 
-class UpdateableCachedScene(CachedScene):
+class UpdateableCachedScene(UpdateableMixin, CachedScene):
     def __init__(self, scene: cmn.Scene):
         super(UpdateableCachedScene, self).__init__(copy.deepcopy(scene))
-
-    def update_modified(self) -> None:
-        self.int_modified = datetime.now(tz=timezone.utc)
-
-    def has_changes(self) -> bool:
-
-        if self.int_modified is None:
-            return False
-
-        if self.modified is None:
-            return True
-
-        return self.int_modified > self.modified
 
     def upsert_object(self, obj: cmn.SceneObject) -> None:
 
@@ -139,17 +164,13 @@ class Orientations:
     parent: Dict[str, cmn.BareActionPoint] = field(default_factory=dict)
 
 
-class CachedProject:
+class CachedProject(CachedBase):
     def __init__(self, project: cmn.Project):
 
-        self.id: str = project.id
-        self.name: str = project.name
+        super().__init__(project)
+
         self.scene_id: str = project.scene_id
-        self.description: str = project.description
         self.has_logic: bool = project.has_logic
-        self.created: Optional[datetime] = project.created
-        self.modified: Optional[datetime] = project.modified
-        self._int_modified: Optional[datetime] = project.int_modified
 
         self._action_points: Dict[str, cmn.BareActionPoint] = {}
 
@@ -498,23 +519,9 @@ class CachedProject:
         self._upsert_child(new_parent, obj_id)
 
 
-class UpdateableCachedProject(CachedProject):
+class UpdateableCachedProject(UpdateableMixin, CachedProject):
     def __init__(self, project: cmn.Project):
         super(UpdateableCachedProject, self).__init__(copy.deepcopy(project))
-
-    def update_modified(self) -> None:
-        self._int_modified = datetime.now(tz=timezone.utc)
-
-    @property
-    def has_changes(self) -> bool:
-
-        if self._int_modified is None:
-            return False
-
-        if self.modified is None:
-            return True
-
-        return self._int_modified > self.modified
 
     def upsert_action(self, ap_id: str, action: cmn.Action) -> None:
 
