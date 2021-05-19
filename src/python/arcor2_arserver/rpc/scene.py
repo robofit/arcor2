@@ -116,7 +116,7 @@ async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
         if glob.LOCK.project:
             raise Arcor2Exception("Project has to be closed first.")
 
-        if not req.args.force and scene.has_changes():
+        if not req.args.force and scene.has_changes:
             raise Arcor2Exception("Scene has unsaved changes.")
 
         can_modify_scene()  # can't close scene while started
@@ -165,8 +165,7 @@ async def open_scene_cb(req: srpc.s.OpenScene.Request, ui: WsClient) -> None:
         await open_scene(req.args.id)
 
         assert glob.LOCK.scene
-        assert glob.LOCK.scene.int_modified is None
-        assert not glob.LOCK.scene.has_changes()
+        assert not glob.LOCK.scene.has_changes
         asyncio.ensure_future(
             notify_scene_opened(sevts.s.OpenScene(data=sevts.s.OpenScene.Data(glob.LOCK.scene.scene)))
         )

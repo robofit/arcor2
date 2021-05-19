@@ -821,7 +821,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
             if glob.LOCK.scene.id != req.args.scene_id:
                 raise Arcor2Exception("Another scene is opened.")
 
-            if glob.LOCK.scene.has_changes():
+            if glob.LOCK.scene.has_changes:
                 glob.LOCK.scene.modified = await storage.update_scene(glob.LOCK.scene.scene)
         else:
 
