@@ -136,7 +136,7 @@ async def get_project(project_id: str) -> Project:
         await _update_list(ps.get_projects, _projects_list, _projects)
 
         if project_id not in _projects_list.listing:
-            del _projects[project_id]
+            _projects.pop(project_id, None)
             raise Arcor2Exception("Project removed externally.")
 
         # project in cache is outdated
@@ -159,7 +159,7 @@ async def get_scene(scene_id: str) -> Scene:
         await _update_list(ps.get_scenes, _scenes_list, _scenes)
 
         if scene_id not in _scenes_list.listing:
-            del _scenes[scene_id]
+            _scenes.pop(scene_id, None)
             raise Arcor2Exception("Scene removed externally.")
 
         # scene in cache is outdated
@@ -182,7 +182,7 @@ async def get_object_type(object_type_id: str) -> ObjectType:
         await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
 
         if object_type_id not in _object_type_list.listing:
-            del _object_types[object_type_id]
+            _object_types.pop(object_type_id, None)
             raise Arcor2Exception("ObjectType removed externally.")
 
         # ObjectType in cache is outdated
@@ -250,34 +250,22 @@ async def update_object_type(object_type: ObjectType) -> datetime:
 async def delete_scene(scene_id: str) -> None:
 
     await ps.delete_scene(scene_id)
-
-    try:
-        del _scenes_list.listing[scene_id]
-        del _scenes[scene_id]
-    except KeyError:
-        pass
+    _scenes_list.listing.pop(scene_id, None)
+    _scenes.pop(scene_id, None)
 
 
 async def delete_project(project_id: str) -> None:
 
     await ps.delete_project(project_id)
-
-    try:
-        del _projects_list.listing[project_id]
-        del _projects[project_id]
-    except KeyError:
-        pass
+    _projects_list.listing.pop(project_id, None)
+    _projects.pop(project_id, None)
 
 
 async def delete_object_type(object_type_id: str) -> None:
 
     await ps.delete_object_type(object_type_id)
-
-    try:
-        del _object_type_list.listing[object_type_id]
-        del _object_types[object_type_id]
-    except KeyError:
-        pass
+    _object_type_list.listing.pop(object_type_id, None)
+    _object_types.pop(object_type_id, None)
 
 
 __all__ = [
