@@ -403,6 +403,10 @@ def project_import() -> RespT:
 
         with tempfile.TemporaryDirectory() as tmp_dir:
 
+            # restore original environment
+            sys.path = list(original_sys_path)
+            sys.modules = dict(original_sys_modules)
+
             prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
 
             for scene_obj in scene.objects:
@@ -427,6 +431,13 @@ def project_import() -> RespT:
                 # TODO fill in OT description (is it used somewhere?)
                 objects[obj_type_name] = ObjectType(obj_type_name, obj_type_src)
                 get_base_from_imported_package(objects[obj_type_name], objects, zip_file, tmp_dir, ast)
+
+                type_def = save_and_import_type_def(obj_type_src, obj_type_name, Generic, tmp_dir, OBJECT_TYPE_MODULE)
+
+                assert obj_type_name == type_def.__name__
+
+                if type_def.abstract():
+                    raise FlaskException(f"Scene contains abstract object type: {obj_type_name}.", error_code=401)
 
         for obj_type in objects.values():  # handle models
 
