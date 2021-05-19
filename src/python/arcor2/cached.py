@@ -1,5 +1,5 @@
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Set, Tuple, Union, ValuesView
 
@@ -91,7 +91,7 @@ class CachedScene(CachedBase):
 
     @property
     def object_ids(self) -> Set[str]:
-        return set(self._objects.keys())
+        return set(self._objects)
 
     def object(self, object_id: str) -> cmn.SceneObject:
 
@@ -144,24 +144,23 @@ class CachedProjectException(Arcor2Exception):
 
 
 @dataclass
-class Actions:
-
-    data: Dict[str, cmn.Action] = field(default_factory=dict)
-    parent: Dict[str, cmn.BareActionPoint] = field(default_factory=dict)
+class Parent:
+    ap: cmn.BareActionPoint
 
 
 @dataclass
-class Joints:
-
-    data: Dict[str, cmn.ProjectRobotJoints] = field(default_factory=dict)
-    parent: Dict[str, cmn.BareActionPoint] = field(default_factory=dict)
+class ApAction(Parent):
+    action: cmn.Action
 
 
 @dataclass
-class Orientations:
+class ApJoints(Parent):
+    joints: cmn.ProjectRobotJoints
 
-    data: Dict[str, cmn.NamedOrientation] = field(default_factory=dict)
-    parent: Dict[str, cmn.BareActionPoint] = field(default_factory=dict)
+
+@dataclass
+class ApOrientation(Parent):
+    orientation: cmn.NamedOrientation
 
 
 class CachedProject(CachedBase):
@@ -174,9 +173,9 @@ class CachedProject(CachedBase):
 
         self._action_points: Dict[str, cmn.BareActionPoint] = {}
 
-        self._actions = Actions()
-        self._joints = Joints()
-        self._orientations = Orientations()
+        self._actions: Dict[str, ApAction] = {}
+        self._joints: Dict[str, ApJoints] = {}
+        self._orientations: Dict[str, ApOrientation] = {}
 
         self._constants: Dict[str, cmn.ProjectConstant] = {}
         self._logic_items: Dict[str, cmn.LogicItem] = {}
@@ -197,29 +196,26 @@ class CachedProject(CachedBase):
 
             for ac in ap.actions:
 
-                if ac.id in self._actions.data:
+                if ac.id in self._actions:
                     raise CachedProjectException(f"Duplicate action id: {ac.id}.")
 
-                self._actions.data[ac.id] = ac
-                self._actions.parent[ac.id] = bare_ap
+                self._actions[ac.id] = ApAction(bare_ap, ac)
                 self._upsert_child(ap.id, ac.id)
 
             for joints in ap.robot_joints:
 
-                if joints.id in self._joints.data:
+                if joints.id in self._joints:
                     raise CachedProjectException(f"Duplicate joints id: {joints.id}.")
 
-                self._joints.data[joints.id] = joints
-                self._joints.parent[joints.id] = bare_ap
+                self._joints[joints.id] = ApJoints(bare_ap, joints)
                 self._upsert_child(ap.id, joints.id)
 
             for orientation in ap.orientations:
 
-                if orientation.id in self._orientations.data:
+                if orientation.id in self._orientations:
                     raise CachedProjectException(f"Duplicate orientation id: {orientation.id}.")
 
-                self._orientations.data[orientation.id] = orientation
-                self._orientations.parent[orientation.id] = bare_ap
+                self._orientations[orientation.id] = ApOrientation(bare_ap, orientation)
                 self._upsert_child(ap.id, orientation.id)
 
         for override in project.object_overrides:
@@ -297,7 +293,7 @@ class CachedProject(CachedBase):
 
     @property
     def action_names(self) -> Set[str]:
-        return {act.name for act in self._actions.data.values()}
+        return {value.action.name for value in self._actions.values()}
 
     @property
     def action_points_names(self) -> Set[str]:
@@ -305,28 +301,32 @@ class CachedProject(CachedBase):
 
     @property
     def action_points_ids(self) -> Set[str]:
-        return set(self._action_points.keys())
+        return set(self._action_points)
 
     def ap_and_joints(self, joints_id: str) -> Tuple[cmn.BareActionPoint, cmn.ProjectRobotJoints]:
 
         try:
-            return self._joints.parent[joints_id], self._joints.data[joints_id]
+            value = self._joints[joints_id]
         except KeyError:
             raise CachedProjectException("Unknown joints.")
+
+        return value.ap, value.joints
 
     def joints(self, joints_id: str) -> cmn.ProjectRobotJoints:
 
         try:
-            return self._joints.data[joints_id]
+            return self._joints[joints_id].joints
         except KeyError:
             raise CachedProjectException("Unknown joints.")
 
     def bare_ap_and_orientation(self, orientation_id: str) -> Tuple[cmn.BareActionPoint, cmn.NamedOrientation]:
 
         try:
-            return self._orientations.parent[orientation_id], self._orientations.data[orientation_id]
+            value = self._orientations[orientation_id]
         except KeyError:
             raise CachedProjectException("Unknown orientation.")
+
+        return value.ap, value.orientation
 
     def pose(self, orientation_id: str) -> cmn.Pose:
 
@@ -335,30 +335,15 @@ class CachedProject(CachedBase):
 
     def ap_orientations(self, ap_id: str) -> List[cmn.NamedOrientation]:
 
-        # TODO come up with something more efficient
-        return [
-            self._orientations.data[ori_id]
-            for ori_id, parent_ap in self._orientations.parent.items()
-            if ap_id == parent_ap.id
-        ]
+        return [value.orientation for value in self._orientations.values() if ap_id == value.ap.id]
 
     def ap_joints(self, ap_id: str) -> List[cmn.ProjectRobotJoints]:
 
-        # TODO come up with something more efficient
-        return [
-            self._joints.data[joints_id]
-            for joints_id, parent_ap in self._joints.parent.items()
-            if ap_id == parent_ap.id
-        ]
+        return [value.joints for value in self._joints.values() if ap_id == value.ap.id]
 
     def ap_actions(self, ap_id: str) -> List[cmn.Action]:
 
-        # TODO come up with something more efficient
-        return [
-            self._actions.data[action_id]
-            for action_id, parent_ap in self._actions.parent.items()
-            if ap_id == parent_ap.id
-        ]
+        return [value.action for value in self._actions.values() if ap_id == value.ap.id]
 
     def ap_action_ids(self, ap_id: str) -> Set[str]:
         return {ac.id for ac in self.ap_actions(ap_id)}
@@ -375,14 +360,14 @@ class CachedProject(CachedBase):
     def orientation(self, orientation_id: str) -> cmn.NamedOrientation:
 
         try:
-            return self._orientations.data[orientation_id]
+            return self._orientations[orientation_id].orientation
         except KeyError:
             raise CachedProjectException("Unknown orientation.")
 
     def action(self, action_id: str) -> cmn.Action:
 
         try:
-            return self._actions.data[action_id]
+            return self._actions[action_id].action
         except KeyError:
             raise CachedProjectException("Action not found")
 
@@ -428,16 +413,18 @@ class CachedProject(CachedBase):
     def action_point_and_action(self, action_id: str) -> Tuple[cmn.BareActionPoint, cmn.Action]:
 
         try:
-            return self._actions.parent[action_id], self._actions.data[action_id]
+            value = self._actions[action_id]
         except KeyError:
             raise CachedProjectException("Action not found")
 
+        return value.ap, value.action
+
     @property
     def actions(self) -> List[cmn.Action]:
-        return list(self._actions.data.values())
+        return [value.action for value in self._actions.values()]
 
     def action_ids(self) -> Set[str]:
-        return {action.id for action in self._actions.data.values()}
+        return set(self._actions)
 
     def bare_action_point(self, action_point_id: str) -> cmn.BareActionPoint:
 
@@ -473,12 +460,12 @@ class CachedProject(CachedBase):
 
         if obj_id in self._action_points:  # AP
             return self._action_points[obj_id]
-        elif obj_id in self._joints.data:  # Joints
-            return self._joints.data[obj_id]
-        elif obj_id in self._orientations.data:  # Orientation
-            return self._orientations.data[obj_id]
-        elif obj_id in self._actions.data:  # Action
-            return self._actions.data[obj_id]
+        elif obj_id in self._joints:  # Joints
+            return self._joints[obj_id].joints
+        elif obj_id in self._orientations:  # Orientation
+            return self._orientations[obj_id].orientation
+        elif obj_id in self._actions:  # Action
+            return self._actions[obj_id].action
 
         raise CachedProjectException("Object not found.")
 
@@ -486,12 +473,12 @@ class CachedProject(CachedBase):
 
         if obj_id in self._action_points:  # AP
             return self._action_points[obj_id].parent if self._action_points[obj_id].parent else None
-        elif obj_id in self._joints.data:  # Joints
-            return self._joints.parent[obj_id].id
-        elif obj_id in self._orientations.data:  # Orientation
-            return self._orientations.parent[obj_id].id
-        elif obj_id in self._actions.data:  # Action
-            return self._actions.parent[obj_id].id
+        elif obj_id in self._joints:  # Joints
+            return self._joints[obj_id].ap.id
+        elif obj_id in self._orientations:  # Orientation
+            return self._orientations[obj_id].ap.id
+        elif obj_id in self._actions:  # Action
+            return self._actions[obj_id].ap.id
 
         raise CachedProjectException("Object not found.")
 
@@ -508,6 +495,7 @@ class CachedProject(CachedBase):
             return set()
 
     def _remove_child(self, parent: Optional[str], child: str) -> None:
+
         if parent and parent in self._childs:
             self._childs[parent].remove(child)
             if not self._childs[parent]:
@@ -527,27 +515,25 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
 
         ap = self.bare_action_point(ap_id)
 
-        if action.id in self._actions.data:
-            assert self._actions.parent[action.id] == ap
-            self._actions.data[action.id] = action
+        if action.id in self._actions:
+            assert self._actions[action.id].ap == ap
+            self._actions[action.id].action = action
         else:
-            self._actions.data[action.id] = action
-            self._actions.parent[action.id] = ap
+            self._actions[action.id] = ApAction(ap, action)
+
         self._upsert_child(ap.id, action.id)
         self.update_modified()
 
     def remove_action(self, action_id: str) -> cmn.Action:
 
         try:
-            self._remove_child(self._actions.parent[action_id].id, action_id)
-            action = self._actions.data.pop(action_id)
-            ap = self._actions.parent[action_id]
-            self._remove_child(ap.id, action_id)
-            del self._actions.parent[action_id]  # TODO KeyError here might be probably ignored? (it should not happen)
+            value = self._actions.pop(action_id)
         except KeyError as e:
             raise CachedProjectException("Action not found.") from e
+
+        self._remove_child(value.ap.id, action_id)
         self.update_modified()
-        return action
+        return value.action
 
     def invalidate_joints(self, ap_id: str) -> None:
 
@@ -565,49 +551,49 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
 
         ap = self.bare_action_point(ap_id)
 
-        if orientation.id in self._orientations.data:
-            assert self._orientations.parent[orientation.id] == ap
-            self._orientations.data[orientation.id] = orientation
+        if orientation.id in self._orientations:
+            assert self._orientations[orientation.id].ap == ap
+            self._orientations[orientation.id].orientation = orientation
         else:
-            self._orientations.data[orientation.id] = orientation
-            self._orientations.parent[orientation.id] = ap
+            self._orientations[orientation.id] = ApOrientation(ap, orientation)
+
         self._upsert_child(ap_id, orientation.id)
         self.update_modified()
 
     def remove_orientation(self, orientation_id: str) -> cmn.NamedOrientation:
 
         try:
-            self._remove_child(self._orientations.parent[orientation_id].id, orientation_id)
-            ori = self._orientations.data.pop(orientation_id)
-            del self._orientations.parent[orientation_id]
+            value = self._orientations.pop(orientation_id)
         except KeyError as e:
             raise CachedProjectException("Orientation not found.") from e
+
+        self._remove_child(value.ap.id, orientation_id)
         self.update_modified()
-        return ori
+        return value.orientation
 
     def upsert_joints(self, ap_id: str, joints: cmn.ProjectRobotJoints) -> None:
 
         ap = self.bare_action_point(ap_id)
 
-        if joints.id in self._joints.data:
-            assert self._joints.parent[joints.id] == ap
-            self._joints.data[joints.id] = joints
+        if joints.id in self._joints:
+            assert self._joints[joints.id].ap == ap
+            self._joints[joints.id].joints = joints
         else:
-            self._joints.data[joints.id] = joints
-            self._joints.parent[joints.id] = ap
+            self._joints[joints.id] = ApJoints(ap, joints)
+
         self._upsert_child(ap_id, joints.id)
         self.update_modified()
 
     def remove_joints(self, joints_id: str) -> cmn.ProjectRobotJoints:
 
         try:
-            self._remove_child(self._joints.parent[joints_id].id, joints_id)
-            joints = self._joints.data.pop(joints_id)
-            del self._joints.parent[joints_id]
+            value = self._joints.pop(joints_id)
         except KeyError as e:
             raise CachedProjectException("Joints not found.") from e
+
+        self._remove_child(value.ap.id, joints_id)
         self.update_modified()
-        return joints
+        return value.joints
 
     def upsert_action_point(
         self, ap_id: str, name: str, position: cmn.Position, parent: Optional[str] = None
