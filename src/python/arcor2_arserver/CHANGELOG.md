@@ -13,21 +13,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Initialization happens in parallel (for objects of the same priority).
 - `SetEefPerpendicularToWorld` now calls IK in parallel.
   - This provides almost 100% speed-up even when the robot service proceeds requests one by one.
-- Created a lock module that allows to read/write lock existing or special objects. The module contains:
-  - lock object with all necessary methods;
-  - structures for keeping data about locked objects;
-  - locking-related exceptions;
-  - queue and task for notifying UI about lock data;
-  - methods for auto-unlocking after timeout when user logouts.
-- Base tests of locking structure.
-- RPCs for (un)locking object, registering user name.
-- Events for (un)locking object.
-- Created a class for maintaining connected UIs.
-- Project methods to get object by ID, object parent and object children.
+- Added locking of internal resources.
+  - Created a lock module that allows to read/write lock existing or special objects. The module contains:
+    - lock object with all necessary methods;
+    - structures for keeping data about locked objects;
+    - locking-related exceptions;
+    - queue and task for notifying UI about lock data;
+    - methods for auto-unlocking after timeout when user logouts.
+  - Base tests of locking structure.
+  - RPCs for (un)locking object, registering user name.
+  - Events for (un)locking object.
+  - Created a class for maintaining connected UIs.
+  - Project methods to get object by ID, object parent and object children.
+  
+  - All RPCs that requires some kind of locking are now lock-guarded.
+  - Updated existing tests to work with newly implemented locking.
+  - Global variables `SCENE`, `PROJECT` and `INTERFACES` moved to new classes.
+- Rewritten cache for the Project service.
+  - The cache is now always on (provides a significant speed-up).
+  - External updates to the Project service are recognized properly.
+- New RPC `AddApUsingRobot`.
+- Support for multiple inheritance.
+    - ObjectTypes can now use mixins.
+    - It should be used like `class NewObjectType(MixinA, MixinB, Generic)`.
+    - E.g. the last ancestor should be something derived from `Generic`.
+- `SetEefPerpendicularToWorld` faster as it calls IK in parallel. 
 
-- All RPCs that requires some kind of locking are now lock-guarded.
-- Updated existing tests to work with newly implemented locking.
-- Global variables `SCENE`, `PROJECT` and `INTERFACES` moved to new classes.
+### Fixed
+
+- `SceneState` event was not sent to a newly connected UIs.
+- Results of actions are now forgotten when going offline.
+- Fixed support for `link` parameter type.
 
 ## [0.16.0] - 2021-04-20
 
