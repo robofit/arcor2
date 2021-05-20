@@ -3,13 +3,13 @@
 import argparse
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import humps
 from flask import jsonify, request, send_file
 
 from arcor2.data import common, object_type
-from arcor2.flask import RespT, create_app, run_app
+from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.json import JsonType
 from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
@@ -23,7 +23,7 @@ BOXES: Dict[str, object_type.Box] = {}
 CYLINDERS: Dict[str, object_type.Cylinder] = {}
 SPHERES: Dict[str, object_type.Sphere] = {}
 
-MESHES: Dict[str, Tuple[BytesIO, str]] = {}
+MESHES: Dict[str, Tuple[BytesIO, Optional[str]]] = {}
 
 
 @app.route("/models/<string:mesh_id>/mesh/file", methods=["PUT"])
@@ -458,6 +458,9 @@ def put_box() -> RespT:
             200:
               description: Ok
     """
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Box.", error_code=400)
 
     # box = object_type.Box.from_dict(humps.decamelize(request.json))  # TODO disabled because of bug in pyhumps
     box = object_type.Box(request.json["id"], request.json["sizeX"], request.json["sizeY"], request.json["sizeZ"])

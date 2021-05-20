@@ -130,7 +130,7 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
 
         try:
 
-            async with websockets.connect(EXE_URL) as manager_client:
+            async with websockets.connect(EXE_URL) as manager_client:  # type: ignore  # TODO not sure what is wrong
 
                 glob.logger.info("Connected to manager.")
 

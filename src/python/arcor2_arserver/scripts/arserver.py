@@ -167,7 +167,7 @@ async def _initialize_server() -> None:
     )
 
     glob.logger.info("Server initialized.")
-    await asyncio.wait([websockets.serve(bound_handler, "0.0.0.0", glob.PORT)])
+    await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
 
     asyncio.create_task(run_lock_notification_worker())
 

@@ -13,7 +13,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 
-RespT = Union[Response, Tuple[str, int]]
+RespT = Union[Response, Tuple[str, int], Tuple[Response, int]]
 
 
 class FlaskException(Arcor2Exception):
@@ -60,7 +60,7 @@ def run_app(
         return
 
     @app.route("/swagger/api/swagger.json", methods=["GET"])
-    def get_swagger() -> str:
+    def get_swagger() -> RespT:
         return jsonify(spec.to_dict())
 
     @app.errorhandler(Arcor2Exception)

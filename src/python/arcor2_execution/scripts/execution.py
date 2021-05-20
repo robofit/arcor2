@@ -415,7 +415,7 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
 
 async def aio_main() -> None:
 
-    await websockets.serve(
+    await websockets.server.serve(
         functools.partial(ws_server.server, logger=logger, register=register, unregister=unregister, rpc_dict=RPC_DICT),
         "0.0.0.0",
         port_from_url(URL),

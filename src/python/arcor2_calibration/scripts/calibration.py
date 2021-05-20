@@ -88,7 +88,7 @@ def put_calibrate_robot() -> RespT:
     """
 
     image = Image.open(request.files["image"].stream)
-    args = CalibrateRobotArgs.from_json(request.files["args"].read())
+    args = CalibrateRobotArgs.from_json(request.files["args"].stream.read().decode())
 
     if _mock:
         time.sleep(5)

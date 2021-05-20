@@ -7,6 +7,7 @@ from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tup
 import websockets
 from aiologger.levels import LogLevel
 from dataclasses_jsonschema import ValidationError
+from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import env
 from arcor2.data.events import Event
@@ -19,16 +20,14 @@ RPCT = TypeVar("RPCT", bound=RPC)
 ReqT = TypeVar("ReqT", bound=RPC.Request)
 RespT = TypeVar("RespT", bound=RPC.Response)
 
-RPC_CB = Callable[[ReqT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, Optional[RespT]]]
+RPC_CB = Callable[[ReqT, WsClient], Coroutine[Any, Any, Optional[RespT]]]
 RPC_DICT_TYPE = Dict[str, Tuple[Type[RPC], RPC_CB]]
 
 EventT = TypeVar("EventT", bound=Event)
-EVENT_DICT_TYPE = Dict[
-    str, Tuple[Type[EventT], Callable[[EventT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, None]]]
-]
+EVENT_DICT_TYPE = Dict[str, Tuple[Type[EventT], Callable[[EventT, WsClient], Coroutine[Any, Any, None]]]]
 
 
-async def send_json_to_client(client: websockets.WebSocketServerProtocol, data: str) -> None:
+async def send_json_to_client(client: WsClient, data: str) -> None:
 
     try:
         await client.send(data)

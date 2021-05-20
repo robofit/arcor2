@@ -12,7 +12,7 @@ from arcor2_dobot.magician import DobotMagician
 from flask import jsonify, request
 
 from arcor2.data.common import Joint, Pose
-from arcor2.flask import RespT, create_app, run_app
+from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 
@@ -83,6 +83,10 @@ def put_start() -> RespT:
 
     model: str = request.args.get("model", default="magician")
     port: str = request.args.get("port", default="/dev/dobot")
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
 
     mapping: Dict[str, Type[Dobot]] = {"magician": DobotMagician, "m1": DobotM1}
@@ -214,6 +218,10 @@ def put_eef_pose() -> RespT:
     """
 
     assert _dobot is not None
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
     move_type: str = request.args.get("moveType", "jump")
     velocity = float(request.args.get("velocity", default=50.0))
@@ -391,6 +399,9 @@ def put_ik() -> RespT:
 
     assert _dobot is not None
 
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
     return jsonify(_dobot.inverse_kinematics(pose))
 
@@ -423,6 +434,9 @@ def put_fk() -> RespT:
     """
 
     assert _dobot is not None
+
+    if not isinstance(request.json, list):
+        raise FlaskException("Body should be a JSON array containing joints.", error_code=400)
 
     joints = [Joint.from_dict(j) for j in request.json]
     return jsonify(_dobot.forward_kinematics(joints))
