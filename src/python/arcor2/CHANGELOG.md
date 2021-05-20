@@ -9,7 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Object initialization order can be set using class-level `INIT_PRIORITY` variable.
   - The higher priority, the sooner are objects of that type initialized.
   - Objects are initialized serially.
-- `CachedProject` has new methods to deal with hierarchy (`get_by_id`, `get_parent_id`, `childs`).  
+- `CachedProject` has new methods to deal with hierarchy (`get_by_id`, `get_parent_id`, `childs`).
+- Project service client updated to be compatible with version 0.7.0.
+- Added a custom `json` module.
+  - Wraps the standard json module, so it might be easier to replace it in the future.
+  - Provides type annotations.
+  - Raises a custom exception based on `Arcor2Exception`.
 
 ### Fixed
 - Handling of context manager arguments in `Resources`.

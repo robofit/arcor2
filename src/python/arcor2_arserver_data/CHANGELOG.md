@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Return value of `GetCameraPose` RPC updated.
 - Locking-related RPCs and events.
+- New RPC `AddApUsingRobot`.
 
 ### Fixed
 - ObjectType which source code contained Windows line endings was always evaluated as modified.

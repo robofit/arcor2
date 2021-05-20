@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - `overwrite` flag divided into: `overwriteScene`, `overwriteProject`, `overwriteObjectTypes`, `overwriteProjectSources`, `overwriteCollisionModels`.
+- Action parameter value is always JSON.
+  - It used to be just string for link/constant types.
+  - Now it is always JSON to be more consistent.
+- Support for multiple inheritance.
+  - ObjectTypes can now use mixins.
+  - It should be used like `class NewObjectType(MixinA, MixinB, Generic)`.
+  - E.g. the last ancestor should be something derived from `Generic`.
+- During a package import, object types used in a scene are checked whether they are not abstract.
 
 ## [0.14.1] - 2021-04-19
 

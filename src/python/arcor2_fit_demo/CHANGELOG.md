@@ -2,10 +2,20 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.6.0] - WIP
+
+## Changed
+
+- Object types now use a mixin to share the common code.
+
+## Fixed
+
+- State controller paths are now consistent.
+
 ## [0.5.2] - 2021-03-30
 
 ## Fixed
- - Dobot M1 does not have IK/FK so far
+- Dobot M1 does not have IK/FK so far
 
 ## [0.5.1] - 2021-03-15
 
