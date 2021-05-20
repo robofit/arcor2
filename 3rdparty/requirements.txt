@@ -1,26 +1,26 @@
 astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unparse is there)
 aiologger==0.6.1
 aiorun==2020.12.1
-apispec-webframeworks[tests]==0.5.2  # "tests" is used just to get dependency on Flask (which is missing otherwise)
-apispec[yaml]==4.4.0
+apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!
+apispec[yaml]==4.4.1
 autopep8==1.5.7
 Cython==0.29.23
 dataclasses-jsonschema[fast-validation,apispec]==2.14.1
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
-Flask==1.1.1  # can't be updated because of apispec-webframeworks
+Flask==2.0.0
 lru-dict==1.1.7
 numpy-quaternion[scipy,numba]==2021.4.5.14.42.35
-numpy==1.20.2
-openapi-spec-validator==0.3.0
-opencv-contrib-python==4.5.1.48
+numpy==1.20.3
+openapi-spec-validator==0.3.1
+opencv-contrib-python==4.5.2.52
 open3d==0.12.0
 packaging==20.9
 Pillow==8.2.0
 pyhumps==3.0.2
-pyk4a==1.2.3
+pyk4a==1.2.4
 pytest-asyncio==0.15.1
-pytest-randomly==3.7.0
+pytest-randomly==3.8.0
 pytest-repeat==0.9.1
 pytest==6.2.4
 pyserial==3.5
@@ -29,5 +29,5 @@ requests==2.25.1
 sqlitedict==1.7.0
 typing-inspect==0.6.0
 urdfpy==0.0.22
-websocket-client==0.59.0
-websockets==8.1  # update to 9.0.1 once https://github.com/aaugustin/websockets/issues/940 is solved
+websocket-client==1.0.0
+websockets==9.0.2

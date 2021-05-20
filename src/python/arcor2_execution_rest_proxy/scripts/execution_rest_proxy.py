@@ -362,6 +362,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     """
 
     file = request.files["executionPackage"]
+    assert file.filename
     file_name = secure_filename(file.filename)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
