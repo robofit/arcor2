@@ -323,8 +323,6 @@ async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterat
 def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
-
-    action_ids: Set[str] = set()
     problems: List[str] = []
 
     unknown_types = {obj.type for obj in scene.objects} - glob.OBJECT_TYPES.keys()
@@ -332,23 +330,22 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
     if unknown_types:
         return [f"Scene invalid, contains unknown types: {unknown_types}."]
 
+    possible_parents = scene.object_ids | project.action_points_ids
+
     for ap in project.action_points:
 
         # test if all objects exists in scene
-        if ap.parent and ap.parent not in scene_objects:
-            problems.append(f"Action point '{ap.name}' has parent '{ap.parent}' that does not exist in the scene.")
+        if ap.parent and ap.parent not in possible_parents:
+            problems.append(f"Action point {ap.name} has non-existing parent: {ap.parent}.")
             continue
 
         for joints in project.ap_joints(ap.id):
-            if not joints.is_valid:
+            if joints.robot_id not in scene.object_ids:
                 problems.append(
-                    f"Action point {ap.name} has invalid joints: {joints.name} " f"(robot {joints.robot_id})."
+                    f"Action point {ap.name} has joints ({joints.name}) for an unknown robot: {joints.robot_id}."
                 )
 
         for action in project.actions:
-
-            if action.id in action_ids:
-                problems.append(f"Action {action.name} of the {ap.name} is not unique.")
 
             # check if objects have used actions
             obj_id, action_type = action.parse_type()
@@ -364,7 +361,7 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
 
             if action_type not in glob.OBJECT_TYPES[os_type].actions:
                 problems.append(
-                    f"Object type {scene_objects[obj_id]} does not have action {action_type} " f"used in {action.id}."
+                    f"Object type {scene_objects[obj_id]} does not have action {action_type} used in {action.id}."
                 )
                 continue
 
