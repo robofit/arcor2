@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.13.1] - WIP
+## [0.13.1] - 2021-05-21
 
 ### Fixed
 - `Aubo` had wrong XML child names for inverse kinematics call
