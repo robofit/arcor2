@@ -22,9 +22,7 @@ from arcor2_arserver_data.objects import ObjectAction
 async def notify_project_opened(evt: OpenProject) -> None:
 
     await notif.broadcast_event(evt)
-    ss = get_scene_state()
-    assert ss.data.state == ss.Data.StateEnum.Stopped
-    await notif.broadcast_event(ss)
+    await notif.broadcast_event(get_scene_state())
 
 
 async def notify_project_closed(project_id: str) -> None:
