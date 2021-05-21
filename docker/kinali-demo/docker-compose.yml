@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.16.0
+    image: arcor2/arcor2_arserver:0.17.0
     container_name: arserver
     depends_on:
       - project
@@ -30,7 +30,7 @@ services:
       - ARCOR2_DATA_PATH=/root/data
 
   build:
-    image: arcor2/arcor2_build:0.14.1
+    image: arcor2/arcor2_build:0.15.0
     container_name: build
     depends_on:
       - project
@@ -41,7 +41,7 @@ services:
     networks:
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.13.0
+    image: arcor2/arcor2_execution:0.14.0
     container_name: execution
     networks:
         - testitoff-execution-network
@@ -59,7 +59,7 @@ services:
         - execution:/root/project
 
   execution-proxy:
-    image: arcor2/arcor2_execution_proxy:0.10.0
+    image: arcor2/arcor2_execution_proxy:0.11.0
     container_name: execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
@@ -74,6 +74,19 @@ services:
       - testitoff-execution-network
     depends_on:
       - execution
+
+  calibration:
+    image: arcor2/arcor2_calibration:0.5.0
+    networks:
+      - testitoff-calibration-network
+    ports:
+      - 5014
+    environment:
+      - ARCOR2_CALIBRATION_URL=http://calibration:5014
+      - ARCOR2_CALIBRATION_SIMULATOR=false
+    volumes:
+      - ./calibration.yaml:/root/calibration.yaml
+
 
   testitoff-robot-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.11.0
@@ -271,3 +284,4 @@ networks:
   testitoff-barcode-network:
   testitoff-statistic-network:
   testitoff-interaction-network:
+  testitoff-execution-network
