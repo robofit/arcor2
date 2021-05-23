@@ -1,15 +1,14 @@
 import asyncio
-import datetime
 from time import sleep
-from typing import List
+from typing import List, Set
 
 import pytest
 
 from arcor2.cached import UpdateableCachedProject, UpdateableCachedScene
-from arcor2.clients import persistent_storage as storage
 from arcor2.data import common as cmn
 from arcor2.data.rpc.common import IdArgs
 from arcor2.exceptions import Arcor2Exception
+from arcor2_arserver.clients import persistent_storage as storage
 from arcor2_arserver.globals import Lock
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.tests.conftest import ars_connection_str, event, event_mapping, lock_object, unlock_object
@@ -362,11 +361,6 @@ async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
     scene = lock.scene
     project = lock.project
 
-    # patch lock storage functions to pass test
-    now = datetime.datetime.now()
-    storage.get_projects = lambda: [cmn.IdDesc(project.id, project.name, now, now, project.description)]
-    storage.get_scenes = lambda: [cmn.IdDesc(scene.id, scene.name, now, now, scene.description)]
-
     lock.project = None
     lock.scene = None
 
@@ -375,9 +369,13 @@ async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
     with pytest.raises(Arcor2Exception):
         lock.project_or_exception()
 
-    # TODO these two lines are randomly failing (maybe issue with monkey-patching?)
-    # assert await lock.get_root_id(project.id) == project.id
-    # assert await lock.get_root_id(scene.id) == scene.id
+    async def patch() -> Set[str]:
+        return {project.id, scene.id}
+
+    storage.get_project_ids = storage.get_scene_ids = patch
+
+    assert await lock.get_root_id(project.id) == project.id
+    assert await lock.get_root_id(scene.id) == scene.id
 
 
 @pytest.mark.asyncio()
