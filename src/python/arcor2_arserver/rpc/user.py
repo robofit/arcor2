@@ -7,7 +7,7 @@ from arcor2_arserver_data import rpc as srpc
 
 async def register_user_cb(req: srpc.u.RegisterUser.Request, ui: WsClient) -> None:
 
-    glob.USERS.login(req.args.user_name, ui)
+    await glob.USERS.login(req.args.user_name, ui)
     glob.logger.debug(f"User {req.args.user_name} just logged in. Known user names are: {glob.USERS.user_names}")
 
     await glob.LOCK.cancel_auto_release(req.args.user_name)
