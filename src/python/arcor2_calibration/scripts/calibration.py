@@ -24,6 +24,7 @@ from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2.urdf import urdf_from_url
+from arcor2_calibration import calibration
 from arcor2_calibration.calibration import detect_corners, estimate_camera_pose
 from arcor2_calibration.quaternions import weighted_average_quaternions
 from arcor2_calibration.robot import calibrate_robot
@@ -33,8 +34,12 @@ logger.propagate = False
 
 MARKERS: Dict[int, Pose] = {}
 MARKER_SIZE = 0.1
+
 MIN_DIST = 0.3
 MAX_DIST = 2.0
+
+MIN_THETA = 2.0
+MAX_THETA = math.pi
 
 _mock: bool = False
 
@@ -52,6 +57,14 @@ def camera_matrix_from_request() -> List[List[float]]:
 
 def dist_matrix_from_request() -> List[float]:
     return [float(val) for val in request.args.getlist("distCoefs")]
+
+
+def normalize(val: float, min_val: float, max_val: float) -> float:
+
+    assert max_val > min_val
+    res = (min(max(abs(val), min_val), max_val) - min_val) / (max_val - min_val)
+    assert 0 <= res <= 1
+    return res
 
 
 @app.route("/calibrate/robot", methods=["PUT"])
@@ -301,18 +314,24 @@ def get_calibration() -> RespT:
             mpose = poses[marker_id]
             dist = math.sqrt(mpose.position.x ** 2 + mpose.position.y ** 2 + mpose.position.z ** 2)
 
-            # the closer the marker is, the higher quality we get
-            marker_quality = 1.0 - ((min(max(dist, MIN_DIST), MAX_DIST) - MIN_DIST) / (MAX_DIST - MIN_DIST))
-            assert 0 <= marker_quality <= 1
-            quality_dict[marker_id] = marker_quality
+            # the closer the theta is to pi, the higher quality we get
+            theta = quaternion.as_spherical_coords(mpose.orientation.as_quaternion())[0]
+            ori_marker_quality = normalize(abs(theta), MIN_THETA, MAX_THETA)
 
-            weight = 1.0 / dist
-            known_markers.append((tr.make_pose_abs(cpose, mpose), weight))
+            # the closer the marker is, the higher quality we get
+            dist_marker_quality = 1.0 - normalize(dist, MIN_DIST, MAX_DIST)
+
+            marker_quality = (ori_marker_quality + dist_marker_quality) / 2
+
+            quality_dict[marker_id] = marker_quality
+            known_markers.append((tr.make_pose_abs(cpose, mpose), marker_quality))
+
             logger.debug(f"Known marker       : {marker_id}")
             logger.debug(f"...original pose   : {poses[marker_id]}")
             logger.debug(f"...transformed pose: {poses[marker_id]}")
-            logger.debug(f"...weight          : {weight}")
-            logger.debug(f"...quality         : {marker_quality}")
+            logger.debug(f"...dist quality    : {dist_marker_quality:.3f}")
+            logger.debug(f"...ori quality     : {ori_marker_quality:.3f}")
+            logger.debug(f"...overall quality : {marker_quality:.3f}")
 
         if not known_markers:
             return jsonify("No known marker detected."), 404
@@ -320,7 +339,6 @@ def get_calibration() -> RespT:
         weights = [marker[1] for marker in known_markers]
 
         # combine all detections
-        # TODO this is just initial (naive) solution with weight equal to distance to the origin
         pose = Pose()
         for mpose, weight in known_markers:
             pose.position += mpose.position * weight
@@ -331,7 +349,7 @@ def get_calibration() -> RespT:
             quaternion.from_float_array(weighted_average_quaternions(quaternions, np.array(weights)))
         )
 
-        quality = np.median(list(quality_dict.values()))
+        quality = np.mean(list(quality_dict.values()))
 
     inverse = request.args.get("inverse", default="false") == "true"
 
@@ -387,6 +405,7 @@ def main() -> None:
             MARKER_SIZE = float(config.get("marker_size", MARKER_SIZE))
             MIN_DIST = float(config.get("min_dist", MIN_DIST))
             MAX_DIST = float(config.get("max_dist", MAX_DIST))
+            calibration.BLUR_THRESHOLD = float(config.get("blur_threshold", calibration.BLUR_THRESHOLD))
 
             for marker_id, marker in config["markers"].items():
                 MARKERS[int(marker_id)] = Pose.from_dict(marker["pose"])
