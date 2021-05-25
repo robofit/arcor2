@@ -1,7 +1,8 @@
-id: arcor2_fit_demo
+id: kinali_demo
 marker_size: 0.1
 min_dist: 0.5
 max_dist: 2.0
+blur_threshold: 150.0
 markers:
   10:
     pose:

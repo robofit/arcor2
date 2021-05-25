@@ -8,8 +8,11 @@ from cv2 import aruco
 from PIL import Image
 
 from arcor2.data.common import Orientation, Pose, Position
+from arcor2.exceptions import Arcor2Exception
 
 aruco_dict = aruco.Dictionary_get(aruco.DICT_7X7_1000)
+
+BLUR_THRESHOLD: float = 150.0
 
 
 def detect_corners(
@@ -20,6 +23,11 @@ def detect_corners(
     dist_matrix_arr = np.array(dist_matrix)
 
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2GRAY)
+
+    variance_of_laplacian = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+    if variance_of_laplacian < BLUR_THRESHOLD:
+        raise Arcor2Exception(f"Blur score {variance_of_laplacian:.2f} is below the threshold.")
 
     parameters = aruco.DetectorParameters_create()
     if refine:  # takes 3x longer
