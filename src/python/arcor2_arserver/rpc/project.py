@@ -464,19 +464,21 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
 
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
-
     user_name = glob.USERS.user_name(ui)
-
     ap = proj.bare_action_point(req.args.action_point_id)
+
+    # some super basic checks (not involving other objects) are performed before locking anything
+    if req.args.new_parent_id == ap.parent:
+        return None
+
+    if req.args.new_parent_id == ap.id:
+        raise Arcor2Exception("AP can't be its own parent.")
 
     to_lock = await get_unlocked_objects(ap.parent, user_name) if ap.parent else set()
     if req.args.new_parent_id:
         to_lock.add(req.args.new_parent_id)
 
     async with ctx_write_lock(to_lock, user_name):
-
-        if req.args.new_parent_id == ap.parent:
-            return None
 
         check_ap_parent(scene, proj, req.args.new_parent_id)
         detect_ap_loop(proj, ap, req.args.new_parent_id)
