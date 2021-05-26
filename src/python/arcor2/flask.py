@@ -63,11 +63,11 @@ def run_app(
     def get_swagger() -> RespT:
         return jsonify(spec.to_dict())
 
-    @app.errorhandler(Arcor2Exception)
+    @app.errorhandler(Arcor2Exception)  # type: ignore  # TODO what's wrong?
     def handle_bad_request_general(e: Arcor2Exception) -> Tuple[str, int]:
         return json.dumps(str(e)), 400
 
-    @app.errorhandler(FlaskException)
+    @app.errorhandler(FlaskException)  # type: ignore  # TODO what's wrong?
     def handle_bad_request_intentional(e: FlaskException) -> Tuple[str, int]:
         return json.dumps(str(e)), e.error_code
 
