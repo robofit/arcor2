@@ -243,6 +243,10 @@ class CachedProject(CachedBase):
         return self._constants.values()
 
     @property
+    def constants_ids(self) -> Set[str]:
+        return set(self._constants)
+
+    @property
     def functions(self) -> ValuesView[cmn.ProjectFunction]:
         return self._functions.values()
 
@@ -456,7 +460,7 @@ class CachedProject(CachedBase):
 
     def get_by_id(
         self, obj_id: str
-    ) -> Union[cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action]:
+    ) -> Union[cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action, cmn.ProjectConstant]:
 
         if obj_id in self._action_points:  # AP
             return self._action_points[obj_id]
@@ -466,6 +470,8 @@ class CachedProject(CachedBase):
             return self._orientations[obj_id].orientation
         elif obj_id in self._actions:  # Action
             return self._actions[obj_id].action
+        elif obj_id in self._constants:
+            return self._constants[obj_id]
 
         raise CachedProjectException("Object not found.")
 

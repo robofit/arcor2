@@ -334,7 +334,7 @@ def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
     assert ars.call_rpc(
         rpc.lock.WriteLock.Request(uid(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
         rpc.lock.WriteLock.Response,
-    )
+    ).result
 
     event(ars, events.lk.ObjectsLocked)
 

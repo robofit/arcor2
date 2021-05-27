@@ -961,7 +961,7 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
         if req.dry_run:
             return None
 
-        await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+        await glob.LOCK.write_unlock(req.args.id, user_name)
 
         proj.remove_action_point(req.args.id)
 
@@ -1063,8 +1063,9 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
     proj = glob.LOCK.project_or_exception()
 
     # When duplicating action AP cannot be removed, no need to lock
-    to_lock = await get_unlocked_objects(req.args.action_point_id, glob.USERS.user_name(ui))
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
+    user_name = glob.USERS.user_name(ui)
+    to_lock = await get_unlocked_objects(req.args.action_point_id, user_name)
+    async with ctx_write_lock(to_lock, user_name):
         ap = proj.bare_action_point(req.args.action_point_id)
 
         unique_name(req.args.name, proj.action_names)
@@ -1151,8 +1152,9 @@ def check_action_usage(proj: CachedProject, action: common.Action) -> None:
 async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
-    to_lock = await get_unlocked_objects(req.args.id, glob.USERS.user_name(ui))
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
+    user_name = glob.USERS.user_name(ui)
+    to_lock = await get_unlocked_objects(req.args.id, user_name)
+    async with ctx_write_lock(to_lock, user_name, auto_unlock=req.dry_run):
 
         ap, action = proj.action_point_and_action(req.args.id)
         check_action_usage(proj, action)
@@ -1160,7 +1162,7 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
         if req.dry_run:
             return None
 
-        await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+        await glob.LOCK.write_unlock(req.args.id, user_name)
 
         proj.remove_action(req.args.id)
         glob.remove_prev_result(action.id)
@@ -1324,8 +1326,9 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
     proj = glob.LOCK.project_or_exception()
     logic_item = proj.logic_item(req.args.logic_item_id)
 
-    to_lock = await get_unlocked_objects([logic_item.start, logic_item.end], glob.USERS.user_name(ui))
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
+    user_name = glob.USERS.user_name(ui)
+    to_lock = await get_unlocked_objects([logic_item.start, logic_item.end], user_name)
+    async with ctx_write_lock(to_lock, user_name):
         # TODO is it necessary to check something here?
         proj.remove_logic_item(req.args.logic_item_id)
 
@@ -1335,7 +1338,7 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
 
     asyncio.create_task(
         glob.LOCK.write_unlock(
-            [item for item in (logic_item.start, logic_item.end) if item not in to_lock], glob.USERS.user_name(ui), True
+            [item for item in (logic_item.start, logic_item.end) if item not in to_lock], user_name, True
         )
     )
     return None
@@ -1364,28 +1367,31 @@ def check_constant(proj: CachedProject, constant: common.ProjectConstant) -> Non
 
 async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None:
 
-    # TODO lock when used, missing information if action is triggered on locked object or not
     proj = glob.LOCK.project_or_exception()
 
-    const = common.ProjectConstant(req.args.name, req.args.type, req.args.value)
-    check_constant(proj, const)
+    async with ctx_write_lock(proj.id, glob.USERS.user_name(ui)):
 
-    if req.dry_run:
-        return
+        const = common.ProjectConstant(req.args.name, req.args.type, req.args.value)
+        check_constant(proj, const)
 
-    proj.upsert_constant(const)
+        if req.dry_run:
+            return
 
-    evt = sevts.p.ProjectConstantChanged(const)
-    evt.change_type = Event.Type.ADD
-    asyncio.ensure_future(notif.broadcast_event(evt))
-    return None
+        proj.upsert_constant(const)
+
+        evt = sevts.p.ProjectConstantChanged(const)
+        evt.change_type = Event.Type.ADD
+        asyncio.ensure_future(notif.broadcast_event(evt))
+        return None
 
 
 async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -> None:
 
-    # TODO lock when used, missing information if action is triggered on locked object or not
     proj = glob.LOCK.project_or_exception()
     const = proj.constant(req.args.constant_id)
+    user_name = glob.USERS.user_name(ui)
+
+    await ensure_locked(req.args.constant_id, ui)
 
     updated_constant = copy.deepcopy(const)
 
@@ -1401,33 +1407,38 @@ async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -
 
     proj.upsert_constant(updated_constant)
 
-    evt = sevts.p.ProjectConstantChanged(const)
+    evt = sevts.p.ProjectConstantChanged(updated_constant)
     evt.change_type = Event.Type.UPDATE
-    asyncio.ensure_future(notif.broadcast_event(evt))
-    return None
+    asyncio.create_task(notif.broadcast_event(evt))
+
+    asyncio.create_task(glob.LOCK.write_unlock(const.id, user_name, True))
 
 
 async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -> None:
 
-    # TODO lock when used, missing information if action is triggered on locked object or not
     proj = glob.LOCK.project_or_exception()
     const = proj.constant(req.args.constant_id)
 
-    # check for usage
-    for act in proj.actions:
-        for param in act.parameters:
-            if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.str_from_value() == const.id:
-                raise Arcor2Exception("Constant used as action parameter.")
+    user_name = glob.USERS.user_name(ui)
+    to_lock = await get_unlocked_objects(req.args.constant_id, user_name)
+    async with ctx_write_lock(to_lock, user_name, auto_unlock=req.dry_run):
 
-    if req.dry_run:
-        return
+        # check for usage
+        for act in proj.actions:
+            for param in act.parameters:
+                if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.str_from_value() == const.id:
+                    raise Arcor2Exception("Constant used as action parameter.")
 
-    proj.remove_constant(const.id)
+        if req.dry_run:
+            return
 
-    evt = sevts.p.ProjectConstantChanged(const)
-    evt.change_type = Event.Type.REMOVE
-    asyncio.ensure_future(notif.broadcast_event(evt))
-    return None
+        await glob.LOCK.write_unlock(req.args.constant_id, user_name)
+
+        proj.remove_constant(const.id)
+
+        evt = sevts.p.ProjectConstantChanged(const)
+        evt.change_type = Event.Type.REMOVE
+        asyncio.ensure_future(notif.broadcast_event(evt))
 
 
 async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> None:
@@ -1435,9 +1446,11 @@ async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> 
     if glob.LOCK.project:
         raise Arcor2Exception("Project has to be closed first.")
 
-    async with ctx_write_lock(req.args.id, glob.USERS.user_name(ui), auto_unlock=False):
+    user_name = glob.USERS.user_name(ui)
+
+    async with ctx_write_lock(req.args.id, user_name, auto_unlock=False):
         project = UpdateableCachedProject(await storage.get_project(req.args.id))
-        await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+        await glob.LOCK.write_unlock(req.args.id, user_name)
         await storage.delete_project(req.args.id)
 
         evt = sevts.p.ProjectChanged(project.bare)

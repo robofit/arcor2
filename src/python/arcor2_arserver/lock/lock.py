@@ -390,6 +390,8 @@ class Lock:
             elif obj_id in self.scene.object_ids:
                 # TODO implement with scene object hierarchy
                 return obj_id
+            elif obj_id in self.project.constants_ids:
+                return obj_id
             else:
                 parent = self.project.get_parent_id(obj_id)
                 ret = parent if parent else obj_id
@@ -610,7 +612,14 @@ class Lock:
 
     def get_by_id(
         self, obj_id: str
-    ) -> Union[cmn.SceneObject, cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action]:
+    ) -> Union[
+        cmn.SceneObject,
+        cmn.BareActionPoint,
+        cmn.NamedOrientation,
+        cmn.ProjectRobotJoints,
+        cmn.Action,
+        cmn.ProjectConstant,
+    ]:
         """Retrive object by it's ID."""
 
         if self.project:
