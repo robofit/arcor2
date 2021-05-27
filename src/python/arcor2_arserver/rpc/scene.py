@@ -310,9 +310,10 @@ async def action_param_values_cb(
 async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient) -> None:
 
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
+    user_name = glob.USERS.user_name(ui)
 
-    to_lock = await get_unlocked_objects(req.args.id, glob.USERS.user_name(ui))
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
+    to_lock = await get_unlocked_objects(req.args.id, user_name)
+    async with ctx_write_lock(to_lock, user_name, auto_unlock=req.dry_run):
 
         can_modify_scene()
 
@@ -325,7 +326,7 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
         if req.args.id not in scene.object_ids:
             raise Arcor2Exception("Unknown id.")
 
-        await glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui))
+        await glob.LOCK.write_unlock(req.args.id, user_name)
 
         obj = scene.object(req.args.id)
         scene.delete_object(req.args.id)
@@ -353,11 +354,10 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
         raise Arcor2Exception("Robot cannot update its own pose.")
 
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
+    user_name = glob.USERS.user_name(ui)
 
-    to_lock = await get_unlocked_objects(
-        [obj for obj in (req.args.robot.robot_id, req.args.id)], glob.USERS.user_name(ui)
-    )
-    async with ctx_write_lock(to_lock, glob.USERS.user_name(ui)):
+    to_lock = await get_unlocked_objects([obj for obj in (req.args.robot.robot_id, req.args.id)], user_name)
+    async with ctx_write_lock(to_lock, user_name):
         ensure_scene_started()
 
         robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
@@ -447,6 +447,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
 
     hlp.is_valid_identifier(req.args.new_name)
 
+    user_name = glob.USERS.user_name(ui)
     await ensure_locked(req.args.id, ui)
 
     if req.dry_run:
@@ -460,7 +461,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
     evt.change_type = Event.Type.UPDATE
     asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui), True))
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name, True))
     return None
 
 
@@ -468,6 +469,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
 
     unique_name(req.args.new_name, (await scene_names()))
 
+    user_name = glob.USERS.user_name(ui)
     await ensure_locked(req.args.id, ui)
 
     if req.dry_run:
@@ -480,7 +482,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
         evt.change_type = Event.Type.UPDATE_BASE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui), True))
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name, True))
     return None
 
 
@@ -489,21 +491,23 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Opti
     if glob.LOCK.scene:
         raise Arcor2Exception("Scene has to be closed first.")
 
-    async with ctx_write_lock(req.args.id, glob.USERS.user_name(ui), auto_unlock=req.dry_run):
+    user_name = glob.USERS.user_name(ui)
+
+    async with ctx_write_lock(req.args.id, user_name, auto_unlock=req.dry_run):
         assoc_projects = await associated_projects(req.args.id)
 
         if assoc_projects:
             resp = srpc.s.DeleteScene.Response(result=False)
             resp.messages = ["Scene has associated projects."]
             resp.data = assoc_projects
-            asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui)))
+            asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name))
             return resp
 
         if req.dry_run:
             return None
 
         scene = UpdateableCachedScene(await storage.get_scene(req.args.id))
-        asyncio.create_task(glob.LOCK.write_unlock(req.args.id, glob.USERS.user_name(ui)))
+        asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name))
         await storage.delete_scene(req.args.id)
         evt = sevts.s.SceneChanged(scene.bare)
         evt.change_type = Event.Type.REMOVE

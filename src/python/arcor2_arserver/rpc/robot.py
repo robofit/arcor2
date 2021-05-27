@@ -253,8 +253,9 @@ async def check_feature(robot_inst: Robot, feature_name: str) -> None:
 async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
 
     glob.LOCK.scene_or_exception()
+    user_name = glob.USERS.user_name(ui)
 
-    async with ctx_write_lock(req.args.robot_id, glob.USERS.user_name(ui), auto_unlock=False):
+    async with ctx_write_lock(req.args.robot_id, user_name, auto_unlock=False):
         ensure_scene_started()
 
         robot_inst = await osa.get_robot_instance(req.args.robot_id, req.args.end_effector_id)
@@ -284,7 +285,7 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
                 target_pose,
                 req.args.speed,
                 req.args.safe,
-                glob.USERS.user_name(ui),
+                user_name,
             )
         )
 
@@ -292,8 +293,9 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
 async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> None:
 
     glob.LOCK.scene_or_exception()
+    user_name = glob.USERS.user_name(ui)
 
-    async with ctx_write_lock(req.args.robot_id, glob.USERS.user_name(ui), auto_unlock=False):
+    async with ctx_write_lock(req.args.robot_id, user_name, auto_unlock=False):
 
         ensure_scene_started()
         robot_inst = await osa.get_robot_instance(req.args.robot_id)
@@ -301,7 +303,7 @@ async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> N
         await robot.check_robot_before_move(robot_inst)
 
         asyncio.ensure_future(
-            robot.move_to_joints(robot_inst, req.args.joints, req.args.speed, req.args.safe, glob.USERS.user_name(ui))
+            robot.move_to_joints(robot_inst, req.args.joints, req.args.speed, req.args.safe, user_name)
         )
 
 

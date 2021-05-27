@@ -46,6 +46,8 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     obj2 = event(ars, events.s.SceneObjectChanged).data
     assert obj2
 
+    # ------------------------------------------------------------------------------------------------------------------
+
     assert ars.call_rpc(
         rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
         rpc.p.NewProject.Response,
@@ -65,6 +67,14 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert ap is not None
 
     assert ars.call_rpc(
+        rpc.p.AddConstant.Request(uid(), rpc.p.AddConstant.Request.Args("min_time", "double", json.dumps(0.45))),
+        rpc.p.AddActionPoint.Response,
+    ).result
+
+    c1 = event(ars, events.p.ProjectConstantChanged).data
+    assert c1
+
+    assert ars.call_rpc(
         rpc.p.AddAction.Request(
             uid(),
             rpc.p.AddAction.Request.Args(
@@ -72,7 +82,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
                 "test_action",
                 f"{obj2.id}/{RandomActions.random_double.__name__}",
                 [
-                    common.ActionParameter("range_min", "double", "0.45"),
+                    common.ActionParameter("range_min", common.ActionParameter.TypeEnum.CONSTANT, json.dumps(c1.id)),
                     common.ActionParameter("range_max", "double", "0.55"),
                 ],
                 [common.Flow(outputs=["random_value"])],
@@ -123,6 +133,8 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     # TODO test also temporary package
 
     close_project(ars)
+
+    # ------------------------------------------------------------------------------------------------------------------
 
     event(ars, events.c.ShowMainScreen)
 

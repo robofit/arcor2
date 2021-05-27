@@ -140,6 +140,8 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
     if glob.LOCK.project:
         raise Arcor2Exception("Project has to be closed first.")
 
+    user_name = glob.USERS.user_name(ui)
+
     obj_id = req.args.id
 
     if obj_id not in FOCUS_OBJECT:
@@ -188,13 +190,13 @@ async def focus_object_done_cb(req: srpc.o.FocusObjectDone.Request, ui: WsClient
             to_unlock.append(FOCUS_OBJECT_ROBOT[obj_id].robot_id)
         except KeyError:
             ...
-        await glob.LOCK.read_unlock(to_unlock, glob.USERS.user_name(ui))
+        await glob.LOCK.read_unlock(to_unlock, user_name)
 
     glob.logger.info(f"Done focusing for {obj_id}.")
 
     clean_up_after_focus(obj_id)
 
-    asyncio.ensure_future(update_scene_object_pose(scene, obj, new_pose, obj_inst, glob.USERS.user_name(ui)))
+    asyncio.ensure_future(update_scene_object_pose(scene, obj, new_pose, obj_inst, user_name))
 
     return None
 
