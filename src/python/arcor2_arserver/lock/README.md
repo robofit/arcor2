@@ -30,15 +30,15 @@
 
 ### User lock maintanance
 
-- User can generally edit projects and use locks after login.
+- A user can generally edit projects and use locks after login.
 - When the user logs out with some acquired locks, timeout is executed. After the timeout period all affected locks are released.
   - When user activity is restored, the cleaning task is canceled.
 
 
 ### RPCs with non-standard behavior
-- Rename: After renaming an action object, the object is automatically unlocked by server.
-- UpdateActionPointParent: When updating parent of action point, only the child has to be locked manually. The parent is locked automatically by server and then both child and parent are unlocked automatically by server.
-- AddLogicItem: Only the first action has to be locked manually. After adding is finished, both start and end actions are unlocked automatically by server.
-- UpdateConstant: When update of a project constant is finished, it is automatically unlocked by server.
-- UpdateLock: Object can be locked alone or including tree. UpdateLock can switch between these two types.
+- `RenameObject`: After renaming an action object, the object is automatically unlocked by server.
+- `UpdateActionPointParent`: When updating parent of action point, only the child has to be locked manually. The parent is locked automatically by server and then both child and parent are unlocked automatically by server.
+- `AddLogicItem`: Only the first action has to be locked manually. After adding is finished, both start and end actions are unlocked automatically by server.
+- `UpdateConstant`: When update of a project constant is finished, it is automatically unlocked by server.
+- `UpdateLock`: Object can be locked alone or including tree. UpdateLock can switch between these two types.
 
