@@ -66,7 +66,11 @@ S = TypeVar("S")
 
 
 async def run_in_executor(func: Callable[..., S], *args, executor: Optional[futures.Executor] = None) -> S:
-    return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
+    try:
+        return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
+    except Exception as e:
+        # all code should raise exceptions based on Arcor2Exception so this is just a guard against a buggy code
+        raise Arcor2Exception(f"Unhandled exception in {func.__name__}.") from e
 
 
 T = TypeVar("T")
