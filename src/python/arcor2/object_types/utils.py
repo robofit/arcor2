@@ -156,8 +156,11 @@ def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
     else:
         settings_cls = param.annotation
 
-    if not issubclass(settings_cls, Settings):
-        raise Arcor2Exception("Settings have invalid type.")
+    try:
+        if not issubclass(settings_cls, Settings):
+            raise Arcor2Exception("Settings have invalid type.")
+    except TypeError:
+        raise Arcor2Exception("Settings have invalid annotation.")
 
     if not is_dataclass(settings_cls):
         raise Arcor2Exception("Settings misses @dataclass decorator.")

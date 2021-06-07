@@ -106,11 +106,7 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
             obj.base = base.__name__
             break
 
-    try:
-        obj.settings = get_dataclass_params(get_settings_def(type_def))
-    except Arcor2Exception:
-        pass
-
+    obj.settings = get_dataclass_params(get_settings_def(type_def))
     return obj
 
 
