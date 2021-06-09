@@ -553,23 +553,27 @@ async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
-async def calibration_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srpc.c.GetCameraPose.Response:
+async def get_camera_pose_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srpc.c.GetCameraPose.Response:
 
-    # TODO estimated pose should be rather returned in an event (it is possibly a long-running process)
-    return srpc.c.GetCameraPose.Response(
-        data=await hlp.run_in_executor(
-            calibration.estimate_camera_pose,
-            req.args.camera_parameters,
-            image_from_str(req.args.image),
-            req.args.inverse,
+    try:
+        return srpc.c.GetCameraPose.Response(
+            data=await hlp.run_in_executor(
+                calibration.estimate_camera_pose,
+                req.args.camera_parameters,
+                image_from_str(req.args.image),
+                req.args.inverse,
+            )
         )
-    )
+    except calibration.MarkerNotFound:  # this is ok
+        raise
+    except calibration.CalibrationException as e:  # this means a serious problem and should be logged
+        glob.logger.warn(f"Failed to get camera pose. {str(e)}")
+        raise
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
 async def marker_corners_cb(req: srpc.c.MarkersCorners.Request, ui: WsClient) -> srpc.c.MarkersCorners.Response:
 
-    # TODO should be rather returned in an event (it is possibly a long-running process)
     return srpc.c.MarkersCorners.Response(
         data=await hlp.run_in_executor(
             calibration.markers_corners, req.args.camera_parameters, image_from_str(req.args.image)
