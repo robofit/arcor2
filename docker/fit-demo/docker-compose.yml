@@ -10,6 +10,7 @@ services:
       - execution
       - kinect
       - mocks
+      - calibration
     ports:
       - "6789:6789"
       - "6780:8888"
@@ -20,7 +21,7 @@ services:
           - testitoff-dobot-network
           - testitoff-calibration-network
     environment:
-      - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
+      - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
       - ARCOR2_SCENE_SERVICE_URL=http://mocks:5013
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
@@ -34,7 +35,7 @@ services:
     depends_on:
       - project
     environment:
-      - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
+      - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
     ports:
       - "5008:5008"
     networks:           
@@ -59,7 +60,7 @@ services:
     networks:
       - testitoff-kinect-network
     ports:
-        - "5014-5016:5014-5016"
+        - "5016:5016"
     environment:
       - ARCOR2_KINECT_SIMULATOR=true
 
@@ -68,7 +69,7 @@ services:
     networks:
       - testitoff-calibration-network
     ports:
-      - 5014
+      - "5014:5014"
     environment:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
       - ARCOR2_CALIBRATION_SIMULATOR=false
@@ -114,7 +115,7 @@ services:
       - "5013:5013"
 
   project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.7.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.8.0
     container_name: "project"
     ports:
       - "10000-10001:10000-10001"

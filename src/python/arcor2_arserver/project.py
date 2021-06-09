@@ -10,7 +10,7 @@ from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.scene import get_scene_state, open_scene
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult

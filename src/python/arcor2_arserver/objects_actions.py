@@ -4,7 +4,7 @@ from typing import List, Optional, Set, Type, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
-from arcor2.clients import aio_persistent_storage as ps
+from arcor2.clients import aio_project_service as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
@@ -17,7 +17,7 @@ from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.object_types.utils import (
     ObjectTypeData,
     ObjectTypeDict,

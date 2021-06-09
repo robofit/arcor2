@@ -17,7 +17,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.image import image_from_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked, get_unlocked_objects, unique_name
 from arcor2_arserver.lock.exceptions import LockingException
 from arcor2_arserver.objects_actions import get_object_types, get_robot_instance

@@ -7,7 +7,7 @@ from typing import AsyncGenerator, Dict, Iterable, List, Optional, Set, Tuple, U
 from arcor2.cached import CachedProjectException, UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.lock.structures import LockedObject, LockEventData
 from arcor2_arserver_data.rpc.lock import UpdateType
@@ -618,7 +618,7 @@ class Lock:
         cmn.NamedOrientation,
         cmn.ProjectRobotJoints,
         cmn.Action,
-        cmn.ProjectConstant,
+        cmn.ProjectParameter,
     ]:
         """Retrive object by it's ID."""
 

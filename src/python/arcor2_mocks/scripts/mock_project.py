@@ -123,7 +123,7 @@ def put_project() -> RespT:
     return jsonify(project.modified.isoformat())
 
 
-@app.route("/project/<string:id>", methods=["GET"])
+@app.route("/projects/<string:id>", methods=["GET"])
 def get_project(id: str) -> RespT:
     """Add or update project.
     ---
@@ -153,7 +153,7 @@ def get_project(id: str) -> RespT:
         return jsonify("Not found"), 404
 
 
-@app.route("/project/<string:id>", methods=["DELETE"])
+@app.route("/projects/<string:id>", methods=["DELETE"])
 def delete_project(id: str) -> RespT:
     """Deletes project.
     ---
@@ -239,7 +239,7 @@ def put_scene() -> RespT:
     return jsonify(scene.modified.isoformat())
 
 
-@app.route("/scene/<string:id>", methods=["GET"])
+@app.route("/scenes/<string:id>", methods=["GET"])
 def get_scene(id: str) -> RespT:
     """Add or update scene.
     ---
@@ -269,7 +269,7 @@ def get_scene(id: str) -> RespT:
         return jsonify("Not found"), 404
 
 
-@app.route("/scene/<string:id>", methods=["DELETE"])
+@app.route("/scenes/<string:id>", methods=["DELETE"])
 def delete_scene(id: str) -> RespT:
     """Deletes scene.
     ---
@@ -384,7 +384,7 @@ def get_object_type(id: str) -> RespT:
         return jsonify("Not found"), 404
 
 
-@app.route("/object_type/<string:id>", methods=["DELETE"])
+@app.route("/object_types/<string:id>", methods=["DELETE"])
 def delete_object_type(id: str) -> RespT:
     """Deletes object type.
     ---
@@ -648,7 +648,7 @@ def main() -> None:
         app,
         PROJECT_SERVICE_NAME,
         version(),
-        "0.4.0",
+        "0.8.0",
         PROJECT_PORT,
         [
             common.Project,

@@ -69,6 +69,10 @@ async def run_in_executor(func: Callable[..., S], *args, executor: Optional[futu
     try:
         return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
     except Exception as e:
+
+        if isinstance(e, Arcor2Exception):
+            raise
+
         # all code should raise exceptions based on Arcor2Exception so this is just a guard against a buggy code
         raise Arcor2Exception(f"Unhandled exception in {func.__name__}.") from e
 

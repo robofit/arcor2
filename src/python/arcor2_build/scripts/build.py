@@ -18,7 +18,7 @@ from flask import request, send_file
 import arcor2_build
 from arcor2 import json
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.clients import persistent_storage as ps
+from arcor2.clients import project_service as ps
 from arcor2.data.common import Project, ProjectSources, Scene
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import Models, ObjectModel, ObjectType

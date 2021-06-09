@@ -3,7 +3,7 @@ import zipfile
 from io import BytesIO
 from typing import List, NamedTuple, Optional, Type
 
-from arcor2.clients import persistent_storage as storage
+from arcor2.clients import project_service as ps
 from arcor2.data.object_type import Models, ObjectType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose
@@ -24,7 +24,7 @@ def upload_whatever(type_def: Type[object]) -> None:
 
     obj_type = ObjectType(id=type_def.__name__, source=get_containing_module_sources(type_def))
     print(f"Storing '{obj_type.id}'...")
-    storage.update_object_type(obj_type)
+    ps.update_object_type(obj_type)
 
 
 def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Optional[Urdf] = None) -> None:
@@ -44,10 +44,10 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Op
 
     if model:
         obj_type.model = model.metamodel()
-        storage.put_model(model)
+        ps.put_model(model)
 
     print(f"Storing '{obj_type.id}'...")
-    storage.update_object_type(obj_type)
+    ps.update_object_type(obj_type)
 
     if urdf:
 
@@ -77,4 +77,4 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Op
                     zf.write(path, os.path.relpath(path, prefix))
 
         mem_zip.seek(0)
-        storage.upload_mesh_file(urdf.archive_name, mem_zip.getvalue())
+        ps.upload_mesh_file(urdf.archive_name, mem_zip.getvalue())

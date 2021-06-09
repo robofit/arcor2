@@ -12,8 +12,8 @@ from arcor2.data.common import (
     LogicItem,
     Position,
     Project,
-    ProjectConstant,
     ProjectLogicIf,
+    ProjectParameter,
     Scene,
     SceneObject,
 )
@@ -114,8 +114,8 @@ def test_constant() -> None:
     project.action_points.append(ap1)
 
     const_value = 1234
-    const = ProjectConstant("int_const", "integer", json.dumps(const_value))
-    project.constants.append(const)
+    const = ProjectParameter("int_const", "integer", json.dumps(const_value))
+    project.parameters.append(const)
 
     ac1 = Action(
         "ac1",

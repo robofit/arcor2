@@ -10,7 +10,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import transformations as tr
 from arcor2 import ws_server
-from arcor2.clients.persistent_storage import URL as ps_url
+from arcor2.clients.project_service import URL as ps_url
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import run_in_executor

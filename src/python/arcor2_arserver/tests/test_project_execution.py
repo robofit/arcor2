@@ -1,6 +1,6 @@
 import json
 
-from arcor2.clients import persistent_storage
+from arcor2.clients import project_service
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.object_types.random_actions import RandomActions
@@ -128,7 +128,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     save_project(ars)
 
-    LOGGER.debug(persistent_storage.get_project(proj.project.id))
+    LOGGER.debug(project_service.get_project(proj.project.id))
 
     # TODO test also temporary package
 
