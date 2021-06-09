@@ -55,7 +55,7 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
 
     try:
         action_result = await hlp.run_in_executor(action_method, *params)
-    except (Arcor2Exception, AttributeError, TypeError) as e:
+    except Arcor2Exception as e:
         glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
         glob.logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
@@ -72,9 +72,9 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
         # action was cancelled, do not send any event
         return  # type: ignore  # action could be cancelled during its execution
 
-    await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None
     glob.RUNNING_ACTION_PARAMS = None
+    await notif.broadcast_event(evt)
 
 
 def check_action_params(

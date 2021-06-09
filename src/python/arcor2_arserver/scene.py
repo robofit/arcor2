@@ -14,6 +14,7 @@ from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import project_service as storage
+from arcor2_arserver.helpers import ctx_write_lock
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver_data.events.common import ShowMainScreen
@@ -74,7 +75,7 @@ async def set_scene_state(state: SceneState.Data.StateEnum, message: Optional[st
 
     global _scene_state
     _scene_state = SceneState(SceneState.Data(state, message))
-    await notif.broadcast_event(_scene_state)
+    asyncio.create_task(notif.broadcast_event(_scene_state))
 
 
 def get_scene_state() -> SceneState:
@@ -276,86 +277,145 @@ async def cleanup_object(obj: Generic) -> None:
         raise Arcor2Exception(f"Failed to cleanup {obj.name}. {str(e)}") from e
 
 
-async def stop_scene(message: Optional[str] = None) -> None:
+async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_locked: bool = False) -> None:
     """Destroys scene object instances."""
 
-    glob.logger.info("Stopping the scene.")
+    async def _stop_scene() -> None:
 
-    await set_scene_state(SceneState.Data.StateEnum.Stopping, message)
+        await set_scene_state(SceneState.Data.StateEnum.Stopping, message)
 
-    if await scene_srv.started():
+        if await scene_srv.started():
+            try:
+                await scene_srv.stop()
+            except Arcor2Exception as e:
+                glob.logger.exception("Failed to go offline.")
+                await set_scene_state(SceneState.Data.StateEnum.Started, str(e))
+                return
+
         try:
-            await scene_srv.stop()
+            await asyncio.gather(*[cleanup_object(obj) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
         except Arcor2Exception as e:
-            glob.logger.exception("Failed to go offline.")
-            await set_scene_state(SceneState.Data.StateEnum.Started, str(e))
+            glob.logger.exception("Exception occurred while cleaning up objects.")
+            await set_scene_state(SceneState.Data.StateEnum.Stopped, str(e))
+        else:
+            await set_scene_state(SceneState.Data.StateEnum.Stopped)
+
+        glob.SCENE_OBJECT_INSTANCES.clear()
+        glob.PREV_RESULTS.clear()
+
+    if already_locked:
+
+        glob.logger.info(f"Stopping the {scene.name} scene after unsuccessful start.")
+
+        assert await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME)
+        assert (glob.LOCK.project is not None) == await glob.LOCK.is_write_locked(
+            glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME
+        )
+
+        await _stop_scene()
+    else:
+
+        glob.logger.info(f"Stopping the {scene.name} scene.")
+
+        assert not await glob.LOCK.is_write_locked(
+            glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME
+        )
+        assert not await glob.LOCK.is_write_locked(
+            glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME
+        )
+
+        to_lock = [glob.LOCK.SpecialValues.SCENE_NAME]
+
+        if glob.LOCK.project:
+            assert not await glob.LOCK.is_write_locked(
+                glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME
+            )
+            to_lock.append(glob.LOCK.SpecialValues.PROJECT_NAME)
+
+        try:
+            async with ctx_write_lock(to_lock, glob.LOCK.SpecialValues.SERVER_NAME):
+                await _stop_scene()
+        except Arcor2Exception as e:
+            glob.logger.error(f"Failed to stop the scene. {str(e)}")
             return
 
-    try:
-        await asyncio.gather(*[cleanup_object(obj) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
-    except Arcor2Exception as e:
-        glob.logger.exception("Exception occurred while cleaning up objects.")
-        await set_scene_state(SceneState.Data.StateEnum.Stopped, str(e))
-    else:
-        await set_scene_state(SceneState.Data.StateEnum.Stopped)
+    assert not scene_started()
+    assert not await scene_srv.started()
 
-    glob.SCENE_OBJECT_INSTANCES.clear()
-    glob.PREV_RESULTS.clear()
+    glob.logger.info("Scene stopped.")
 
 
 async def start_scene(scene: CachedScene) -> None:
     """Creates instances of scene objects."""
 
-    glob.logger.info("Starting the scene.")
+    async def _start_scene() -> bool:
 
-    await set_scene_state(SceneState.Data.StateEnum.Starting)
+        glob.logger.info(f"Starting the {scene.name} scene.")
 
-    try:
-        await scene_srv.stop()
-    except Arcor2Exception:
-        await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
-        return
-
-    object_overrides: Dict[str, List[Parameter]] = {}
-
-    if glob.LOCK.project:
-        object_overrides = glob.LOCK.project.overrides
-
-    prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
-
-    for obj in scene.objects:
-        type_def = glob.OBJECT_TYPES[obj.type].type_def
-        assert type_def
-        prio_dict[type_def.INIT_PRIORITY].append(obj)
-
-    for prio in sorted(prio_dict.keys(), reverse=True):
-
-        assert prio_dict[prio]
-
-        # object initialization could take some time - let's do it in parallel (grouped by priority)
-        tasks = [
-            asyncio.ensure_future(
-                create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
-            )
-            for obj in prio_dict[prio]
-        ]
+        await set_scene_state(SceneState.Data.StateEnum.Starting)
 
         try:
-            await asyncio.gather(*tasks)
+            await scene_srv.stop()
+        except Arcor2Exception:
+            await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
+            return False
+
+        object_overrides: Dict[str, List[Parameter]] = {}
+
+        if glob.LOCK.project:
+            object_overrides = glob.LOCK.project.overrides
+
+        prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
+
+        for obj in scene.objects:
+            type_def = glob.OBJECT_TYPES[obj.type].type_def
+            assert type_def
+            prio_dict[type_def.INIT_PRIORITY].append(obj)
+
+        for prio in sorted(prio_dict.keys(), reverse=True):
+
+            assert prio_dict[prio]
+
+            # object initialization could take some time - let's do it in parallel (grouped by priority)
+            tasks = [
+                asyncio.ensure_future(
+                    create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
+                )
+                for obj in prio_dict[prio]
+            ]
+
+            try:
+                await asyncio.gather(*tasks)
+            except Arcor2Exception as e:
+                for t in tasks:
+                    t.cancel()
+                glob.logger.exception("Failed to create instances.")
+                await stop_scene(scene, str(e), already_locked=True)
+                return False
+
+        try:
+            await scene_srv.start()
         except Arcor2Exception as e:
-            for t in tasks:
-                t.cancel()
-            glob.logger.exception("Failed to create instances.")
-            await stop_scene(str(e))
-            return
+            glob.logger.exception("Failed to go online.")
+            await stop_scene(scene, str(e), already_locked=True)
+            return False
+
+        await set_scene_state(SceneState.Data.StateEnum.Started)
+        return True
+
+    to_lock = [glob.LOCK.SpecialValues.SCENE_NAME]
+
+    if glob.LOCK.project:
+        to_lock.append(glob.LOCK.SpecialValues.PROJECT_NAME)
 
     try:
-        await scene_srv.start()
+        async with ctx_write_lock(to_lock, glob.LOCK.SpecialValues.SERVER_NAME):
+            ret = await _start_scene()
     except Arcor2Exception as e:
-        glob.logger.exception("Failed to go online.")
-        await stop_scene(str(e))
+        glob.logger.error(f"Failed to start the scene. {str(e)}")
         return
 
-    await set_scene_state(SceneState.Data.StateEnum.Started)
-    assert scene_started()
-    assert await scene_srv.started()
+    assert ret == scene_started()
+    assert ret == await scene_srv.started()
+
+    glob.logger.info("Scene started.")

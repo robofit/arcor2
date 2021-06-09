@@ -163,8 +163,8 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc((rpc.s.StartScene.Request(uid())), rpc.s.StartScene.Response).result
 
-    event(ars, events.s.SceneState)
-    event(ars, events.s.SceneState)
+    assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Starting
+    assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Started
 
     assert ars.call_rpc(
         rpc.p.ExecuteAction.Request(uid(), rpc.p.ExecuteAction.Request.Args(action.id)), rpc.p.ExecuteAction.Response
@@ -178,8 +178,8 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     assert not res.data.error
 
     assert ars.call_rpc((rpc.s.StopScene.Request(uid())), rpc.s.StopScene.Response).result
-    event(ars, events.s.SceneState)
-    event(ars, events.s.SceneState)
+    assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Stopping
+    assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Stopped
 
     assert ars.call_rpc(rpc.p.RemoveAction.Request(uid(), rpc.p.IdArgs(action.id)), rpc.p.RemoveAction.Response).result
     assert event(ars, events.p.ActionChanged).data
