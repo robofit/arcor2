@@ -9,6 +9,15 @@ from PIL.Image import Image
 from arcor2 import rest
 from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Joint, Pose
+from arcor2.exceptions import Arcor2Exception
+
+
+class CalibrationException(Arcor2Exception):
+    pass
+
+
+class MarkerNotFound(CalibrationException):
+    pass
 
 
 def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorners]:
@@ -42,13 +51,19 @@ def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool =
         params = camera.to_dict()
         params["inverse"] = inverse
 
-        return rest.call(
-            rest.Method.PUT,
-            f"{CALIBRATION_URL}/calibrate/camera",
-            params=params,
-            return_type=EstimatedPose,
-            files={"image": buff.getvalue()},
-        )
+        try:
+            return rest.call(
+                rest.Method.PUT,
+                f"{CALIBRATION_URL}/calibrate/camera",
+                params=params,
+                return_type=EstimatedPose,
+                files={"image": buff.getvalue()},
+            )
+        except rest.RestException as e:
+            if isinstance(e, rest.RestHttpException) and e.error_code == 404:
+                raise MarkerNotFound(str(e)) from e
+
+            raise CalibrationException(str(e)) from e
 
 
 @dataclass

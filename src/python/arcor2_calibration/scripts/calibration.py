@@ -281,6 +281,12 @@ def get_calibration() -> RespT:
                 application/json:
                   schema:
                     $ref: EstimatedPose
+            404:
+              description: No marker found.
+              content:
+                application/json:
+                  schema:
+                    type: string
 
     """
 
