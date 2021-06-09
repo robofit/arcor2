@@ -118,6 +118,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
+    # TODO rather lock the project and release the lock once execution is finished?
     async with ctx_write_lock(glob.LOCK.SpecialValues.RUNNING_ACTION, glob.USERS.user_name(ui)):
 
         ensure_scene_started()
@@ -883,7 +884,7 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
-    async with ctx_write_lock(proj.id, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui)):
 
         hlp.is_valid_identifier(req.args.name)
         unique_name(req.args.name, proj.action_points_names)
@@ -1369,7 +1370,7 @@ async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None
 
     proj = glob.LOCK.project_or_exception()
 
-    async with ctx_write_lock(proj.id, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui)):
 
         const = common.ProjectParameter(req.args.name, req.args.type, req.args.value)
         check_constant(proj, const)

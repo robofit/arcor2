@@ -54,10 +54,10 @@ class LockedObject:
         it."""
 
         if obj_id not in self.read:
-            raise CannotUnlock(f"Object is not read locked by '{owner}'")
+            raise CannotUnlock(f"{obj_id} is not read locked by {owner}.")
 
         if owner not in self.read[obj_id]:
-            raise CannotUnlock(f"Object lock is not owned by '{owner}'")
+            raise CannotUnlock(f"{obj_id} lock is not owned by {owner}.")
 
         if len(self.read[obj_id]) > 1:
             self.read[obj_id].remove(owner)
@@ -82,10 +82,10 @@ class LockedObject:
         it."""
 
         if obj_id not in self.write:
-            raise CannotUnlock(f"Object is not write locked by '{owner}'")
+            raise CannotUnlock(f"{obj_id} is not write locked by {owner}.")
 
         if owner != self.write[obj_id]:
-            raise CannotUnlock(f"Object lock is not owned by '{owner}'")
+            raise CannotUnlock(f"{obj_id} lock is not owned by {owner}.")
 
         if self.tree:
             self.tree = False
@@ -99,7 +99,7 @@ class LockedObject:
     def check_upgrade(self, obj_id: str, owner: str) -> None:
         """Check if lock can be upgraded to whole locked tree."""
 
-        raise_msg = f"Object lock is not owned by '{owner}'"
+        raise_msg = f"{obj_id} lock is not owned by {owner}."
         if obj_id not in self.write:
             raise LockingException(raise_msg)
 
@@ -110,12 +110,12 @@ class LockedObject:
             raise LockingException(raise_msg)
 
         if self.tree:
-            raise LockingException("Nothing to upgrade")
+            raise LockingException(f"Nothing to upgrade for {obj_id} and owner {owner}.")
 
     def check_downgrade(self, obj_id: str, owner: str) -> None:
         """Check if lock can be downgraded to single object lock."""
 
-        raise_msg = f"Object lock is not owned by '{owner}'"
+        raise_msg = f"{obj_id} lock is not owned by {owner}."
         if obj_id not in self.write:
             raise LockingException(raise_msg)
 
@@ -123,4 +123,4 @@ class LockedObject:
             raise LockingException(raise_msg)
 
         if not self.tree:
-            raise LockingException("Nothing to downgrade")
+            raise LockingException(f"Nothing to downgrade for {obj_id} and owner {owner}.")

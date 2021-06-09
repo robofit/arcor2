@@ -588,8 +588,16 @@ async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
     if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Stopped:
         raise Arcor2Exception("Scene not stopped.")
 
-    if await glob.LOCK.get_write_locks_count():
+    # online scene can't be modified so we demand that UIs free all their locks first
+    # when editing project, changes can be done both online and offline
+    if not glob.LOCK.project and await glob.LOCK.get_write_locks_count():
         raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED.value)
+
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+        raise Arcor2Exception("Scene locked.")
+
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+        raise Arcor2Exception("Project locked.")
 
     if req.dry_run:
         return
@@ -599,15 +607,21 @@ async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
 
 async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
 
-    # TODO it should not be possible to stop scene while some action runs
+    scene = glob.LOCK.scene_or_exception()
 
     if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Started:
         raise Arcor2Exception("Scene not started.")
 
-    if await glob.LOCK.get_write_locks_count():
-        raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED.value)
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+        raise Arcor2Exception("Scene locked.")
+
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+        raise Arcor2Exception("Project locked.")
+
+    if glob.RUNNING_ACTION:  # TODO acquire lock?
+        raise Arcor2Exception("There is a running action.")
 
     if req.dry_run:
         return
 
-    asyncio.ensure_future(stop_scene())
+    asyncio.ensure_future(stop_scene(scene))

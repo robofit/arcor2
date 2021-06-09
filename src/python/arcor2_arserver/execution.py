@@ -35,6 +35,9 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 async def run_temp_package(package_id: str) -> None:
 
+    # TODO lock scene and project?
+
+    assert glob.LOCK.scene
     assert glob.LOCK.project
     project_id = glob.LOCK.project.id
     glob.TEMPORARY_PACKAGE = True
@@ -42,7 +45,7 @@ async def run_temp_package(package_id: str) -> None:
     scene_online = scene_started()
 
     if scene_online:
-        await stop_scene()  # the package will start it on its own
+        await stop_scene(glob.LOCK.scene)  # the package will start it on its own
 
     await project.close_project()
     req = erpc.RunPackage.Request
