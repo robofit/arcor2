@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - WIP
+
+### Changed
+- Project service client updated to API version 0.8.0.
+
 ## [0.16.0] - 2021-05-21
 
 ### Changed

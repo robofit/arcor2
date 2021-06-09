@@ -177,7 +177,7 @@ class CachedProject(CachedBase):
         self._joints: Dict[str, ApJoints] = {}
         self._orientations: Dict[str, ApOrientation] = {}
 
-        self._constants: Dict[str, cmn.ProjectConstant] = {}
+        self._constants: Dict[str, cmn.ProjectParameter] = {}
         self._logic_items: Dict[str, cmn.LogicItem] = {}
         self._functions: Dict[str, cmn.ProjectFunction] = {}
 
@@ -221,7 +221,7 @@ class CachedProject(CachedBase):
         for override in project.object_overrides:
             self.overrides[override.id] = override.parameters
 
-        for constant in project.constants:
+        for constant in project.parameters:
             self._constants[constant.id] = constant
 
         for logic_item in project.logic:
@@ -239,7 +239,7 @@ class CachedProject(CachedBase):
         return {cmn.LogicItem.START, cmn.LogicItem.END} | self._logic_items.keys()
 
     @property
-    def constants(self) -> ValuesView[cmn.ProjectConstant]:
+    def constants(self) -> ValuesView[cmn.ProjectParameter]:
         return self._constants.values()
 
     @property
@@ -264,7 +264,7 @@ class CachedProject(CachedBase):
             proj.action_points.append(ap)
 
         proj.object_overrides = [cmn.SceneObjectOverride(k, v) for k, v in self.overrides.items()]
-        proj.constants = list(self.constants)
+        proj.parameters = list(self.constants)
         proj.functions = list(self.functions)
         proj.logic = list(self.logic)
         return proj
@@ -451,7 +451,7 @@ class CachedProject(CachedBase):
         except KeyError:
             raise CachedProjectException("LogicItem not found.")
 
-    def constant(self, constant_id: str) -> cmn.ProjectConstant:
+    def constant(self, constant_id: str) -> cmn.ProjectParameter:
 
         try:
             return self._constants[constant_id]
@@ -460,7 +460,7 @@ class CachedProject(CachedBase):
 
     def get_by_id(
         self, obj_id: str
-    ) -> Union[cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action, cmn.ProjectConstant]:
+    ) -> Union[cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action, cmn.ProjectParameter]:
 
         if obj_id in self._action_points:  # AP
             return self._action_points[obj_id]
@@ -656,11 +656,11 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
         self._logic_items.clear()
         self.update_modified()
 
-    def upsert_constant(self, const: cmn.ProjectConstant) -> None:
+    def upsert_constant(self, const: cmn.ProjectParameter) -> None:
         self._constants[const.id] = const
         self.update_modified()
 
-    def remove_constant(self, const_id: str) -> cmn.ProjectConstant:
+    def remove_constant(self, const_id: str) -> cmn.ProjectParameter:
 
         try:
             const = self._constants.pop(const_id)

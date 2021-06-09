@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Set
 from lru import LRU
 
 from arcor2 import env
-from arcor2.clients import aio_persistent_storage as ps
-from arcor2.clients.aio_persistent_storage import (
+from arcor2.clients import aio_project_service as ps
+from arcor2.clients.aio_project_service import (
     delete_model,
     get_mesh,
     get_meshes,
@@ -18,7 +18,7 @@ from arcor2.clients.aio_persistent_storage import (
     put_model,
     update_project_sources,
 )
-from arcor2.clients.persistent_storage import ProjectServiceException
+from arcor2.clients.project_service import ProjectServiceException
 from arcor2.data.common import IdDesc, Project, Scene
 from arcor2.data.object_type import ObjectType
 from arcor2.exceptions import Arcor2Exception
@@ -35,7 +35,7 @@ class CachedListing:
 
 
 """
-This module adds some caching capabilities to the aio version of persistent_storage. It should be only used by ARServer.
+This module adds some caching capabilities to the aio version of project_service. It should be only used by ARServer.
 
 Caching can be disabled by setting respective environment variable - this is useful for environments
 where ARServer is not the only one who touches Project service.

@@ -7,7 +7,7 @@ from typing import Dict, Iterator, Optional, Tuple, Type, TypeVar
 
 import pytest
 
-from arcor2.clients import persistent_storage, scene_service
+from arcor2.clients import project_service, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
 from arcor2.helpers import find_free_port
@@ -52,9 +52,9 @@ def start_processes() -> Iterator[None]:
 
         project_port = find_free_port()
         project_url = f"http://0.0.0.0:{project_port}"
-        my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = project_url
+        my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
-        persistent_storage.URL = project_url
+        project_service.URL = project_url
 
         scene_port = find_free_port()
         scene_url = f"http://0.0.0.0:{scene_port}"

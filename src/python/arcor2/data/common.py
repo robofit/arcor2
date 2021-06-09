@@ -587,11 +587,22 @@ class LogicItem(JsonSchemaMixin, ModelMixin):
 
 
 @dataclass
-class ProjectConstant(JsonSchemaMixin, ModelMixin):
+class Range(JsonSchemaMixin):
+    # TODO when nested in ProjectParameter, ProjectParameter.from_dict({}) raises NameError: name 'Range' is not defined
+
+    min: float
+    max: float
+
+
+@dataclass
+class ProjectParameter(JsonSchemaMixin, ModelMixin):
 
     name: str
     type: str
     value: str
+    range: Optional[Range] = None  # TODO use it in parameter plugins?
+    display_name: Optional[str] = None
+    description: Optional[str] = None
     id: str = ""
 
     @classmethod
@@ -672,7 +683,7 @@ class BareProject(JsonSchemaMixin, ModelMixin):
 class Project(BareProject):
 
     action_points: List[ActionPoint] = field(default_factory=list)
-    constants: List[ProjectConstant] = field(default_factory=list)
+    parameters: List[ProjectParameter] = field(default_factory=list)
     functions: List[ProjectFunction] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
     object_overrides: List[SceneObjectOverride] = field(default_factory=list)

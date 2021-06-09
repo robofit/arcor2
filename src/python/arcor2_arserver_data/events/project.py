@@ -49,7 +49,7 @@ class LogicItemChanged(Event):
 
 @dataclass
 class ProjectConstantChanged(Event):
-    data: common.ProjectConstant
+    data: common.ProjectParameter
 
 
 @dataclass

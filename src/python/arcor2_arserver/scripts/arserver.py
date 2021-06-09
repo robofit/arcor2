@@ -36,7 +36,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
 from arcor2_arserver import scene, settings
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.lock.notifications import run_lock_notification_worker
 from arcor2_arserver_data import events as evts
 from arcor2_arserver_data import rpc as srpc

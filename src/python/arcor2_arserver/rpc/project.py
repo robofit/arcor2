@@ -19,7 +19,7 @@ from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import (
     ctx_read_lock,
     ctx_write_lock,
@@ -1344,7 +1344,7 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
     return None
 
 
-def check_constant(proj: CachedProject, constant: common.ProjectConstant) -> None:
+def check_constant(proj: CachedProject, constant: common.ProjectParameter) -> None:
 
     hlp.is_valid_identifier(constant.name)
 
@@ -1371,7 +1371,7 @@ async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None
 
     async with ctx_write_lock(proj.id, glob.USERS.user_name(ui)):
 
-        const = common.ProjectConstant(req.args.name, req.args.type, req.args.value)
+        const = common.ProjectParameter(req.args.name, req.args.type, req.args.value)
         check_constant(proj, const)
 
         if req.dry_run:
