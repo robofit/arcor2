@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - Project service client updated to API version 0.8.0.
+- `ARCOR2_PERSISTENT_STORAGE_URL` renamed to `ARCOR2_PROJECT_SERVICE_URL`.  
+- Dependencies updated.
 
 ## [0.16.0] - 2021-05-21
 

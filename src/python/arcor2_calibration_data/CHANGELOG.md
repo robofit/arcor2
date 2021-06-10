@@ -2,6 +2,10 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.4.0] - WIP
+### Changed
+- Client now raises custom exceptions.
+
 ## [0.3.0] - 2021-05-21
 ### Changed
 - `estimate_camera_pose` now returns `EstimatedPose` which includes pose and estimation of its precision (quality). 
