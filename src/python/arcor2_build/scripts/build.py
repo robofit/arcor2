@@ -243,7 +243,9 @@ def project_publish(project_id: str) -> RespT:
     """Publish project
     ---
     get:
-      description: Get zip file with execution package. To be used by the Execution service.
+      tags:
+        - Build
+      summary: Get zip file with execution package. To be used by the Execution service.
       parameters:
         - in: path
           name: project_id
@@ -260,17 +262,24 @@ def project_publish(project_id: str) -> RespT:
           description: Package name
       responses:
         200:
-          description: Ok
+          description: Returns archive of the execution package (.zip).
           content:
             application/zip:
                 schema:
                   type: string
                   format: binary
-                  example: The archive of execution package (.zip)
         404:
             description: Project ID or some of the required items was not found.
+            content:
+              application/json:
+                schema:
+                  type: string
         501:
             description: Project invalid.
+            content:
+              application/json:
+                schema:
+                  type: string
     """
 
     return _publish(project_id, request.args.get("packageName", default="N/A"))
@@ -294,7 +303,9 @@ def project_import() -> RespT:
     """Imports a project from execution package.
     ---
     put:
-      description: Imports a project from execution package.
+      tags:
+        - Build
+      summary: Imports a project from execution package.
       parameters:
             - in: query
               name: overwriteScene

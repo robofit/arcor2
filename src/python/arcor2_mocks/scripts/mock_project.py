@@ -55,6 +55,10 @@ def put_mesh_file(mesh_id: str) -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     buff = BytesIO()
@@ -110,6 +114,10 @@ def put_project() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     project = common.Project.from_dict(humps.decamelize(request.json))
@@ -143,8 +151,14 @@ def get_project(id: str) -> RespT:
               description: Ok
               content:
                 application/json:
-                    schema:
-                        $ref: Project
+                  schema:
+                    $ref: Project
+            404:
+              description: Project not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -171,6 +185,16 @@ def delete_project(id: str) -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+            404:
+              description: Project not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -190,7 +214,7 @@ def get_projects() -> RespT:
         - Project
         summary: Gets all projects id and description.
         responses:
-            '200':
+            200:
               description: Success
               content:
                 application/json:
@@ -226,6 +250,11 @@ def put_scene() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+                    format: date-time
     """
 
     scene = common.Scene.from_dict(humps.decamelize(request.json))
@@ -259,8 +288,14 @@ def get_scene(id: str) -> RespT:
               description: Ok
               content:
                 application/json:
-                    schema:
-                        $ref: Scene
+                  schema:
+                    $ref: Scene
+            404:
+              description: Scene not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -285,8 +320,18 @@ def delete_scene(id: str) -> RespT:
               schema:
                 type: string
         responses:
-            200:
-              description: Ok
+          200:
+            description: Ok
+            content:
+              application/json:
+                schema:
+                  type: string
+          404:
+            description: Scene not found.
+            content:
+              application/json:
+                schema:
+                  type: string
     """
 
     try:
@@ -306,7 +351,7 @@ def get_scenes() -> RespT:
         - Scene
         summary: Gets all scenes id and description.
         responses:
-            '200':
+            200:
               description: Success
               content:
                 application/json:
@@ -342,6 +387,11 @@ def put_object_type() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+                    format: date-time
     """
 
     obj_type = object_type.ObjectType.from_dict(humps.decamelize(request.json))
@@ -370,12 +420,18 @@ def get_object_type(id: str) -> RespT:
               schema:
                 type: string
         responses:
-            200:
-              description: Ok
-              content:
-                application/json:
-                    schema:
-                        $ref: ObjectType
+          200:
+            description: Ok
+            content:
+              application/json:
+                schema:
+                  $ref: ObjectType
+          404:
+            description: Scene not found.
+            content:
+              application/json:
+                schema:
+                  type: string
     """
 
     try:
@@ -402,6 +458,16 @@ def delete_object_type(id: str) -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+            404:
+              description: ObjectType not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -421,7 +487,7 @@ def get_object_types() -> RespT:
         - ObjectType
         summary: Gets all object types id and description.
         responses:
-            '200':
+            200:
               description: Success
               content:
                 application/json:
@@ -457,6 +523,10 @@ def put_box() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     if not isinstance(request.json, dict):
@@ -490,6 +560,12 @@ def get_box(id: str) -> RespT:
                 application/json:
                     schema:
                         $ref: Box
+            404:
+              description: Model not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -514,6 +590,10 @@ def put_cylinder() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     cylinder = object_type.Cylinder.from_dict(humps.decamelize(request.json))
@@ -543,6 +623,12 @@ def get_cylinder(id: str) -> RespT:
                 application/json:
                     schema:
                         $ref: Cylinder
+            404:
+              description: Model not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -567,6 +653,10 @@ def put_sphere() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     sphere = object_type.Sphere.from_dict(humps.decamelize(request.json))
@@ -596,6 +686,12 @@ def get_sphere(id: str) -> RespT:
                 application/json:
                     schema:
                         $ref: Sphere
+            404:
+              description: Model not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -622,6 +718,10 @@ def delete_model(id: str) -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:

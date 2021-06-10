@@ -67,6 +67,10 @@ def put_box() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     # TODO workarounded because of bug in pyhumps
@@ -106,6 +110,10 @@ def put_sphere() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     args = humps.decamelize(request.args.to_dict())
@@ -145,6 +153,10 @@ def put_cylinder() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     args = humps.decamelize(request.args.to_dict())
@@ -196,6 +208,10 @@ def put_mesh() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     args = humps.decamelize(request.args.to_dict())
@@ -222,6 +238,16 @@ def delete_collision(collisionId: str) -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+            404:
+              description: Model not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -355,7 +381,7 @@ def main() -> None:
         app,
         SCENE_SERVICE_NAME,
         version(),
-        "0.3.0",
+        "0.4.0",
         SCENE_PORT,
         [
             common.Pose,
