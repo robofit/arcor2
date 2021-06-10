@@ -170,7 +170,7 @@ def post_token() -> RespT:
     """post_token
     ---
     post:
-        description: Creates a token with the given name.
+        summary: Creates a token with the given name.
         tags:
            - Tokens
         parameters:
@@ -204,7 +204,7 @@ def get_tokens() -> RespT:
     """Get all known tokens.
     ---
     get:
-      description: Tokens.
+      summary: Tokens.
       tags:
         - Tokens
       responses:
@@ -227,7 +227,7 @@ def delete_token(tokenId: str) -> RespT:  # noqa
     """Delete token.
     ---
     delete:
-      description: Remove given token from known tokens.
+      summary: Remove given token from known tokens.
       tags:
         - Tokens
       parameters:
@@ -240,15 +240,25 @@ def delete_token(tokenId: str) -> RespT:  # noqa
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+           description: Token not found
+           content:
+              application/json:
+                schema:
+                  type: string
     """
 
     with tokens_db() as tokens:
         try:
             del tokens[tokenId]
         except KeyError:
-            return "Token not found", 404
+            return jsonify("Token not found"), 404
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/tokens/<string:tokenId>/access", methods=["PUT"])
@@ -256,7 +266,7 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
     """put_token_access
     ---
     put:
-        description: Sets execution access rights for given token.
+        summary: Sets execution access rights for given token.
         tags:
            - Tokens
         parameters:
@@ -279,17 +289,23 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
                 application/json:
                   schema:
                     type: boolean
+            404:
+              description: Token not found
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     with tokens_db() as tokens:
         try:
             token = Token.from_dict(tokens[tokenId])
         except KeyError:
-            return "Token not found", 404
+            return jsonify("Token not found"), 404
         token.access = request.args["newAccess"] == "true"
         tokens[tokenId] = token.to_dict()
 
-    return "ok", 200
+    return jsonify("ok"), 200
 
 
 @app.route("/tokens/<string:tokenId>/access", methods=["GET"])
@@ -297,7 +313,7 @@ def get_token_access(tokenId: str) -> RespT:  # noqa
     """get_token_access
     ---
     get:
-        description: Gets execution access rights for given token.
+        summary: Gets execution access rights for given token.
         tags:
            - Tokens
         parameters:
@@ -310,13 +326,23 @@ def get_token_access(tokenId: str) -> RespT:  # noqa
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+            404:
+              description: Token not found
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     with tokens_db() as tokens:
         try:
             token = Token.from_dict(tokens[tokenId])
         except KeyError:
-            return "Token not found", 404
+            return jsonify("Token not found"), 404
         return jsonify(token.access), 200
 
 
@@ -325,7 +351,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     """Put package
     ---
     put:
-        description: Upload/update execution package.
+        summary: Upload/update execution package.
         tags:
            - Packages
         parameters:
@@ -350,6 +376,10 @@ def put_package(packageId: str) -> RespT:  # noqa
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
             501:
               description: Contains array of errors.
               content:
@@ -376,7 +406,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     resp = call_rpc(rpc.UploadPackage.Request(id=get_id(), args=rpc.UploadPackage.Request.Args(packageId, b64_str)))
 
     if resp.result:
-        return "ok", 200
+        return jsonify("ok"), 200
     else:
         return jsonify(resp.messages), 501
 
@@ -386,7 +416,7 @@ def get_package(packageId: str) -> RespT:  # noqa
     """Get execution package.
     ---
     get:
-      description: Get zip file with execution package.
+      summary: Get zip file with execution package.
       tags:
         - Packages
       parameters:
@@ -398,19 +428,22 @@ def get_package(packageId: str) -> RespT:  # noqa
           description: unique ID
       responses:
         200:
-          description: Ok
+          description: Return archive of the execution package (.zip).
           content:
             application/zip:
-                schema:
-                  type: string
-                  format: binary
-                  example: The archive of execution package (.zip)
+              schema:
+                type: string
+                format: binary
         404:
-            description: Package ID was not found.
+          description: Package ID was not found.
+          content:
+            application/json:
+              schema:
+                type: string
     """
 
     if not package_exists(packageId):
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
@@ -425,7 +458,7 @@ def get_packages() -> RespT:
     """Gets summary for all stored execution packages.
     ---
     get:
-      description: Summary.
+      summary: Summary.
       tags:
         - Packages
       responses:
@@ -462,7 +495,7 @@ def delete_package(packageId: str) -> RespT:  # noqa
     """Delete package.
     ---
     delete:
-      description: Delete package.
+      summary: Delete package.
       tags:
         - Packages
       parameters:
@@ -475,23 +508,33 @@ def delete_package(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                type: string
         501:
-            description: Contains array of errors.
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    type: string
+          description: Contains array of errors.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
     """
 
     if not package_exists(packageId):
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
     resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
 
     if resp.result:
-        return "ok", 200
+        return jsonify("ok"), 200
     else:
         return jsonify(resp.messages), 501
 
@@ -501,7 +544,7 @@ def package_start(packageId: str) -> RespT:  # noqa
     """Run project
     ---
     put:
-      description: Start execution of the execution package.
+      summary: Start execution of the execution package.
       tags:
         - Packages
       parameters:
@@ -514,6 +557,16 @@ def package_start(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                type: string
         501:
             description: Contains array of errors.
             content:
@@ -525,12 +578,12 @@ def package_start(packageId: str) -> RespT:  # noqa
     """
 
     if not package_exists(packageId):
-        return "Not found", 404
+        return jsonify("Not found"), 404
 
     resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
 
     if resp.result:
-        return "ok", 200
+        return jsonify("ok"), 200
     else:
         return jsonify(resp.messages), 501
 
@@ -540,12 +593,16 @@ def packages_stop() -> RespT:
     """Stops running project
     ---
     put:
-      description: Stops execution of the given package.
+      summary: Stops execution of the given package.
       tags:
         - Packages
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
         501:
             description: Contains array of errors.
             content:
@@ -559,9 +616,9 @@ def packages_stop() -> RespT:
     resp = call_rpc(rpc.StopPackage.Request(id=get_id()))
 
     if resp.result:
-        return "ok", 200
+        return jsonify("ok"), 200
     else:
-        return jsonify(resp.messages), 403
+        return jsonify(resp.messages), 501
 
 
 @app.route("/packages/pause", methods=["PUT"])
@@ -569,12 +626,16 @@ def packages_pause() -> RespT:
     """Pauses running package.
     ---
     put:
-      description: Pause execution of the given package.
+      summary: Pause execution of the given package.
       tags:
         - Packages
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
         501:
             description: Contains array of errors.
             content:
@@ -588,9 +649,9 @@ def packages_pause() -> RespT:
     resp = call_rpc(rpc.PausePackage.Request(id=get_id()))
 
     if resp.result:
-        return "ok", 200
+        return jsonify("ok"), 200
     else:
-        return jsonify(resp.messages), 403
+        return jsonify(resp.messages), 501
 
 
 @app.route("/packages/resume", methods=["PUT"])
@@ -598,12 +659,16 @@ def packages_resume() -> RespT:
     """Resumes running package.
     ---
     put:
-      description: Resumes execution of the given package.
+      summary: Resumes execution of the given package.
       tags:
         - Packages
       responses:
         200:
           description: Ok
+          content:
+            application/json:
+              schema:
+                type: string
         501:
             description: Contains array of errors.
             content:
@@ -617,7 +682,7 @@ def packages_resume() -> RespT:
     resp = call_rpc(rpc.ResumePackage.Request(id=get_id()))
 
     if resp.result:
-        return "ok", 200
+        return jsonify("ok"), 200
     else:
         return jsonify(resp.messages), 501
 
@@ -627,7 +692,7 @@ def packages_executioninfo() -> RespT:
     """/packages/executioninfo
     ---
     get:
-      description: /packages/executioninfo
+      summary: /packages/executioninfo
       tags:
         - Packages
       responses:
@@ -637,8 +702,12 @@ def packages_executioninfo() -> RespT:
             application/json:
               schema:
                 $ref: ExecutionInfo
-        404:
-            description: No project running
+        501:
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                type: string
     """
 
     if package_state is None or package_state.state == PackageState.Data.StateEnum.UNDEFINED:
@@ -656,7 +725,7 @@ def packages_executioninfo() -> RespT:
         else:
             ret = ExecutionInfo(ExecutionState.Completed, package_state.package_id)
     else:
-        return "Unhandled state", 501
+        return jsonify("Unhandled state"), 501
 
     return jsonify(ret.to_dict()), 200
 
