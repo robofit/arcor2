@@ -33,7 +33,7 @@ class NotificationValue(JsonSchemaMixin):
 
 
 class Interaction(AbstractSimple):
-    """REST interface to the Interaction service (0.1.1)."""
+    """REST interface to the Interaction service (0.4.0)."""
 
     _ABSTRACT = False
 
@@ -50,7 +50,7 @@ class Interaction(AbstractSimple):
 
         return rest.call(
             rest.Method.PUT,
-            f"{self.settings.url}/dialog",
+            f"{self.settings.url}/dialogs",
             return_type=str,
             params={"title": title, "content": content},
             body=options,
@@ -64,16 +64,17 @@ class Interaction(AbstractSimple):
         :return:
         """
 
-        return rest.call(rest.Method.GET, f"{self.settings.url}/dialog", return_type=DialogValue)
+        return rest.call(rest.Method.GET, f"{self.settings.url}/dialogs", return_type=DialogValue)
 
-    def resolve_dialog(self, option: str, *, an: Optional[str] = None) -> None:
+    def resolve_dialog(self, id: str, option: str, *, an: Optional[str] = None) -> None:
         """Resolves current dialog using one of the options.
 
+        :param id:
         :param option:
         :return:
         """
 
-        rest.call(rest.Method.PUT, f"{self.settings.url}/dialog/resolve", params={"option": option})
+        rest.call(rest.Method.PUT, f"{self.settings.url}/dialogs/resolve", params={"id": id, "option": option})
 
     # --- Notification Controller --------------------------------------------------------------------------------------
 

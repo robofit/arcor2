@@ -17,7 +17,7 @@ class StatisticValue(JsonSchemaMixin):
 
 
 class Statistic(AbstractSimple):
-    """Statistic Web API Reference (0.3.0)."""
+    """Statistic Web API Reference (0.4.0)."""
 
     _ABSTRACT = False
 

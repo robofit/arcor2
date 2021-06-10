@@ -7,7 +7,7 @@ from .abstract_with_pose import AbstractWithPose
 
 
 class Barcode(AbstractWithPose):
-    """REST interface to the barcode service (0.3.0)."""
+    """REST interface to the barcode service (0.6.0)."""
 
     _ABSTRACT = False
 

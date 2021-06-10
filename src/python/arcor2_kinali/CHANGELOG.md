@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+
+## [0.14.0] - 2021-06-10
+
+### Changed
+- Implement `Interaction` service version `0.4.0`
+- Update services version
+
 ## [0.13.1] - 2021-05-21
 
 ### Fixed
