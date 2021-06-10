@@ -38,6 +38,7 @@ def test_global_aps_cls() -> None:
 
     my_name = "my_module"
     my_spec = importlib.util.spec_from_loader(my_name, loader=None)
+    assert my_spec
     my_module = importlib.util.module_from_spec(my_spec)
 
     cproj = CachedProject(proj)

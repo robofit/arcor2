@@ -292,8 +292,6 @@ def print_openapi_models() -> None:
 
 def main() -> None:
 
-    assert sys.version_info >= (3, 8)
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-v", "--verbose", help="Increase verbosity.", action="store_const", const=True, default=False)
