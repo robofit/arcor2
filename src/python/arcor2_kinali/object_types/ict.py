@@ -8,7 +8,7 @@ from .abstract_with_pose import AbstractWithPose, Settings
 
 
 class Ict(AbstractWithPose):
-    """REST interface to the ict service (0.1.0)."""
+    """REST interface to the ict service (0.4.0)."""
 
     _ABSTRACT = False
 
