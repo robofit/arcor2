@@ -2,7 +2,7 @@ astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unpa
 aiologger==0.6.1
 aiorun==2020.12.1
 apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!
-apispec[yaml]==4.4.2
+apispec[yaml]==4.5.0
 autopep8==1.5.7
 Cython==0.29.23
 dataclasses-jsonschema[fast-validation,apispec]==2.14.1
@@ -10,11 +10,11 @@ flask_cors==3.0.10
 flask-swagger-ui==3.36.0
 Flask==2.0.1
 lru-dict==1.1.7
-numpy-quaternion[scipy,numba]==2021.4.5.14.42.35
+numpy-quaternion[scipy,numba]==2021.6.9.13.34.11
 numpy==1.20.3
 openapi-spec-validator==0.3.1
-opencv-contrib-python==4.5.2.52
-open3d==0.12.0
+opencv-contrib-python==4.5.2.54
+open3d==0.13.0
 packaging==20.9
 Pillow==8.2.0
 pyhumps==3.0.2
@@ -27,7 +27,7 @@ pyserial==3.5
 PyYAML==5.4.1
 requests==2.25.1
 sqlitedict==1.7.0
-typing-inspect==0.6.0
+typing-inspect==0.7.1
 urdfpy==0.0.22
-websocket-client==1.0.1
-websockets==9.0.2
+websocket-client==1.1.0
+websockets==9.1

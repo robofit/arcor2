@@ -424,8 +424,6 @@ async def aio_main() -> None:
 
 def main() -> None:
 
-    assert sys.version_info >= (3, 8)
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
