@@ -34,7 +34,7 @@ async def remove_object_type(obj_type_id: str) -> None:
     glob.logger.debug(f"Deleting {path}.")
 
     try:
-        await hlp.run_in_executor(os.remove, path)
+        await hlp.run_in_executor(os.remove, path, propagate=[FileNotFoundError])
     except FileNotFoundError as e:
         raise Arcor2Exception(f"File for {obj_type_id} was not found.") from e
 
