@@ -8,7 +8,7 @@ import sys
 from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Callable, Optional, Type, TypeVar
+from typing import Any, Callable, List, Optional, Type, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -65,13 +65,35 @@ def is_valid_type(value: str) -> None:
 S = TypeVar("S")
 
 
-async def run_in_executor(func: Callable[..., S], *args, executor: Optional[futures.Executor] = None) -> S:
+async def run_in_executor(
+    func: Callable[..., S],
+    *args: Any,
+    executor: Optional[futures.Executor] = None,
+    propagate: Optional[List[Type[Exception]]] = None,
+) -> S:
+    """Executes synchronous function in an executor. Catches all exceptions are
+    re-raises them as Arcor2Exception.
+
+    :param func:
+    :param args:
+    :param executor:
+    :param propagate: Exceptions to propagate.
+    :return:
+    """
+
+    # TODO user typing.ParamSpec instead of *args: Any (Python 3.10 or typing-extensions)
+    # ...not supported by mypy at the moment, see https://github.com/python/mypy/issues/8645
+
     try:
         return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
+    except Arcor2Exception:
+        raise
     except Exception as e:
 
-        if isinstance(e, Arcor2Exception):
-            raise
+        if propagate:
+            for etp in propagate:
+                if isinstance(e, etp):
+                    raise
 
         # all code should raise exceptions based on Arcor2Exception so this is just a guard against a buggy code
         raise Arcor2Exception(f"Unhandled exception in {func.__name__}.") from e
