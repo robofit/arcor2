@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Type
 import arcor2_execution_rest_proxy
 import websocket
 from dataclasses_jsonschema import JsonSchemaMixin
-from flask import jsonify, request, send_file
+from flask import Response, jsonify, request, send_file
 from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
 
@@ -40,6 +40,7 @@ TOKENS_DB_PATH = os.path.join(DB_PATH, "tokens")
 
 
 class ExecutionState(Enum):
+    """Represents the state of package execution."""
 
     Undefined: str = "Undefined"
     Running: str = "Running"
@@ -51,6 +52,7 @@ class ExecutionState(Enum):
 
 @dataclass
 class SummaryPackage(JsonSchemaMixin):
+    """Describes execution package."""
 
     id: str
     name: Optional[str] = None
@@ -62,6 +64,7 @@ class SummaryPackage(JsonSchemaMixin):
 
 @dataclass
 class ExecutionInfo(JsonSchemaMixin):
+    """Stores information about package execution."""
 
     state: ExecutionState
     activePackageId: Optional[str] = None
@@ -70,6 +73,7 @@ class ExecutionInfo(JsonSchemaMixin):
 
 @dataclass
 class Token(JsonSchemaMixin):
+    """Describes Token."""
 
     id: str
     name: str
@@ -183,13 +187,11 @@ def post_token() -> RespT:
               description: The name of the token.
         responses:
             200:
-              description: Ok
+              description: Created token with requested name and execution access rights set to false.
               content:
                 application/json:
                   schema:
-                    type: array
-                    items:
-                      $ref: Token
+                    $ref: Token
     """
 
     token = Token(uuid.uuid4().hex, request.args["name"])
@@ -211,7 +213,7 @@ def get_tokens() -> RespT:
         - Tokens
       responses:
         200:
-          description: Ok
+          description: Array of all knows tokens.
           content:
             application/json:
               schema:
@@ -242,17 +244,13 @@ def delete_token(tokenId: str) -> RespT:  # noqa
           description: unique ID
       responses:
         200:
-          description: Ok
-          content:
-            application/json:
-              schema:
-                type: string
+          description: Success
         404:
            description: Token not found
            content:
-              application/json:
-                schema:
-                  type: string
+             application/json:
+               schema:
+                 type: string
     """
 
     with tokens_db() as tokens:
@@ -261,7 +259,7 @@ def delete_token(tokenId: str) -> RespT:  # noqa
         except KeyError:
             return jsonify("Token not found"), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/tokens/<string:tokenId>/access", methods=["PUT"])
@@ -289,10 +287,6 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: boolean
             404:
               description: Token not found
               content:
@@ -309,7 +303,7 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
         token.access = request.args["newAccess"] == "true"
         tokens[tokenId] = token.to_dict()
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/tokens/<string:tokenId>/access", methods=["GET"])
@@ -327,14 +321,14 @@ def get_token_access(tokenId: str) -> RespT:  # noqa
               schema:
                 type: string
               required: true
-              description: Token Id to have access value changed.
+              description: Token Id to be checked.
         responses:
             200:
-              description: Ok
+              description: True if the given token has access rights, otherwise false.
               content:
                 application/json:
                   schema:
-                    type: string
+                    type: boolean
             404:
               description: Token not found
               content:
@@ -356,7 +350,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     """Put package
     ---
     put:
-        summary: Upload/update execution package.
+        summary: Adds the execution package.
         operationId: PutPackage
         tags:
            - Packages
@@ -366,7 +360,7 @@ def put_package(packageId: str) -> RespT:  # noqa
               schema:
                 type: string
               required: true
-              description: unique ID
+              description: Unique package Id
         requestBody:
               content:
                 multipart/form-data:
@@ -382,10 +376,6 @@ def put_package(packageId: str) -> RespT:  # noqa
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
             501:
               description: Contains array of errors.
               content:
@@ -394,7 +384,6 @@ def put_package(packageId: str) -> RespT:  # noqa
                     type: array
                     items:
                       type: string
-
     """
 
     file = request.files["executionPackage"]
@@ -412,7 +401,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     resp = call_rpc(rpc.UploadPackage.Request(id=get_id(), args=rpc.UploadPackage.Request.Args(packageId, b64_str)))
 
     if resp.result:
-        return jsonify("ok"), 200
+        return Response(status=200)
     else:
         return jsonify(resp.messages), 501
 
@@ -432,7 +421,7 @@ def get_package(packageId: str) -> RespT:  # noqa
           schema:
             type: string
           required: true
-          description: unique ID
+          description: Unique package Id
       responses:
         200:
           description: Return archive of the execution package (.zip).
@@ -465,13 +454,13 @@ def get_packages() -> RespT:
     """Gets summary for all stored execution packages.
     ---
     get:
-      summary: Summary.
+      summary: Gets summary for all stored execution packages.
       operationId: GetSummaryPackages
       tags:
         - Packages
       responses:
         200:
-          description: Ok
+          description: Summary of all packages on execution service.
           content:
             application/json:
               schema:
@@ -510,6 +499,7 @@ def delete_package(packageId: str) -> RespT:  # noqa
       parameters:
         - in: path
           name: packageId
+          description: Unique package Id
           schema:
             type: string
           required: true
@@ -517,10 +507,6 @@ def delete_package(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: Ok
-          content:
-            application/json:
-              schema:
-                type: string
         404:
           description: Package not found
           content:
@@ -543,7 +529,7 @@ def delete_package(packageId: str) -> RespT:  # noqa
     resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
 
     if resp.result:
-        return jsonify("ok"), 200
+        return Response(status=200)
     else:
         return jsonify(resp.messages), 501
 
@@ -563,14 +549,10 @@ def package_start(packageId: str) -> RespT:  # noqa
           schema:
             type: string
           required: true
-          description: unique ID
+          description: Unique package Id
       responses:
         200:
           description: Ok
-          content:
-            application/json:
-              schema:
-                type: string
         404:
           description: Package not found
           content:
@@ -593,7 +575,7 @@ def package_start(packageId: str) -> RespT:  # noqa
     resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
 
     if resp.result:
-        return jsonify("ok"), 200
+        return Response(status=200)
     else:
         return jsonify(resp.messages), 501
 
@@ -610,10 +592,6 @@ def packages_stop() -> RespT:
       responses:
         200:
           description: Ok
-          content:
-            application/json:
-              schema:
-                type: string
         501:
             description: Contains array of errors.
             content:
@@ -627,7 +605,7 @@ def packages_stop() -> RespT:
     resp = call_rpc(rpc.StopPackage.Request(id=get_id()))
 
     if resp.result:
-        return jsonify("ok"), 200
+        return Response(status=200)
     else:
         return jsonify(resp.messages), 501
 
@@ -644,10 +622,6 @@ def packages_pause() -> RespT:
       responses:
         200:
           description: Ok
-          content:
-            application/json:
-              schema:
-                type: string
         501:
             description: Contains array of errors.
             content:
@@ -661,7 +635,7 @@ def packages_pause() -> RespT:
     resp = call_rpc(rpc.PausePackage.Request(id=get_id()))
 
     if resp.result:
-        return jsonify("ok"), 200
+        return Response(status=200)
     else:
         return jsonify(resp.messages), 501
 
@@ -678,10 +652,6 @@ def packages_resume() -> RespT:
       responses:
         200:
           description: Ok
-          content:
-            application/json:
-              schema:
-                type: string
         501:
             description: Contains array of errors.
             content:
@@ -695,7 +665,7 @@ def packages_resume() -> RespT:
     resp = call_rpc(rpc.ResumePackage.Request(id=get_id()))
 
     if resp.result:
-        return jsonify("ok"), 200
+        return Response(status=200)
     else:
         return jsonify(resp.messages), 501
 
@@ -711,7 +681,7 @@ def packages_executioninfo() -> RespT:
         - Packages
       responses:
         200:
-          description: Ok
+          description: Execution information
           content:
             application/json:
               schema:

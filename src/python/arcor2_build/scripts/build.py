@@ -314,26 +314,31 @@ def project_import() -> RespT:
               schema:
                 type: boolean
                 default: false
+              description: overwrite Scene
             - in: query
               name: overwriteProject
               schema:
                 type: boolean
                 default: false
+              description: overwrite Project
             - in: query
               name: overwriteObjectTypes
               schema:
                 type: boolean
                 default: false
+              description: overwrite ObjectTypes
             - in: query
               name: overwriteProjectSources
               schema:
                 type: boolean
                 default: false
+              description: overwrite ProjectSources
             - in: query
               name: overwriteCollisionModels
               schema:
                 type: boolean
                 default: false
+              description: overwrite collision models
       requestBody:
               content:
                 multipart/form-data:
