@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.17.0
+    image: arcor2/arcor2_arserver:0.18.0
     container_name: arserver
     depends_on:
       - project
@@ -33,7 +33,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
 
   build:
-    image: arcor2/arcor2_build:0.15.0
+    image: arcor2/arcor2_build:0.16.0
     container_name: build
     depends_on:
       - project
@@ -62,7 +62,7 @@ services:
         - execution:/root/project
 
   execution-proxy:
-    image: arcor2/arcor2_execution_proxy:0.11.0
+    image: arcor2/arcor2_execution_proxy:0.12.0
     container_name: execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
@@ -79,7 +79,7 @@ services:
       - execution
 
   calibration:
-    image: arcor2/arcor2_calibration:0.5.0
+    image: arcor2/arcor2_calibration:0.6.0
     networks:
       - testitoff-calibration-network
     ports:
