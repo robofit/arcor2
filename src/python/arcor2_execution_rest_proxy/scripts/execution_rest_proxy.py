@@ -171,6 +171,7 @@ def post_token() -> RespT:
     ---
     post:
         summary: Creates a token with the given name.
+        operationId: CreateToken
         tags:
            - Tokens
         parameters:
@@ -205,6 +206,7 @@ def get_tokens() -> RespT:
     ---
     get:
       summary: Tokens.
+      operationId: GetTokens
       tags:
         - Tokens
       responses:
@@ -228,6 +230,7 @@ def delete_token(tokenId: str) -> RespT:  # noqa
     ---
     delete:
       summary: Remove given token from known tokens.
+      operationId: RemoveToken
       tags:
         - Tokens
       parameters:
@@ -267,6 +270,7 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
     ---
     put:
         summary: Sets execution access rights for given token.
+        operationId: SetAccess
         tags:
            - Tokens
         parameters:
@@ -314,6 +318,7 @@ def get_token_access(tokenId: str) -> RespT:  # noqa
     ---
     get:
         summary: Gets execution access rights for given token.
+        operationId: GetAccess
         tags:
            - Tokens
         parameters:
@@ -352,6 +357,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     ---
     put:
         summary: Upload/update execution package.
+        operationId: PutPackage
         tags:
            - Packages
         parameters:
@@ -417,6 +423,7 @@ def get_package(packageId: str) -> RespT:  # noqa
     ---
     get:
       summary: Get zip file with execution package.
+      operationId: GetPackage
       tags:
         - Packages
       parameters:
@@ -459,6 +466,7 @@ def get_packages() -> RespT:
     ---
     get:
       summary: Summary.
+      operationId: GetSummaryPackages
       tags:
         - Packages
       responses:
@@ -496,6 +504,7 @@ def delete_package(packageId: str) -> RespT:  # noqa
     ---
     delete:
       summary: Delete package.
+      operationId: DeletePackage
       tags:
         - Packages
       parameters:
@@ -545,6 +554,7 @@ def package_start(packageId: str) -> RespT:  # noqa
     ---
     put:
       summary: Start execution of the execution package.
+      operationId: StartPackage
       tags:
         - Packages
       parameters:
@@ -594,6 +604,7 @@ def packages_stop() -> RespT:
     ---
     put:
       summary: Stops execution of the given package.
+      operationId: StopPackage
       tags:
         - Packages
       responses:
@@ -627,6 +638,7 @@ def packages_pause() -> RespT:
     ---
     put:
       summary: Pause execution of the given package.
+      operationId: PausePackage
       tags:
         - Packages
       responses:
@@ -660,6 +672,7 @@ def packages_resume() -> RespT:
     ---
     put:
       summary: Resumes execution of the given package.
+      operationId: ResumePackage
       tags:
         - Packages
       responses:
@@ -693,6 +706,7 @@ def packages_executioninfo() -> RespT:
     ---
     get:
       summary: /packages/executioninfo
+      operationId: GetExecutionInfo
       tags:
         - Packages
       responses:

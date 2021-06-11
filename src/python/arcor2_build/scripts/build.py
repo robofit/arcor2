@@ -246,6 +246,7 @@ def project_publish(project_id: str) -> RespT:
       tags:
         - Build
       summary: Get zip file with execution package. To be used by the Execution service.
+      operationId: ProjectPublish
       parameters:
         - in: path
           name: project_id
@@ -306,6 +307,7 @@ def project_import() -> RespT:
       tags:
         - Build
       summary: Imports a project from execution package.
+      operationId: ProjectImport
       parameters:
             - in: query
               name: overwriteScene
