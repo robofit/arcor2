@@ -27,9 +27,9 @@ from arcor2.data.events import Event, PackageInfo, PackageState, ProjectExceptio
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_aiologger
-from arcor2.package import PROJECT_PATH, read_package_meta, write_package_meta
 from arcor2_execution_data import EVENTS, URL, events, rpc
 from arcor2_execution_data.common import PackageSummary, ProjectMeta
+from arcor2_execution_data.package import PROJECT_PATH, read_package_meta, write_package_meta
 
 logger = get_aiologger("Execution")
 

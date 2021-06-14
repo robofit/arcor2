@@ -4,8 +4,8 @@
 service for the specific project."""
 
 from arcor2.data.common import uid
-from arcor2.exceptions.runtime import print_exception
-from arcor2.resources import Resources
+from arcor2_execution_data.exceptions import print_exception
+from arcor2_execution_data.resources import Resources
 from arcor2_kinali.object_types.abstract_simple import Settings as SimpleSettings
 from arcor2_kinali.object_types.statistic import Statistic
 
@@ -18,7 +18,7 @@ def main(res: Resources) -> None:
 
 if __name__ == "__main__":
     try:
-        with Resources("project_uuid") as res:
+        with Resources() as res:
             main(res)
     except Exception as e:
         print_exception(e)

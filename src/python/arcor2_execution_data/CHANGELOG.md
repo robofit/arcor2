@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.11.0] - WIP
+
+### Changed
+- Modules `package` and `resources` moved here from `arcor2` package.
+- `Resources` class now do not have any parameters (it used to have `project_id`).
+
+### Fixed
+- In `Resources/__exit__`, collision models were deleted before calling `cleanup` for each object.
+
 ## [0.10.0] - 2021-02-08
 
 ### Changed
