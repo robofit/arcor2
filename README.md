@@ -112,7 +112,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2021-06-11: [0.17.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.17.0) ([pypi](https://pypi.org/project/arcor2/0.17.0/)).
+ - 2021-06-14: [0.18.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.18.0) ([pypi](https://pypi.org/project/arcor2/0.18.0/)).
 
 
  
@@ -136,7 +136,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
-- 2021-06-11: [0.16.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.16.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=0.16.0), [pypi](https://pypi.org/project/arcor2-build/0.16.0/)).
+- 2021-06-14: [0.17.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.17.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=0.17.0), [pypi](https://pypi.org/project/arcor2-build/0.17.0/)).
 
 ### arcor2_build_data
 
@@ -161,13 +161,13 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2021-05-21: [0.14.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.14.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.14.0), [pypi](https://pypi.org/project/arcor2-execution/0.14.0/)).
+ - 2021-06-14: [0.16.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.16.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.16.0), [pypi](https://pypi.org/project/arcor2-execution/0.16.0/)).
  
 ### arcor2_execution_data
 
 [README](src/python/arcor2_execution_data/README.md) | [CHANGELOG](src/python/arcor2_execution_data/CHANGELOG.md)
 
- - 2021-02-08: [0.10.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_data%2F0.10.0) ([pypi](https://pypi.org/project/arcor2-execution-data/0.10.0/)).
+ - 2021-06-14: [0.11.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_data%2F0.11.0) ([pypi](https://pypi.org/project/arcor2-execution-data/0.11.0/)).
  
 ### arcor2_execution_rest_proxy
 

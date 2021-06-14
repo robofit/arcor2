@@ -3,7 +3,7 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
-## [0.16.0] - WIP
+## [0.16.0] - 2021-06-14
 
 ### Changed
 - Dependency on `arcor2` 0.18.0.

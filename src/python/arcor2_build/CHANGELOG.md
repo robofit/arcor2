@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.17.0] - WIP
+## [0.17.0] - 2021-06-14
 
 ### Changed
 - Updated code generation for `Resources` (moved, now without parameters).
