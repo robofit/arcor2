@@ -4,6 +4,7 @@ arcor2_python_distribution(
     dependencies=[
         "src/python/arcor2/clients",
         "src/python/arcor2/data",
+        "src/python/arcor2/exceptions",
         "src/python/arcor2/object_types",
         "src/python/arcor2/parameter_plugins",
         "src/python/arcor2/source",
