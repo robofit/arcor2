@@ -33,7 +33,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
 
   build:
-    image: arcor2/arcor2_build:0.16.0
+    image: arcor2/arcor2_build:0.17.0
     container_name: build
     depends_on:
       - project
@@ -44,7 +44,7 @@ services:
     networks:
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.14.0
+    image: arcor2/arcor2_execution:0.16.0
     container_name: execution
     networks:
         - testitoff-execution-network
