@@ -7,7 +7,7 @@ import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 import arcor2.object_types
-from arcor2 import json, package
+from arcor2 import json
 from arcor2 import transformations as tr
 from arcor2.action import get_action_name_to_id, patch_object_actions, print_event
 from arcor2.cached import CachedProject, CachedScene
@@ -16,10 +16,11 @@ from arcor2.data.common import Project, Scene
 from arcor2.data.events import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception
-from arcor2.exceptions.runtime import print_exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
+from arcor2_execution_data import package
+from arcor2_execution_data.exceptions import print_exception
 
 
 class ResourcesException(Arcor2Exception):
@@ -157,13 +158,10 @@ class Resources(IntResources):
         except JsonSchemaValidationError as e:
             raise ResourcesException(f"Invalid project/scene: {e}")
 
-    def __init__(self, project_id: str) -> None:
+    def __init__(self) -> None:
 
         scene = self.read_project_data(Scene.__name__.lower(), Scene)
         project = self.read_project_data(Project.__name__.lower(), Project)
-
-        if project_id != project.id:
-            raise ResourcesException("Resources were generated for different project!")
 
         models: Dict[str, Optional[Models]] = {}
 

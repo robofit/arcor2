@@ -2,10 +2,10 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.17.1] - WIP
+## [0.18.0] - WIP
 
-### Fixed
-- In `Resources/__exit__`, collision models were deleted before calling `cleanup` for each object.
+### Changed
+- Modules `package` and `resources` moved to `arcor2_execution_data`.
 
 ## [0.17.0] - 2021-06-11
 

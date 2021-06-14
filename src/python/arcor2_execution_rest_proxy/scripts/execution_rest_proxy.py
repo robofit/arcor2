@@ -27,10 +27,10 @@ from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import PackageInfo, PackageState, ProjectException
 from arcor2.flask import RespT, create_app, run_app
-from arcor2.package import PROJECT_PATH
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
 from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc
+from arcor2_execution_data.package import PROJECT_PATH
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"
