@@ -133,10 +133,12 @@ class IntResources:
             print_exception(ex_value)
 
         scene_service.stop()
-        scene_service.delete_all_collisions()
 
         for obj in self.objects.values():
             obj.cleanup()
+
+        # for a case of manually created collision models
+        scene_service.delete_all_collisions()
 
         return True
 

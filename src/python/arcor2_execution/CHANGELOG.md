@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.15.0] - WIP
 
 ### Changed
-- Dependency on arcor2 0.17.0 (`constants` renamed to `parameters` in the `Project` model).
+- Dependency on arcor2 0.17.1 (`constants` renamed to `parameters` in the `Project` model).
 
 ## [0.14.0] - 2021-05-21
 
