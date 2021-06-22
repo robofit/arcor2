@@ -265,6 +265,111 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         raise Arcor2NotImplemented()
 
     def set_hand_teaching_mode(self, enabled: bool) -> None:
+        raise Arcor2NotImplemented("The robot does not support hand teaching.")
+
+
+class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
+    """Abstract class representing robot and its basic capabilities (motion)"""
+
+    @abc.abstractmethod
+    def get_arm_ids(self) -> Set[str]:
+        """Most robots have just one arm so this method is not abstract and
+        returns one arm id.
+
+        :return:
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> Set[str]:
+        pass
+
+    @abc.abstractmethod
+    def get_end_effector_pose(self, end_effector: str, arm_id: Optional[str] = None) -> Pose:
+        pass
+
+    @abc.abstractmethod
+    def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
+        """With no arm specified, returns all robot joints. Otherwise, returns
+        joints for the given arm.
+
+        :param arm_id:
+        :return:
+        """
+        pass
+
+    @abc.abstractmethod
+    def grippers(self, arm_id: Optional[str] = None) -> Set[str]:
+        return set()
+
+    @abc.abstractmethod
+    def suctions(self, arm_id: Optional[str] = None) -> Set[str]:
+        return set()
+
+    def move_to_pose(
+        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, arm_id: Optional[str] = None
+    ) -> None:
+        """Move given robot's end effector to the selected pose.
+
+        :param end_effector_id:
+        :param target_pose:
+        :param speed:
+        :param safe:
+        :return:
+        """
+
+        assert 0.0 <= speed <= 1.0
+        raise Arcor2NotImplemented("Robot does not support moving to pose.")
+
+    def move_to_joints(
+        self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+    ) -> None:
+        """Sets target joint values.
+
+        :param target_joints:
+        :param speed:
+        :param safe:
+        :return:
+        """
+
+        assert 0.0 <= speed <= 1.0
+        raise Arcor2NotImplemented("Robot does not support moving to joints.")
+
+    def inverse_kinematics(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
+        arm_id: Optional[str] = None,
+    ) -> List[Joint]:
+        """Computes inverse kinematics.
+
+        :param end_effector_id: IK target pose end-effector
+        :param pose: IK target pose
+        :param start_joints: IK start joints
+        :param avoid_collisions: Return non-collision IK result if true
+        :return: Inverse kinematics
+        """
+        raise Arcor2NotImplemented()
+
+    def forward_kinematics(self, end_effector_id: str, joints: List[Joint], arm_id: Optional[str] = None) -> Pose:
+        """Computes forward kinematics.
+
+        :param end_effector_id: Target end effector name
+        :param joints: Input joint values
+        :return: Pose of the given end effector
+        """
+        raise Arcor2NotImplemented()
+
+    def get_hand_teaching_mode(self, arm_id: Optional[str] = None) -> bool:
+        """
+        This is expected to be implemented if the robot supports set_hand_teaching_mode
+        :return:
+        """
+        raise Arcor2NotImplemented()
+
+    def set_hand_teaching_mode(self, enabled: bool, arm_id: Optional[str] = None) -> None:
         raise Arcor2NotImplemented()
 
 

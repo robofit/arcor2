@@ -332,6 +332,7 @@ class ProjectRobotJoints(JsonSchemaMixin, ModelMixin):
     robot_id: str
     joints: List[Joint]
     is_valid: bool = False
+    arm_id: Optional[str] = None
     id: str = ""
 
     @classmethod

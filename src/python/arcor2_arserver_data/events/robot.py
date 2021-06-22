@@ -25,6 +25,7 @@ class RobotEef(Event):
         class EefPose(JsonSchemaMixin):
             end_effector_id: str
             pose: common.Pose
+            arm_id: Optional[str] = None
 
         robot_id: str
         end_effectors: List[EefPose] = field(default_factory=list)
@@ -54,6 +55,7 @@ class RobotMoveToPose(Event):
         target_pose: common.Pose
         safe: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -68,6 +70,7 @@ class RobotMoveToJoints(Event):
         target_joints: List[common.Joint]
         safe: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -83,6 +86,7 @@ class RobotMoveToActionPointOrientation(Event):
         orientation_id: str
         safe: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -97,6 +101,7 @@ class RobotMoveToActionPointJoints(Event):
         joints_id: str
         safe: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -110,5 +115,6 @@ class HandTeachingMode(Event):
     class Data(JsonSchemaMixin):
         robot_id: str
         enabled: bool
+        arm_id: Optional[str] = None
 
     data: Data
