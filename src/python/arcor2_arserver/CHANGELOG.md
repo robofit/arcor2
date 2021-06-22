@@ -2,6 +2,10 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.19.0] - 2021-06-22
+
+- Update to API version 0.15.0.
+
 ## [0.18.0] - 2021-06-11
 
 ### Changed
