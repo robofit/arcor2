@@ -54,12 +54,14 @@ class RobotArg(JsonSchemaMixin):
 
         robot_id: str
         end_effector: str
+        arm_id: Optional[str] = None
 
     robot_id: str = field(metadata=dict(description="Object id of the robot or robot_id within the robot service."))
     end_effector: str
+    arm_id: Optional[str] = None
 
     def as_tuple(self) -> RobotArgTuple:
-        return self.RobotArgTuple(self.robot_id, self.end_effector)
+        return self.RobotArgTuple(self.robot_id, self.end_effector, self.arm_id)
 
 
 # ----------------------------------------------------------------------------------------------------------------------

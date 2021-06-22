@@ -124,9 +124,11 @@ async def focus_object_cb(req: srpc.o.FocusObject.Request, ui: WsClient) -> srpc
             glob.logger.info(f"Start of focusing for {obj_id}.")
             FOCUS_OBJECT[obj_id] = {}
 
-        robot_id, end_effector = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
+        robot_id, end_effector, arm_id = FOCUS_OBJECT_ROBOT[obj_id].as_tuple()
 
-        FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(await osa.get_robot_instance(robot_id), end_effector)
+        FOCUS_OBJECT[obj_id][pt_idx] = await get_end_effector_pose(
+            await osa.get_robot_instance(robot_id), end_effector, arm_id
+        )
 
         r = srpc.o.FocusObject.Response()
         r.data = r.Data(finished_indexes=list(FOCUS_OBJECT[obj_id].keys()))

@@ -186,6 +186,7 @@ class AddApUsingRobot(RPC):
             robot_id: str
             end_effector_id: str
             name: str
+            arm_id: Optional[str] = None
 
         args: Args
         dry_run: bool = False
@@ -206,6 +207,7 @@ class AddActionPointJointsUsingRobot(RPC):
             action_point_id: str
             robot_id: str
             name: str = "default"
+            arm_id: Optional[str] = None
 
         args: Args
         dry_run: bool = False
