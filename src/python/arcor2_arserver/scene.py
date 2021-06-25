@@ -247,8 +247,7 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
 async def open_scene(scene_id: str) -> None:
 
-    await get_object_types()
-    asyncio.ensure_future(scene_srv.delete_all_collisions())
+    await asyncio.gather(scene_srv.delete_all_collisions(), get_object_types())
     glob.LOCK.scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     try:
