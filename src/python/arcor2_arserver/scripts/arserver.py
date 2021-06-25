@@ -151,7 +151,7 @@ async def _initialize_server() -> None:
                 await scene_srv.stop()
             break
         except scene_srv.SceneServiceException as e:
-            glob.logger.error(f"Failed to communicate with Scene service. {str(e)}")
+            glob.logger.error(f"Failed to communicate with the Scene service. {str(e)}")
             await asyncio.sleep(1)
 
     await osa.get_object_types()
