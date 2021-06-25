@@ -81,7 +81,7 @@ class RunPackage(RPC):
     class Request(RPC.Request):
         @dataclass
         class Args(IdArgs):
-            cleanup_after_run: bool = True
+            pass
 
         args: Args
 

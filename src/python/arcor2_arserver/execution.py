@@ -49,7 +49,7 @@ async def run_temp_package(package_id: str) -> None:
 
     await project.close_project()
     req = erpc.RunPackage.Request
-    exe_req = req(uuid.uuid4().int, args=req.Args(package_id, cleanup_after_run=False))
+    exe_req = req(uuid.uuid4().int, args=req.Args(package_id))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
