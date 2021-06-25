@@ -39,6 +39,7 @@ from arcor2_arserver.scene import (
     notify_scene_opened,
     open_scene,
     scene_names,
+    scene_started,
     scenes,
     start_scene,
     stop_scene,
@@ -417,7 +418,12 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
 async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClient) -> None:
 
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
-    can_modify_scene()
+
+    try:
+        if scene_started() and await get_robot_instance(req.args.object_id):
+            raise Arcor2Exception("Robot's pose can be only updated offline.")
+    except Arcor2Exception:
+        pass
 
     obj = scene.object(req.args.object_id)
 
