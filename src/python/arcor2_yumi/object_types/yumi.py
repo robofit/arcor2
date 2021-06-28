@@ -173,7 +173,10 @@ class YumiSocket:
         with self._lock:
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._socket.settimeout(self._timeout)
-            self._socket.connect((self._ip, self._port))
+            try:
+                self._socket.connect((self._ip, self._port))
+            except socket.timeout:
+                raise YuMiCommException(f"Failed to connect to {self._ip}:{self._port}.")
         logger.debug("Socket successfully opened!")
 
     def close(self) -> None:
@@ -720,9 +723,8 @@ class YuMi(MultiArmRobot):
         self.set_tool(Pose())
         self.set_z("fine")
 
-        # TODO figure out what this conf means
-        self._left.set_conf([0, 0, 0, 11])
-        self._right.set_conf([0, 0, 0, 11])
+        self._left.set_conf([0, 0, 0, 4])
+        self._right.set_conf([0, 0, 0, 4])
 
     @property
     def settings(self) -> YumiSettings:
@@ -751,9 +753,7 @@ class YuMi(MultiArmRobot):
     def get_end_effector_pose(self, end_effector: str, arm_id: Optional[str] = None) -> Pose:
 
         arm = self._arm_by_name(arm_id)
-        pose = arm.get_pose()
-        pose = tr.make_pose_abs(self.pose, pose)
-        return pose
+        return tr.make_pose_abs(self.pose, arm.get_pose())
 
     def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
 
@@ -846,7 +846,7 @@ class YuMi(MultiArmRobot):
         :return: Inverse kinematics
         """
 
-        return self._arm_by_name(arm_id).ik(pose)
+        return self._arm_by_name(arm_id).ik(tr.make_pose_rel(self.pose, pose))
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint], arm_id: Optional[str] = None) -> Pose:
         """Computes forward kinematics.
@@ -856,7 +856,7 @@ class YuMi(MultiArmRobot):
         :return: Pose of the given end effector
         """
 
-        return self._arm_by_name(arm_id).fk(joints)
+        return tr.make_pose_abs(self.pose, self._arm_by_name(arm_id).fk(joints))
 
     def cleanup(self) -> None:
 
