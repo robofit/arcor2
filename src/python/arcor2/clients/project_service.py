@@ -8,7 +8,7 @@ from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, MetaModel3d, 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.helpers import handle
 
-URL = os.getenv("ARCOR2_PROJECT_SERVICE_URL", "http://0.0.0.0:11000")
+URL = os.getenv("ARCOR2_PROJECT_SERVICE_URL", "http://0.0.0.0:10000")
 
 """
 Collection of functions to work with the Project service (0.8.0).
