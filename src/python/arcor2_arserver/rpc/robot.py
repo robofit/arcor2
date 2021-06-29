@@ -48,7 +48,7 @@ async def robot_joints_event(robot_inst: Robot) -> None:
 
         try:
             evt = sevts.r.RobotJoints(
-                sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst)))
+                sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None)))
             )
         except Arcor2Exception as e:
             glob.logger.error(f"Failed to get joints for {robot_inst.id}. {str(e)}")
@@ -250,7 +250,7 @@ async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request,
                 else:
                     raise Arcor2Exception("Robot does not have any end effector.")
 
-            elif not await robot.get_end_effectors(robot_inst):
+            elif not await robot.get_end_effectors(robot_inst, None):
                 raise Arcor2Exception("Robot does not have any end effector.")
 
             await register(req, robot_inst, ui, EEF_POSE_TASKS, glob.ROBOT_EEF_REGISTERED_UIS, robot_eef_pose_event)
@@ -282,7 +282,8 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
     async with ctx_write_lock(req.args.robot_id, user_name, auto_unlock=False):
         ensure_scene_started()
 
-        robot_inst = await osa.get_robot_instance(req.args.robot_id, req.args.end_effector_id)
+        robot_inst = await osa.get_robot_instance(req.args.robot_id)
+        await robot.check_eef_arm(robot_inst, req.args.arm_id, req.args.end_effector_id)
 
         await check_feature(robot_inst, Robot.move_to_pose.__name__)
         await robot.check_robot_before_move(robot_inst)
@@ -306,11 +307,11 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
             robot.move_to_pose(
                 robot_inst,
                 req.args.end_effector_id,
+                req.args.arm_id,
                 target_pose,
                 req.args.speed,
                 req.args.safe,
                 user_name,
-                req.args.arm_id,
             )
         )
 
@@ -372,11 +373,11 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
                 robot.move_to_ap_orientation(
                     robot_inst,
                     req.args.end_effector_id,
+                    req.args.arm_id,
                     pose,
                     req.args.speed,
                     req.args.orientation_id,
                     req.args.safe,
-                    req.args.arm_id,
                 )
             )
 
@@ -408,10 +409,10 @@ async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.I
         joints = await robot.ik(
             robot_inst,
             req.args.end_effector_id,
+            req.args.arm_id,
             req.args.pose,
             req.args.start_joints,
             req.args.avoid_collisions,
-            req.args.arm_id,
         )
         resp = srpc.r.InverseKinematics.Response()
         resp.data = joints
@@ -428,7 +429,7 @@ async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.F
         robot_inst = await osa.get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.forward_kinematics.__name__)
 
-        pose = await robot.fk(robot_inst, req.args.end_effector_id, req.args.joints, req.args.arm_id)
+        pose = await robot.fk(robot_inst, req.args.end_effector_id, req.args.arm_id, req.args.joints)
         resp = srpc.r.ForwardKinematics.Response()
         resp.data = pose
         return resp
@@ -571,7 +572,7 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
         assert req.args.pose
         tp = tr.make_pose_abs(req.args.pose, tp)
 
-    await robot.check_reachability(scene, robot_inst, req.args.end_effector_id, tp, req.args.safe, req.args.arm_id)
+    await robot.check_reachability(scene, robot_inst, req.args.end_effector_id, req.args.arm_id, tp, req.args.safe)
 
     await ensure_locked(req.args.robot_id, ui)
 
@@ -579,7 +580,7 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
         return
 
     asyncio.ensure_future(
-        robot.move_to_pose(robot_inst, req.args.end_effector_id, tp, req.args.speed, req.args.safe, req.args.arm_id)
+        robot.move_to_pose(robot_inst, req.args.end_effector_id, req.args.arm_id, tp, req.args.speed, req.args.safe)
     )
 
 
@@ -606,7 +607,7 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
 
     # select best (closest joint configuration) reachable pose
     tasks = [
-        robot.ik(robot_inst, req.args.end_effector_id, pose, current_joints, req.args.safe, req.args.arm_id)
+        robot.ik(robot_inst, req.args.end_effector_id, req.args.arm_id, pose, current_joints, req.args.safe)
         for pose in [
             common.Pose(
                 tp.position,

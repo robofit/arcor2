@@ -27,7 +27,7 @@ from arcor2_arserver.project import (
     projects_using_object,
     remove_object_references_from_projects,
 )
-from arcor2_arserver.robot import get_end_effector_pose
+from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose
 from arcor2_arserver.scene import (
     add_object_to_scene,
     can_modify_scene,
@@ -365,7 +365,8 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     async with ctx_write_lock(to_lock, user_name):
         ensure_scene_started()
 
-        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
+        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
         scene_object = scene.object(req.args.id)
 
@@ -383,7 +384,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
         elif req.args.pivot != req.args.PivotEnum.MIDDLE:
             raise Arcor2Exception("Only middle pivot point is supported for objects without collision model.")
 
-        new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector)
+        new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector, req.args.robot.arm_id)
 
         position_delta = common.Position()
 

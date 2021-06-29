@@ -22,7 +22,7 @@ from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
-from arcor2_arserver.robot import get_end_effector_pose
+from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose
 from arcor2_arserver.scene import ensure_scene_started, scenes, update_scene_object_pose
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
@@ -66,7 +66,8 @@ async def focus_object_start_cb(req: srpc.o.FocusObjectStart.Request, ui: WsClie
         if obj_id not in glob.SCENE_OBJECT_INSTANCES:
             raise Arcor2Exception("Unknown object.")
 
-        inst = await osa.get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
+        inst = await osa.get_robot_instance(req.args.robot.robot_id)
+        await check_eef_arm(inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
         robot_type = glob.OBJECT_TYPES[inst.__class__.__name__]
         assert robot_type.robot_meta

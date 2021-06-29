@@ -12,7 +12,7 @@ from arcor2.data import common
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
-from arcor2.object_types.abstract import MultiArmRobot, Robot
+from arcor2.object_types.abstract import Robot
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.parameter_plugins.pose import PosePlugin
 from arcor2.parameter_plugins.utils import plugin_from_type_name
@@ -39,7 +39,7 @@ from arcor2_arserver.project import (
     project_names,
     project_problems,
 )
-from arcor2_arserver.robot import get_end_effector_pose, get_pose_and_joints, get_robot_joints
+from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose, get_pose_and_joints, get_robot_joints
 from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, open_scene
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
@@ -261,15 +261,6 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     return resp
 
 
-async def check_arm(robot_inst: Robot, arm_id: Optional[str]) -> None:
-
-    if isinstance(robot_inst, MultiArmRobot):
-        if not arm_id:
-            raise Arcor2Exception("Arm has to be specified.")
-    elif arm_id:
-        raise Arcor2Exception("Arm should not be specified.")
-
-
 async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClient) -> None:
     async def notify(ap: common.BareActionPoint, ori: common.NamedOrientation, joi: common.ProjectRobotJoints) -> None:
 
@@ -296,8 +287,8 @@ async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClien
 
         unique_name(req.args.name, proj.action_points_names)
 
-        robot_inst = await get_robot_instance(req.args.robot_id, req.args.end_effector_id)
-        await check_arm(robot_inst, req.args.arm_id)
+        robot_inst = await get_robot_instance(req.args.robot_id)
+        await check_eef_arm(robot_inst, req.args.arm_id, req.args.end_effector_id)
 
         if req.dry_run:
             return None
@@ -326,7 +317,7 @@ async def add_action_point_joints_using_robot_cb(
         ensure_scene_started()
 
         robot_inst = await get_robot_instance(req.args.robot_id)
-        await check_arm(robot_inst, req.args.arm_id)
+        await check_eef_arm(robot_inst, req.args.arm_id)
 
         ap = proj.bare_action_point(req.args.action_point_id)
 
@@ -594,9 +585,11 @@ async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingR
     ap = proj.bare_action_point(req.args.action_point_id)
     await ensure_locked(ap.id, ui)
 
+    print(req.args.robot.arm_id)
+
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
-        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
-        await check_arm(robot_inst, req.args.robot.arm_id)
+        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
         new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector, req.args.robot.arm_id)
 
         if ap.parent:
@@ -674,8 +667,8 @@ async def add_action_point_orientation_using_robot_cb(
         ap = proj.bare_action_point(req.args.action_point_id)
         hlp.is_valid_identifier(req.args.name)
         unique_name(req.args.name, proj.ap_orientation_names(ap.id))
-        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
-        await check_arm(robot_inst, req.args.robot.arm_id)
+        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
         await ensure_locked(req.args.action_point_id, ui)
 
@@ -712,8 +705,8 @@ async def update_action_point_orientation_using_robot_cb(
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
 
         ensure_scene_started()
-        robot_inst = await get_robot_instance(req.args.robot.robot_id, req.args.robot.end_effector)
-        await check_arm(robot_inst, req.args.robot.arm_id)
+        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
         ap, ori = proj.bare_ap_and_orientation(req.args.orientation_id)
 

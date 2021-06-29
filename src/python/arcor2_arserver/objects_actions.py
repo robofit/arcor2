@@ -1,6 +1,6 @@
 import asyncio
 import os
-from typing import List, Optional, Set, Type, Union
+from typing import List, Set, Type, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
@@ -269,14 +269,14 @@ async def get_object_types() -> None:
             )
 
 
-async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Robot:
+async def get_robot_instance(robot_id: str) -> Robot:
 
-    if robot_id not in glob.SCENE_OBJECT_INSTANCES:
+    try:
+        robot_inst = glob.SCENE_OBJECT_INSTANCES[robot_id]
+    except KeyError:
         raise Arcor2Exception("Robot not found.")
 
-    robot_inst = glob.SCENE_OBJECT_INSTANCES[robot_id]
     if not isinstance(robot_inst, Robot):
         raise Arcor2Exception("Not a robot.")
-    if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_inst.get_end_effectors_ids):
-        raise Arcor2Exception("Unknown end effector ID.")
+
     return robot_inst
