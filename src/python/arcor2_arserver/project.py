@@ -92,13 +92,13 @@ def check_action_params(
 
         param = action.parameter(req_param.name)
 
-        if param.type == common.ActionParameter.TypeEnum.CONSTANT:
+        if param.type == common.ActionParameter.TypeEnum.PROJECT_PARAMETER:
 
-            const = project.constant(param.str_from_value())
+            pparam = project.parameter(param.str_from_value())
 
             param_meta = object_action.parameter(param.name)
-            if param_meta.type != const.type:
-                raise Arcor2Exception("Param type does not match constant type.")
+            if param_meta.type != pparam.type:
+                raise Arcor2Exception("Action parameter type does not match project parameter type.")
 
         elif param.type == common.ActionParameter.TypeEnum.LINK:
 

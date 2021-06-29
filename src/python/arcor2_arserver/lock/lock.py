@@ -390,7 +390,7 @@ class Lock:
             elif obj_id in self.scene.object_ids:
                 # TODO implement with scene object hierarchy
                 return obj_id
-            elif obj_id in self.project.constants_ids:
+            elif obj_id in self.project.parameters_ids:
                 return obj_id
             else:
                 parent = self.project.get_parent_id(obj_id)

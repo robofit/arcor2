@@ -67,11 +67,13 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert ap is not None
 
     assert ars.call_rpc(
-        rpc.p.AddConstant.Request(uid(), rpc.p.AddConstant.Request.Args("min_time", "double", json.dumps(0.45))),
+        rpc.p.AddProjectParameter.Request(
+            uid(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.45))
+        ),
         rpc.p.AddActionPoint.Response,
     ).result
 
-    c1 = event(ars, events.p.ProjectConstantChanged).data
+    c1 = event(ars, events.p.ProjectParameterChanged).data
     assert c1
 
     assert ars.call_rpc(
@@ -82,7 +84,9 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
                 "test_action",
                 f"{obj2.id}/{RandomActions.random_double.__name__}",
                 [
-                    common.ActionParameter("range_min", common.ActionParameter.TypeEnum.CONSTANT, json.dumps(c1.id)),
+                    common.ActionParameter(
+                        "range_min", common.ActionParameter.TypeEnum.PROJECT_PARAMETER, json.dumps(c1.id)
+                    ),
                     common.ActionParameter("range_max", "double", "0.55"),
                 ],
                 [common.Flow(outputs=["random_value"])],

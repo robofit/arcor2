@@ -420,7 +420,7 @@ class ActionParameterException(Arcor2Exception):
 class ActionParameter(Parameter):
     class TypeEnum(StrEnum):
 
-        CONSTANT: str = "constant"
+        PROJECT_PARAMETER: str = "project_parameter"
         LINK: str = "link"
 
     def str_from_value(self) -> str:
