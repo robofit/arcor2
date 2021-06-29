@@ -858,6 +858,14 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
         assert glob.LOCK.scene
 
+        # add commonly used project constants
+        import json  # TODO use parameter/constant plugin
+
+        glob.LOCK.project.upsert_constant(common.ProjectParameter("scene_id", "string", json.dumps(glob.LOCK.scene.id)))
+        glob.LOCK.project.upsert_constant(
+            common.ProjectParameter("project_id", "string", json.dumps(glob.LOCK.project.id))
+        )
+
         asyncio.ensure_future(
             notify_project_opened(
                 sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
