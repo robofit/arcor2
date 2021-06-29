@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.5.1rc2"
+pants_version = "2.5.1rc3"
 colors = true
 process_execution_local_parallelism = 4
 
@@ -49,12 +49,11 @@ extra_requirements.add = [
 
 [mypy]
 config = "mypy.ini"
-version = "mypy==0.901"
-# TODO enable this once numpy 1.21.0 is out
-# extra_requirements.add = [
-#  "numpy"
-#]
-extra_requirements = ["types-requests==0.1.9"]
+version = "mypy==0.910"
+extra_requirements.add = [
+  "numpy==1.21.0",
+  "types-requests==2.25.0"
+]
 
 [pytest]
 pytest_plugins.add = [
