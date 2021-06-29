@@ -54,9 +54,9 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     # TODO temporary solution - should be (probably) handled by plugin(s)
     from arcor2 import json
 
-    # TODO should we put there even unused constants?
-    for const in project.constants:
-        val = json.loads(const.value)
+    # TODO should we put there even unused parameters?
+    for param in project.parameters:
+        val = json.loads(param.value)
 
         aval: Optional[expr] = None
 
@@ -68,13 +68,13 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
             aval = Str(s=val, kind="")
 
         if not aval:
-            raise Arcor2Exception(f"Unsupported constant type ({const.type}) or value ({val}).")
+            raise Arcor2Exception(f"Unsupported project parameter type ({param.type}) or value ({val}).")
 
         last_assign += 1
         main.body.insert(
             last_assign,
             Assign(  # TODO use rather AnnAssign?
-                targets=[Name(id=const.name, ctx=Store())], value=aval, type_comment=None
+                targets=[Name(id=param.name, ctx=Store())], value=aval, type_comment=None
             ),
         )
 
@@ -148,8 +148,8 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
                 args.append(Name(id=res_name, ctx=Load()))
 
-            elif param.type == ActionParameter.TypeEnum.CONSTANT:
-                args.append(Name(id=project.constant(param.str_from_value()).name, ctx=Load()))
+            elif param.type == ActionParameter.TypeEnum.PROJECT_PARAMETER:
+                args.append(Name(id=project.parameter(param.str_from_value()).name, ctx=Load()))
             else:
 
                 plugin = plugin_from_type_name(param.type)

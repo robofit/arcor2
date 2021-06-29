@@ -177,7 +177,7 @@ class CachedProject(CachedBase):
         self._joints: Dict[str, ApJoints] = {}
         self._orientations: Dict[str, ApOrientation] = {}
 
-        self._constants: Dict[str, cmn.ProjectParameter] = {}
+        self._parameters: Dict[str, cmn.ProjectParameter] = {}
         self._logic_items: Dict[str, cmn.LogicItem] = {}
         self._functions: Dict[str, cmn.ProjectFunction] = {}
 
@@ -221,8 +221,8 @@ class CachedProject(CachedBase):
         for override in project.object_overrides:
             self.overrides[override.id] = override.parameters
 
-        for constant in project.parameters:
-            self._constants[constant.id] = constant
+        for param in project.parameters:
+            self._parameters[param.id] = param
 
         for logic_item in project.logic:
             self._logic_items[logic_item.id] = logic_item
@@ -239,12 +239,12 @@ class CachedProject(CachedBase):
         return {cmn.LogicItem.START, cmn.LogicItem.END} | self._logic_items.keys()
 
     @property
-    def constants(self) -> ValuesView[cmn.ProjectParameter]:
-        return self._constants.values()
+    def parameters(self) -> ValuesView[cmn.ProjectParameter]:
+        return self._parameters.values()
 
     @property
-    def constants_ids(self) -> Set[str]:
-        return set(self._constants)
+    def parameters_ids(self) -> Set[str]:
+        return set(self._parameters)
 
     @property
     def functions(self) -> ValuesView[cmn.ProjectFunction]:
@@ -264,7 +264,7 @@ class CachedProject(CachedBase):
             proj.action_points.append(ap)
 
         proj.object_overrides = [cmn.SceneObjectOverride(k, v) for k, v in self.overrides.items()]
-        proj.parameters = list(self.constants)
+        proj.parameters = list(self.parameters)
         proj.functions = list(self.functions)
         proj.logic = list(self.logic)
         return proj
@@ -451,12 +451,17 @@ class CachedProject(CachedBase):
         except KeyError:
             raise CachedProjectException("LogicItem not found.")
 
-    def constant(self, constant_id: str) -> cmn.ProjectParameter:
+    def parameter(self, parameter_id: str) -> cmn.ProjectParameter:
+        """Gets a project parameter by its ID.
+
+        :param parameter_id:
+        :return:
+        """
 
         try:
-            return self._constants[constant_id]
+            return self._parameters[parameter_id]
         except KeyError:
-            raise CachedProjectException("Constant not found.")
+            raise CachedProjectException("Project parameter not found.")
 
     def get_by_id(
         self, obj_id: str
@@ -470,8 +475,8 @@ class CachedProject(CachedBase):
             return self._orientations[obj_id].orientation
         elif obj_id in self._actions:  # Action
             return self._actions[obj_id].action
-        elif obj_id in self._constants:
-            return self._constants[obj_id]
+        elif obj_id in self._parameters:
+            return self._parameters[obj_id]
 
         raise CachedProjectException("Object not found.")
 
@@ -656,15 +661,15 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
         self._logic_items.clear()
         self.update_modified()
 
-    def upsert_constant(self, const: cmn.ProjectParameter) -> None:
-        self._constants[const.id] = const
+    def upsert_parameter(self, parameter: cmn.ProjectParameter) -> None:
+        self._parameters[parameter.id] = parameter
         self.update_modified()
 
-    def remove_constant(self, const_id: str) -> cmn.ProjectParameter:
+    def remove_parameter(self, parameter_id: str) -> cmn.ProjectParameter:
 
         try:
-            const = self._constants.pop(const_id)
+            param = self._parameters.pop(parameter_id)
         except KeyError as e:
-            raise CachedProjectException("Constant not found.") from e
+            raise CachedProjectException("Project parameter not found.") from e
         self.update_modified()
-        return const
+        return param

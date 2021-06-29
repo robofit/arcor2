@@ -121,7 +121,7 @@ def test_constant() -> None:
         "ac1",
         f"{obj.id}/test_par",
         flows=[Flow()],
-        parameters=[ActionParameter("param", ActionParameter.TypeEnum.CONSTANT, json.dumps(const.id))],
+        parameters=[ActionParameter("param", ActionParameter.TypeEnum.PROJECT_PARAMETER, json.dumps(const.id))],
     )
 
     ap1.actions.append(ac1)

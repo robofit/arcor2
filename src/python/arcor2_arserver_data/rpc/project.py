@@ -700,7 +700,7 @@ class RenameAction(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class AddConstant(RPC):
+class AddProjectParameter(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
@@ -720,12 +720,12 @@ class AddConstant(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class UpdateConstant(RPC):
+class UpdateProjectParameter(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
-            constant_id: str
+            id: str
             name: Optional[str] = None
             value: Optional[str] = None
 
@@ -740,12 +740,12 @@ class UpdateConstant(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class RemoveConstant(RPC):
+class RemoveProjectParameter(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
-            constant_id: str
+            id: str
 
         args: Args
         dry_run: bool = False

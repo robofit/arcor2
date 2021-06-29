@@ -152,12 +152,12 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                     assert parsed_link.output_index == 0
                     params.append(results)
 
-            elif param.type == common.ActionParameter.TypeEnum.CONSTANT:
-                const = proj.constant(param.str_from_value())
+            elif param.type == common.ActionParameter.TypeEnum.PROJECT_PARAMETER:
+                pparam = proj.parameter(param.str_from_value())
                 # TODO use plugin to get the value
                 from arcor2 import json
 
-                params.append(json.loads(const.value))
+                params.append(json.loads(pparam.value))
             else:
 
                 try:
@@ -858,11 +858,13 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
         assert glob.LOCK.scene
 
-        # add commonly used project constants
-        import json  # TODO use parameter/constant plugin
+        # add commonly used project parameters
+        import json  # TODO use parameter plugin
 
-        glob.LOCK.project.upsert_constant(common.ProjectParameter("scene_id", "string", json.dumps(glob.LOCK.scene.id)))
-        glob.LOCK.project.upsert_constant(
+        glob.LOCK.project.upsert_parameter(
+            common.ProjectParameter("scene_id", "string", json.dumps(glob.LOCK.scene.id))
+        )
+        glob.LOCK.project.upsert_parameter(
             common.ProjectParameter("project_id", "string", json.dumps(glob.LOCK.project.id))
         )
 
@@ -1369,99 +1371,102 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
     return None
 
 
-def check_constant(proj: CachedProject, constant: common.ProjectParameter) -> None:
+def check_parameter(proj: CachedProject, parameter: common.ProjectParameter) -> None:
 
-    hlp.is_valid_identifier(constant.name)
+    hlp.is_valid_identifier(parameter.name)
 
-    for const in proj.constants:
+    for pparam in proj.parameters:
 
-        if constant.id == const.id:
+        if parameter.id == pparam.id:
             continue
 
-        if constant.name == const.name:
+        if parameter.name == pparam.name:
             raise Arcor2Exception("Name has to be unique.")
 
     # TODO check using (constant?) plugin
     from arcor2 import json
 
-    val = json.loads(constant.value)
+    val = json.loads(parameter.value)
 
     if not isinstance(val, (int, float, str, bool)):
         raise Arcor2Exception("Only basic types are supported so far.")
 
 
-async def add_constant_cb(req: srpc.p.AddConstant.Request, ui: WsClient) -> None:
+async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui)):
 
-        const = common.ProjectParameter(req.args.name, req.args.type, req.args.value)
-        check_constant(proj, const)
+        pparam = common.ProjectParameter(req.args.name, req.args.type, req.args.value)
+        check_parameter(proj, pparam)
 
         if req.dry_run:
             return
 
-        proj.upsert_constant(const)
+        proj.upsert_parameter(pparam)
 
-        evt = sevts.p.ProjectConstantChanged(const)
+        evt = sevts.p.ProjectParameterChanged(pparam)
         evt.change_type = Event.Type.ADD
         asyncio.ensure_future(notif.broadcast_event(evt))
         return None
 
 
-async def update_constant_cb(req: srpc.p.UpdateConstant.Request, ui: WsClient) -> None:
+async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
-    const = proj.constant(req.args.constant_id)
+    param = proj.parameter(req.args.id)
     user_name = glob.USERS.user_name(ui)
 
-    await ensure_locked(req.args.constant_id, ui)
+    await ensure_locked(req.args.id, ui)
 
-    updated_constant = copy.deepcopy(const)
+    updated_param = copy.deepcopy(param)
 
     if req.args.name is not None:
-        updated_constant.name = req.args.name
+        updated_param.name = req.args.name
     if req.args.value is not None:
-        updated_constant.value = req.args.value
+        updated_param.value = req.args.value
 
-    check_constant(proj, const)
+    check_parameter(proj, param)
 
     if req.dry_run:
         return
 
-    proj.upsert_constant(updated_constant)
+    proj.upsert_parameter(updated_param)
 
-    evt = sevts.p.ProjectConstantChanged(updated_constant)
+    evt = sevts.p.ProjectParameterChanged(updated_param)
     evt.change_type = Event.Type.UPDATE
     asyncio.create_task(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(const.id, user_name, True))
+    asyncio.create_task(glob.LOCK.write_unlock(param.id, user_name, True))
 
 
-async def remove_constant_cb(req: srpc.p.RemoveConstant.Request, ui: WsClient) -> None:
+async def remove_project_parameter_cb(req: srpc.p.RemoveProjectParameter.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
-    const = proj.constant(req.args.constant_id)
+    pparam = proj.parameter(req.args.id)
 
     user_name = glob.USERS.user_name(ui)
-    to_lock = await get_unlocked_objects(req.args.constant_id, user_name)
+    to_lock = await get_unlocked_objects(req.args.id, user_name)
     async with ctx_write_lock(to_lock, user_name, auto_unlock=req.dry_run):
 
         # check for usage
         for act in proj.actions:
             for param in act.parameters:
-                if param.type == common.ActionParameter.TypeEnum.CONSTANT and param.str_from_value() == const.id:
-                    raise Arcor2Exception("Constant used as action parameter.")
+                if (
+                    param.type == common.ActionParameter.TypeEnum.PROJECT_PARAMETER
+                    and param.str_from_value() == pparam.id
+                ):
+                    raise Arcor2Exception(f"Project parameter used in {act.name} action.")
 
         if req.dry_run:
             return
 
-        await glob.LOCK.write_unlock(req.args.constant_id, user_name)
+        await glob.LOCK.write_unlock(req.args.id, user_name)
 
-        proj.remove_constant(const.id)
+        proj.remove_parameter(pparam.id)
 
-        evt = sevts.p.ProjectConstantChanged(const)
+        evt = sevts.p.ProjectParameterChanged(pparam)
         evt.change_type = Event.Type.REMOVE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
