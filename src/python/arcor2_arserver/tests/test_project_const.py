@@ -1,3 +1,5 @@
+from typing import Dict
+
 from arcor2 import json
 from arcor2.data import common
 from arcor2.object_types.random_actions import RandomActions
@@ -37,8 +39,18 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
         rpc.p.NewProject.Response,
     ).result
 
-    proj = event(ars, events.p.OpenProject).data
-    assert proj
+    open_project = event(ars, events.p.OpenProject).data
+    assert open_project
+
+    proj = open_project.project
+
+    # test project parameters added by the arserver
+    d: Dict[str, common.ProjectParameter] = {par.name: par for par in proj.parameters}
+    assert len(d) == 2
+    assert d["scene_id"].type == "string"
+    assert json.loads(d["scene_id"].value) == scene.id
+    assert d["project_id"].type == "string"
+    assert json.loads(d["project_id"].value) == proj.id
 
     event(ars, events.s.SceneState)
 

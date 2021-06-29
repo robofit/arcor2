@@ -43,7 +43,7 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
 
     assert open_project_evt.data.project.name == project_name
     assert not open_project_evt.data.project.action_points
-    assert not open_project_evt.data.project.parameters
+    assert len(open_project_evt.data.project.parameters) == 2  # scene_id + project_id
     assert not open_project_evt.data.project.functions
     assert not open_project_evt.data.project.logic
 
