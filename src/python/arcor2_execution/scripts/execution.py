@@ -6,13 +6,15 @@ import os
 import shutil
 import signal
 import sys
-import tempfile
 import time
 import zipfile
 from datetime import datetime, timezone
 from typing import Awaitable, List, Optional, Set, Union
 
+import aiofiles
+import aiofiles.os
 import websockets
+from aiofiles import tempfile  # type: ignore
 from aiologger.levels import LogLevel
 from aiorun import run
 from dataclasses_jsonschema import ValidationError
@@ -25,7 +27,7 @@ from arcor2.data import common, compile_json_schemas
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import port_from_url
+from arcor2.helpers import port_from_url, run_in_executor
 from arcor2.logging import get_aiologger
 from arcor2_execution_data import EVENTS, URL, events, rpc
 from arcor2_execution_data.common import PackageSummary, ProjectMeta
@@ -130,8 +132,8 @@ async def read_proc_stdout() -> None:
 
             await send_to_clients(ProjectException(ProjectException.Data(message, exception_type)))
 
-            with open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
-                tb_file.write("".join(printed_out))
+            async with aiofiles.open("traceback-{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), "w") as tb_file:
+                await tb_file.write("".join(printed_out))
 
         else:
             logger.warn(
@@ -144,9 +146,9 @@ async def read_proc_stdout() -> None:
     RUNNING_PACKAGE_ID = None
 
 
-def check_script(script_path: str) -> None:
+async def check_script(script_path: str) -> None:
 
-    if not os.path.exists(script_path):
+    if not await run_in_executor(os.path.exists, script_path):
         raise Arcor2Exception("Main script not found.")
 
 
@@ -162,12 +164,12 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     package_path = os.path.join(PROJECT_PATH, req.args.id)
 
     try:
-        os.chdir(package_path)
+        await run_in_executor(os.chdir, package_path, propagate=[FileNotFoundError])
     except FileNotFoundError:
         raise Arcor2Exception("Not found.")
 
     script_path = os.path.join(package_path, MAIN_SCRIPT_NAME)
-    check_script(script_path)
+    await check_script(script_path)
 
     # this is necessary in order to make PEX embedded modules available to subprocess
     pypath = ":".join(sys.path)
@@ -190,9 +192,9 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start project.")
 
-    meta = read_package_meta(req.args.id)
+    meta = await run_in_executor(read_package_meta, req.args.id)
     meta.executed = datetime.now(tz=timezone.utc)
-    write_package_meta(req.args.id, meta)
+    await run_in_executor(write_package_meta, req.args.id, meta)
 
     RUNNING_PACKAGE_ID = req.args.id
 
@@ -259,15 +261,15 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
 
     # TODO do not allow if there are manual changes?
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    async with tempfile.TemporaryDirectory() as tmpdirname:
 
         zip_path = os.path.join(tmpdirname, "publish.zip")
 
         b64_bytes = req.args.data.encode()
         zip_content = base64.b64decode(b64_bytes)
 
-        with open(zip_path, "wb") as zip_file:
-            zip_file.write(zip_content)
+        async with aiofiles.open(zip_path, mode="wb") as zip_file:
+            await zip_file.write(zip_content)
 
         try:
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
@@ -276,17 +278,17 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
             logger.error(e)
             raise Arcor2Exception("Invalid zip file.")
 
-        os.remove(zip_path)
+        await aiofiles.os.remove(zip_path)
 
         try:
-            shutil.rmtree(target_path)
+            await run_in_executor(shutil.rmtree, target_path, propagate=[FileNotFoundError])
         except FileNotFoundError:
             pass
-        shutil.copytree(tmpdirname, target_path)
+        await run_in_executor(shutil.copytree, tmpdirname, target_path)
 
     script_path = os.path.join(target_path, MAIN_SCRIPT_NAME)
 
-    check_script(script_path)
+    await check_script(script_path)
 
     evt = events.PackageChanged(await get_summary(target_path))
     evt.change_type = Event.Type.ADD
@@ -296,41 +298,43 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
 
 async def get_summary(path: str) -> PackageSummary:
 
+    sum = await get_opt_summary(path)
+
+    if not sum:
+        raise Arcor2Exception("Invalid package.")
+
+    return sum
+
+
+async def get_opt_summary(path: str) -> Optional[PackageSummary]:
+
     if not os.path.isfile(os.path.join(path, MAIN_SCRIPT_NAME)):
-        raise Arcor2Exception("Package does not contain main script.")
+        logger.warn(f"Package at {path} does not contain main script.")
+        return None
 
     package_dir = os.path.basename(path)
     package_meta = read_package_meta(package_dir)
 
     try:
-        with open(os.path.join(path, "data", "project.json")) as project_file:
-            project = common.Project.from_json(project_file.read())
+        async with aiofiles.open(os.path.join(path, "data", "project.json")) as project_file:
+            project = common.Project.from_json(await project_file.read())
     except (ValidationError, IOError) as e:
         logger.error(f"Failed to read/parse project file of {package_dir}: {e}")
 
         return PackageSummary(package_dir, package_meta)
 
-    modified = project.modified
-    if not modified:
-        modified = datetime.fromtimestamp(0, tz=timezone.utc)
-
-    return PackageSummary(package_dir, package_meta, ProjectMeta(project.id, project.name, modified))
+    return PackageSummary(package_dir, package_meta, ProjectMeta.from_project(project))
 
 
 async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.ListPackages.Response:
 
     resp = rpc.ListPackages.Response()
-    resp.data = []
-
     subfolders = [f.path for f in os.scandir(PROJECT_PATH) if f.is_dir()]
-
-    for folder_path in subfolders:
-
-        try:
-            resp.data.append(await get_summary(folder_path))
-        except Arcor2Exception:
-            pass
-
+    resp.data = [
+        ps
+        for ps in await asyncio.gather(*[get_opt_summary(folder_path) for folder_path in subfolders])
+        if ps is not None
+    ]
     return resp
 
 
@@ -343,7 +347,7 @@ async def delete_package_cb(req: rpc.DeletePackage.Request, ui: WsClient) -> Non
     package_summary = await get_summary(target_path)
 
     try:
-        shutil.rmtree(target_path)
+        await run_in_executor(shutil.rmtree, target_path, propagate=[FileNotFoundError])
     except FileNotFoundError:
         raise Arcor2Exception("Not found.")
 
@@ -360,8 +364,8 @@ async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> Non
     pm = read_package_meta(req.args.package_id)
     pm.name = req.args.new_name
 
-    with open(target_path, "w") as pkg_file:
-        pkg_file.write(pm.to_json())
+    async with aiofiles.open(target_path, mode="w") as pkg_file:
+        await pkg_file.write(pm.to_json())
 
     evt = events.PackageChanged(await get_summary(os.path.join(PROJECT_PATH, req.args.package_id)))
     evt.change_type = Event.Type.UPDATE
@@ -371,7 +375,7 @@ async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> Non
 
 async def _version_cb(req: arcor2_rpc.common.Version.Request, ui: WsClient) -> arcor2_rpc.common.Version.Response:
     resp = arcor2_rpc.common.Version.Response()
-    resp.data = resp.Data(arcor2_execution_data.version())
+    resp.data = resp.Data(await run_in_executor(arcor2_execution_data.version))
     return resp
 
 
