@@ -585,8 +585,6 @@ async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingR
     ap = proj.bare_action_point(req.args.action_point_id)
     await ensure_locked(ap.id, ui)
 
-    print(req.args.robot.arm_id)
-
     async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
         robot_inst = await get_robot_instance(req.args.robot.robot_id)
         await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
