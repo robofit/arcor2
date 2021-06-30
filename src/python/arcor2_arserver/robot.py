@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from typing import List, Optional, Set, Tuple, Type
+from typing import Any, List, Optional, Set, Tuple, Type
 
 import arcor2.helpers as hlp
 from arcor2.cached import CachedScene
@@ -20,7 +20,7 @@ class RobotPoseException(Arcor2Exception):
     pass
 
 
-def prepare_args(robot_inst: Robot, args: List, arm_id: Optional[str]) -> List:
+def prepare_args(robot_inst: Robot, args: List[Any], arm_id: Optional[str]) -> List[Any]:
 
     if isinstance(robot_inst, MultiArmRobot):
         args.append(arm_id)

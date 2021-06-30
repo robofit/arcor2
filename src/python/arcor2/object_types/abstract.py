@@ -178,8 +178,6 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         except Arcor2NotImplemented:
             pass
 
-        return None
-
     def move_to_calibration_pose(self) -> None:
         raise Arcor2NotImplemented("No calibration pose specified.")
 
@@ -305,6 +303,25 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def suctions(self, arm_id: Optional[str] = None) -> Set[str]:
         return set()
+
+    def check_if_ready_to_move(self) -> None:
+        """The method should raise exception when the robot is not ready to
+        move for some reason.
+
+        :return:
+        """
+
+        if self.move_in_progress:  # this holds for all arms
+            raise RobotException("Already moving.")
+
+        # hand-teaching mode is arm specific
+        for arm_id in self.get_arm_ids():
+
+            try:
+                if self.get_hand_teaching_mode(arm_id):
+                    raise RobotException("Can't move in hand teaching mode.")
+            except Arcor2NotImplemented:
+                pass
 
     def move_to_pose(
         self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, arm_id: Optional[str] = None

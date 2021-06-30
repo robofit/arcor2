@@ -1,6 +1,7 @@
 import time
 from typing import Dict, List, Optional, Set
 
+from arcor2 import transformations as tr
 from arcor2.data.common import Joint, Pose, StrEnum
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import MultiArmRobot, Settings
@@ -29,7 +30,14 @@ class DummyMultiArmRobot(MultiArmRobot):
 
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
         super().__init__(obj_id, name, pose, settings)
+
         self._hand_teaching: Dict[str, bool] = {self.Arms.left: False, self.Arms.right: False}
+        self._poses: Dict[str, Dict[str, Pose]] = {}
+
+        for arm, eefs in self.EEF.items():
+            self._poses[arm] = {}
+            for eef in eefs:
+                self._poses[arm][eef] = Pose()
 
     def get_arm_ids(self) -> Set[str]:
         return self.Arms.set()
@@ -53,7 +61,9 @@ class DummyMultiArmRobot(MultiArmRobot):
         if end_effector not in self.get_end_effectors_ids(arm_id):
             raise Arcor2Exception("Unknown end effector.")
 
-        return Pose()
+        assert arm_id
+
+        return tr.make_pose_abs(self.pose, self._poses[arm_id][end_effector])
 
     def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
         """With no arm specified, returns all robot joints. Otherwise, returns
@@ -92,7 +102,13 @@ class DummyMultiArmRobot(MultiArmRobot):
         if end_effector_id not in self.get_end_effectors_ids(arm_id):
             raise Arcor2Exception("Unknown end effector.")
 
-        time.sleep(1)
+        assert arm_id
+
+        speed = min(max(0.0, speed), 1.0)
+
+        with self._move_lock:
+            time.sleep(1.0 - speed)
+            self._poses[arm_id][end_effector_id] = tr.make_pose_rel(self.pose, target_pose)
 
     def move_to_joints(
         self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
@@ -106,17 +122,15 @@ class DummyMultiArmRobot(MultiArmRobot):
         """
 
         if arm_id is None:
-
             if len(target_joints) != len(self.robot_joints()):
                 raise Arcor2Exception("Joints for both arms have to be specified.")
-
-            time.sleep(1)
-            return
-
-        if arm_id not in self.get_arm_ids():
+        elif arm_id not in self.get_arm_ids():
             raise Arcor2Exception("Unknown arm.")
 
-        time.sleep(1)
+        speed = min(max(0.0, speed), 1.0)
+
+        with self._move_lock:
+            time.sleep(1.0 - speed)
 
     def inverse_kinematics(
         self,
