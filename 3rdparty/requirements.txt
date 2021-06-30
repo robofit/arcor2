@@ -1,4 +1,5 @@
 astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unparse is there)
+aiofiles==0.7.0
 aiologger==0.6.1
 aiorun==2020.12.1
 apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!

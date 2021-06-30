@@ -52,11 +52,11 @@ def check_object_type(type_def: Type[Generic]) -> None:
 def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
     """Yields class name and class definition tuple."""
 
-    for cls in inspect.getmembers(arcor2.object_types.abstract, inspect.isclass):
-        if not issubclass(cls[1], Generic):
+    for cls_name, cls_type in inspect.getmembers(arcor2.object_types.abstract, inspect.isclass):
+        if not issubclass(cls_type, Generic):
             continue
 
-        yield cls[0], cls[1]
+        yield cls_name, cls_type
 
 
 def get_built_in_type(name: str) -> Type[Generic]:
@@ -69,13 +69,7 @@ def get_built_in_type(name: str) -> Type[Generic]:
 
 
 def built_in_types_names() -> Set[str]:
-
-    names = set()
-
-    for type_name, _ in built_in_types():
-        names.add(type_name)
-
-    return names
+    return {type_name for type_name, _ in built_in_types()}
 
 
 class DataError(Arcor2Exception):

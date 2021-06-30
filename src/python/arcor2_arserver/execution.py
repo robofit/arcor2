@@ -1,11 +1,12 @@
 import asyncio
 import base64
 import os
-import tempfile
 import uuid
 from typing import TYPE_CHECKING, Dict, Optional
 
+import aiofiles
 import websockets
+from aiofiles import tempfile  # type: ignore
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
@@ -88,7 +89,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
 
     # call build service
     # TODO store data in memory
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    async with tempfile.TemporaryDirectory() as tmpdirname:
         path = os.path.join(tmpdirname, "publish.zip")
 
         await hlp.run_in_executor(
@@ -98,8 +99,8 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             {"packageName": package_name},
         )
 
-        with open(path, "rb") as zip_file:
-            b64_bytes = base64.b64encode(zip_file.read())
+        async with aiofiles.open(path, "rb") as zip_file:
+            b64_bytes = base64.b64encode(await zip_file.read())
             b64_str = b64_bytes.decode()
 
     # send data to execution service
