@@ -56,9 +56,13 @@ class Generic(metaclass=abc.ABCMeta):
 
     @classmethod
     def description(cls) -> str:
-        if not cls.__doc__:
+        """Returns short description from docstring comment."""
+
+        docs = parse_docstring(cls.__doc__)
+
+        if not docs.short_description:
             return "No description available."
-        return parse_docstring(cls.__doc__)["short_description"]
+        return docs.short_description
 
     def scene_object(self) -> SceneObject:
         return SceneObject(self.name, self.__class__.__name__, id=self.id)

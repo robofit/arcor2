@@ -148,13 +148,8 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
         try:
 
-            if not method_def.__doc__:
-                doc = {}
-            else:
-                doc = parse_docstring(method_def.__doc__)
-                doc_short = doc["short_description"]
-                if doc_short:
-                    data.description = doc_short
+            docstring = parse_docstring(method_def.__doc__)
+            data.description = docstring.short_description
 
             signature = inspect.signature(method_def)  # sig.parameters is OrderedDict
 
@@ -226,11 +221,7 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
                 if def_val is not inspect.Parameter.empty:
                     args.default_value = param_type.value_to_json(def_val)
 
-                try:
-                    args.description = doc["params"][name].strip()
-                except KeyError:
-                    pass
-
+                args.description = docstring.param(name)
                 data.parameters.append(args)
 
         except Arcor2Exception as e:
