@@ -55,5 +55,7 @@ def test_generic_with_pose(start_processes: None) -> None:
     obj.enabled = True
     assert obj.id in scene_service.collision_ids()
 
-    obj.cleanup()
+    scene_service.start()
+    assert obj.id in scene_service.collision_ids()
+    scene_service.stop()  # after stop, all collisions are removed by the Scene service
     assert not scene_service.collision_ids()

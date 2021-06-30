@@ -49,9 +49,9 @@ class IntResources:
         built_in = built_in_types_names()
 
         if scene_service.started():
-            scene_service.stop()
-
-        scene_service.delete_all_collisions()
+            scene_service.stop()  # also deletes all collisions
+        else:
+            scene_service.delete_all_collisions()  # in order to prepare a clean environment
 
         package_id = os.path.basename(os.getcwd())
         package_meta = package.read_package_meta(package_id)
@@ -137,9 +137,6 @@ class IntResources:
 
         for obj in self.objects.values():
             obj.cleanup()
-
-        # for a case of manually created collision models
-        scene_service.delete_all_collisions()
 
         return True
 

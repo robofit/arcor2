@@ -247,7 +247,7 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
 async def open_scene(scene_id: str) -> None:
 
-    await asyncio.gather(scene_srv.delete_all_collisions(), get_object_types())
+    await get_object_types()
     glob.LOCK.scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     try:
@@ -353,8 +353,12 @@ async def start_scene(scene: CachedScene) -> None:
 
         await set_scene_state(SceneState.Data.StateEnum.Starting)
 
+        # in order to prepare a clear environment
         try:
-            await scene_srv.stop()
+            if await scene_srv.started():
+                await scene_srv.stop()
+            else:
+                await scene_srv.delete_all_collisions()
         except Arcor2Exception:
             await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
             return False
