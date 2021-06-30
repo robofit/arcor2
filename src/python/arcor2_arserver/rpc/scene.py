@@ -10,7 +10,6 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2.cached import UpdateableCachedScene
-from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
@@ -96,10 +95,9 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
         if req.dry_run:
             return None
 
-        # delete all collision objects (just for sure)
         # TODO get_object_types - not ideal, may take quite long time
         #  ...maybe creating a scene should be done similarly to starting one (process with events about its state)?
-        await asyncio.gather(scene_srv.delete_all_collisions(), get_object_types())
+        await get_object_types()
 
         glob.LOCK.scene = UpdateableCachedScene(common.Scene(req.args.name, description=req.args.description))
         asyncio.ensure_future(notify_scene_opened(sevts.s.OpenScene(sevts.s.OpenScene.Data(glob.LOCK.scene.scene))))

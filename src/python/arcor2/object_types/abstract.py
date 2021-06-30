@@ -137,15 +137,8 @@ class GenericWithPose(Generic):
                 assert self.id not in scene_service.collision_ids()
                 scene_service.upsert_collision(self.collision_model, self.pose)
             if self._enabled and not enabled:
-                # TODO not sure if it's intentional, but stopped scene service 0.4.2 returns empty list of collision IDs
-                # assert self.id in scene_service.collision_ids()
                 scene_service.delete_collision_id(self.id)
         self._enabled = enabled
-
-    def cleanup(self) -> None:
-
-        super(GenericWithPose, self).cleanup()
-        self.enabled = False
 
 
 class RobotException(Arcor2Exception):
