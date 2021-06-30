@@ -51,15 +51,23 @@ class ExecutionState(Enum):
 
 
 @dataclass
+class SummaryProject(JsonSchemaMixin):
+    """Describes a project."""
+
+    id: str
+    name: str
+    description: str
+
+
+@dataclass
 class SummaryPackage(JsonSchemaMixin):
     """Describes execution package."""
 
     id: str
     name: Optional[str] = None
-    projectId: Optional[str] = None
-    projectName: Optional[str] = None
     created: Optional[datetime] = None
     executed: Optional[datetime] = None
+    project: Optional[SummaryProject] = None
 
 
 @dataclass
@@ -480,8 +488,7 @@ def get_packages() -> RespT:
         sp.created = pck.package_meta.built
         sp.executed = pck.package_meta.executed
         if pck.project_meta:
-            sp.projectId = pck.project_meta.id
-            sp.projectName = pck.project_meta.name
+            sp.project = SummaryProject(pck.project_meta.id, pck.project_meta.name, pck.project_meta.description)
         ret.append(sp.to_dict())
 
     return jsonify(ret), 200
