@@ -105,7 +105,7 @@ rpc_responses: Dict[int, RespQueue] = {}
 
 package_state: Optional[PackageState.Data] = None
 package_info: Optional[PackageInfo.Data] = None
-exception_message: Optional[str] = None
+exception_messages: List[str] = []
 
 
 @contextmanager
@@ -121,7 +121,6 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
 
     global package_info
     global package_state
-    global exception_message
     assert ws
 
     event_mapping: Dict[str, Type[events.Event]] = {evt.__name__: evt for evt in EVENTS}
@@ -141,10 +140,10 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
                 package_state = evt.data
 
                 if package_state.state == PackageState.Data.StateEnum.RUNNING:
-                    exception_message = None
+                    exception_messages.clear()
 
             elif isinstance(evt, ProjectException):
-                exception_message = evt.data.message
+                exception_messages.append(evt.data.message)
 
         elif "response" in data:
             resp = rpc_mapping[data["response"]].Response.from_dict(data)
@@ -711,8 +710,8 @@ def packages_executioninfo() -> RespT:
         ret = ExecutionInfo(ExecutionState.Pending, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.STOPPED:
 
-        if exception_message:
-            ret = ExecutionInfo(ExecutionState.Faulted, package_state.package_id, exception_message)
+        if exception_messages:
+            ret = ExecutionInfo(ExecutionState.Faulted, package_state.package_id, " ".join(exception_messages))
         else:
             ret = ExecutionInfo(ExecutionState.Completed, package_state.package_id)
     else:

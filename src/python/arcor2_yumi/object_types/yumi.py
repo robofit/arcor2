@@ -761,7 +761,7 @@ class YuMi(MultiArmRobot):
 
             ret: List[Joint] = []
 
-            futures = []
+            futures: List[concurrent.futures.Future] = []
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures.append(executor.submit(self._left.joints))
                 futures.append(executor.submit(self._right.joints))

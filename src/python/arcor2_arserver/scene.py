@@ -1,6 +1,5 @@
 import asyncio
-from collections import defaultdict
-from typing import AsyncIterator, DefaultDict, Dict, List, Optional, Set
+from typing import AsyncIterator, Dict, List, Optional, Set
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -368,33 +367,22 @@ async def start_scene(scene: CachedScene) -> None:
         if glob.LOCK.project:
             object_overrides = glob.LOCK.project.overrides
 
-        prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
+        # object initialization could take some time - let's do it in parallel
+        tasks = [
+            asyncio.ensure_future(
+                create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
+            )
+            for obj in scene.objects
+        ]
 
-        for obj in scene.objects:
-            type_def = glob.OBJECT_TYPES[obj.type].type_def
-            assert type_def
-            prio_dict[type_def.INIT_PRIORITY].append(obj)
-
-        for prio in sorted(prio_dict.keys(), reverse=True):
-
-            assert prio_dict[prio]
-
-            # object initialization could take some time - let's do it in parallel (grouped by priority)
-            tasks = [
-                asyncio.ensure_future(
-                    create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
-                )
-                for obj in prio_dict[prio]
-            ]
-
-            try:
-                await asyncio.gather(*tasks)
-            except Arcor2Exception as e:
-                for t in tasks:
-                    t.cancel()
-                glob.logger.exception("Failed to create instances.")
-                await stop_scene(scene, str(e), already_locked=True)
-                return False
+        try:
+            await asyncio.gather(*tasks)
+        except Arcor2Exception as e:
+            for t in tasks:
+                t.cancel()  # TODO maybe it would be better to let them finish?
+            glob.logger.exception("Failed to create instances.")
+            await stop_scene(scene, str(e), already_locked=True)
+            return False
 
         try:
             await scene_srv.start()

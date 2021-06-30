@@ -35,7 +35,6 @@ class Generic(metaclass=abc.ABCMeta):
     DYNAMIC_PARAMS: DynamicParamDict = {}
     CANCEL_MAPPING: CancelDict = {}
     _ABSTRACT = True
-    INIT_PRIORITY = 0  # OT with the highest priority will be initialized first
 
     def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
 
