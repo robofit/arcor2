@@ -166,9 +166,10 @@ async def _initialize_server() -> None:
         verbose=glob.VERBOSE,
     )
 
-    glob.logger.info("Server initialized.")
+    glob.logger.info(
+        f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized."
+    )
     await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
-
     asyncio.create_task(run_lock_notification_worker())
 
 

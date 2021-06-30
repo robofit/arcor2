@@ -1,7 +1,8 @@
+import concurrent.futures
 import importlib
 import os
 from types import TracebackType
-from typing import Dict, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
@@ -74,27 +75,46 @@ class IntResources:
 
         scene_objects = list(self.scene.objects)
 
-        # sort according to OT initialization priority (highest is initialized first)
-        scene_objects.sort(key=lambda x: self.type_defs[x.type].INIT_PRIORITY, reverse=True)
+        futures: List[concurrent.futures.Future] = []
 
-        for scene_obj in scene_objects:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for scene_obj in scene_objects:
 
-            cls = self.type_defs[scene_obj.type]
+                cls = self.type_defs[scene_obj.type]
 
-            assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
+                assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
-            settings = settings_from_params(cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None))
-
-            if issubclass(cls, Robot):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose, settings)
-            elif issubclass(cls, GenericWithPose):
-                self.objects[scene_obj.id] = cls(
-                    scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
+                settings = settings_from_params(
+                    cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None)
                 )
-            elif issubclass(cls, Generic):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, settings)
+
+                if issubclass(cls, Robot):
+                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
+                elif issubclass(cls, GenericWithPose):
+                    futures.append(
+                        executor.submit(
+                            cls, scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
+                        )
+                    )
+                elif issubclass(cls, Generic):
+                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, settings))
+                else:
+                    raise Arcor2Exception("Unknown base class.")
+
+        exception_cnt: int = 0
+
+        for f in concurrent.futures.as_completed(futures):
+            try:
+                inst = f.result()  # if an object creation resulted in exception, it will be raised here
+            except Arcor2Exception as e:
+                print_exception(e)
+                exception_cnt += 1  # count of objects that failed to initialize
             else:
-                raise Arcor2Exception("Unknown base class.")
+                self.objects[inst.id] = inst  # successfully initialized objects
+
+        if exception_cnt:  # if something failed, tear down those that succeeded and stop
+            self.cleanup_all_objects()
+            raise Arcor2Exception(f"Failed to initialize {exception_cnt} object(s).")
 
         for model in models.values():
 
@@ -119,6 +139,22 @@ class IntResources:
             # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
             tr.make_relative_ap_global(self.scene, self.project, aps)
 
+    def cleanup_all_objects(self) -> None:
+        """Calls cleanup method of all objects in parallel.
+
+        Errors are just logged.
+        """
+
+        futures: List[concurrent.futures.Future] = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for obj in self.objects.values():
+                futures.append(executor.submit(obj.cleanup))
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Arcor2Exception as e:
+                print_exception(e)
+
     def __enter__(self: R) -> R:
         return self
 
@@ -134,9 +170,7 @@ class IntResources:
             print_exception(ex_value)
 
         scene_service.stop()
-
-        for obj in self.objects.values():
-            obj.cleanup()
+        self.cleanup_all_objects()
 
         return True
 
