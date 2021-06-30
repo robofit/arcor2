@@ -8,7 +8,7 @@ from .abstract_robot import AbstractRobot
 
 
 class Simatic(AbstractRobot):
-    """REST interface to the robot service (0.7.0)."""
+    """REST interface to the robot service (0.12.0)."""
 
     _ABSTRACT = False
     robot_type = RobotType.CARTESIAN

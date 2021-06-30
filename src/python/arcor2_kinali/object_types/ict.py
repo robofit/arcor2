@@ -23,12 +23,6 @@ class Ict(AbstractWithPose):
         settings: Optional[Settings] = None,
     ) -> None:
         super(AbstractWithPose, self).__init__(obj_id, name, pose, collision_model, settings)
-        rest.call(
-            rest.Method.PUT,
-            f"{self.settings.url}/system/set",
-            body=pose,
-            params={"configurationId": self.settings.configuration_id, "id": self.id},
-        )
 
     def test(self, serial_number: str, *, an: Optional[str] = None) -> bool:
         """Tests a PCB in an ICT tester.
