@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple
 
 import quaternion
 from arcor2_dobot.dobot import Dobot, DobotException
-from pydobot import dobot
+from arcor2_dobot.dobot_api import DobotApiException
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Orientation, Pose, Position, StrEnum
@@ -170,10 +170,10 @@ class DobotMagician(Dobot):
             - self.end_effector_length
         )
 
-        ori = Orientation()
-        ori.set_from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value + j1))
-
-        pose = Pose(Position(x, y, z), ori)
+        pose = Pose(
+            Position(x, y, z),
+            Orientation.from_quaternion(quaternion.from_euler_angles(0, math.pi, joints[-1].value + j1)),
+        )
 
         if __debug__:
             self._check_orientation(pose)
@@ -201,7 +201,7 @@ class DobotMagician(Dobot):
 
         try:
             self._dobot.wait_for_cmd(self._dobot.suck(True))
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Suck failed.") from e
 
     def release(self) -> None:
@@ -211,5 +211,5 @@ class DobotMagician(Dobot):
 
         try:
             self._dobot.wait_for_cmd(self._dobot.suck(False))
-        except dobot.DobotException as e:
+        except DobotApiException as e:
             raise DobotException("Release failed.") from e

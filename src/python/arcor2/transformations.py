@@ -1,24 +1,9 @@
+from typing import NamedTuple, Optional
+
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import BareActionPoint, Orientation, Pose, Position
 from arcor2.exceptions import Arcor2Exception
-
-
-def make_position_rel(parent: Position, child: Position) -> Position:
-
-    p = Position()
-
-    p.x = child.x - parent.x
-    p.y = child.y - parent.y
-    p.z = child.z - parent.z
-    return p
-
-
-def make_orientation_rel(parent: Orientation, child: Orientation) -> Orientation:
-
-    p = Orientation()
-    p.set_from_quaternion(child.as_quaternion() / parent.as_quaternion())
-    return p
 
 
 def make_pose_rel(parent: Pose, child: Pose) -> Pose:
@@ -28,26 +13,10 @@ def make_pose_rel(parent: Pose, child: Pose) -> Pose:
     :return: relative pose
     """
 
-    p = Pose()
-    p.position = make_position_rel(parent.position, child.position).rotated(parent.orientation, True)
-    p.orientation = make_orientation_rel(parent.orientation, child.orientation)
-    return p
-
-
-def make_position_abs(parent: Position, child: Position) -> Position:
-
-    p = Position()
-    p.x = child.x + parent.x
-    p.y = child.y + parent.y
-    p.z = child.z + parent.z
-    return p
-
-
-def make_orientation_abs(parent: Orientation, child: Orientation) -> Orientation:
-
-    p = Orientation()
-    p.set_from_quaternion(child.as_quaternion() * parent.as_quaternion().conjugate().inverse())
-    return p
+    return Pose(
+        (child.position - parent.position).rotated(parent.orientation, inverse=True),
+        Orientation.from_quaternion(parent.orientation.as_quaternion().inverse() * child.orientation.as_quaternion()),
+    )
 
 
 def make_pose_abs(parent: Pose, child: Pose) -> Pose:
@@ -57,11 +26,38 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
     :return: absolute pose
     """
 
-    p = Pose()
-    p.position = child.position.rotated(parent.orientation)
-    p.position = make_position_abs(parent.position, p.position)
-    p.orientation = make_orientation_abs(parent.orientation, child.orientation)
-    return p
+    return Pose(
+        (child.position.rotated(parent.orientation) + parent.position),
+        Orientation.from_quaternion(parent.orientation.as_quaternion() * child.orientation.as_quaternion()),
+    )
+
+
+class Parent(NamedTuple):
+
+    pose: Pose
+    parent_id: Optional[str] = None  # parent of the parent
+
+
+def get_parent_pose(scene: CScene, project: CProject, parent_id: str) -> Parent:
+    """Returns pose of the parent and parent of the parent (if any).
+
+    :param scene:
+    :param project:
+    :param parent_id:
+    :return:
+    """
+
+    if parent_id in scene.object_ids:
+        parent_obj = scene.object(parent_id)
+        if not parent_obj.pose:
+            raise Arcor2Exception("Parent object does not have pose!")
+        # TODO find parent object in the graph (SceneObject has "children" property)
+        return Parent(parent_obj.pose, None)
+    elif parent_id in project.action_points_ids:
+        ap = project.bare_action_point(parent_id)
+        return Parent(Pose(ap.position, Orientation()), ap.parent)
+    else:
+        raise Arcor2Exception("Unknown parent_id.")
 
 
 def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> None:
@@ -76,27 +72,14 @@ def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoin
     if not ap.parent:
         return
 
-    if ap.parent in scene.object_ids:
-        parent_obj = scene.object(ap.parent)
-        if not parent_obj.pose:
-            raise Arcor2Exception("Parent object does not have pose!")
-        old_parent_pose = parent_obj.pose
-    elif ap.parent in project.action_points_ids:
-        old_parent_pose = Pose(project.bare_action_point(ap.parent).position, Orientation())
-    else:
-        raise Arcor2Exception("AP has unknown parent_id.")
+    parent = get_parent_pose(scene, project, ap.parent)
 
-    ap.position = make_pose_abs(old_parent_pose, Pose(ap.position, Orientation())).position
+    ap.position = make_pose_abs(parent.pose, Pose(ap.position, Orientation())).position
     for ori in project.ap_orientations(ap.id):
-        ori.orientation = make_orientation_abs(old_parent_pose.orientation, ori.orientation)
+        ori.orientation = make_pose_abs(parent.pose, Pose(Position(), ori.orientation)).orientation
 
-    if ap.parent in project.action_points_ids:
-        parent_ap = project.bare_action_point(ap.parent)
-        if parent_ap.parent:
-            ap.parent = parent_ap.parent
-            make_relative_ap_global(scene, project, ap)
-
-    ap.parent = None
+    ap.parent = parent.parent_id
+    make_relative_ap_global(scene, project, ap)
 
 
 def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoint, parent_id: str) -> None:
@@ -112,27 +95,21 @@ def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoin
 
     assert project.scene_id == scene.id
 
-    if parent_id in scene.object_ids:
-        parent_obj = scene.object(parent_id)
-        if not parent_obj.pose:
-            raise Arcor2Exception("Parent object does not have pose!")
-        new_parent_pose = parent_obj.pose
-    elif parent_id in project.action_points_ids:
+    if ap.parent:
+        raise Arcor2Exception("Action point already has a parent.")
 
-        parent_ap = project.bare_action_point(parent_id)
+    def _make_global_ap_relative(parent_id: str) -> None:
 
-        if parent_ap.parent:
-            make_global_ap_relative(scene, project, ap, parent_ap.parent)
+        parent = get_parent_pose(scene, project, parent_id)
 
-        new_parent_pose = Pose(parent_ap.position, Orientation())
+        if parent.parent_id:
+            _make_global_ap_relative(parent.parent_id)
 
-    else:
-        raise Arcor2Exception("Unknown parent_id.")
+        ap.position = make_pose_rel(parent.pose, Pose(ap.position, Orientation())).position
+        for ori in project.ap_orientations(ap.id):
+            ori.orientation = make_pose_rel(parent.pose, Pose(Position(), ori.orientation)).orientation
 
-    ap.position = make_pose_rel(new_parent_pose, Pose(ap.position, Orientation())).position
-    for ori in project.ap_orientations(ap.id):
-        ori.orientation = make_orientation_rel(new_parent_pose.orientation, ori.orientation)
-
+    _make_global_ap_relative(parent_id)
     ap.parent = parent_id
 
 
@@ -147,47 +124,11 @@ def make_pose_rel_to_parent(scene: CScene, project: CProject, pose: Pose, parent
     :return:
     """
 
-    if parent_id in scene.object_ids:
-        parent_obj = scene.object(parent_id)
-        if not parent_obj.pose:
-            raise Arcor2Exception("Parent object does not have pose!")
-        parent_pose = parent_obj.pose
-    elif parent_id in project.action_points_ids:
+    parent = get_parent_pose(scene, project, parent_id)
+    if parent.parent_id:
+        pose = make_pose_rel_to_parent(scene, project, pose, parent.parent_id)
 
-        parent_ap = project.bare_action_point(parent_id)
-
-        if parent_ap.parent:
-            pose = make_pose_rel_to_parent(scene, project, pose, parent_ap.parent)
-
-        parent_pose = Pose(parent_ap.position, Orientation())
-
-    else:
-        raise Arcor2Exception("Unknown parent_id.")
-
-    return make_pose_rel(parent_pose, pose)
-
-
-# TODO mostly duplicate of make_pose_rel_to_parent
-def _abs_pose_from_ap_orientation(scene: CScene, project: CProject, pose: Pose, parent_id: str) -> Pose:
-
-    if parent_id in scene.object_ids:
-        parent_obj = scene.object(parent_id)
-        if not parent_obj.pose:
-            raise Arcor2Exception("Parent object does not have pose!")
-        parent_pose = parent_obj.pose
-    elif parent_id in project.action_points_ids:
-
-        parent_ap = project.bare_action_point(parent_id)
-
-        if parent_ap.parent:
-            pose = _abs_pose_from_ap_orientation(scene, project, pose, parent_ap.parent)
-
-        parent_pose = Pose(parent_ap.position, Orientation())
-
-    else:
-        raise Arcor2Exception("Unknown parent_id.")
-
-    return make_pose_abs(parent_pose, pose)
+    return make_pose_rel(parent.pose, pose)
 
 
 def abs_pose_from_ap_orientation(scene: CScene, project: CProject, orientation_id: str) -> Pose:
@@ -198,9 +139,13 @@ def abs_pose_from_ap_orientation(scene: CScene, project: CProject, orientation_i
     """
 
     ap, ori = project.bare_ap_and_orientation(orientation_id)
+
     pose = Pose(ap.position, ori.orientation)
+    parent_id = ap.parent
 
-    if not ap.parent:
-        return pose
+    while parent_id:
+        parent = get_parent_pose(scene, project, parent_id)
+        pose = make_pose_abs(parent.pose, pose)
+        parent_id = parent.parent_id
 
-    return _abs_pose_from_ap_orientation(scene, project, pose, ap.parent)
+    return pose

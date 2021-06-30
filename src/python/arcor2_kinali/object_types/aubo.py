@@ -26,17 +26,21 @@ class MoveRelativeJointsParameters(JsonSchemaMixin):
     orientation: Orientation
 
 
+@dataclass
+class IKPoseJointsParameters(JsonSchemaMixin):
+
+    target_pose: Pose
+    start_joints: List[Joint]
+
+
 class Aubo(AbstractRobot):
-    """REST interface to the robot service (0.7.0)."""
+    """REST interface to the robot service (0.11.0)."""
 
     _ABSTRACT = False
     urdf_package_name = "aubo.zip"
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
-        self.move(end_effector_id, target_pose, MoveTypeEnum.SIMPLE, speed, safe=True)
-
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
-        self.set_joints(ProjectRobotJoints("", "", "", target_joints), MoveTypeEnum.SIMPLE, speed, safe=True)
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
+        self.move(end_effector_id, target_pose, MoveTypeEnum.SIMPLE, speed, safe=safe)
 
     # --- EndEffectors Controller --------------------------------------------------------------------------------------
 
@@ -192,11 +196,13 @@ class Aubo(AbstractRobot):
         if start_joints is None:
             start_joints = self.robot_joints()
 
+        body = IKPoseJointsParameters(pose, start_joints)
+
         return rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",
-            params={"startJoints": [joint.to_dict() for joint in start_joints], "avoidCollisions": avoid_collisions},
-            body=pose,
+            params={"avoidCollisions": avoid_collisions},
+            body=body,
             list_return_type=Joint,
         )
 
@@ -218,7 +224,7 @@ class Aubo(AbstractRobot):
 
     @lru_cache()
     def suctions(self) -> Set[str]:
-        return set(rest.call(rest.Method.GET, f"{self.settings.url}/suctions", return_type=str))
+        return set(rest.call(rest.Method.GET, f"{self.settings.url}/suctions", list_return_type=str))
 
     def suck(self, suction_id: str, *, an: Optional[str] = None) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/suctions/{suction_id}/suck")

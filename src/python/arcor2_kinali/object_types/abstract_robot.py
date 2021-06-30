@@ -60,6 +60,9 @@ class AbstractRobot(Robot):
         super(AbstractRobot, self).cleanup()
         rest.call(rest.Method.PUT, f"{self.settings.url}/system/reset")
 
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
+        self.set_joints(ProjectRobotJoints("", "", target_joints), MoveTypeEnum.SIMPLE, speed, safe=safe)
+
     # --- Grippers Controller ------------------------------------------------------------------------------------------
 
     @lru_cache()
@@ -74,16 +77,17 @@ class AbstractRobot(Robot):
         force: float = 0.5,
         *,
         an: Optional[str] = None,
-    ) -> None:
+    ) -> bool:
 
         assert 0.0 <= position <= 1.0
         assert 0.0 <= speed <= 1.0
         assert 0.0 <= force <= 1.0
 
-        rest.call(
+        return rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/grippers/{gripper_id}/grip",
             params={"position": position, "speed": speed, "force": force},
+            return_type=bool,
         )
 
     def set_opening(

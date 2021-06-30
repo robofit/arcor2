@@ -15,6 +15,7 @@ class RobotFeatures(JsonSchemaMixin):
     stop: bool = False
     forward_kinematics: bool = False
     inverse_kinematics: bool = False
+    hand_teaching: bool = False
 
 
 @dataclass
@@ -23,5 +24,6 @@ class RobotMeta(JsonSchemaMixin):
 
     type: str
     robot_type: RobotType
+    multi_arm: bool = False
     features: RobotFeatures = field(default_factory=RobotFeatures)
     urdf_package_filename: Optional[str] = None

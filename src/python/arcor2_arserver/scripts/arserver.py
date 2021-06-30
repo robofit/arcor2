@@ -24,6 +24,7 @@ import arcor2_arserver_data
 import arcor2_execution_data
 from arcor2 import action as action_mod
 from arcor2 import ws_server
+from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins.utils import known_parameter_types
@@ -34,8 +35,9 @@ from arcor2_arserver import models
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
-from arcor2_arserver import settings
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver import scene, settings
+from arcor2_arserver.clients import project_service as storage
+from arcor2_arserver.lock.notifications import run_lock_notification_worker
 from arcor2_arserver_data import events as evts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.rpc import objects as obj_rpc
@@ -60,8 +62,10 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
             if "event" in msg:
 
-                if glob.INTERFACES:
-                    await asyncio.gather(*[ws_server.send_json_to_client(intf, message) for intf in glob.INTERFACES])
+                if glob.USERS.interfaces:
+                    await asyncio.gather(
+                        *[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces]
+                    )
 
                 try:
                     evt = event_mapping[msg["event"]].from_dict(msg)
@@ -137,7 +141,17 @@ async def _initialize_server() -> None:
             await storage.initialize_module()
             break
         except storage.ProjectServiceException as e:
-            print(str(e))
+            glob.logger.error(f"Failed to communicate with Project service. {str(e)}")
+            await asyncio.sleep(1)
+
+    while True:
+        try:
+            if await scene_srv.started():
+                glob.logger.warn("Scene already started, attempting to stop it...")
+                await scene_srv.stop()
+            break
+        except scene_srv.SceneServiceException as e:
+            glob.logger.error(f"Failed to communicate with the Scene service. {str(e)}")
             await asyncio.sleep(1)
 
     await osa.get_object_types()
@@ -153,7 +167,9 @@ async def _initialize_server() -> None:
     )
 
     glob.logger.info("Server initialized.")
-    await asyncio.wait([websockets.serve(bound_handler, "0.0.0.0", glob.PORT)])
+    await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
+
+    asyncio.create_task(run_lock_notification_worker())
 
 
 async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_rpc.ListMeshes.Response:
@@ -163,15 +179,15 @@ async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_r
 async def register(websocket: WsClient) -> None:
 
     glob.logger.info("Registering new ui")
-    glob.INTERFACES.add(websocket)
+    glob.USERS.add_interface(websocket)
 
-    if glob.PROJECT:
-        assert glob.SCENE
+    if glob.LOCK.project:
+        assert glob.LOCK.scene
         await notif.event(
-            websocket, evts.p.OpenProject(evts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project))
+            websocket, evts.p.OpenProject(evts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
         )
-    elif glob.SCENE:
-        await notif.event(websocket, evts.s.OpenScene(evts.s.OpenScene.Data(glob.SCENE.scene)))
+    elif glob.LOCK.scene:
+        await notif.event(websocket, evts.s.OpenScene(evts.s.OpenScene.Data(glob.LOCK.scene.scene)))
     elif glob.PACKAGE_INFO:
 
         # this can't be done in parallel - ui expects this order of events
@@ -184,10 +200,23 @@ async def register(websocket: WsClient) -> None:
         assert glob.MAIN_SCREEN
         await notif.event(websocket, evts.c.ShowMainScreen(glob.MAIN_SCREEN))
 
+    if glob.LOCK.project or glob.LOCK.scene:
+        await notif.event(websocket, scene.get_scene_state())
+
 
 async def unregister(websocket: WsClient) -> None:
-    glob.logger.info("Unregistering ui")  # TODO print out some identifier
-    glob.INTERFACES.remove(websocket)
+
+    try:
+        user_name = glob.USERS.user_name(websocket)
+    except Arcor2Exception:
+        glob.logger.info("Unregistering ui")
+    else:
+        await glob.LOCK.schedule_auto_release(user_name)
+        glob.logger.info(f"Unregistering ui {user_name}")
+
+    glob.USERS.logout(websocket)
+
+    glob.logger.debug(f"Known user names: {glob.USERS.user_names}")
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
         if websocket in registered_uis:
@@ -262,8 +291,6 @@ def print_openapi_models() -> None:
 
 
 def main() -> None:
-
-    assert sys.version_info >= (3, 8)
 
     parser = argparse.ArgumentParser()
 

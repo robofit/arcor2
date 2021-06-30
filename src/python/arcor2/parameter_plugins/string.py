@@ -1,6 +1,5 @@
+from ast import Str
 from typing import Any, List
-
-from typed_ast.ast3 import Str
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene

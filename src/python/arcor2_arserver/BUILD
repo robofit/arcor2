@@ -3,6 +3,7 @@ arcor2_python_distribution(
     description="ARCOR2 ARServer",
     dependencies=[
         "src/python/arcor2_arserver/clients",
+        "src/python/arcor2_arserver/lock",
         "src/python/arcor2_arserver/object_types",
         "src/python/arcor2_arserver/rpc"
     ],

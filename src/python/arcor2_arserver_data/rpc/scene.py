@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -92,7 +91,8 @@ class RemoveFromScene(RPC):
 class SaveScene(RPC):
     @dataclass
     class Request(RPC.Request):
-        pass
+
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
@@ -125,7 +125,7 @@ class ListScenes(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(IdDesc):
-            modified: Optional[datetime] = None
+            pass
 
         data: Optional[List[Data]] = None
 
@@ -139,7 +139,7 @@ class NewScene(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             name: str
-            desc: str = field(default_factory=str)
+            description: str = field(default_factory=str)
 
         args: Args
         dry_run: bool = False

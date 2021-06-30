@@ -2,7 +2,43 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.11.1] - WIP
+
+## [0.14.0] - 2021-06-11
+
+### Changed
+- Implement `Interaction` service version `0.4.0`
+- Update services version
+
+## [0.13.1] - 2021-05-21
+
+### Fixed
+- `Aubo` had wrong XML child names for inverse kinematics call
+
+## [0.13.0] - 2021-04-21
+
+### Changed
+- Class `AbstractRobot` updated for Robot 0.10.0
+- Class `Aubo` (inverse_kinematics) updated for Robot 0.11.0
+
+## [0.12.1] - 2021-03-15
+
+### Fixed
+- Getting suction IDs was broken.
+- Fixed signatures of some robot methods.
+
+### Changed
+- Example scripts were updated with id-related changes.
+
+## [0.12.0] - 2021-03-03
+
+### Changed
+- Parameter `safe` added to the `Robot` interface.
+- Added an example using `RestHttpException`.
+
+### Fixed
+- `Simatic` robot was missing `move_to_joints` (moved to `AbstractRobot`).
+
+## [0.11.1] - 2021-02-09
 
 ### Changed
 - Add Ict service 0.1.0

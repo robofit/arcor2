@@ -1,15 +1,15 @@
+import ast
 import inspect
-import json
 import os
 import shutil
 from dataclasses import is_dataclass
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, get_type_hints
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, get_type_hints
 
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
-from typed_ast.ast3 import Name
 
 import arcor2
+from arcor2 import json
 from arcor2.data.common import ActionMetadata, Parameter
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, Settings
@@ -20,7 +20,7 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-def get_containing_module_sources(type_def: Type[Generic]) -> str:
+def get_containing_module_sources(type_def: Type[object]) -> str:
     """Returns sources of the whole containing module.
 
     ...whereas inspect.getsource(type_def) returns just source of the class itself
@@ -127,7 +127,7 @@ def settings_from_params(
                 settings_data[s.name] = json.loads(s.value)
             else:
                 settings_data[s.name] = setting_def(json.loads(s.value))
-        except (ValueError, ValidationError) as e:
+        except (json.JsonException, ValidationError) as e:
             raise Arcor2Exception(f"Parameter {s.name} has invalid value.") from e
 
     try:
@@ -156,8 +156,11 @@ def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
     else:
         settings_cls = param.annotation
 
-    if not issubclass(settings_cls, Settings):
-        raise Arcor2Exception("Settings have invalid type.")
+    try:
+        if not issubclass(settings_cls, Settings):
+            raise Arcor2Exception("Settings have invalid type.")
+    except TypeError:
+        raise Arcor2Exception("Settings have invalid annotation.")
 
     if not is_dataclass(settings_cls):
         raise Arcor2Exception("Settings misses @dataclass decorator.")
@@ -165,16 +168,31 @@ def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
     return settings_cls
 
 
-def base_from_source(source: str, cls_name: str) -> Optional[str]:
+def base_from_source(source: Union[str, ast.AST], cls_name: str) -> List[str]:
+    """Returns list, where the first element is name of the base class and
+    others are mixins.
 
-    cls_def = find_class_def(cls_name, parse(source))
+    :param source:
+    :param cls_name:
+    :return:
+    """
+
+    if isinstance(source, str):
+        cls_def = find_class_def(cls_name, parse(source))
+    else:
+        cls_def = find_class_def(cls_name, source)
+
     if not cls_def.bases:
-        return None
+        return []
 
-    base_name = cls_def.bases[-1]  # allow usage of mixins e.g. class MyType(mixin, Generic)
+    ret: List[str] = []
 
-    assert isinstance(base_name, Name)
-    return base_name.id
+    for base in reversed(cls_def.bases):
+
+        assert isinstance(base, ast.Name)
+        ret.append(base.id)
+
+    return ret
 
 
 def iterate_over_actions(

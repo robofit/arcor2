@@ -46,12 +46,14 @@ def start_processes() -> Iterator[None]:
 def test_generic_with_pose(start_processes: None) -> None:
 
     obj = GenericWithPose("id", "name", Pose(), Box("boxId", 0.1, 0.1, 0.1))
-
-    ids = scene_service.collision_ids()
-    assert len(ids) == 1
-    assert obj.id in ids
+    assert obj.id in scene_service.collision_ids()
 
     obj.pose = Pose()
+
+    obj.enabled = False
+    assert obj.id not in scene_service.collision_ids()
+    obj.enabled = True
+    assert obj.id in scene_service.collision_ids()
 
     obj.cleanup()
     assert not scene_service.collision_ids()

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Set, Type, Union
 
@@ -107,11 +108,19 @@ class ObjectType(JsonSchemaMixin):
 
     id: str
     source: str
-    desc: Optional[str] = ""
+    name: str = field(init=False)
+
+    description: Optional[str] = None
     model: Optional[MetaModel3d] = None
 
-    def __post_init__(self) -> None:  # TODO workaround for bug (?) in Storage
+    created: Optional[datetime] = None
+    modified: Optional[datetime] = None
 
+    def __post_init__(self) -> None:
+
+        self.name = self.id  # name makes no sense for ObjectType but is required by the Project service
+
+        # TODO workaround for bug (?) in Project service
         if self.model and self.model.type == Model3dType.NONE:
             self.model = None
 

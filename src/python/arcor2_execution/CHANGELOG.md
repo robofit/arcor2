@@ -2,6 +2,45 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+
+## [0.16.0] - 2021-06-14
+
+### Changed
+- Dependency on `arcor2` 0.18.0.
+- Dependency on `arcor2_execution_data` 0.11.0.
+
+## [0.15.0] - 2021-06-14
+
+### Changed
+- Dependency on `arcor2` 0.17.0 (`constants` renamed to `parameters` in the `Project` model).
+
+## [0.14.0] - 2021-05-21
+
+### Changed
+- Dependency on arcor2 0.16.0 (updated `Resources` class).
+
+## [0.13.0] - 2021-04-20
+
+### Changed
+- Dependency on arcor2 0.15.0 with updated REST client.
+
+## [0.12.0] - 2021-03-30
+
+### Changed
+- Dependency on arcor2 0.14.0.
+- Reporting `paussing` before `paused` and `stopping` before `stopped`. 
+
+### Fixed
+- Script was stopped using a wrong signal.
+  - Execution used SIGTERM instead of SIGINT.
+  - Because of this, the script was not stopped gracefully.
+
+## [0.11.1] - 2021-03-15
+
+### Fixed
+- Script was stopped using wrong signal (SIGTERM instead of SIGINT).
+  - Because of this, the script was not stopped gracefully and `cleanup` methods of objects were not executed.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed

@@ -1,13 +1,10 @@
-#!/usr/bin/env python3
-
-
 import argparse
 import asyncio
 import base64
 import functools
-import json
 import os
 import shutil
+import signal
 import sys
 import tempfile
 import time
@@ -23,16 +20,16 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2_execution
 import arcor2_execution_data
-from arcor2 import ws_server
+from arcor2 import json, ws_server
 from arcor2.data import common, compile_json_schemas
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_aiologger
-from arcor2.package import PROJECT_PATH, read_package_meta, write_package_meta
 from arcor2_execution_data import EVENTS, URL, events, rpc
 from arcor2_execution_data.common import PackageSummary, ProjectMeta
+from arcor2_execution_data.package import PROJECT_PATH, read_package_meta, write_package_meta
 
 logger = get_aiologger("Execution")
 
@@ -93,7 +90,7 @@ async def read_proc_stdout() -> None:
 
         try:
             data = json.loads(stripped)
-        except json.decoder.JSONDecodeError:
+        except json.JsonException:
             printed_out.append(decoded)
             logger.error(decoded.strip())
             continue
@@ -213,8 +210,10 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
     assert PROCESS is not None
     assert TASK is not None
 
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.STOPPING, RUNNING_PACKAGE_ID)))
+
     logger.info("Terminating process")
-    PROCESS.terminate()
+    PROCESS.send_signal(signal.SIGINT)  # the same as when a user presses ctrl+c
     logger.info("Waiting for process to finish...")
     await asyncio.wait([TASK])
     PACKAGE_INFO_EVENT = None
@@ -232,6 +231,7 @@ async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
     if PACKAGE_STATE_EVENT.data.state != PackageState.Data.StateEnum.RUNNING:
         raise Arcor2Exception("Cannot pause.")
 
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSING, RUNNING_PACKAGE_ID)))
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
     return None
@@ -415,7 +415,7 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
 
 async def aio_main() -> None:
 
-    await websockets.serve(
+    await websockets.server.serve(
         functools.partial(ws_server.server, logger=logger, register=register, unregister=unregister, rpc_dict=RPC_DICT),
         "0.0.0.0",
         port_from_url(URL),
@@ -423,8 +423,6 @@ async def aio_main() -> None:
 
 
 def main() -> None:
-
-    assert sys.version_info >= (3, 8)
 
     parser = argparse.ArgumentParser()
 

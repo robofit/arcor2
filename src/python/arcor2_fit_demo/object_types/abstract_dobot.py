@@ -5,15 +5,14 @@ from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
-from arcor2.object_types.abstract import Robot, RobotException, Settings
+from arcor2.object_types.abstract import Robot, RobotException
 
-# TODO jogging
+from .fit_common_mixin import FitCommonMixin, UrlSettings
 
 
 @dataclass
-class DobotSettings(Settings):
+class DobotSettings(UrlSettings):
 
-    url: str
     port: str = "/dev/dobot"
 
 
@@ -28,7 +27,7 @@ class MoveType(StrEnum):
     LINEAR: str = "LINEAR"
 
 
-class AbstractDobot(Robot):
+class AbstractDobot(FitCommonMixin, Robot):
 
     robot_type = RobotType.SCARA
 
@@ -36,19 +35,23 @@ class AbstractDobot(Robot):
         super(AbstractDobot, self).__init__(obj_id, name, pose, settings)
 
     def _start(self, model: str) -> None:
+
+        if self._started():
+            self._stop()
+
         rest.call(
             rest.Method.PUT,
-            f"{self.settings.url}/start",
+            f"{self.settings.url}/state/start",
             params={"model": model, "port": self.settings.port},
             body=self.pose,
         )
 
     @property
-    def settings(self) -> DobotSettings:
+    def settings(self) -> DobotSettings:  # type: ignore
         return cast(DobotSettings, super(AbstractDobot, self).settings)
 
     def cleanup(self):
-        rest.call(rest.Method.PUT, f"{self.settings.url}/stop")
+        self._stop()
 
     def get_end_effectors_ids(self) -> Set[str]:
         return {"default"}
@@ -62,10 +65,14 @@ class AbstractDobot(Robot):
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
         return rest.call(rest.Method.GET, f"{self.settings.url}/eef/pose", return_type=Pose)
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
+        if safe:
+            raise DobotException("Dobot does not support safe moves.")
         self.move(target_pose, MoveType.LINEAR, speed * 100)
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
+        if safe:
+            raise DobotException("Dobot does not support safe moves.")
         self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
 
     def home(self, *, an: Optional[str] = None) -> None:
@@ -108,41 +115,47 @@ class AbstractDobot(Robot):
     def release(self, *, an: Optional[str] = None) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/release")
 
+    def pick(self, pick_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+        """Picks an item from given pose.
+
+        :param pick_pose:
+        :param vertical_offset:
+        :return:
+        """
+
+        pick_pose.position.z += vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+        pick_pose.position.z -= vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pick pose
+        self.suck()
+        pick_pose.position.z += vertical_offset
+        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+
+    def place(self, place_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+        """Places an item to a given pose.
+
+        :param place_pose:
+        :param vertical_offset:
+        :return:
+        """
+
+        place_pose.position.z += vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+        place_pose.position.z -= vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # place pose
+        self.release()
+        place_pose.position.z += vertical_offset
+        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+
     def robot_joints(self) -> List[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
-
-    def inverse_kinematics(
-        self,
-        end_effector_id: str,
-        pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
-        avoid_collisions: bool = True,
-    ) -> List[Joint]:
-        """Computes inverse kinematics.
-
-        :param end_effector_id: IK target pose end-effector
-        :param pose: IK target pose
-        :param start_joints: IK start joints (not supported)
-        :param avoid_collisions: Return non-collision IK result if true (not supported)
-        :return: Inverse kinematics
-        """
-
-        return rest.call(rest.Method.PUT, f"{self.settings.url}/ik", body=pose, list_return_type=Joint)
-
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
-        """Computes forward kinematics.
-
-        :param end_effector_id: Target end effector name
-        :param joints: Input joint values
-        :return: Pose of the given end effector
-        """
-
-        return rest.call(rest.Method.PUT, f"{self.settings.url}/fk", body=joints, return_type=Pose)
 
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
     move.__action__ = ActionMetadata(blocking=True)  # type: ignore
     suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
     release.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    pick.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
+    place.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
 
 
 AbstractDobot.DYNAMIC_PARAMS = {

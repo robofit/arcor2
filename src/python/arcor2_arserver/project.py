@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncIterator, Callable, Dict, List, Set, Tuple, Union
+from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
 
 from arcor2 import helpers as hlp
 from arcor2.action import results_to_json
@@ -10,23 +10,19 @@ from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.objects_actions import get_types_dict
-from arcor2_arserver.scene import open_scene
+from arcor2_arserver.scene import get_scene_state, open_scene
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
 from arcor2_arserver_data.events.common import ShowMainScreen
-from arcor2_arserver_data.events.project import ProjectClosed
+from arcor2_arserver_data.events.project import OpenProject, ProjectClosed
 from arcor2_arserver_data.objects import ObjectAction
 
-PREV_RESULTS: Dict[str, Union[Tuple[Any], Any]] = {}
 
+async def notify_project_opened(evt: OpenProject) -> None:
 
-def remove_prev_result(action_id: str) -> None:
-
-    try:
-        del PREV_RESULTS[action_id]
-    except KeyError:
-        pass
+    await notif.broadcast_event(evt)
+    await notif.broadcast_event(get_scene_state())
 
 
 async def notify_project_closed(project_id: str) -> None:
@@ -40,12 +36,12 @@ async def notify_project_closed(project_id: str) -> None:
 
 async def close_project() -> None:
 
-    assert glob.PROJECT
+    assert glob.LOCK.project
 
-    project_id = glob.PROJECT.project.id
-    glob.SCENE = None
-    glob.PROJECT = None
-    PREV_RESULTS.clear()
+    project_id = glob.LOCK.project.project.id
+    glob.LOCK.scene = None
+    glob.LOCK.project = None
+    glob.PREV_RESULTS.clear()
     asyncio.ensure_future(notify_project_closed(project_id))
 
 
@@ -59,13 +55,13 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
 
     try:
         action_result = await hlp.run_in_executor(action_method, *params)
-    except (Arcor2Exception, AttributeError, TypeError) as e:
+    except Arcor2Exception as e:
         glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
         glob.logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
     else:
         if action_result is not None:
-            PREV_RESULTS[glob.RUNNING_ACTION] = action_result
+            glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
 
         try:
             evt.data.results = results_to_json(action_result)
@@ -76,9 +72,9 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
         # action was cancelled, do not send any event
         return  # type: ignore  # action could be cancelled during its execution
 
-    await notif.broadcast_event(evt)
     glob.RUNNING_ACTION = None
     glob.RUNNING_ACTION_PARAMS = None
+    await notif.broadcast_event(evt)
 
 
 def check_action_params(
@@ -96,24 +92,41 @@ def check_action_params(
 
         param = action.parameter(req_param.name)
 
-        if param.type == common.ActionParameter.TypeEnum.CONSTANT:
+        if param.type == common.ActionParameter.TypeEnum.PROJECT_PARAMETER:
 
-            const = project.constant(param.value)
+            pparam = project.parameter(param.str_from_value())
 
             param_meta = object_action.parameter(param.name)
-            if param_meta.type != const.type:
-                raise Arcor2Exception("Param type does not match constant type.")
+            if param_meta.type != pparam.type:
+                raise Arcor2Exception("Action parameter type does not match project parameter type.")
 
         elif param.type == common.ActionParameter.TypeEnum.LINK:
 
             parsed_link = param.parse_link()
-            outputs = project.action(parsed_link.action_id).flow(parsed_link.flow_name).outputs
 
-            assert len(outputs) == len(object_action.returns)
+            if parsed_link.action_id == action.id:
+                raise Arcor2Exception("Can't use own result as a parameter.")
+
+            parent_action = project.action(parsed_link.action_id)
+            source_action_pt = parent_action.parse_type()
+
+            parent_action_meta = glob.OBJECT_TYPES[scene.object(source_action_pt.obj_id).type].actions[
+                source_action_pt.action_type
+            ]
+
+            if len(parent_action.flow(parsed_link.flow_name).outputs) != len(parent_action_meta.returns):
+                raise Arcor2Exception("Source action does not have outputs specified.")
 
             param_meta = object_action.parameter(param.name)
-            if param_meta.type != object_action.returns[parsed_link.output_index]:
-                raise Arcor2Exception("Param type does not match action output type.")
+
+            try:
+                if param_meta.type != parent_action_meta.returns[parsed_link.output_index]:
+                    raise Arcor2Exception("Param type does not match action output type.")
+            except IndexError:
+                raise Arcor2Exception(
+                    f"Index {parsed_link.output_index} is invalid for action {object_action.name},"
+                    f" which returns {len(object_action.returns)} values."
+                )
 
         else:
 
@@ -151,8 +164,7 @@ def check_flows(
         raise Arcor2Exception("Number of the flow outputs does not match the number of action outputs.")
 
     for output in flow.outputs:
-        if not hlp.is_valid_identifier(output):
-            raise Arcor2Exception(f"Output {output} is not a valid Python identifier.")
+        hlp.is_valid_identifier(output)
 
     outputs: Set[str] = set()
 
@@ -185,7 +197,7 @@ def find_object_action(scene: CachedScene, action: common.Action) -> ObjectActio
 
 
 async def project_names() -> Set[str]:
-    return {proj.name for proj in (await storage.get_projects()).items}
+    return {proj.name for proj in (await storage.get_projects())}
 
 
 async def associated_projects(scene_id: str) -> Set[str]:
@@ -194,11 +206,11 @@ async def associated_projects(scene_id: str) -> Set[str]:
 
 async def remove_object_references_from_projects(obj_id: str) -> None:
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     updated_project_ids: Set[str] = set()
 
-    async for project in projects_using_object_as_parent(glob.SCENE.id, obj_id):
+    async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj_id):
 
         # action_ids: Set[str] = set()
 
@@ -232,9 +244,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
 async def projects(scene_id: str) -> AsyncIterator[UpdateableCachedProject]:
 
-    id_list = await storage.get_projects()
-
-    for project_meta in id_list.items:
+    for project_meta in await storage.get_projects():
 
         project = await storage.get_project(project_meta.id)
 
@@ -287,10 +297,10 @@ async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIt
 
 async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> None:
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
 
     # Invalidates robot joints if action point's parent has changed its pose.
-    async for project in projects_using_object_as_parent(glob.SCENE.id, obj.id):
+    async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj.id):
 
         for ap in project.action_points:
 
@@ -313,8 +323,6 @@ async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterat
 def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
 
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
-
-    action_ids: Set[str] = set()
     problems: List[str] = []
 
     unknown_types = {obj.type for obj in scene.objects} - glob.OBJECT_TYPES.keys()
@@ -322,23 +330,22 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
     if unknown_types:
         return [f"Scene invalid, contains unknown types: {unknown_types}."]
 
+    possible_parents = scene.object_ids | project.action_points_ids
+
     for ap in project.action_points:
 
         # test if all objects exists in scene
-        if ap.parent and ap.parent not in scene_objects:
-            problems.append(f"Action point '{ap.name}' has parent '{ap.parent}' that does not exist in the scene.")
+        if ap.parent and ap.parent not in possible_parents:
+            problems.append(f"Action point {ap.name} has non-existing parent: {ap.parent}.")
             continue
 
         for joints in project.ap_joints(ap.id):
-            if not joints.is_valid:
+            if joints.robot_id not in scene.object_ids:
                 problems.append(
-                    f"Action point {ap.name} has invalid joints: {joints.name} " f"(robot {joints.robot_id})."
+                    f"Action point {ap.name} has joints ({joints.name}) for an unknown robot: {joints.robot_id}."
                 )
 
         for action in project.actions:
-
-            if action.id in action_ids:
-                problems.append(f"Action {action.name} of the {ap.name} is not unique.")
 
             # check if objects have used actions
             obj_id, action_type = action.parse_type()
@@ -354,7 +361,7 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
 
             if action_type not in glob.OBJECT_TYPES[os_type].actions:
                 problems.append(
-                    f"Object type {scene_objects[obj_id]} does not have action {action_type} " f"used in {action.id}."
+                    f"Object type {scene_objects[obj_id]} does not have action {action_type} used in {action.id}."
                 )
                 continue
 
@@ -370,19 +377,19 @@ async def open_project(project_id: str) -> None:
 
     project = UpdateableCachedProject(await storage.get_project(project_id))
 
-    if glob.SCENE:
-        if glob.SCENE.id != project.scene_id:
+    if glob.LOCK.scene:
+        if glob.LOCK.scene.id != project.scene_id:
             raise Arcor2Exception("Required project is associated to another scene.")
     else:
         await open_scene(project.scene_id)
 
-    assert glob.SCENE
+    assert glob.LOCK.scene
     for ap in project.action_points_with_parent:
 
         assert ap.parent
 
-        if ap.parent not in glob.SCENE.object_ids | project.action_points_ids:
-            glob.SCENE = None
+        if ap.parent not in glob.LOCK.scene.object_ids | project.action_points_ids:
+            glob.LOCK.scene = None
             raise Arcor2Exception(f"Action point's {ap.name} parent not available.")
 
-    glob.PROJECT = project
+    glob.LOCK.project = project

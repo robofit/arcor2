@@ -1,11 +1,12 @@
 import abc
-import json
+import ast
+import copy
+from ast import AST
 from typing import Any, Callable, List, NamedTuple, Optional
 
 import humps
-from typed_ast import ast3 as ast
-from typed_ast.ast3 import AST
 
+from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.object_type import ParameterMeta
@@ -78,7 +79,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
 
         try:
             return json.loads(value)
-        except ValueError as e:
+        except json.JsonException as e:
             raise ParameterPluginException(f"Invalid value '{value}'.") from e
 
     @classmethod
@@ -86,7 +87,8 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
 
-        return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+        # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
+        return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 
     @classmethod
     @abc.abstractmethod

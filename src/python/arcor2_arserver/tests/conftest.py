@@ -7,7 +7,7 @@ from typing import Dict, Iterator, Optional, Tuple, Type, TypeVar
 
 import pytest
 
-from arcor2.clients import persistent_storage, scene_service
+from arcor2.clients import project_service, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
 from arcor2.helpers import find_free_port
@@ -52,9 +52,9 @@ def start_processes() -> Iterator[None]:
 
         project_port = find_free_port()
         project_url = f"http://0.0.0.0:{project_port}"
-        my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = project_url
+        my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
-        persistent_storage.URL = project_url
+        project_service.URL = project_url
 
         scene_port = find_free_port()
         scene_url = f"http://0.0.0.0:{scene_port}"
@@ -142,6 +142,11 @@ for mod in modules:
 def ars() -> Iterator[ARServer]:
 
     with ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping) as ws:
+        test_username = "testUser"
+        assert ws.call_rpc(
+            rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args(test_username)),
+            rpc.u.RegisterUser.Response,
+        ).result
         yield ws
 
 
@@ -158,6 +163,8 @@ def scene(ars: ARServer) -> common.Scene:
 
     scene_evt = event(ars, events.s.OpenScene)
     assert scene_evt.data
+
+    event(ars, events.s.SceneState)
 
     test_type = "TestType"
 
@@ -209,6 +216,74 @@ def scene(ars: ARServer) -> common.Scene:
     return scene_evt.data.scene
 
 
+@pytest.fixture()
+def project(ars: ARServer, scene: common.Scene) -> common.Project:
+    """Creates project with following objects:
+
+    ap - global AP
+    ap_ap - child of ap
+    ap_ap_ap - child of ap_ap
+    ori - ap_ap_ap orientation
+    """
+
+    test = "Test project"
+
+    assert ars.call_rpc(
+        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, test, test)), rpc.p.NewProject.Response
+    ).result
+
+    project_evt = event(ars, events.p.OpenProject)
+    assert project_evt.data
+
+    event(ars, events.s.SceneState)
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap", common.Position(0, 0, 0))),
+        rpc.p.AddActionPoint.Response,
+    ).result
+    ap_evt = event(ars, events.p.ActionPointChanged)
+    assert ap_evt.data
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPoint.Request(
+            uid(), rpc.p.AddActionPoint.Request.Args("ap_ap", common.Position(0, 0, 1), ap_evt.data.id)
+        ),
+        rpc.p.AddActionPoint.Response,
+    ).result
+    ap_ap_evt = event(ars, events.p.ActionPointChanged)
+    assert ap_ap_evt.data
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPoint.Request(
+            uid(), rpc.p.AddActionPoint.Request.Args("ap_ap_ap", common.Position(0, 0, 2), ap_ap_evt.data.id)
+        ),
+        rpc.p.AddActionPoint.Response,
+    ).result
+    ap_ap_ap_evt = event(ars, events.p.ActionPointChanged)
+    assert ap_ap_ap_evt.data
+
+    lock_object(ars, ap_ap_ap_evt.data.id)
+
+    assert ars.call_rpc(
+        rpc.p.AddActionPointOrientation.Request(
+            uid(), rpc.p.AddActionPointOrientation.Request.Args(ap_ap_ap_evt.data.id, common.Orientation(), "ori")
+        ),
+        rpc.p.AddActionPointOrientation.Response,
+    ).result
+    ori_evt = event(ars, events.p.OrientationChanged)
+    assert ori_evt.data
+
+    unlock_object(ars, ap_ap_ap_evt.data.id)
+
+    assert ars.call_rpc(rpc.p.SaveProject.Request(uid()), rpc.p.SaveProject.Response).result
+    event(ars, events.p.ProjectSaved)
+    assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
+    event(ars, events.p.ProjectClosed)
+    event(ars, events.c.ShowMainScreen)
+
+    return project_evt.data.project
+
+
 E = TypeVar("E", bound=Event)
 
 
@@ -252,3 +327,22 @@ def close_project(ars: ARServer) -> None:
 
     assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
     event(ars, events.p.ProjectClosed)
+
+
+def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
+
+    assert ars.call_rpc(
+        rpc.lock.WriteLock.Request(uid(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
+        rpc.lock.WriteLock.Response,
+    ).result
+
+    event(ars, events.lk.ObjectsLocked)
+
+
+def unlock_object(ars: ARServer, obj_id: str) -> None:
+
+    assert ars.call_rpc(
+        rpc.lock.WriteUnlock.Request(uid(), rpc.lock.WriteUnlock.Request.Args(obj_id)), rpc.lock.WriteUnlock.Response
+    )
+
+    event(ars, events.lk.ObjectsUnlocked)

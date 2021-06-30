@@ -2,6 +2,33 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.6.0] - 2021-06-11
+### Changed
+
+- Improved quality estimation (take orientation into account).
+- Reject blurry images.
+
+## [0.5.0] - 2021-05-21
+### Changed
+- `PUT /calibrate/camera` now returns `EstimatedPose` (pose + quality).
+
+### Fixed
+- Command line arguments fixed.
+  - It is mandatory to provide `-c` (path to a configuration file) or one of `-s` (prints OpenAPI) or `-m` (start as mock).
+
+## [0.4.0] - 2021-04-26
+### Changed
+- The service now requires YAML configuration file where placement of markers is specified.
+- There might be 1-n markers in an arbitrary pose.
+- At least one of the configured markers should be visible.
+- Un-configured markers are ignored.  
+- Estimated poses of the camera from multiple detected markers are so far simply averaged.
+- The average is weighted according to the camera-marker distance.
+
+## [0.3.0] - 2021-03-30
+### Changed
+- `PUT /calibrate/camera` now has `inverse` parameter. 
+
 ## [0.2.0] - 2021-02-08
 ### Changed
 - Part of the code refactored into `arcor2/flask.py`.

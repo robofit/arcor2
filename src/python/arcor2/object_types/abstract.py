@@ -35,6 +35,7 @@ class Generic(metaclass=abc.ABCMeta):
     DYNAMIC_PARAMS: DynamicParamDict = {}
     CANCEL_MAPPING: CancelDict = {}
     _ABSTRACT = True
+    INIT_PRIORITY = 0  # OT with the highest priority will be initialized first
 
     def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
 
@@ -60,7 +61,7 @@ class Generic(metaclass=abc.ABCMeta):
         return parse_docstring(cls.__doc__)["short_description"]
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.name, self.__class__.__name__)
+        return SceneObject(self.name, self.__class__.__name__, id=self.id)
 
     def __repr__(self) -> str:
         return str(self.__dict__)
@@ -87,30 +88,60 @@ class GenericWithPose(Generic):
 
         self._pose = pose
         self.collision_model = copy.deepcopy(collision_model)
+        self._enabled = True
         if self.collision_model:
             # originally, each model has id == object type (e.g. BigBox) but here we need to set it to something unique
             self.collision_model.id = self.id
             scene_service.upsert_collision(self.collision_model, pose)
 
     def scene_object(self) -> SceneObject:
-        return SceneObject(self.id, self.name, self.__class__.__name__, self._pose)
+        return SceneObject(self.name, self.__class__.__name__, self._pose, id=self.id)
 
     @property
     def pose(self) -> Pose:
+        """Returns pose of the object.
+
+        When set, pose of the collision model is updated on the Scene service.
+        :return:
+        """
         return self._pose
 
     @pose.setter
     def pose(self, pose: Pose) -> None:
         self._pose = pose
-        if self.collision_model:
+        if self.collision_model and self._enabled:
             scene_service.upsert_collision(self.collision_model, pose)
+
+    @property
+    def enabled(self) -> bool:
+        """If the object has a collision model, this indicates whether the
+        model is enabled (set on the Scene service).
+
+        When set, it updates the state of the model on the Scene service.
+        :return:
+        """
+
+        if self.collision_model:
+            assert self.id in scene_service.collision_ids() == self._enabled
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool) -> None:
+
+        if self.collision_model:
+            if not self._enabled and enabled:
+                assert self.id not in scene_service.collision_ids()
+                scene_service.upsert_collision(self.collision_model, self.pose)
+            if self._enabled and not enabled:
+                # TODO not sure if it's intentional, but stopped scene service 0.4.2 returns empty list of collision IDs
+                # assert self.id in scene_service.collision_ids()
+                scene_service.delete_collision_id(self.id)
+        self._enabled = enabled
 
     def cleanup(self) -> None:
 
         super(GenericWithPose, self).cleanup()
-
-        if self.collision_model:
-            scene_service.delete_collision_id(self.collision_model.id)
+        self.enabled = False
 
 
 class RobotException(Arcor2Exception):
@@ -141,6 +172,12 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         if self.move_in_progress:
             raise RobotException("Already moving.")
 
+        try:
+            if self.get_hand_teaching_mode():
+                raise RobotException("Can't move in hand teaching mode.")
+        except Arcor2NotImplemented:
+            pass
+
         return None
 
     def move_to_calibration_pose(self) -> None:
@@ -166,31 +203,33 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     def suctions(self) -> Set[str]:
         return set()
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float) -> None:
+    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
         """Move given robot's end effector to the selected pose.
 
         :param end_effector_id:
         :param target_pose:
         :param speed:
+        :param safe:
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
-        raise NotImplementedError("Robot does not support moving to pose.")
+        raise Arcor2NotImplemented("Robot does not support moving to pose.")
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float) -> None:
+    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
         """Sets target joint values.
 
         :param target_joints:
         :param speed:
+        :param safe:
         :return:
         """
 
         assert 0.0 <= speed <= 1.0
-        raise NotImplementedError("Robot does not support moving to joints.")
+        raise Arcor2NotImplemented("Robot does not support moving to joints.")
 
     def stop(self) -> None:
-        raise NotImplementedError("The robot can't be stopped.")
+        raise Arcor2NotImplemented("The robot can't be stopped.")
 
     def inverse_kinematics(
         self,
@@ -207,7 +246,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         :param avoid_collisions: Return non-collision IK result if true
         :return: Inverse kinematics
         """
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
@@ -216,7 +255,122 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         :param joints: Input joint values
         :return: Pose of the given end effector
         """
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
+
+    def get_hand_teaching_mode(self) -> bool:
+        """
+        This is expected to be implemented if the robot supports set_hand_teaching_mode
+        :return:
+        """
+        raise Arcor2NotImplemented()
+
+    def set_hand_teaching_mode(self, enabled: bool) -> None:
+        raise Arcor2NotImplemented("The robot does not support hand teaching.")
+
+
+class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
+    """Abstract class representing robot and its basic capabilities (motion)"""
+
+    @abc.abstractmethod
+    def get_arm_ids(self) -> Set[str]:
+        """Most robots have just one arm so this method is not abstract and
+        returns one arm id.
+
+        :return:
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> Set[str]:
+        pass
+
+    @abc.abstractmethod
+    def get_end_effector_pose(self, end_effector: str, arm_id: Optional[str] = None) -> Pose:
+        pass
+
+    @abc.abstractmethod
+    def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
+        """With no arm specified, returns all robot joints. Otherwise, returns
+        joints for the given arm.
+
+        :param arm_id:
+        :return:
+        """
+        pass
+
+    @abc.abstractmethod
+    def grippers(self, arm_id: Optional[str] = None) -> Set[str]:
+        return set()
+
+    @abc.abstractmethod
+    def suctions(self, arm_id: Optional[str] = None) -> Set[str]:
+        return set()
+
+    def move_to_pose(
+        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, arm_id: Optional[str] = None
+    ) -> None:
+        """Move given robot's end effector to the selected pose.
+
+        :param end_effector_id:
+        :param target_pose:
+        :param speed:
+        :param safe:
+        :return:
+        """
+
+        assert 0.0 <= speed <= 1.0
+        raise Arcor2NotImplemented("Robot does not support moving to pose.")
+
+    def move_to_joints(
+        self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+    ) -> None:
+        """Sets target joint values.
+
+        :param target_joints:
+        :param speed:
+        :param safe:
+        :return:
+        """
+
+        assert 0.0 <= speed <= 1.0
+        raise Arcor2NotImplemented("Robot does not support moving to joints.")
+
+    def inverse_kinematics(
+        self,
+        end_effector_id: str,
+        pose: Pose,
+        start_joints: Optional[List[Joint]] = None,
+        avoid_collisions: bool = True,
+        arm_id: Optional[str] = None,
+    ) -> List[Joint]:
+        """Computes inverse kinematics.
+
+        :param end_effector_id: IK target pose end-effector
+        :param pose: IK target pose
+        :param start_joints: IK start joints
+        :param avoid_collisions: Return non-collision IK result if true
+        :return: Inverse kinematics
+        """
+        raise Arcor2NotImplemented()
+
+    def forward_kinematics(self, end_effector_id: str, joints: List[Joint], arm_id: Optional[str] = None) -> Pose:
+        """Computes forward kinematics.
+
+        :param end_effector_id: Target end effector name
+        :param joints: Input joint values
+        :return: Pose of the given end effector
+        """
+        raise Arcor2NotImplemented()
+
+    def get_hand_teaching_mode(self, arm_id: Optional[str] = None) -> bool:
+        """
+        This is expected to be implemented if the robot supports set_hand_teaching_mode
+        :return:
+        """
+        raise Arcor2NotImplemented()
+
+    def set_hand_teaching_mode(self, enabled: bool, arm_id: Optional[str] = None) -> None:
+        raise Arcor2NotImplemented()
 
 
 class Camera(GenericWithPose, metaclass=abc.ABCMeta):
@@ -235,7 +389,7 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
         self.color_camera_params: Optional[CameraParameters] = None
 
     def color_image(self, *, an: Optional[str] = None) -> Image.Image:
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
     def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
         """This should provide depth image transformed into color camera
@@ -244,7 +398,7 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
         :return:
         """
 
-        raise NotImplementedError()
+        raise Arcor2NotImplemented()
 
 
 __all__ = [

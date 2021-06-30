@@ -1,11 +1,8 @@
+import ast
 import importlib
 import inspect
-from typing import List, Optional, Type, Union
-
-import autopep8
-import horast
-import typed_astunparse
-from typed_ast.ast3 import (
+import sys
+from ast import (
     AST,
     Assert,
     Assign,
@@ -26,6 +23,10 @@ from typed_ast.ast3 import (
     alias,
     fix_missing_locations,
 )
+from typing import List, Optional, Type, Union
+
+import astunparse  # TODO this is not necessary once switched to Python 3.9 (ast.unparse is there)
+import autopep8
 
 from arcor2.source import SourceException
 
@@ -33,7 +34,7 @@ from arcor2.source import SourceException
 def parse(source: str) -> AST:
 
     try:
-        return horast.parse(source)
+        return ast.parse(source, feature_version=sys.version_info[0:2])
     except (AssertionError, NotImplementedError, SyntaxError, ValueError) as e:
         raise SourceException("Failed to parse the code.") from e
 
@@ -197,18 +198,13 @@ def get_name_attr(name: str, attr: str, ctx: Union[Type[Load], Type[Store]] = Lo
 
 
 def tree_to_str(tree: AST) -> str:
-    # TODO why this fails?
-    # validator.visit(tree)
 
     fix_missing_locations(tree)
-    generated_code: str = horast.unparse(tree)
-    generated_code = autopep8.fix_code(generated_code, options={"aggressive": 1})
-
-    return generated_code
+    return autopep8.fix_code(astunparse.unparse(tree), options={"aggressive": 1, "max_line_length": 120})
 
 
 def dump(tree: Module) -> str:
-    return typed_astunparse.dump(tree)
+    return astunparse.dump(tree)
 
 
 def find_raises(tree: FunctionDef) -> List[Raise]:

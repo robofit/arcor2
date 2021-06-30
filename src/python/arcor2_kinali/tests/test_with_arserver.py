@@ -7,13 +7,16 @@ from typing import Dict, Iterator, Tuple, Type
 
 import pytest
 
-from arcor2.clients import persistent_storage
+from arcor2.clients import project_service, scene_service
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import TypeArgs
 from arcor2.helpers import find_free_port
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.robot import RobotMeta
 from arcor2_execution_data import EVENTS as EXE_EVENTS
+from arcor2_kinali.object_types.aubo import Aubo
+from arcor2_kinali.object_types.simatic import Simatic
 
 LOGGER = logging.getLogger(__name__)
 
@@ -48,9 +51,15 @@ def start_processes() -> Iterator[None]:
 
         project_port = find_free_port()
         project_url = f"http://0.0.0.0:{project_port}"
-        my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = project_url
+        my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
-        persistent_storage.URL = project_url
+        project_service.URL = project_url
+
+        scene_port = find_free_port()
+        scene_url = f"http://0.0.0.0:{scene_port}"
+        my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
+        my_env["ARCOR2_SCENE_SERVICE_MOCK_PORT"] = str(scene_port)
+        scene_service.URL = scene_url
 
         my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
         my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
@@ -62,9 +71,12 @@ def start_processes() -> Iterator[None]:
 
         for cmd in (
             "./src.python.arcor2_mocks.scripts/mock_project.pex",
+            "./src.python.arcor2_mocks.scripts/mock_scene.pex",
             "./src.python.arcor2_execution.scripts/execution.pex",
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
+
+        scene_service.wait_for(60)
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):
@@ -150,3 +162,30 @@ def test_objects(start_processes: None, ars: ARServer) -> None:
                 if act.problem.startswith("Unknown parameter type"):
                     continue
             assert not act.disabled, f"Action {act.name} of {obj.type} disabled. {act.problem}"
+
+
+def test_robot_meta(start_processes: None, ars: ARServer) -> None:
+
+    assert isinstance(ars.get_event(), events.c.ShowMainScreen)
+
+    res = ars.call_rpc(rpc.r.GetRobotMeta.Request(uid()), rpc.r.GetRobotMeta.Response)
+    assert res.result
+    assert res.data is not None
+
+    robots: Dict[str, RobotMeta] = {robot.type: robot for robot in res.data}
+
+    simatic = robots[Simatic.__name__]
+    assert simatic.features.move_to_joints
+    assert simatic.features.stop
+    assert not simatic.features.move_to_pose
+    assert not simatic.features.inverse_kinematics
+    assert not simatic.features.forward_kinematics
+    assert not simatic.features.hand_teaching
+
+    aubo = robots[Aubo.__name__]
+    assert aubo.features.move_to_pose
+    assert aubo.features.move_to_joints
+    assert aubo.features.inverse_kinematics
+    assert aubo.features.forward_kinematics
+    assert aubo.features.stop
+    assert not aubo.features.hand_teaching

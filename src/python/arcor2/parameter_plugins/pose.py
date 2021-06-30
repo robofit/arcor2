@@ -1,8 +1,8 @@
-import json
+import copy
+from ast import Attribute, Load, Name
 from typing import Any, List
 
-from typed_ast.ast3 import Attribute, Load, Name
-
+from arcor2 import json
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -38,7 +38,10 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
 
-        return tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
+        # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
+        return copy.deepcopy(
+            tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
+        )
 
     @classmethod
     def value_to_json(cls, value: Pose) -> str:
@@ -54,13 +57,12 @@ class PosePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Attribute:
 
-        ap, _ = project.action_point_and_action(action_id)
-        ori = project.orientation(cls.orientation_id(project, action_id, parameter_id))
+        ori_ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
 
         return Attribute(
             value=Attribute(
                 value=Attribute(
-                    value=Name(id="aps", ctx=Load()), attr=ap.name, ctx=Load()  # TODO this should not be hardcoded
+                    value=Name(id="aps", ctx=Load()), attr=ori_ap.name, ctx=Load()  # TODO this should not be hardcoded
                 ),
                 attr="poses",  # TODO this should not be hardcoded
                 ctx=Load(),
@@ -102,13 +104,13 @@ class PoseListPlugin(ListParameterPlugin):
         ap, action = project.action_point_and_action(action_id)
 
         if not ap.parent:
-            return cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
+            return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 
         parameter = action.parameter(parameter_id)
         ret: List[Pose] = []
 
         for orientation_id in cls._param_value_list(parameter):
-            ret.append(tr.abs_pose_from_ap_orientation(scene, project, orientation_id))
+            ret.append(copy.deepcopy(tr.abs_pose_from_ap_orientation(scene, project, orientation_id)))
 
         return ret
 

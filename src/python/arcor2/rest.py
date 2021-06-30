@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 from enum import Enum
 from functools import partial
 from io import BytesIO
@@ -11,6 +9,7 @@ import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError
 
+from arcor2 import env, json
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 
@@ -29,6 +28,14 @@ class RestException(Arcor2Exception):
     """Exception raised by functions in the module."""
 
     pass
+
+
+class RestHttpException(RestException):
+    """Exception with associated HTTP status (error) code."""
+
+    def __init__(self, *args, error_code: int):
+        super().__init__(*args)
+        self.error_code = error_code
 
 
 class Method(Enum):
@@ -65,7 +72,7 @@ OptTimeout = Optional[Timeout]
 
 
 # module-level variables
-debug: bool = bool(os.getenv("ARCOR2_REST_DEBUG", False))
+debug = env.get_bool("ARCOR2_REST_DEBUG", False)
 headers = {"accept": "application/json", "content-type": "application/json"}
 session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
@@ -243,6 +250,13 @@ def call(
     else:
         params = {}
 
+    assert params is not None
+
+    # requests just simply stringifies parameters, which does not work for booleans
+    for param_name, param_value in params.items():
+        if isinstance(param_value, bool):
+            params[param_name] = "true" if param_value else "false"
+
     if timeout is None:
         timeout = Timeout()
 
@@ -253,7 +267,10 @@ def call(
             resp = method.value(url, data=json.dumps(d), timeout=timeout, headers=headers, params=params)
     except requests.exceptions.RequestException as e:
         logger.debug("Request failed.", exc_info=True)
-        raise RestException("Catastrophic system error.", str(e)) from e
+        # TODO would be good to provide more meaningful message but the original one could be very very long
+        raise RestException("Catastrophic system error.") from e
+
+    logger.debug(resp.url)  # to see if query parameters are ok
 
     _handle_response(resp)
 
@@ -318,19 +335,16 @@ def _handle_response(resp: requests.Response) -> None:
     :return:
     """
 
-    try:
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
+    if resp.status_code >= 400:
 
-        try:
-            resp_body = json.loads(resp.content)
-        except json.JSONDecodeError:
-            raise RestException(resp.content.decode("utf-8")) from e
+        decoded_content = resp.content.decode()
 
+        # here we try to handle different cases
         try:
-            raise RestException(resp_body["message"]) from e
-        except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestException(str(resp_body)) from e
+            raise RestHttpException(str(json.loads(decoded_content)), error_code=resp.status_code)
+        except json.JsonException:
+            # response contains invalid JSON
+            raise RestHttpException(decoded_content, error_code=resp.status_code)
 
 
 def get_image(url: str) -> Image.Image:

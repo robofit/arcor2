@@ -16,6 +16,7 @@ from arcor2_arserver import events as server_events
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
+from arcor2_arserver.scene import scene_started, start_scene, stop_scene
 from arcor2_arserver_data import events as sevts
 from arcor2_build_data import URL as BUILD_URL
 from arcor2_execution_data import URL as EXE_URL
@@ -34,13 +35,21 @@ MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 async def run_temp_package(package_id: str) -> None:
 
-    assert glob.PROJECT
-    project_id = glob.PROJECT.id
+    # TODO lock scene and project?
+
+    assert glob.LOCK.scene
+    assert glob.LOCK.project
+    project_id = glob.LOCK.project.id
     glob.TEMPORARY_PACKAGE = True
+
+    scene_online = scene_started()
+
+    if scene_online:
+        await stop_scene(glob.LOCK.scene)  # the package will start it on its own
 
     await project.close_project()
     req = erpc.RunPackage.Request
-    exe_req = req(uuid.uuid4().int, args=req.Args(package_id, cleanup_after_run=False))
+    exe_req = req(uuid.uuid4().int, args=req.Args(package_id))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
@@ -56,12 +65,15 @@ async def run_temp_package(package_id: str) -> None:
 
     await project.open_project(project_id)
 
-    assert glob.SCENE
-    assert glob.PROJECT
+    assert glob.LOCK.scene
+    assert glob.LOCK.project
 
-    asyncio.ensure_future(
-        notif.broadcast_event(sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.SCENE.scene, glob.PROJECT.project)))
+    await notif.broadcast_event(
+        sevts.p.OpenProject(sevts.p.OpenProject.Data(glob.LOCK.scene.scene, glob.LOCK.project.project))
     )
+
+    if scene_online:
+        await start_scene(glob.LOCK.scene)
 
 
 async def build_and_upload_package(project_id: str, package_name: str) -> str:
@@ -72,7 +84,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
     :return: generated package ID.
     """
 
-    package_id = common.uid()
+    package_id = common.uid("pkg")
 
     # call build service
     # TODO store data in memory
@@ -121,7 +133,7 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
 
         try:
 
-            async with websockets.connect(EXE_URL) as manager_client:
+            async with websockets.connect(EXE_URL) as manager_client:  # type: ignore  # TODO not sure what is wrong
 
                 glob.logger.info("Connected to manager.")
 

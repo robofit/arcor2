@@ -1,6 +1,5 @@
+from ast import Attribute, Load, Name
 from typing import Any
-
-from typed_ast.ast3 import Attribute, Load, Name
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene

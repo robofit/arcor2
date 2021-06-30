@@ -2,13 +2,22 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import List
 
-from arcor2_calibration_data import CALIBRATION_URL, MarkerCorners
+from arcor2_calibration_data import CALIBRATION_URL, EstimatedPose, MarkerCorners
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL.Image import Image
 
 from arcor2 import rest
 from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Joint, Pose
+from arcor2.exceptions import Arcor2Exception
+
+
+class CalibrationException(Arcor2Exception):
+    pass
+
+
+class MarkerNotFound(CalibrationException):
+    pass
 
 
 def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorners]:
@@ -26,19 +35,35 @@ def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorner
         )
 
 
-def estimate_camera_pose(camera: CameraParameters, image: Image) -> Pose:
+def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool = False) -> EstimatedPose:
+    """Returns camera pose with respect to the origin.
+
+    :param camera: Camera parameters.
+    :param image: Image.
+    :param inverse: When set, the method returns pose of the origin wrt. the camera.
+    :return:
+    """
 
     with BytesIO() as buff:
 
         image.save(buff, format="PNG")
 
-        return rest.call(
-            rest.Method.PUT,
-            f"{CALIBRATION_URL}/calibrate/camera",
-            params=camera.to_dict(),
-            return_type=Pose,
-            files={"image": buff.getvalue()},
-        )
+        params = camera.to_dict()
+        params["inverse"] = inverse
+
+        try:
+            return rest.call(
+                rest.Method.PUT,
+                f"{CALIBRATION_URL}/calibrate/camera",
+                params=params,
+                return_type=EstimatedPose,
+                files={"image": buff.getvalue()},
+            )
+        except rest.RestException as e:
+            if isinstance(e, rest.RestHttpException) and e.error_code == 404:
+                raise MarkerNotFound(str(e)) from e
+
+            raise CalibrationException(str(e)) from e
 
 
 @dataclass

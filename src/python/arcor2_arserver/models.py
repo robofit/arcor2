@@ -2,6 +2,7 @@ import inspect
 from enum import Enum
 from typing import List, Type, Union
 
+import flask  # noqa  # this is in order to get dependency on Flask, which is not specified for apispec_webframeworks
 from apispec import APISpec
 from apispec.exceptions import DuplicateComponentNameError
 from apispec_webframeworks.flask import FlaskPlugin

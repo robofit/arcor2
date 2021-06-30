@@ -2,13 +2,14 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:${ARCOR2_VERSION:?ARCOR2_VERSION env variable not set}
+    image: arcor2/arcor2_arserver:0.19.0
     container_name: arserver
     depends_on:
       - project
       - build
       - execution
       - testitoff-scene-webapi
+      - calibration
     ports:
       - "6789:6789"
       - "6780:8888"
@@ -22,26 +23,28 @@ services:
       - testitoff-barcode-network
       - testitoff-statistic-network 
       - testitoff-interaction-network
+      - testitoff-calibration-network
     environment:
-      - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
+      - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
       - ARCOR2_DATA_PATH=/root/data
+      - ARCOR2_CALIBRATION_URL=http://calibration:5014
 
   build:
-    image: arcor2/arcor2_build:${ARCOR2_BUILD_VERSION:?ARCOR2_BUILD_VERSION env variable not set}
+    image: arcor2/arcor2_build:0.17.0
     container_name: build
     depends_on:
       - project
     environment:
-      - ARCOR2_PERSISTENT_STORAGE_URL=http://project:10000
+      - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
     ports:
       - "5008:5008"
     networks:
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:${ARCOR2_EXECUTION_VERSION:?ARCOR2_EXECUTION_VERSION env variable not set}
+    image: arcor2/arcor2_execution:0.16.0
     container_name: execution
     networks:
         - testitoff-execution-network
@@ -59,7 +62,7 @@ services:
         - execution:/root/project
 
   execution-proxy:
-    image: arcor2/arcor2_execution_proxy:${ARCOR2_EXECUTION_PROXY_VERSION:?ARCOR2_EXECUTION_PROXY_VERSION env variable not set}
+    image: arcor2/arcor2_execution_proxy:0.12.0
     container_name: execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
@@ -75,8 +78,21 @@ services:
     depends_on:
       - execution
 
+  calibration:
+    image: arcor2/arcor2_calibration:0.6.0
+    networks:
+      - testitoff-calibration-network
+    ports:
+      - 5014
+    environment:
+      - ARCOR2_CALIBRATION_URL=http://calibration:5014
+      - ARCOR2_CALIBRATION_SIMULATOR=false
+    volumes:
+      - ./calibration.yaml:/root/calibration.yaml
+
+
   testitoff-robot-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.9.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.11.0
       container_name: "testitoff-robot-webapi"
       expose:
           - "13000"
@@ -90,7 +106,7 @@ services:
         - testitoff-scene-network
 
   testitoff-robot2-webapi:
-    image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.9.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.11.0
     container_name: "testitoff-robot2-webapi"
     expose:
       - "13001"
@@ -104,7 +120,7 @@ services:
       - testitoff-scene-network
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.4.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/simulator:0.9.0
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
@@ -136,7 +152,7 @@ services:
           - "14017:27017"  
 
   testitoff-search-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.7.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/search-simulator:0.9.0
       container_name: "testitoff-search-webapi"
       privileged: true
       restart: always
@@ -165,7 +181,7 @@ services:
           - "12017:27017" 
 
   testitoff-scene-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.4.2
       container_name: "testitoff-scene"
       restart: always
       ports:
@@ -176,7 +192,7 @@ services:
           - ROBOTSYSTEM_SERVICE_URL=http://testitoff-robotsystem-webapi:14000  
 
   testitoff-statistic-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/statistic:0.3.1
+      image: registry.gitlab.com/kinalisoft/test-it-off/statistic:0.3.3
       container_name: "testitoff-statistic-webapi"
       privileged: true
       restart: always
@@ -187,7 +203,7 @@ services:
         - testitoff-scene-network
 
   project:
-      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.5.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.8.0
       container_name: "project"
       ports:
         - "10000-10001:10000-10001"
@@ -215,7 +231,7 @@ services:
 
 
   testitoff-interaction-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/interaction:0.1.2
+      image: registry.gitlab.com/kinalisoft/test-it-off/interaction:0.1.4
       container_name: "testitoff-interaction-webapi"
       privileged: true
       restart: always
@@ -225,7 +241,7 @@ services:
         - testitoff-interaction-network
 
   testitoff-barcode-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/barcode-simulator:0.4.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/barcode-simulator:0.4.1
       container_name: "testitoff-barcode-webapi"
       privileged: true
       restart: always
@@ -271,3 +287,4 @@ networks:
   testitoff-barcode-network:
   testitoff-statistic-network:
   testitoff-interaction-network:
+  testitoff-calibration-network:

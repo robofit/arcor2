@@ -1,9 +1,5 @@
 import logging
-import os
-from typing import Dict, List, Optional, Set, Union
-
-import humps
-from typed_ast.ast3 import (
+from ast import (
     AST,
     Assign,
     Compare,
@@ -23,7 +19,11 @@ from typed_ast.ast3 import (
     expr,
     keyword,
 )
+from typing import Dict, List, Optional, Set, Union
 
+import humps
+
+from arcor2 import env
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import Action, ActionParameter, FlowTypes
@@ -36,7 +36,7 @@ from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
 from arcor2_build.source.utils import empty_script_tree, find_function, find_last_assign, main_loop
 
-logger = get_logger(__name__, logging.DEBUG if bool(os.getenv("ARCOR2_LOGIC_DEBUG", False)) else logging.INFO)
+logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
 
 def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logic: bool = True) -> str:
@@ -52,29 +52,29 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
         main.body.insert(last_assign, object_instance_from_res(obj.name, obj.id, obj.type))
 
     # TODO temporary solution - should be (probably) handled by plugin(s)
-    import json
+    from arcor2 import json
 
-    # TODO should we put there even unused constants?
-    for const in project.constants:
-        val = json.loads(const.value)
+    # TODO should we put there even unused parameters?
+    for param in project.parameters:
+        val = json.loads(param.value)
 
         aval: Optional[expr] = None
 
-        if isinstance(val, (int, float)):
-            aval = Num(n=val)
-        elif isinstance(val, bool):
-            aval = NameConstant(value=val)
+        if isinstance(val, bool):  # subclass of int
+            aval = NameConstant(value=val, kind=None)
+        elif isinstance(val, (int, float)):
+            aval = Num(n=val, kind=None)
         elif isinstance(val, str):
             aval = Str(s=val, kind="")
 
         if not aval:
-            raise Arcor2Exception(f"Unsupported constant type ({const.type}) or value ({val}).")
+            raise Arcor2Exception(f"Unsupported project parameter type ({param.type}) or value ({val}).")
 
         last_assign += 1
         main.body.insert(
             last_assign,
             Assign(  # TODO use rather AnnAssign?
-                targets=[Name(id=const.name, ctx=Store())], value=aval, type_comment=None
+                targets=[Name(id=param.name, ctx=Store())], value=aval, type_comment=None
             ),
         )
 
@@ -129,8 +129,8 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
         for param in current_action.parameters:
 
             if param.type == ActionParameter.TypeEnum.LINK:
-                parsed_link = param.parse_link()
 
+                parsed_link = param.parse_link()
                 parent_action = project.action(parsed_link.action_id)
 
                 # TODO add support for tuples
@@ -148,8 +148,8 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
                 args.append(Name(id=res_name, ctx=Load()))
 
-            elif param.type == ActionParameter.TypeEnum.CONSTANT:
-                args.append(Name(id=project.constant(param.value).name, ctx=Load()))
+            elif param.type == ActionParameter.TypeEnum.PROJECT_PARAMETER:
+                args.append(Name(id=project.parameter(param.str_from_value()).name, ctx=Load()))
             else:
 
                 plugin = plugin_from_type_name(param.type)
@@ -226,10 +226,10 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
                 # TODO use parameter plugin (action metadata will be needed - to get the return types)
                 # TODO support for other countable types
                 # ...this will only work for booleans
-                import json
+                from arcor2 import json
 
                 condition_value = json.loads(output.condition.value)
-                comp = NameConstant(value=condition_value)
+                comp = NameConstant(value=condition_value, kind=None)
                 what = output.condition.parse_what()
                 output_name = project.action(what.action_id).flow(what.flow_name).outputs[what.output_index]
 
@@ -257,7 +257,8 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
     # having 'while True' default loop is temporary solution until there will be support for functions/loops
     loop = main_loop(tree)
     _add_logic(loop, current_action)
-    assert added_actions == project.action_ids(), "Not all actions were added."
+
+    logger.debug(f"Unused actions: {[project.action(act_id).name for act_id in project.action_ids() - added_actions]}")
 
     if loop and isinstance(loop.body[0], Pass):
         # pass is not necessary now

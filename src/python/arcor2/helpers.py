@@ -1,12 +1,14 @@
 import asyncio
+import builtins
 import importlib
 import keyword
 import os
 import socket
 import sys
+from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Callable, Type, TypeVar
+from typing import Any, Callable, List, Optional, Type, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -22,33 +24,79 @@ class TypeDefException(Arcor2Exception):
     pass
 
 
-def is_valid_identifier(value: str) -> bool:
+WINDOWS_LINE_ENDING = "\r\n"
+UNIX_LINE_ENDING = "\n"
+
+
+def convert_line_endings_to_unix(content: str) -> str:
+    return content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
+
+
+def is_valid_identifier(value: str) -> None:
     """
-    Identifier (e.g. object id) will be used as variable name in the script - it should be in snake_case,
-    not containing any special characters etc.
+    Identifier (e.g. object id) will be used as variable name in the script - it should
+    not contain any special characters etc.
     :param value:
     :return:
     """
 
-    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_snakecase(value)
+    if not value:
+        raise Arcor2Exception("Empty string is not enough.")
+
+    if not (value[0].isalpha() or value[0] == "_"):
+        raise Arcor2Exception("It has to start with character or underscore.")
+
+    for c in value[1:]:
+        if c == " ":
+            raise Arcor2Exception("Use underscore instead of space.")
+        if not (c.isalnum() or c == "_"):
+            raise Arcor2Exception(f"Character '{c}' can't be used.")
+
+    assert value.isidentifier()
+
+    if keyword.iskeyword(value) or value in builtins.__dict__.keys():
+        raise Arcor2Exception("Reserved keyword.")
 
 
-def is_valid_type(value: str) -> bool:
-    """
-    Value will be used as object type name - it should be in CamelCase,
-    not containing any special characters etc.
-    :param value:
-    :return:
-    """
-
-    return value.isidentifier() and not keyword.iskeyword(value) and humps.is_pascalcase(value)
+def is_valid_type(value: str) -> None:
+    is_valid_identifier(value)
 
 
 S = TypeVar("S")
 
 
-async def run_in_executor(func: Callable[..., S], *args) -> S:
-    return await asyncio.get_event_loop().run_in_executor(None, func, *args)
+async def run_in_executor(
+    func: Callable[..., S],
+    *args: Any,
+    executor: Optional[futures.Executor] = None,
+    propagate: Optional[List[Type[Exception]]] = None,
+) -> S:
+    """Executes synchronous function in an executor. Catches all exceptions are
+    re-raises them as Arcor2Exception.
+
+    :param func:
+    :param args:
+    :param executor:
+    :param propagate: Exceptions to propagate.
+    :return:
+    """
+
+    # TODO user typing.ParamSpec instead of *args: Any (Python 3.10 or typing-extensions)
+    # ...not supported by mypy at the moment, see https://github.com/python/mypy/issues/8645
+
+    try:
+        return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
+    except Arcor2Exception:
+        raise
+    except Exception as e:
+
+        if propagate:
+            for etp in propagate:
+                if isinstance(e, etp):
+                    raise
+
+        # all code should raise exceptions based on Arcor2Exception so this is just a guard against a buggy code
+        raise Arcor2Exception(f"Unhandled exception in {func.__name__}.") from e
 
 
 T = TypeVar("T")
@@ -65,12 +113,16 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     """
 
     type_file = humps.depascalize(type_name)
-    full_path = os.path.join(path, module_name, type_file)
+    full_path = f"{os.path.join(path, module_name, type_file)}.py"
 
-    with open(f"{full_path}.py", "w") as file:
+    with open(full_path, "w") as file:
         file.write(source)
 
-    return import_type_def(type_name, output_type, path, module_name)
+    try:
+        return import_type_def(type_name, output_type, path, module_name)
+    except Arcor2Exception:
+        os.remove(full_path)
+        raise
 
 
 def import_type_def(type_name: str, output_type: Type[T], path: str, module_name: str) -> Type[T]:
@@ -88,15 +140,19 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
 
     type_file = humps.depascalize(type_name)
 
-    try:
-        module = importlib.import_module(f"{module_name}.{type_file}")
-    except ModuleNotFoundError:
-        raise ImportClsException(f"Module '{module_name}' not found.")
+    importlib.invalidate_caches()  # otherwise import might fail randomly (not sure why exactly)
 
-    # reload is necessary for cases when the module is already loaded
-    path_to_file = os.path.abspath(module.__file__)
-    assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
-    importlib.reload(module)
+    try:
+
+        module = importlib.import_module(f"{module_name}.{type_file}")
+
+        # reload is necessary for cases when the module is already loaded
+        path_to_file = os.path.abspath(module.__file__)
+        assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
+        module = importlib.reload(module)  # TODO does this really solve anything?
+
+    except ImportError as e:
+        raise ImportClsException(f"Failed to import '{module_name}.{type_file}'. {str(e).capitalize()}.") from e
 
     try:
         cls = getattr(module, type_name)
@@ -104,7 +160,7 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
         raise ImportClsException(f"Class {type_name} not found in module '{module_name}'.")
 
     if not issubclass(cls, output_type):
-        raise ImportClsException("Not a required type.")
+        raise ImportClsException(f"{cls.__name__} is not subclass of {output_type.__name__}.")
 
     return cls
 

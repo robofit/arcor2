@@ -2,6 +2,22 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - 2021-06-11
+
+### Changed
+- OpenAPI definition updated.
+
+## [0.11.0] - 2021-05-21
+
+### Changed
+- Update of dependencies.
+
+## [0.10.0] - 2021-03-30
+
+### Changed
+- Implements Execution API 0.5.0.
+  - Execution state `Pending` was added, which is reported when long-running operation takes place (e.g. pause a package).
+
 ## [0.9.0] - 2021-02-08
 
 ### Changed

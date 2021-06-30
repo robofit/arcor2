@@ -2,6 +2,98 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.18.0] - 2021-06-14
+
+### Changed
+- Modules `package` and `resources` moved to `arcor2_execution_data`.
+
+## [0.17.0] - 2021-06-11
+
+### Changed
+- Project service client updated to API version 0.8.0.
+- `ARCOR2_PERSISTENT_STORAGE_URL` renamed to `ARCOR2_PROJECT_SERVICE_URL`.  
+- Dependencies updated.
+
+## [0.16.0] - 2021-05-21
+
+### Changed
+- Objects initialization order (`Resources`):
+  - Object initialization order can be set using class-level `INIT_PRIORITY` variable.
+  - The higher priority, the sooner are objects of that type initialized.
+  - Objects are initialized serially.
+- `CachedProject` has new methods to deal with hierarchy (`get_by_id`, `get_parent_id`, `childs`).
+- Project service client updated to be compatible with version 0.7.0.
+- Added a custom `json` module.
+  - Wraps the standard json module, so it might be easier to replace it in the future.
+  - Provides type annotations.
+  - Raises a custom exception based on `Arcor2Exception`.
+
+### Fixed
+- Handling of context manager arguments in `Resources`.
+
+## [0.15.0] - 2021-04-20
+
+### Changed
+- REST client now handles all codes >= 400 as errors.
+
+## [0.14.1] - 2021-04-19
+
+### Fixed
+- Save and import of ObjectType was randomly failing because of [race condition](https://docs.python.org/3.8/library/importlib.html#importlib.machinery.FileFinder).
+
+## [0.14.0] - 2021-03-30
+
+### Changed
+- Improved code for transforming poses.
+- Use monkey patching instead of custom released version of dataclasses_jsonschema.
+- Switched to builtin ast module instead of horast - much faster builds, etc.
+- Added states `Stopping` and `Pausing` to `PackageState.Data.StateEnum`.
+  - This is because it may take some time to pause or stop a package.
+  - Other operations (as e.g. resume) are almost instant.
+
+### Fixed
+- `Resources` are now not sending `KeyboardInterrupt` as event.
+- `import_type_def` now provides better error messages when import fails.
+- Save and import of ObjectType was randomly failing.
+
+## [0.13.0] - 2021-03-15
+
+### Changed
+- IDs (uuid) are now generated within the respective classes.
+  - If necessary, ID can be still provided from outside as before.
+  - IDs are prefixed so developers can easily check type of an object from its ID.
+  - Prefix always start with a character.
+
+### Fixed
+- Composite actions are now properly handled by the `@action` decorator.
+
+## [0.12.1] - 2021-03-08
+
+### Fixed
+- `Pose` parameter plugin fixed to generate correct code in a case when action on action point A uses orientation from action point B.
+
+## [0.12.0] - 2021-03-03
+
+### Fixed
+- Parameter plugins now return copy of the parameter in order to prevent changes in the project if the value is modified e.g. within an action.
+- Method `update_project_sources` of the Project service client was fixed.
+
+### Changed
+- Flask-based apps now don't log each API call by default.
+  - It can be turned on by setting `ARCOR2_REST_API_DEBUG`.
+- The `rest` module has a new exception type RestHttpException for getting HTTP error codes.
+- `is_valid_identifier` now behaves the same as `is_valid_type`, it does not insist on convention (PascalCase vs snake_case) and provides concrete error messages.
+- `Robot` API now has `safe` parameter.
+- `Robot` now has API for hand teaching mode.  
+- Line length of generated code changed from 80 to 120.
+
+## [0.11.1] - 2021-02-09
+
+### Fixed
+- `@action` decorator fixed.
+- `KeyError` was raised when `an` parameter was not given to an action.
+- This only happened in the "manual" script writing scenario and when `patch_object_actions` was used.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed

@@ -15,5 +15,6 @@ def test_project_ap_rpcs(start_processes: None, ars: ARServer, scene: common.Sce
     ).result
 
     event(ars, events.p.OpenProject)
+    event(ars, events.s.SceneState)
 
     # TODO add object-AP, global AP, etc.

@@ -57,47 +57,46 @@ def test_get_value() -> None:
 
     p = Pose(Position(1, 2, 3), Orientation(1, 0, 0, 0))
 
-    scene = Scene("s1", "s1")
-    obj_id = "TestId"
-    scene.objects.append(SceneObject(obj_id, "test_name", TestObject.__name__))
-    project = Project("p1", "p1", "s1")
-    ap1 = ActionPoint("ap1", "ap1", Position(1, 0, 0))
+    scene = Scene("s1")
+    obj = SceneObject("test_name", TestObject.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position(1, 0, 0))
     project.action_points.append(ap1)
-    ap2 = ActionPoint("ap2", "ap2", Position(), parent="ap1")
+    ap2 = ActionPoint("ap2", Position(), parent=ap1.id)
     project.action_points.append(ap2)
 
-    ori_id = "or1"
-    ap2.orientations.append(NamedOrientation(ori_id, ori_id, p.orientation))
+    ori1 = NamedOrientation("ori1", p.orientation)
+
+    ap2.orientations.append(ori1)
 
     invalid_param_name = "invalid_param"
-    action_id = "ac1"
 
-    ap1.actions.append(
-        Action(
-            action_id,
-            action_id,
-            f"{obj_id}/{TestObject.action.__name__}",
-            [
-                ActionParameter(param_name, PosePlugin.type_name(), json.dumps(ori_id)),
-                ActionParameter(invalid_param_name, PosePlugin.type_name(), json.dumps("non_sense")),
-            ],
-        )
+    ac1 = Action(
+        "ac1",
+        f"{obj.id}/{TestObject.action.__name__}",
+        parameters=[
+            ActionParameter(param_name, PosePlugin.type_name(), json.dumps(ori1.id)),
+            ActionParameter(invalid_param_name, PosePlugin.type_name(), json.dumps("non_sense")),
+        ],
     )
+
+    ap1.actions.append(ac1)
 
     cscene = CachedScene(scene)
     cproject = CachedProject(project)
 
     with pytest.raises(Arcor2Exception):
-        PosePlugin.parameter_value(type_defs, cscene, cproject, action_id, "non_sense")
+        PosePlugin.parameter_value(type_defs, cscene, cproject, ac1.id, "non_sense")
 
     with pytest.raises(Arcor2Exception):
         PosePlugin.parameter_value(type_defs, cscene, cproject, "non_sense", param_name)
 
     with pytest.raises(ParameterPluginException):
-        PosePlugin.parameter_value(type_defs, cscene, cproject, action_id, invalid_param_name)
+        PosePlugin.parameter_value(type_defs, cscene, cproject, ac1.id, invalid_param_name)
 
-    value = PosePlugin.parameter_value(type_defs, cscene, cproject, action_id, param_name)
-    exe_value = PosePlugin.parameter_execution_value(type_defs, cscene, cproject, action_id, param_name)
+    value = PosePlugin.parameter_value(type_defs, cscene, cproject, ac1.id, param_name)
+    exe_value = PosePlugin.parameter_execution_value(type_defs, cscene, cproject, ac1.id, param_name)
 
     assert value == value
     assert value != exe_value

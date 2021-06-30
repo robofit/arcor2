@@ -2,6 +2,65 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - 2021-06-14
+
+### Changed
+- Updated code generation for `Resources` (moved, now without parameters).
+
+## [0.16.0] - 2021-06-11
+
+### Changed
+- OpenAPI definition updated.
+
+## [0.15.0] - 2021-05-21
+
+### Changed
+- `overwrite` flag divided into: `overwriteScene`, `overwriteProject`, `overwriteObjectTypes`, `overwriteProjectSources`, `overwriteCollisionModels`.
+- Action parameter value is always JSON.
+  - It used to be just string for link/constant types.
+  - Now it is always JSON to be more consistent.
+- Support for multiple inheritance.
+  - ObjectTypes can now use mixins.
+  - It should be used like `class NewObjectType(MixinA, MixinB, Generic)`.
+  - E.g. the last ancestor should be something derived from `Generic`.
+- During a package import, object types used in a scene are checked whether they are not abstract.
+
+## [0.14.1] - 2021-04-19
+
+### Fixed
+- Dependency on a bugfix release of arcor2.
+
+## [0.14.0] - 2021-03-30
+
+### Changed
+- Considerably faster builds and imports.
+- Allow unused actions.
+- Import run returns `ImportedPackage` containing scene and project IDs.
+
+## [0.13.0] - 2021-03-15
+
+### Changed
+- Dependency on arcor2 0.13.0.
+- Generated `ActionPoints` class now returns copy of data (poses etc. can be freely modified within actions).
+
+
+## [0.12.1] - 2021-03-08
+
+### Fixed
+- Bump dependency to arcor2 0.12.1 which fixes code generation in the `Pose` plugin.
+- Check whether ObjectType id (class name) is the same as its models id.
+  - The assertion was turned into exception.
+
+## [0.12.0] - 2021-03-03
+
+### Changed
+- A new method `PUT /project/import` to import existing execution package.
+  - Import fails if data already exists and there is any difference.
+  - Import can be forced by setting `overwrite` parameter.
+
+### Fixed
+- Build now returns response messages in JSON.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed

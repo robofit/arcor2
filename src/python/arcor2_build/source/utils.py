@@ -1,7 +1,5 @@
-from typing import List, Union
-
-import humps
-from typed_ast.ast3 import (
+import copy
+from ast import (
     AnnAssign,
     Assign,
     Attribute,
@@ -19,6 +17,7 @@ from typed_ast.ast3 import (
     Name,
     NameConstant,
     Pass,
+    Return,
     Store,
     Str,
     Try,
@@ -30,17 +29,18 @@ from typed_ast.ast3 import (
     stmt,
     withitem,
 )
+from typing import List, Union
+
+import humps
 
 import arcor2.data.common
-import arcor2.exceptions.runtime
 from arcor2.cached import CachedProject
-from arcor2.data.common import ActionPoint
+from arcor2.data.common import ActionPoint, Pose, Position, ProjectRobotJoints
 from arcor2.exceptions import Arcor2Exception
 from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, tree_to_str
 
-# can't use `import arcor2.resources` as it brings in dependency on ARCOR2_PROJECT_PATH env. var
-RES_MODULE = "arcor2.resources"
+RES_MODULE = "arcor2_execution_data.resources"
 RES_CLS = "Resources"
 
 
@@ -70,7 +70,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
     ]
 
     if add_main_loop:
-        main_body.append(While(test=NameConstant(value=True), body=[Pass()], orelse=[]))
+        main_body.append(While(test=NameConstant(value=True, kind=None), body=[Pass()], orelse=[]))
     else:
         """put there "pass" in order to make code valid even if there is no
         other statement (e.g. no object from resources)"""
@@ -92,7 +92,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                 ),
                 body=main_body,
                 decorator_list=[],
-                returns=NameConstant(value=None),
+                returns=NameConstant(value=None, kind=None),
                 type_comment=None,
             ),
             If(
@@ -107,7 +107,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                                     withitem(
                                         context_expr=Call(
                                             func=Name(id=RES_CLS, ctx=Load()),
-                                            args=[Str(s=project_id, kind="")],
+                                            args=[],
                                             keywords=[],
                                         ),
                                         optional_vars=Name(id="res", ctx=Store()),
@@ -132,9 +132,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                                 body=[
                                     Expr(
                                         value=Call(
-                                            func=Name(
-                                                id=arcor2.exceptions.runtime.print_exception.__name__, ctx=Load()
-                                            ),
+                                            func=Name(id="print_exception", ctx=Load()),
                                             args=[Name(id="e", ctx=Load())],
                                             keywords=[],
                                         )
@@ -152,7 +150,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
         type_ignores=[],
     )
 
-    add_import(tree, arcor2.exceptions.runtime.__name__, arcor2.exceptions.runtime.print_exception.__name__)
+    add_import(tree, "arcor2_execution_data.exceptions", "print_exception", try_to_import=False)
     add_import(tree, RES_MODULE, RES_CLS, try_to_import=False)
     add_import(tree, "action_points", "ActionPoints", try_to_import=False)
 
@@ -161,9 +159,28 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
 
 def global_action_points_class(project: CachedProject) -> str:
     tree = Module(body=[])
+
     tree.body.append(
-        ImportFrom(module=arcor2.data.common.__name__, names=[alias(name=ActionPoint.__name__, asname=None)], level=0)
+        ImportFrom(
+            module=arcor2.data.common.__name__,
+            names=[
+                alias(name=ActionPoint.__name__, asname=None),
+                alias(name=Position.__name__, asname=None),
+                alias(name=Pose.__name__, asname=None),
+                alias(name=ProjectRobotJoints.__name__, asname=None),
+            ],
+            level=0,
+        )
     )
+
+    tree.body.append(
+        ImportFrom(
+            module=copy.__name__,
+            names=[alias(name=copy.deepcopy.__name__, asname=None)],
+            level=0,
+        )
+    )
+
     tree.body.append(
         ImportFrom(
             module=RES_MODULE,
@@ -178,7 +195,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
         ap_cls_body: List[Assign] = [
             Assign(
-                targets=[Attribute(value=Name(id="self", ctx=Load()), attr="position", ctx=Store())],
+                targets=[Attribute(value=Name(id="self", ctx=Load()), attr="_position", ctx=Store())],
                 value=Attribute(
                     value=Call(
                         func=Attribute(
@@ -203,7 +220,7 @@ def global_action_points_class(project: CachedProject) -> str:
         for joints in project.ap_joints(ap.id):
             ap_joints_init_body.append(
                 Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=joints.name, ctx=Store())],
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=f"_{joints.name}", ctx=Store())],
                     value=Call(
                         func=Attribute(
                             value=Attribute(value=Name(id="res", ctx=Load()), attr="project", ctx=Load()),
@@ -219,34 +236,63 @@ def global_action_points_class(project: CachedProject) -> str:
 
         if ap_joints_init_body:
 
-            tree.body.append(
-                ClassDef(
-                    name=f"{ap_type_name}Joints",
-                    bases=[],
-                    keywords=[],
-                    body=[
-                        FunctionDef(
-                            name="__init__",
-                            args=arguments(
-                                args=[
-                                    arg(arg="self", annotation=None, type_comment=None),
-                                    arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
-                                ],
-                                vararg=None,
-                                kwonlyargs=[],
-                                kw_defaults=[],
-                                kwarg=None,
-                                defaults=[],
-                            ),
-                            body=ap_joints_init_body,
-                            decorator_list=[],
-                            returns=None,
-                            type_comment=None,
-                        )
-                    ],
-                    decorator_list=[],
-                )
+            ap_joints_cls_def = ClassDef(
+                name=f"{ap_type_name}Joints",
+                bases=[],
+                keywords=[],
+                body=[
+                    FunctionDef(
+                        name="__init__",
+                        args=arguments(
+                            args=[
+                                arg(arg="self", annotation=None, type_comment=None),
+                                arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
+                            ],
+                            vararg=None,
+                            kwonlyargs=[],
+                            kw_defaults=[],
+                            kwarg=None,
+                            defaults=[],
+                        ),
+                        body=ap_joints_init_body,
+                        decorator_list=[],
+                        returns=None,
+                        type_comment=None,
+                    )
+                ],
+                decorator_list=[],
             )
+
+            for joints in project.ap_joints(ap.id):
+                ap_joints_cls_def.body.append(
+                    FunctionDef(
+                        name=joints.name,
+                        args=arguments(
+                            args=[arg(arg="self", annotation=None, type_comment=None)],
+                            vararg=None,
+                            kwonlyargs=[],
+                            kw_defaults=[],
+                            kwarg=None,
+                            defaults=[],
+                        ),
+                        body=[
+                            Return(
+                                value=Call(
+                                    func=Name(id=copy.deepcopy.__name__, ctx=Load()),
+                                    args=[
+                                        Attribute(value=Name(id="self", ctx=Load()), attr=f"_{joints.name}", ctx=Load())
+                                    ],
+                                    keywords=[],
+                                )
+                            )
+                        ],
+                        decorator_list=[Name(id="property", ctx=Load())],
+                        returns=Name(id=ProjectRobotJoints.__name__, ctx=Load()),
+                        type_comment=None,
+                    )
+                )
+
+            tree.body.append(ap_joints_cls_def)
 
             ap_cls_body.append(
                 Assign(
@@ -265,7 +311,7 @@ def global_action_points_class(project: CachedProject) -> str:
         for ori in project.ap_orientations(ap.id):
             ap_orientations_init_body.append(
                 Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=ori.name, ctx=Store())],
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=f"_{ori.name}", ctx=Store())],
                     value=Call(
                         func=Attribute(
                             value=Attribute(value=Name(id="res", ctx=Load()), attr="project", ctx=Load()),
@@ -280,50 +326,9 @@ def global_action_points_class(project: CachedProject) -> str:
             )
 
         if ap_orientations_init_body:
-            tree.body.append(
-                ClassDef(
-                    name=f"{ap_type_name}Poses",
-                    bases=[],
-                    keywords=[],
-                    body=[
-                        FunctionDef(
-                            name="__init__",
-                            args=arguments(
-                                args=[
-                                    arg(arg="self", annotation=None, type_comment=None),
-                                    arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
-                                ],
-                                vararg=None,
-                                kwonlyargs=[],
-                                kw_defaults=[],
-                                kwarg=None,
-                                defaults=[],
-                            ),
-                            body=ap_orientations_init_body,
-                            decorator_list=[],
-                            returns=None,
-                            type_comment=None,
-                        )
-                    ],
-                    decorator_list=[],
-                )
-            )
 
-            ap_cls_body.append(
-                Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr="poses", ctx=Store())],
-                    value=Call(
-                        func=Name(id=f"{ap_type_name}Poses", ctx=Load()),
-                        args=[Name(id="res", ctx=Load())],
-                        keywords=[],
-                    ),
-                    type_comment=None,
-                )
-            )
-
-        tree.body.append(
-            ClassDef(
-                name=ap_type_name,
+            ap_orientations_cls_def = ClassDef(
+                name=f"{ap_type_name}Poses",
                 bases=[],
                 keywords=[],
                 body=[
@@ -340,7 +345,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             kwarg=None,
                             defaults=[],
                         ),
-                        body=ap_cls_body,
+                        body=ap_orientations_init_body,
                         decorator_list=[],
                         returns=None,
                         type_comment=None,
@@ -348,7 +353,105 @@ def global_action_points_class(project: CachedProject) -> str:
                 ],
                 decorator_list=[],
             )
+
+            for ori in project.ap_orientations(ap.id):
+                ap_orientations_cls_def.body.append(
+                    FunctionDef(
+                        name=ori.name,
+                        args=arguments(
+                            args=[arg(arg="self", annotation=None, type_comment=None)],
+                            vararg=None,
+                            kwonlyargs=[],
+                            kw_defaults=[],
+                            kwarg=None,
+                            defaults=[],
+                        ),
+                        body=[
+                            Return(
+                                value=Call(
+                                    func=Name(id=copy.deepcopy.__name__, ctx=Load()),
+                                    args=[
+                                        Attribute(value=Name(id="self", ctx=Load()), attr=f"_{ori.name}", ctx=Load())
+                                    ],
+                                    keywords=[],
+                                )
+                            )
+                        ],
+                        decorator_list=[Name(id="property", ctx=Load())],
+                        returns=Name(id=Pose.__name__, ctx=Load()),
+                        type_comment=None,
+                    )
+                )
+
+            tree.body.append(ap_orientations_cls_def)
+
+            ap_cls_body.append(
+                Assign(
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr="poses", ctx=Store())],
+                    value=Call(
+                        func=Name(id=f"{ap_type_name}Poses", ctx=Load()),
+                        args=[Name(id="res", ctx=Load())],
+                        keywords=[],
+                    ),
+                    type_comment=None,
+                )
+            )
+
+        ap_cls_def = ClassDef(
+            name=ap_type_name,
+            bases=[],
+            keywords=[],
+            body=[
+                FunctionDef(
+                    name="__init__",
+                    args=arguments(
+                        args=[
+                            arg(arg="self", annotation=None, type_comment=None),
+                            arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
+                        ],
+                        vararg=None,
+                        kwonlyargs=[],
+                        kw_defaults=[],
+                        kwarg=None,
+                        defaults=[],
+                    ),
+                    body=ap_cls_body,
+                    decorator_list=[],
+                    returns=None,
+                    type_comment=None,
+                )
+            ],
+            decorator_list=[],
         )
+
+        # add copy property for position
+        ap_cls_def.body.append(
+            FunctionDef(
+                name="position",
+                args=arguments(
+                    args=[arg(arg="self", annotation=None, type_comment=None)],
+                    vararg=None,
+                    kwonlyargs=[],
+                    kw_defaults=[],
+                    kwarg=None,
+                    defaults=[],
+                ),
+                body=[
+                    Return(
+                        value=Call(
+                            func=Name(id=copy.deepcopy.__name__, ctx=Load()),
+                            args=[Attribute(value=Name(id="self", ctx=Load()), attr="_position", ctx=Load())],
+                            keywords=[],
+                        )
+                    )
+                ],
+                decorator_list=[Name(id="property", ctx=Load())],
+                returns=Name(id=Position.__name__, ctx=Load()),
+                type_comment=None,
+            )
+        )
+
+        tree.body.append(ap_cls_def)
 
         aps_init_body.append(
             Assign(

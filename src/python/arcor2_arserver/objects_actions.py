@@ -1,12 +1,14 @@
 import asyncio
 import os
-from typing import Optional, Type
+from typing import List, Set, Type, Union
 
 from arcor2 import helpers as hlp
-from arcor2.clients import aio_persistent_storage as ps
+from arcor2.cached import CachedScene
+from arcor2.clients import aio_project_service as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
+from arcor2.helpers import convert_line_endings_to_unix
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
 from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources, prepare_object_types_dir
@@ -15,7 +17,7 @@ from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.object_types.utils import (
     ObjectTypeData,
     ObjectTypeDict,
@@ -36,14 +38,12 @@ def get_types_dict() -> TypesDict:
     return {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None}
 
 
-def get_obj_type_name(object_id: str) -> str:
-
-    assert glob.SCENE
+def get_obj_type_data(scene: CachedScene, object_id: str) -> ObjectTypeData:
 
     try:
-        return glob.SCENE.object(object_id).type
+        return glob.OBJECT_TYPES[scene.object(object_id).type]
     except KeyError:
-        raise Arcor2Exception("Unknown object id.")
+        raise Arcor2Exception("Unknown object type.")
 
 
 def valid_object_types() -> ObjectTypeDict:
@@ -82,16 +82,35 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
         stored_type_def = glob.OBJECT_TYPES[obj_id].type_def
         assert stored_type_def
-        if hash(get_containing_module_sources(stored_type_def)) == hash(obj.source):
+
+        # TODO do not compare sources but 'modified`
+        # the code we get from type_def has Unix line endings, while the code from Project service might have Windows...
+        obj.source = convert_line_endings_to_unix(obj.source)
+
+        if get_containing_module_sources(stored_type_def) == obj.source:
             glob.logger.debug(f"No need to update {obj_id}.")
             return
 
     try:
-        base = otu.base_from_source(obj.source, obj_id)
-        if base and base not in object_types.keys() | built_in_types_names():
-            glob.logger.debug(f"Getting base class {base} for {obj_id}.")
-            await get_object_data(object_types, base)
-    except Arcor2Exception:
+        bases = otu.base_from_source(obj.source, obj_id)
+        if bases and bases[0] not in object_types.keys() | built_in_types_names():
+            glob.logger.debug(f"Getting base class {bases[0]} for {obj_id}.")
+            await get_object_data(object_types, bases[0])
+
+        for mixin in bases[1:]:
+            mixin_obj = await storage.get_object_type(mixin)
+
+            await hlp.run_in_executor(
+                hlp.save_and_import_type_def,
+                mixin_obj.source,
+                mixin_obj.id,
+                object,
+                settings.OBJECT_TYPE_PATH,
+                settings.OBJECT_TYPE_MODULE,
+            )
+
+    except Arcor2Exception as e:
+        glob.logger.warn(f"Disabling object type {obj.id}: can't get a base. {str(e)}")
         object_types[obj_id] = ObjectTypeData(
             ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem="Can't get base.")
         )
@@ -108,7 +127,13 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             settings.OBJECT_TYPE_PATH,
             settings.OBJECT_TYPE_MODULE,
         )
-        assert issubclass(type_def, Generic)
+    except Arcor2Exception as e:
+        glob.logger.debug(f"{obj.id} is probably not an object type. {str(e)}")
+        return
+
+    assert issubclass(type_def, Generic)
+
+    try:
         meta = meta_from_def(type_def)
         otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:
@@ -144,7 +169,7 @@ async def get_object_types() -> None:
     :return:
     """
 
-    assert glob.SCENE is None
+    assert glob.LOCK.scene is None
 
     initialization = False
 
@@ -157,7 +182,13 @@ async def get_object_types() -> None:
 
     updated_object_types: ObjectTypeDict = {}
 
-    object_type_ids = {it.id for it in (await storage.get_object_type_ids()).items}
+    object_type_ids: Union[Set[str], List[str]] = await storage.get_object_type_ids()
+
+    if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
+        import random
+
+        object_type_ids = list(object_type_ids)
+        random.shuffle(object_type_ids)
 
     for obj_id in object_type_ids:
         await get_object_data(updated_object_types, obj_id)
@@ -238,14 +269,14 @@ async def get_object_types() -> None:
             )
 
 
-async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Robot:
+async def get_robot_instance(robot_id: str) -> Robot:
 
-    if robot_id not in glob.SCENE_OBJECT_INSTANCES:
+    try:
+        robot_inst = glob.SCENE_OBJECT_INSTANCES[robot_id]
+    except KeyError:
         raise Arcor2Exception("Robot not found.")
 
-    robot_inst = glob.SCENE_OBJECT_INSTANCES[robot_id]
     if not isinstance(robot_inst, Robot):
         raise Arcor2Exception("Not a robot.")
-    if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_inst.get_end_effectors_ids):
-        raise Arcor2Exception("Unknown end effector ID.")
+
     return robot_inst

@@ -1,7 +1,7 @@
+from ast import Call, Load, Name, Num
 from typing import Any, List, Optional
 
 from dataclasses_jsonschema import ValidationError
-from typed_ast.ast3 import Call, Load, Name, Num
 
 import arcor2.data.common
 from arcor2.cached import CachedProject as CProject
@@ -41,16 +41,20 @@ class RelativePosePlugin(ParameterPlugin):
             args=[
                 Call(
                     func=Name(id=Position.__name__, ctx=Load()),
-                    args=[Num(n=val.position.x), Num(n=val.position.y), Num(n=val.position.z)],
+                    args=[
+                        Num(n=val.position.x, kind=None),
+                        Num(n=val.position.y, kind=None),
+                        Num(n=val.position.z, kind=None),
+                    ],
                     keywords=[],
                 ),
                 Call(
                     func=Name(id=Orientation.__name__, ctx=Load()),
                     args=[
-                        Num(n=val.orientation.x),
-                        Num(n=val.orientation.y),
-                        Num(n=val.orientation.z),
-                        Num(n=val.orientation.w),
+                        Num(n=val.orientation.x, kind=None),
+                        Num(n=val.orientation.y, kind=None),
+                        Num(n=val.orientation.z, kind=None),
+                        Num(n=val.orientation.w, kind=None),
                     ],
                     keywords=[],
                 ),

@@ -12,7 +12,7 @@ from arcor2_dobot.magician import DobotMagician
 from flask import jsonify, request
 
 from arcor2.data.common import Joint, Pose
-from arcor2.flask import RespT, create_app, run_app
+from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 
@@ -42,7 +42,7 @@ def requires_started(f):
     return wrapped
 
 
-@app.route("/start", methods=["PUT"])
+@app.route("/state/start", methods=["PUT"])
 def put_start() -> RespT:
     """Start the robot.
     ---
@@ -83,6 +83,10 @@ def put_start() -> RespT:
 
     model: str = request.args.get("model", default="magician")
     port: str = request.args.get("port", default="/dev/dobot")
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
 
     mapping: Dict[str, Type[Dobot]] = {"magician": DobotMagician, "m1": DobotM1}
@@ -91,10 +95,10 @@ def put_start() -> RespT:
 
     _dobot = mapping[model](pose, port, _mock)
 
-    return "ok", 200
+    return jsonify("ok")
 
 
-@app.route("/stop", methods=["PUT"])
+@app.route("/state/stop", methods=["PUT"])
 @requires_started
 def put_stop() -> RespT:
     """Stop the robot.
@@ -114,10 +118,10 @@ def put_stop() -> RespT:
     assert _dobot is not None
     _dobot.cleanup()
     _dobot = None
-    return "ok", 200
+    return jsonify("ok")
 
 
-@app.route("/started", methods=["GET"])
+@app.route("/state/started", methods=["GET"])
 def get_started() -> RespT:
     """Get the current state.
     ---
@@ -136,7 +140,7 @@ def get_started() -> RespT:
               description: Not started
     """
 
-    return jsonify(started()), 200
+    return jsonify(started())
 
 
 @app.route("/eef/pose", methods=["GET"])
@@ -214,13 +218,17 @@ def put_eef_pose() -> RespT:
     """
 
     assert _dobot is not None
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
     move_type: str = request.args.get("moveType", "jump")
     velocity = float(request.args.get("velocity", default=50.0))
     acceleration = float(request.args.get("acceleration", default=50.0))
 
     _dobot.move(pose, MoveType(move_type), velocity, acceleration)
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/home", methods=["PUT"])
@@ -241,7 +249,57 @@ def put_home() -> RespT:
 
     assert _dobot is not None
     _dobot.home()
-    return "ok", 200
+    return jsonify("ok")
+
+
+@app.route("/hand_teaching", methods=["GET"])
+@requires_started
+def get_hand_teaching() -> RespT:
+    """Get hand teaching status.
+    ---
+    get:
+        description: Get hand teaching status.
+        tags:
+           - Robot
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                    schema:
+                        type: boolean
+            403:
+              description: Not started
+    """
+
+    assert _dobot
+    return jsonify(_dobot.hand_teaching_mode)
+
+
+@app.route("/hand_teaching", methods=["PUT"])
+@requires_started
+def put_hand_teaching() -> RespT:
+    """Set hand teaching status.
+    ---
+    put:
+        description: Set hand teaching status.
+        tags:
+           - Robot
+        parameters:
+            - in: query
+              name: enabled
+              schema:
+                type: boolean
+        responses:
+            200:
+              description: Ok
+            403:
+              description: Not started
+    """
+
+    assert _dobot
+    _dobot.hand_teaching_mode = request.args.get("enabled") == "true"
+    return jsonify("ok")
 
 
 @app.route("/suck", methods=["PUT"])
@@ -262,7 +320,7 @@ def put_suck() -> RespT:
 
     assert _dobot is not None
     _dobot.suck()
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/release", methods=["PUT"])
@@ -283,7 +341,7 @@ def put_release() -> RespT:
 
     assert _dobot is not None
     _dobot.release()
-    return "ok", 200
+    return jsonify("ok")
 
 
 @app.route("/joints", methods=["GET"])
@@ -309,7 +367,7 @@ def get_joints() -> RespT:
     """
 
     assert _dobot is not None
-    return jsonify(_dobot.robot_joints()), 200
+    return jsonify(_dobot.robot_joints())
 
 
 @app.route("/ik", methods=["PUT"])
@@ -341,8 +399,11 @@ def put_ik() -> RespT:
 
     assert _dobot is not None
 
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
-    return jsonify(_dobot.inverse_kinematics(pose)), 200
+    return jsonify(_dobot.inverse_kinematics(pose))
 
 
 @app.route("/fk", methods=["PUT"])
@@ -374,8 +435,11 @@ def put_fk() -> RespT:
 
     assert _dobot is not None
 
+    if not isinstance(request.json, list):
+        raise FlaskException("Body should be a JSON array containing joints.", error_code=400)
+
     joints = [Joint.from_dict(j) for j in request.json]
-    return jsonify(_dobot.forward_kinematics(joints)), 200
+    return jsonify(_dobot.forward_kinematics(joints))
 
 
 def main() -> None:

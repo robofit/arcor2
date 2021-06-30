@@ -2,6 +2,38 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.15.0] - 2021-06-11
+
+### Changed
+
+- Updated to work with Project service 0.8.0.
+  - `ProjectConstant` renamed to `ProjectParameter`.
+
+## [0.14.0] - 2021-05-21
+
+### Changed
+
+- Return value of `GetCameraPose` RPC updated.
+- Locking-related RPCs and events.
+- New RPC `AddApUsingRobot`.
+
+### Fixed
+- ObjectType which source code contained Windows line endings was always evaluated as modified.
+
+## [0.13.0] - 2021-03-30
+
+### Changed
+
+- New RPC `SetEefPerpendicularToWorld`.
+- New RPC `StepRobotEef`.
+
+## [0.12.0] - 2021-03-03
+
+### Changed
+- `CopyActionPoint` RPC added.
+- `HandTeachingMode` RPC and event added.
+- `safe` added to `MoveToPose`, `MoveToJoints`, `MoveToActionPoint`.
+
 ## [0.11.0] - 2021-02-08
 
 ### Changed

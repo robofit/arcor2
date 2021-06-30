@@ -119,7 +119,7 @@ class KinectAzure:
 
         capture = self._capture()
 
-        if not capture.color:
+        if capture.color is None:
             raise KinectAzureException("Color image not available.")
 
         self._bgra_to_rgba(capture.color)
