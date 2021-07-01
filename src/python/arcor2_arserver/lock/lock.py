@@ -18,7 +18,7 @@ class Lock:
         """Values for special locking cases e.g. global variable access
         SERVER_NAME can be used only as lock owner substitution."""
 
-        SERVER_NAME: str = "SERVER"
+        SERVER_NAME: str = "SERVER"  # TODO make a SpecialOwners enum
 
         SCENE_NAME: str = "SCENE"
         PROJECT_NAME: str = "PROJECT"
@@ -33,9 +33,18 @@ class Lock:
         LOCK_FAIL: str = "Locking failed, try again"
         NOT_LOCKED: str = "Object not locked"
 
-    LOCK_TIMEOUT: int = 300  # 5 minutes
-    LOCK_RETRIES: int = 13
-    RETRY_WAIT: float = 0.15
+    __slots__ = (
+        "_scene",
+        "_project",
+        "_lock",
+        "_locked_objects",
+        "_release_tasks",
+        "notifications_q",
+        "_ui_user_locks",
+        "_lock_timeout",
+        "_lock_retries",
+        "_retry_wait",
+    )
 
     def __init__(self) -> None:
         self._scene: Optional[UpdateableCachedScene] = None
@@ -47,6 +56,10 @@ class Lock:
 
         self.notifications_q: asyncio.Queue[LockEventData] = asyncio.Queue()
         self._ui_user_locks: Dict[str, Set[str]] = {}
+
+        self._lock_timeout: int = 300  # 5 minutes
+        self._lock_retries: int = 13
+        self._retry_wait: float = 0.15
 
     @property
     def scene(self) -> Optional[UpdateableCachedScene]:
@@ -100,7 +113,7 @@ class Lock:
         i = 0
         yielded = False
         try:
-            for _ in range(self.LOCK_RETRIES):
+            for _ in range(self._lock_retries):
                 i += 1
                 try:
                     async with self._lock:
@@ -116,12 +129,12 @@ class Lock:
 
                     break
                 except CannotLock:
-                    await asyncio.sleep(self.RETRY_WAIT)
+                    await asyncio.sleep(self._retry_wait)
         finally:
-            if i > self.LOCK_RETRIES * 0.25:
+            if i > self._lock_retries * 0.25:
                 from arcor2_arserver.globals import logger
 
-                logger.warn(f"Retry took {i * self.LOCK_TIMEOUT}")
+                logger.warn(f"Retry took {i * self._lock_timeout}")
 
             if not yielded:
                 raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
@@ -473,7 +486,7 @@ class Lock:
         :param owner: unregistered user
         """
 
-        await asyncio.sleep(self.LOCK_TIMEOUT)
+        await asyncio.sleep(self._lock_timeout)
 
         async with self._lock:
             read, write = self._get_owner_locks(owner)

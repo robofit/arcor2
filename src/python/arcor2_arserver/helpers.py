@@ -34,7 +34,7 @@ def make_name_unique(orig_name: str, names: Set[str]) -> str:
 async def ctx_write_lock(
     obj_ids: Union[str, Iterable[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
 ) -> AsyncGenerator[None, None]:
-    @retry(exc=CannotLock, tries=glob.LOCK.LOCK_RETRIES, delay=glob.LOCK.RETRY_WAIT)
+    @retry(exc=CannotLock, tries=glob.LOCK._lock_retries, delay=glob.LOCK._retry_wait)
     async def lock():
         if not await glob.LOCK.write_lock(obj_ids, owner):
             raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)
@@ -55,7 +55,7 @@ async def ctx_write_lock(
 async def ctx_read_lock(
     obj_ids: Union[str, Iterable[str]], owner: str, auto_unlock: bool = True, dry_run: bool = False
 ) -> AsyncGenerator[None, None]:
-    @retry(exc=CannotLock, tries=glob.LOCK.LOCK_RETRIES, delay=glob.LOCK.RETRY_WAIT)
+    @retry(exc=CannotLock, tries=glob.LOCK._lock_retries, delay=glob.LOCK._retry_wait)
     async def lock():
         if not await glob.LOCK.read_lock(obj_ids, owner):
             raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)

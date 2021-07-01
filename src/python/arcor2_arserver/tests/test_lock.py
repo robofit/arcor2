@@ -327,7 +327,7 @@ async def test_auto_release(lock: Lock) -> None:
     action = lock.project.ap_actions(ap_ap_ap.id)[0]
 
     # Test auto-release of locks and auto locking of child in tree
-    lock.LOCK_TIMEOUT = 2
+    lock._lock_timeout = 2
     await lock.write_lock(ap.id, test, True, True)
     assert await lock.is_write_locked(ap_ap_ap.id, test)
     assert await lock.is_write_locked(ap_ap.id, test)
@@ -346,7 +346,7 @@ async def test_auto_release(lock: Lock) -> None:
     assert ap.id in write
 
     await lock.schedule_auto_release(test)
-    await asyncio.sleep(lock.LOCK_TIMEOUT + 0.5)
+    await asyncio.sleep(lock._lock_timeout + 0.5)
     assert await lock.get_write_locks_count() == 0
     assert not await lock.is_read_locked(ap2.id, test)
     await check_notification_content(lock, test, [ap.id, ap_ap.id, ap_ap_ap.id, ori.id, action.id], False)

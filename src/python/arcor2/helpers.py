@@ -185,6 +185,8 @@ def check_compatibility(my_version: str, their_version: str) -> None:
 class NonBlockingLock:
     """This lock can only be used as a context manager."""
 
+    __slots__ = ("_lock",)
+
     def __init__(self) -> None:
         self._lock = Lock()
 

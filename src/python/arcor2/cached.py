@@ -19,6 +19,9 @@ class CachedSceneException(Arcor2Exception):
 
 
 class CachedBase:
+
+    __slots__ = "id", "name", "description", "created", "modified", "int_modified"
+
     def __init__(self, data: Union[cmn.Scene, cmn.Project, CachedScene, CachedProject]) -> None:
 
         self.id: str = data.id
@@ -31,6 +34,8 @@ class CachedBase:
 
 
 class UpdateableMixin:
+
+    __slots__ = ()
 
     if TYPE_CHECKING:
         modified: Optional[datetime] = None
@@ -62,6 +67,9 @@ class UpdateableMixin:
 
 
 class CachedScene(CachedBase):
+
+    __slots__ = ("_objects",)
+
     def __init__(self, scene: Union[cmn.Scene, CachedScene]) -> None:
 
         super().__init__(scene)
@@ -127,6 +135,9 @@ class CachedScene(CachedBase):
 
 
 class UpdateableCachedScene(UpdateableMixin, CachedScene):
+
+    __slots__ = ()
+
     def __init__(self, scene: Union[cmn.Scene, CachedScene]):
         super(UpdateableCachedScene, self).__init__(copy.deepcopy(scene))
 
@@ -151,25 +162,52 @@ class CachedProjectException(Arcor2Exception):
 
 @dataclass
 class Parent:
+
+    __slots__ = ("ap",)
+
     ap: cmn.BareActionPoint
 
 
 @dataclass
 class ApAction(Parent):
+
+    __slots__ = ("action",)
+
     action: cmn.Action
 
 
 @dataclass
 class ApJoints(Parent):
+
+    __slots__ = ("joints",)
+
     joints: cmn.ProjectRobotJoints
 
 
 @dataclass
 class ApOrientation(Parent):
+
+    __slots__ = ("orientation",)
+
     orientation: cmn.NamedOrientation
 
 
 class CachedProject(CachedBase):
+
+    __slots__ = (
+        "scene_id",
+        "has_logic",
+        "_action_points",
+        "_actions",
+        "_joints",
+        "_orientations",
+        "_parameters",
+        "_logic_items",
+        "_functions",
+        "overrides",
+        "_childs",
+    )
+
     def __init__(self, project: Union[cmn.Project, CachedProject]):
 
         super().__init__(project)
@@ -538,6 +576,9 @@ class CachedProject(CachedBase):
 
 
 class UpdateableCachedProject(UpdateableMixin, CachedProject):
+
+    __slots__ = ()
+
     def __init__(self, project: Union[cmn.Project, CachedProject]):
         super().__init__(copy.deepcopy(project))
 
