@@ -44,7 +44,7 @@ class AbstractRobot(Robot):
             rest.Method.PUT,
             f"{self.settings.url}/system/set",
             body=pose,
-            params={"configId": self.settings.configuration_id, "id": self.id},
+            params={"configurationId": self.settings.configuration_id, "id": self.id},
         )
 
         self.move_timeout = rest.Timeout(read=5 * 60)

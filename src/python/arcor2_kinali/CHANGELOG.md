@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.15.0] - 2021-0M-DD
+
+### Changed
+- Implement `Search` service version `0.11.0`
+- Implement `Robot` service version `0.12.0`
+- All service now use `configurationId` instead of `configId`
 
 ## [0.14.0] - 2021-06-11
 

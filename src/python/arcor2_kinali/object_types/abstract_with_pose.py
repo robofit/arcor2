@@ -31,7 +31,7 @@ class AbstractWithPose(GenericWithPose):
             rest.Method.PUT,
             f"{self.settings.url}/system/set",
             body=pose,
-            params={"configId": self.settings.configuration_id, "id": self.id},
+            params={"configurationId": self.settings.configuration_id, "id": self.id},
         )
 
     @property
