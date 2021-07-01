@@ -124,6 +124,15 @@ async def get_object_types() -> List[IdDesc]:
     return list(_object_type_list.listing.values())
 
 
+async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
+
+    await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
+    try:
+        return _object_type_list.listing[object_type_id]
+    except KeyError:
+        raise ProjectServiceException("Unknown object type.")
+
+
 async def get_project(project_id: str) -> Project:
 
     try:
