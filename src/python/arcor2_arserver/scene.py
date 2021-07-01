@@ -110,7 +110,7 @@ async def notify_scene_opened(evt: OpenScene) -> None:
 async def scenes() -> AsyncIterator[CachedScene]:
 
     for scene_id in await storage.get_scene_ids():
-        yield CachedScene(await storage.get_scene(scene_id))
+        yield await storage.get_scene(scene_id)
 
 
 async def scene_names() -> Set[str]:

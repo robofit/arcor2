@@ -236,7 +236,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
         # TODO remove invalid logic items
 
-        await storage.update_project(project.project)
+        await storage.update_project(project)
         updated_project_ids.add(project.id)
 
     glob.logger.info("Updated projects: {}".format(updated_project_ids))
@@ -310,7 +310,7 @@ async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> N
             glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
             project.invalidate_joints(ap.id)
 
-        await storage.update_project(project.project)
+        await storage.update_project(project)
 
 
 async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[CachedProject]:

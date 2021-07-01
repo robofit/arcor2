@@ -70,7 +70,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerato
         yield scene
     finally:
         if save_back:
-            asyncio.ensure_future(storage.update_scene(scene.scene))
+            asyncio.ensure_future(storage.update_scene(scene))
 
 
 async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
@@ -148,7 +148,7 @@ async def save_scene_cb(req: srpc.s.SaveScene.Request, ui: WsClient) -> None:
         if req.dry_run:
             return None
 
-        scene.modified = await storage.update_scene(scene.scene)
+        scene.modified = await storage.update_scene(scene)
         asyncio.ensure_future(notif.broadcast_event(sevts.s.SceneSaved()))
         for obj_id in glob.OBJECTS_WITH_UPDATED_POSE:
             asyncio.ensure_future(invalidate_joints_using_object_as_parent(scene.object(obj_id)))

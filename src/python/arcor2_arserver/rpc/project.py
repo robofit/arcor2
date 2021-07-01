@@ -7,7 +7,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2 import transformations as tr
-from arcor2.cached import CachedProject, CachedProjectException, CachedScene, UpdateableCachedProject
+from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
 from arcor2.data import common
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
@@ -67,7 +67,7 @@ async def managed_project(project_id: str, make_copy: bool = False) -> AsyncGene
         yield project
     finally:
         if save_back:
-            asyncio.ensure_future(storage.update_project(project.project))
+            asyncio.ensure_future(storage.update_project(project))
 
 
 async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> None:
@@ -212,20 +212,14 @@ async def project_info(
     )
 
     try:
-        cached_project = UpdateableCachedProject(project)
-    except CachedProjectException as e:
-        pd.problems.append(str(e))
-        return pd
-
-    try:
         async with scenes_lock:
             if project.scene_id not in scenes:
-                scenes[project.scene_id] = CachedScene(await storage.get_scene(project.scene_id))
+                scenes[project.scene_id] = await storage.get_scene(project.scene_id)
     except storage.ProjectServiceException:
         pd.problems.append("Scene does not exist.")
         return pd
 
-    pd.problems = project_problems(scenes[project.scene_id], cached_project)
+    pd.problems = project_problems(scenes[project.scene_id], project)
     pd.valid = not pd.problems
 
     if not pd.valid:
@@ -803,7 +797,7 @@ async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None
         import time
 
         start = time.monotonic()
-        proj.modified = await storage.update_project(proj.project)
+        proj.modified = await storage.update_project(proj)
         glob.logger.info(f"Updating the project took {time.monotonic()-start:.3f}s.")
 
     asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
@@ -832,7 +826,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
                 raise Arcor2Exception("Another scene is opened.")
 
             if glob.LOCK.scene.has_changes:
-                glob.LOCK.scene.modified = await storage.update_scene(glob.LOCK.scene.scene)
+                glob.LOCK.scene.modified = await storage.update_scene(glob.LOCK.scene)
         else:
 
             if req.args.scene_id not in (await storage.get_scene_ids()):
@@ -1470,7 +1464,7 @@ async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> 
     user_name = glob.USERS.user_name(ui)
 
     async with ctx_write_lock(req.args.id, user_name, auto_unlock=False):
-        project = UpdateableCachedProject(await storage.get_project(req.args.id))
+        project = await storage.get_project(req.args.id)
         await glob.LOCK.write_unlock(req.args.id, user_name)
         await storage.delete_project(req.args.id)
 
