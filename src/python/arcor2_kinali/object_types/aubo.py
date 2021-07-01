@@ -34,7 +34,7 @@ class IKPoseJointsParameters(JsonSchemaMixin):
 
 
 class Aubo(AbstractRobot):
-    """REST interface to the robot service (0.11.0)."""
+    """REST interface to the robot service (0.12.0)."""
 
     _ABSTRACT = False
     urdf_package_name = "aubo.zip"

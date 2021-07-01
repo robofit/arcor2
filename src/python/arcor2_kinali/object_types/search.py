@@ -26,13 +26,19 @@ class SearchOutput(JsonSchemaMixin):
 
 
 @dataclass
-class GripperSetup(JsonSchemaMixin):
+class PickArgs(JsonSchemaMixin):
+
+    name: str
+    pick_pose: Pose
+
+
+@dataclass
+class GripperSetup(PickArgs, JsonSchemaMixin):
 
     pick_speed: float
     pre_pick_opening: float
     pick_opening: float
     pick_force: float
-    pick_pose: Pose
 
 
 @dataclass
@@ -63,12 +69,6 @@ class LogLevel(StrEnum):
 
 
 @dataclass
-class PickArgs(JsonSchemaMixin):
-
-    pick_pose: Pose
-
-
-@dataclass
 class SearchLogLevel(JsonSchemaMixin):
 
     level: LogLevel
@@ -83,7 +83,7 @@ class SearchEngineParameters(JsonSchemaMixin):
 
 
 class Search(AbstractWithPose):
-    """REST interface to the search service (0.10.0)."""
+    """REST interface to the search service (0.11.0)."""
 
     _ABSTRACT = False
 
@@ -140,6 +140,20 @@ class Search(AbstractWithPose):
             params={"itemId": item_id, "suctionId": suction_id},
         )
 
+    def get_pick_args(self, item_id: str, suction_id: str, *, an: Optional[str] = None) -> List[PickArgs]:
+        """Gets pick arguments for given suction and item.
+
+        :param item_id:
+        :param suction_id:
+        :return:
+        """
+        return rest.call(
+            rest.Method.GET,
+            f"{self.settings.url}/pick/suctions",
+            params={"itemId": item_id, "suctionId": suction_id},
+            list_return_type=PickArgs,
+        )
+
     def compute_pick_args(
         self, item_id: str, suction_id: str, pose: Pose, *, an: Optional[str] = None
     ) -> List[PickArgs]:
@@ -175,6 +189,21 @@ class Search(AbstractWithPose):
             f"{self.settings.url}/pick/grippers",
             body=gripper_setup,
             params={"itemId": item_id, "gripperId": gripper_id},
+        )
+
+    def get_gripper_args(self, item_id: str, gripper_id: str, *, an: Optional[str] = None) -> List[GripperSetup]:
+        """Gets pick poses for specific tool and item.
+
+        :param item_id:
+        :param gripper_id:
+        :return:
+        """
+
+        return rest.call(
+            rest.Method.GET,
+            f"{self.settings.url}/pick/grippers/",
+            params={"itemId": item_id, "gripperId": gripper_id},
+            list_return_type=GripperSetup,
         )
 
     def compute_gripper_args(
@@ -228,9 +257,11 @@ class Search(AbstractWithPose):
     get_pose.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
     upsert_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    get_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
     compute_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
     upsert_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    compute_gripper_args
+    get_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    compute_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
     search.__action__ = ActionMetadata(blocking=True)  # type: ignore
     set_search_parameters.__action__ = ActionMetadata(blocking=True)  # type: ignore
