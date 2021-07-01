@@ -1,7 +1,7 @@
 import asyncio
 import time
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Set
 
@@ -28,8 +28,10 @@ from arcor2.exceptions import Arcor2Exception
 @dataclass
 class CachedListing:
 
-    listing: Dict[str, IdDesc] = field(default_factory=dict)
-    ts: float = 0
+    __slots__ = "listing", "ts"
+
+    listing: Dict[str, IdDesc]
+    ts: float
 
     def time_to_update(self) -> bool:
         return time.monotonic() - self.ts > 1.0
@@ -47,9 +49,9 @@ _cache_projects = max(env.get_int("ARCOR2_ARSERVER_CACHE_PROJECTS", 64), 1)
 _cache_object_types = max(env.get_int("ARCOR2_ARSERVER_CACHE_OBJECT_TYPES", 64), 1)
 
 # here we need to know all the items
-_scenes_list = CachedListing()
-_projects_list = CachedListing()
-_object_type_list = CachedListing()
+_scenes_list = CachedListing({}, 0)
+_projects_list = CachedListing({}, 0)
+_object_type_list = CachedListing({}, 0)
 
 # here we can forget least used items
 if TYPE_CHECKING:

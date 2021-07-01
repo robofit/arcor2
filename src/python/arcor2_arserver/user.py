@@ -12,6 +12,9 @@ class UsersException(Arcor2Exception):
 
 
 class Users:
+
+    __slots__ = ("_interfaces", "_users_ui", "_ui_users")
+
     def __init__(self) -> None:
 
         self._interfaces: Set[WsClient] = set()

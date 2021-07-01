@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Type, TypeVar
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-import arcor2.object_types
 from arcor2 import json
 from arcor2 import transformations as tr
 from arcor2.action import get_action_name_to_id, patch_object_actions, print_event
@@ -28,12 +27,13 @@ class ResourcesException(Arcor2Exception):
     pass
 
 
+CUSTOM_OBJECT_TYPES_MODULE = "object_types"
 R = TypeVar("R", bound="IntResources")
 
 
 class IntResources:
 
-    CUSTOM_OBJECT_TYPES_MODULE = "object_types"
+    __slots__ = ("project", "scene", "objects")
 
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
@@ -45,9 +45,7 @@ class IntResources:
 
         self.objects: Dict[str, Generic] = {}
 
-        self.type_defs: TypesDict = {}
-
-        built_in = built_in_types_names()
+        type_defs: TypesDict = {}
 
         if scene_service.started():
             scene_service.stop()  # also deletes all collisions
@@ -60,27 +58,21 @@ class IntResources:
 
         for scene_obj_type in self.scene.object_types:  # get all type-defs
 
-            assert scene_obj_type not in self.type_defs
+            assert scene_obj_type not in type_defs
+            assert scene_obj_type not in built_in_types_names()
 
-            if scene_obj_type in built_in:
-                module = importlib.import_module(arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj_type))
-            else:
-                module = importlib.import_module(
-                    Resources.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type)
-                )
+            module = importlib.import_module(CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type))
 
             cls = getattr(module, scene_obj_type)
             patch_object_actions(cls, get_action_name_to_id(self.scene, self.project, cls.__name__))
-            self.type_defs[cls.__name__] = cls
-
-        scene_objects = list(self.scene.objects)
+            type_defs[cls.__name__] = cls
 
         futures: List[concurrent.futures.Future] = []
 
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            for scene_obj in scene_objects:
+            for scene_obj in self.scene.objects:
 
-                cls = self.type_defs[scene_obj.type]
+                cls = type_defs[scene_obj.type]
 
                 assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
@@ -206,4 +198,4 @@ class Resources(IntResources):
             except IOError:
                 models[obj.type] = None
 
-        super(Resources, self).__init__(scene, project, models)
+        super().__init__(scene, project, models)
