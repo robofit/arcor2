@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -17,7 +19,7 @@ class CachedSceneException(Arcor2Exception):
 
 
 class CachedBase:
-    def __init__(self, data: Union[cmn.Scene, cmn.Project]) -> None:
+    def __init__(self, data: Union[cmn.Scene, cmn.Project, CachedScene, CachedProject]) -> None:
 
         self.id: str = data.id
         self.name: str = data.name
@@ -25,17 +27,17 @@ class CachedBase:
 
         self.created: Optional[datetime] = data.created
         self.modified: Optional[datetime] = data.modified
-        self._int_modified: Optional[datetime] = data.int_modified
+        self.int_modified: Optional[datetime] = data.int_modified
 
 
 class UpdateableMixin:
 
     if TYPE_CHECKING:
         modified: Optional[datetime] = None
-        _int_modified: Optional[datetime] = None
+        int_modified: Optional[datetime] = None
 
     def update_modified(self) -> None:
-        self._int_modified = datetime.now(tz=timezone.utc)
+        self.int_modified = datetime.now(tz=timezone.utc)
 
     @property
     def has_changes(self) -> bool:
@@ -50,33 +52,37 @@ class UpdateableMixin:
             return True
 
         # this is true for scene/project that was loaded but there are not changes yet
-        if self._int_modified is None:
+        if self.int_modified is None:
             return False
 
         # if the scene/project was already saved once (modified is not None)
         # and there were some changes (int_modified is not None)
         # let's compare if some change happened (int_modified) after saving to the Project service (modified)
-        return self._int_modified > self.modified
+        return self.int_modified > self.modified
 
 
 class CachedScene(CachedBase):
-    def __init__(self, scene: cmn.Scene) -> None:
+    def __init__(self, scene: Union[cmn.Scene, CachedScene]) -> None:
 
         super().__init__(scene)
 
-        # TODO deal with children
         self._objects: Dict[str, cmn.SceneObject] = {}
 
-        for obj in scene.objects:
+        if isinstance(scene, CachedScene):
+            self._objects = scene._objects
+        else:
+            # TODO deal with children
 
-            if obj.id in self._objects:
-                raise CachedSceneException(f"Duplicate object id: {obj.id}.")
+            for obj in scene.objects:
 
-            self._objects[obj.id] = obj
+                if obj.id in self._objects:
+                    raise CachedSceneException(f"Duplicate object id: {obj.id}.")
+
+                self._objects[obj.id] = obj
 
     @property
     def bare(self) -> cmn.BareScene:
-        return cmn.BareScene(self.name, self.description, self.created, self.modified, self._int_modified, id=self.id)
+        return cmn.BareScene(self.name, self.description, self.created, self.modified, self.int_modified, id=self.id)
 
     def object_names(self) -> Iterator[str]:
 
@@ -115,13 +121,13 @@ class CachedScene(CachedBase):
 
         sc = cmn.Scene.from_bare(self.bare)
         sc.modified = self.modified
-        sc.int_modified = self._int_modified
+        sc.int_modified = self.int_modified
         sc.objects = list(self.objects)
         return sc
 
 
 class UpdateableCachedScene(UpdateableMixin, CachedScene):
-    def __init__(self, scene: cmn.Scene):
+    def __init__(self, scene: Union[cmn.Scene, CachedScene]):
         super(UpdateableCachedScene, self).__init__(copy.deepcopy(scene))
 
     def upsert_object(self, obj: cmn.SceneObject) -> None:
@@ -164,7 +170,7 @@ class ApOrientation(Parent):
 
 
 class CachedProject(CachedBase):
-    def __init__(self, project: cmn.Project):
+    def __init__(self, project: Union[cmn.Project, CachedProject]):
 
         super().__init__(project)
 
@@ -185,50 +191,63 @@ class CachedProject(CachedBase):
 
         self._childs: Dict[str, Set[str]] = {}
 
-        for ap in project.action_points:
+        if isinstance(project, CachedProject):
+            self._action_points = project._action_points
+            self._actions = project._actions
+            self._joints = project._joints
+            self._orientations = project._orientations
+            self._parameters = project._parameters
+            self._logic_items = project._logic_items
+            self._functions = project._functions
+            self.overrides = project.overrides
+            self._childs = project._childs
 
-            if ap.id in self._action_points:
-                raise CachedProjectException(f"Duplicate AP id: {ap.id}.")
+        else:
 
-            bare_ap = cmn.BareActionPoint(ap.name, ap.position, ap.parent, id=ap.id)
-            self._action_points[ap.id] = bare_ap
-            self._upsert_child(ap.parent, ap.id)
+            for ap in project.action_points:
 
-            for ac in ap.actions:
+                if ap.id in self._action_points:
+                    raise CachedProjectException(f"Duplicate AP id: {ap.id}.")
 
-                if ac.id in self._actions:
-                    raise CachedProjectException(f"Duplicate action id: {ac.id}.")
+                bare_ap = cmn.BareActionPoint(ap.name, ap.position, ap.parent, id=ap.id)
+                self._action_points[ap.id] = bare_ap
+                self._upsert_child(ap.parent, ap.id)
 
-                self._actions[ac.id] = ApAction(bare_ap, ac)
-                self._upsert_child(ap.id, ac.id)
+                for ac in ap.actions:
 
-            for joints in ap.robot_joints:
+                    if ac.id in self._actions:
+                        raise CachedProjectException(f"Duplicate action id: {ac.id}.")
 
-                if joints.id in self._joints:
-                    raise CachedProjectException(f"Duplicate joints id: {joints.id}.")
+                    self._actions[ac.id] = ApAction(bare_ap, ac)
+                    self._upsert_child(ap.id, ac.id)
 
-                self._joints[joints.id] = ApJoints(bare_ap, joints)
-                self._upsert_child(ap.id, joints.id)
+                for joints in ap.robot_joints:
 
-            for orientation in ap.orientations:
+                    if joints.id in self._joints:
+                        raise CachedProjectException(f"Duplicate joints id: {joints.id}.")
 
-                if orientation.id in self._orientations:
-                    raise CachedProjectException(f"Duplicate orientation id: {orientation.id}.")
+                    self._joints[joints.id] = ApJoints(bare_ap, joints)
+                    self._upsert_child(ap.id, joints.id)
 
-                self._orientations[orientation.id] = ApOrientation(bare_ap, orientation)
-                self._upsert_child(ap.id, orientation.id)
+                for orientation in ap.orientations:
 
-        for override in project.object_overrides:
-            self.overrides[override.id] = override.parameters
+                    if orientation.id in self._orientations:
+                        raise CachedProjectException(f"Duplicate orientation id: {orientation.id}.")
 
-        for param in project.parameters:
-            self._parameters[param.id] = param
+                    self._orientations[orientation.id] = ApOrientation(bare_ap, orientation)
+                    self._upsert_child(ap.id, orientation.id)
 
-        for logic_item in project.logic:
-            self._logic_items[logic_item.id] = logic_item
+            for override in project.object_overrides:
+                self.overrides[override.id] = override.parameters
 
-        for function in project.functions:
-            self._functions[function.id] = function
+            for param in project.parameters:
+                self._parameters[param.id] = param
+
+            for logic_item in project.logic:
+                self._logic_items[logic_item.id] = logic_item
+
+            for function in project.functions:
+                self._functions[function.id] = function
 
     @property
     def logic(self) -> ValuesView[cmn.LogicItem]:
@@ -278,7 +297,7 @@ class CachedProject(CachedBase):
             self.has_logic,
             self.created,
             self.modified,
-            self._int_modified,
+            self.int_modified,
             id=self.id,
         )
 
@@ -519,8 +538,8 @@ class CachedProject(CachedBase):
 
 
 class UpdateableCachedProject(UpdateableMixin, CachedProject):
-    def __init__(self, project: cmn.Project):
-        super(UpdateableCachedProject, self).__init__(copy.deepcopy(project))
+    def __init__(self, project: Union[cmn.Project, CachedProject]):
+        super().__init__(copy.deepcopy(project))
 
     def upsert_action(self, ap_id: str, action: cmn.Action) -> None:
 

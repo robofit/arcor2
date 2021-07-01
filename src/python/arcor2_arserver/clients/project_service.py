@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Set
 from lru import LRU
 
 from arcor2 import env
+from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import aio_project_service as ps
 from arcor2.clients.aio_project_service import (
     delete_model,
@@ -19,7 +20,7 @@ from arcor2.clients.aio_project_service import (
     update_project_sources,
 )
 from arcor2.clients.project_service import ProjectServiceException
-from arcor2.data.common import IdDesc, Project, Scene
+from arcor2.data.common import IdDesc
 from arcor2.data.object_type import ObjectType
 from arcor2.exceptions import Arcor2Exception
 
@@ -52,8 +53,8 @@ _object_type_list = CachedListing()
 
 # here we can forget least used items
 if TYPE_CHECKING:
-    _scenes: Dict[str, Scene] = {}
-    _projects: Dict[str, Project] = {}
+    _scenes: Dict[str, CachedScene] = {}
+    _projects: Dict[str, CachedProject] = {}
     _object_types: Dict[str, ObjectType] = {}
 else:
     _scenes = LRU(_cache_scenes)
@@ -133,13 +134,13 @@ async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
         raise ProjectServiceException("Unknown object type.")
 
 
-async def get_project(project_id: str) -> Project:
+async def get_project(project_id: str) -> CachedProject:
 
     try:
         project = _projects[project_id]
         assert project.modified
     except KeyError:
-        project = await ps.get_project(project_id)
+        project = CachedProject(await ps.get_project(project_id))
         _projects[project_id] = project
     else:
         await _update_list(ps.get_projects, _projects_list, _projects)
@@ -150,19 +151,19 @@ async def get_project(project_id: str) -> Project:
 
         # project in cache is outdated
         if project.modified < _projects_list.listing[project_id].modified:
-            project = await ps.get_project(project_id)
+            project = CachedProject(await ps.get_project(project_id))
             _projects[project_id] = project
 
     return project
 
 
-async def get_scene(scene_id: str) -> Scene:
+async def get_scene(scene_id: str) -> CachedScene:
 
     try:
         scene = _scenes[scene_id]
         assert scene.modified
     except KeyError:
-        scene = await ps.get_scene(scene_id)
+        scene = CachedScene(await ps.get_scene(scene_id))
         _scenes[scene_id] = scene
     else:
         await _update_list(ps.get_scenes, _scenes_list, _scenes)
@@ -173,7 +174,7 @@ async def get_scene(scene_id: str) -> Scene:
 
         # scene in cache is outdated
         if scene.modified < _scenes_list.listing[scene_id].modified:
-            scene = await ps.get_scene(scene_id)
+            scene = CachedScene(await ps.get_scene(scene_id))
             _scenes[scene_id] = scene
 
     return scene
@@ -202,11 +203,11 @@ async def get_object_type(object_type_id: str) -> ObjectType:
     return ot
 
 
-async def update_project(project: Project) -> datetime:
+async def update_project(project: CachedProject) -> datetime:
 
     assert project.id
 
-    ret = await ps.update_project(project)
+    ret = await ps.update_project(project.project)
     project.modified = ret
 
     if not project.created:
@@ -221,11 +222,11 @@ async def update_project(project: Project) -> datetime:
     return ret
 
 
-async def update_scene(scene: Scene) -> datetime:
+async def update_scene(scene: CachedScene) -> datetime:
 
     assert scene.id
 
-    ret = await ps.update_scene(scene)
+    ret = await ps.update_scene(scene.scene)
     scene.modified = ret
 
     if not scene.created:

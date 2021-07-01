@@ -334,7 +334,7 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
                 glob.logger.error(str(e))
 
         del glob.OBJECT_TYPES[req.args.id]
-        await hlp.run_in_executor(remove_object_type, req.args.id)
+        await remove_object_type(req.args.id)
 
         evt = sevts.o.ChangedObjectTypes([obj_type.meta])
         evt.change_type = events.Event.Type.REMOVE
