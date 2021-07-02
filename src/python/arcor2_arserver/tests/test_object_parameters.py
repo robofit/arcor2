@@ -5,12 +5,12 @@ from arcor2.data.rpc.common import IdArgs
 from arcor2_arserver.tests.conftest import event, lock_object, save_project, unlock_object
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
 from arcor2_arserver_data import events, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -> None:
 
-    assert ars.call_rpc(rpc.s.OpenScene.Request(uid(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
+    assert ars.call_rpc(rpc.s.OpenScene.Request(get_id(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
 
     event(ars, events.s.OpenScene)
     event(ars, events.s.SceneState)
@@ -24,7 +24,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
 
     assert ars.call_rpc(
         rpc.s.AddObjectToScene.Request(
-            uid(), rpc.s.AddObjectToScene.Request.Args("ows", ObjectWithSettings.__name__, parameters=req_params)
+            get_id(), rpc.s.AddObjectToScene.Request.Args("ows", ObjectWithSettings.__name__, parameters=req_params)
         ),
         rpc.s.AddObjectToScene.Response,
     ).result
@@ -47,7 +47,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
 
     assert ars.call_rpc(
         rpc.s.UpdateObjectParameters.Request(
-            uid(), rpc.s.UpdateObjectParameters.Request.Args(soc.data.id, parameters=req_params2)
+            get_id(), rpc.s.UpdateObjectParameters.Request.Args(soc.data.id, parameters=req_params2)
         ),
         rpc.s.AddObjectToScene.Response,
     ).result
@@ -61,7 +61,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
 
     # let's continue with testing overrides
     assert ars.call_rpc(
-        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
+        rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
         rpc.p.NewProject.Response,
     ).result
 
@@ -70,21 +70,21 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
 
     assert not ars.call_rpc(
         rpc.o.DeleteOverride.Request(
-            uid(), rpc.o.DeleteOverride.Request.Args(obj_id, Parameter("bool_param", "boolean", json.dumps(True)))
+            get_id(), rpc.o.DeleteOverride.Request.Args(obj_id, Parameter("bool_param", "boolean", json.dumps(True)))
         ),
         rpc.o.DeleteOverride.Response,
     ).result
 
     assert not ars.call_rpc(
         rpc.o.UpdateOverride.Request(
-            uid(), rpc.o.UpdateOverride.Request.Args(obj_id, Parameter("bool_param", "boolean", json.dumps(True)))
+            get_id(), rpc.o.UpdateOverride.Request.Args(obj_id, Parameter("bool_param", "boolean", json.dumps(True)))
         ),
         rpc.o.UpdateOverride.Response,
     ).result
 
     # int_param has to be set to special value, so without override, StartScene should fail now
     assert ars.call_rpc(
-        rpc.s.StartScene.Request(uid()),
+        rpc.s.StartScene.Request(get_id()),
         rpc.s.StartScene.Response,
     ).result
 
@@ -97,7 +97,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     override = Parameter("int_param", "integer", json.dumps(ObjectWithSettings.INT_PARAM_SPECIAL_VALUE))
 
     assert ars.call_rpc(
-        rpc.o.AddOverride.Request(uid(), rpc.o.AddOverride.Request.Args(obj_id, override)),
+        rpc.o.AddOverride.Request(get_id(), rpc.o.AddOverride.Request.Args(obj_id, override)),
         rpc.o.AddOverride.Response,
     ).result
 
@@ -110,7 +110,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
     override2 = Parameter("str_param", "string", json.dumps("test"))
 
     assert ars.call_rpc(
-        rpc.o.AddOverride.Request(uid(), rpc.o.AddOverride.Request.Args(obj_id, override2)),
+        rpc.o.AddOverride.Request(get_id(), rpc.o.AddOverride.Request.Args(obj_id, override2)),
         rpc.o.AddOverride.Response,
     ).result
 
@@ -122,7 +122,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
 
     # now it should be possible to start the scene
     assert ars.call_rpc(
-        rpc.s.StartScene.Request(uid()),
+        rpc.s.StartScene.Request(get_id()),
         rpc.s.StartScene.Response,
     ).result
 

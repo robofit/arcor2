@@ -97,7 +97,7 @@ class Position(IterableIndexable):
 
         rotated_vector = quaternion.rotate_vectors([q], [list(self)])[0][0]
 
-        return Position(rotated_vector[0], rotated_vector[1], rotated_vector[2])
+        return Position(float(rotated_vector[0]), float(rotated_vector[1]), float(rotated_vector[2]))
 
     def __eq__(self, other: object) -> bool:
 
@@ -163,7 +163,7 @@ class Orientation(IterableIndexable):
 
     @classmethod
     def from_quaternion(cls, q: quaternion.quaternion) -> Orientation:
-        return Orientation(q.x, q.y, q.z, q.w)
+        return Orientation(float(q.x), float(q.y), float(q.z), float(q.w))
 
     @staticmethod
     def _normalized(q: quaternion.quaternion) -> quaternion.quaternion:
@@ -188,10 +188,10 @@ class Orientation(IterableIndexable):
 
         nq = self._normalized(q)
 
-        self.x = nq.x
-        self.y = nq.y
-        self.z = nq.z
-        self.w = nq.w
+        self.x = float(nq.x)
+        self.y = float(nq.y)
+        self.z = float(nq.z)
+        self.w = float(nq.w)
 
     def as_tr_matrix(self) -> np.ndarray:
         """Returns 4x4 transformation matrix.
@@ -230,10 +230,10 @@ class Orientation(IterableIndexable):
 
         nq = self.as_quaternion()  # in order to get normalized quaternion
 
-        self.x = nq.x
-        self.y = nq.y
-        self.z = nq.z
-        self.w = nq.w
+        self.x = float(nq.x)
+        self.y = float(nq.y)
+        self.z = float(nq.z)
+        self.w = float(nq.w)
 
 
 class ModelMixin(abc.ABC):

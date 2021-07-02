@@ -4,7 +4,7 @@ from arcor2.data.object_type import Box, Cylinder, Model3dType, ObjectModel, Sph
 from arcor2.object_types.abstract import GenericWithPose
 from arcor2_arserver.tests.conftest import event
 from arcor2_arserver_data import events, objects, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 
 
 # TODO find out way how to test invalid models (has to be constructed as a json)
@@ -27,7 +27,7 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
 
     assert ars.call_rpc(
         rpc.o.NewObjectType.Request(
-            uid(), objects.ObjectTypeMeta(type_name, base=GenericWithPose.__name__, object_model=model)
+            get_id(), objects.ObjectTypeMeta(type_name, base=GenericWithPose.__name__, object_model=model)
         ),
         rpc.o.NewObjectType.Response,
     ).result

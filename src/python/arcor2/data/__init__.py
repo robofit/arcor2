@@ -1,8 +1,10 @@
 import importlib
 import inspect
 import pkgutil
-from typing import Dict
+from typing import TYPE_CHECKING, Dict, Type
 
+import dataclasses_jsonschema
+import orjson
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from dataclasses_jsonschema.apispec import DataclassesPlugin, _schema_reference
 
@@ -11,6 +13,23 @@ from arcor2.exceptions import Arcor2Exception
 
 class DataException(Arcor2Exception):
     pass
+
+
+if not TYPE_CHECKING:
+
+    # monkey-patch dataclasses_jsonschema to use orjson instead of json
+
+    @classmethod
+    def from_json(
+        cls: Type[dataclasses_jsonschema.T], data: str, validate: bool = True, **json_kwargs
+    ) -> dataclasses_jsonschema.T:
+        return cls.from_dict(orjson.loads(data), validate)
+
+    def to_json(self, omit_none: bool = True, validate: bool = False, **json_kwargs) -> str:
+        return orjson.dumps(self.to_dict(omit_none, validate), **json_kwargs).decode()
+
+    JsonSchemaMixin.from_json = from_json
+    JsonSchemaMixin.to_json = to_json
 
 
 def resolve_schema_refs(self, data: Dict) -> None:
