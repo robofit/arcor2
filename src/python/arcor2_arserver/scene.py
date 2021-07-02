@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterator, Dict, List, Optional, Set
+from typing import AsyncIterator, Dict, List, Optional, Set, Type, TypeVar
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -57,9 +57,7 @@ async def update_scene_object_pose(
     if scene_started():
 
         if obj_inst is None:
-            inst = get_instance(obj.id)
-            assert isinstance(inst, GenericWithPose)
-            obj_inst = inst
+            obj_inst = get_instance(obj.id, GenericWithPose)
 
         assert pose is not None
 
@@ -67,7 +65,7 @@ async def update_scene_object_pose(
         await hlp.run_in_executor(setattr, obj_inst, "pose", pose)
 
     if lock_owner:
-        await glob.LOCK.read_unlock(obj.id, lock_owner)
+        await glob.LOCK.write_unlock(obj.id, lock_owner, True)
 
 
 async def set_scene_state(state: SceneState.Data.StateEnum, message: Optional[str] = None) -> None:
@@ -257,13 +255,30 @@ async def open_scene(scene_id: str) -> None:
         raise Arcor2Exception(f"Failed to open scene. {str(e)}") from e
 
 
-# TODO optional parameter for expected return type
-def get_instance(obj_id: str) -> Generic:
+def get_robot_instance(obj_id: str) -> Robot:  # TODO remove once https://github.com/python/mypy/issues/5374 is solved
 
-    if obj_id not in glob.SCENE_OBJECT_INSTANCES:
-        raise Arcor2Exception("Unknown object/service ID.")
+    robot_inst = get_instance(obj_id, Robot)  # type: ignore
+    assert isinstance(robot_inst, Robot)
+    return robot_inst
 
-    return glob.SCENE_OBJECT_INSTANCES[obj_id]
+
+T = TypeVar("T", bound=Generic)
+
+
+# TODO "thanks" to https://github.com/python/mypy/issues/3737, `expected_type: Type[T] = Generic` can't be used
+def get_instance(obj_id: str, expected_type: Type[T]) -> T:
+
+    assert scene_started()
+
+    try:
+        inst = glob.SCENE_OBJECT_INSTANCES[obj_id]
+    except KeyError:
+        raise Arcor2Exception("Unknown object ID.")
+
+    if not isinstance(inst, expected_type):
+        raise Arcor2Exception(f"{inst.name} is not of {expected_type.__name__} type.")
+
+    return inst
 
 
 async def cleanup_object(obj: Generic) -> None:

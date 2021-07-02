@@ -22,8 +22,9 @@ OBJECT_TYPES: Dict[str, object_type.ObjectType] = {}
 BOXES: Dict[str, object_type.Box] = {}
 CYLINDERS: Dict[str, object_type.Cylinder] = {}
 SPHERES: Dict[str, object_type.Sphere] = {}
+MESHES: Dict[str, object_type.Mesh] = {}
 
-MESHES: Dict[str, Tuple[BytesIO, Optional[str]]] = {}
+MESH_FILES: Dict[str, Tuple[BytesIO, Optional[str]]] = {}
 
 
 @app.route("/models/<string:mesh_id>/mesh/file", methods=["PUT"])
@@ -64,7 +65,7 @@ def put_mesh_file(mesh_id: str) -> RespT:
     buff = BytesIO()
     fs = request.files["file"]
     fs.save(buff)
-    MESHES[mesh_id] = buff, fs.filename
+    MESH_FILES[mesh_id] = buff, fs.filename
     return jsonify("ok"), 200
 
 
@@ -93,7 +94,7 @@ def get_mesh_file(mesh_id: str) -> RespT:
                         format: binary
     """
 
-    mesh_file, filename = MESHES[mesh_id]
+    mesh_file, filename = MESH_FILES[mesh_id]
     mesh_file.seek(0)
     return send_file(mesh_file, as_attachment=True, cache_timeout=0, attachment_filename=filename)
 
@@ -700,6 +701,69 @@ def get_sphere(id: str) -> RespT:
         return jsonify("Not found"), 404
 
 
+@app.route("/models/mesh", methods=["PUT"])
+def put_mesh() -> RespT:
+    """Add or update mesh.
+    ---
+    put:
+        tags:
+            - Models
+        description: Add or update mesh.
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: Mesh
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+    """
+
+    mesh = object_type.Mesh.from_dict(humps.decamelize(request.json))
+    MESHES[mesh.id] = mesh
+    return jsonify("ok"), 200
+
+
+@app.route("/models/<string:id>/mesh", methods=["GET"])
+def get_mesh(id: str) -> RespT:
+    """Add or update mesh.
+    ---
+    get:
+        tags:
+            - Models
+        summary: Gets mesh by id.
+        parameters:
+            - name: id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                    schema:
+                        $ref: Mesh
+            404:
+              description: Model not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
+    """
+
+    try:
+        return jsonify(MESHES[id].to_dict())
+    except KeyError:
+        return jsonify("Not found"), 404
+
+
 @app.route("/models/<string:id>", methods=["DELETE"])
 def delete_model(id: str) -> RespT:
     """Deletes model.
@@ -733,7 +797,10 @@ def delete_model(id: str) -> RespT:
             try:
                 del SPHERES[id]
             except KeyError:
-                return jsonify("Not found"), 404
+                try:
+                    del MESHES[id]
+                except KeyError:
+                    return jsonify("Not found"), 404
 
     return jsonify("ok"), 200
 
@@ -758,6 +825,7 @@ def main() -> None:
             object_type.Box,
             object_type.Cylinder,
             object_type.Sphere,
+            object_type.Mesh,
         ],
         args.swagger,
     )

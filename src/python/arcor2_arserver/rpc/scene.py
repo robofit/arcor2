@@ -14,12 +14,19 @@ from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.image import image_from_str
+from arcor2.object_types.abstract import Generic
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import project_service as storage
-from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_locked, get_unlocked_objects, unique_name
+from arcor2_arserver.helpers import (
+    ctx_read_lock,
+    ctx_write_lock,
+    ensure_write_locked,
+    get_unlocked_objects,
+    unique_name,
+)
 from arcor2_arserver.lock.exceptions import LockingException
-from arcor2_arserver.objects_actions import get_object_types, get_robot_instance
+from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver.project import (
     associated_projects,
     invalidate_joints_using_object_as_parent,
@@ -33,6 +40,7 @@ from arcor2_arserver.scene import (
     check_object_parameters,
     ensure_scene_started,
     get_instance,
+    get_robot_instance,
     get_scene_state,
     notify_scene_closed,
     notify_scene_opened,
@@ -229,7 +237,7 @@ async def update_object_parameters_cb(req: srpc.s.UpdateObjectParameters.Request
 
     check_object_parameters(obj_type, req.args.parameters)
 
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
 
     if req.dry_run:
         return None
@@ -277,7 +285,7 @@ async def action_param_values_cb(
     async with ctx_read_lock(req.args.id, glob.USERS.user_name(ui)):
         ensure_scene_started()
 
-        inst = get_instance(req.args.id)
+        inst = get_instance(req.args.id, Generic)
 
         parent_params = {}
 
@@ -363,7 +371,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
     async with ctx_write_lock(to_lock, user_name):
         ensure_scene_started()
 
-        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        robot_inst = get_robot_instance(req.args.robot.robot_id)
         await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
         scene_object = scene.object(req.args.id)
@@ -423,7 +431,7 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
 
     try:
-        if scene_started() and await get_robot_instance(req.args.object_id):
+        if scene_started() and get_robot_instance(req.args.object_id):
             raise Arcor2Exception("Robot's pose can be only updated offline.")
     except Arcor2Exception:
         pass
@@ -433,7 +441,7 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
     if not obj.pose:
         raise Arcor2Exception("Object without pose.")
 
-    await ensure_locked(req.args.object_id, ui)
+    await ensure_write_locked(req.args.object_id, glob.USERS.user_name(ui))
 
     if req.dry_run:
         return
@@ -457,7 +465,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
     hlp.is_valid_identifier(req.args.new_name)
 
     user_name = glob.USERS.user_name(ui)
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, user_name)
 
     if req.dry_run:
         return None
@@ -479,7 +487,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
     unique_name(req.args.new_name, (await scene_names()))
 
     user_name = glob.USERS.user_name(ui)
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, user_name)
 
     if req.dry_run:
         return None

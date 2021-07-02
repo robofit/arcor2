@@ -1,8 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Iterable, List, Set, Union
 
-from websockets.server import WebSocketServerProtocol as WsClient
-
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import globals as glob
 from arcor2_arserver.decorators import retry
@@ -72,14 +70,18 @@ async def ctx_read_lock(
             await glob.LOCK.read_unlock(obj_ids, owner)
 
 
-async def ensure_locked(obj_id: str, ui: WsClient, locked_tree: bool = False) -> None:
-    """Check if object is write locked.
+async def ensure_write_locked(obj_id: str, owner: str, locked_tree: bool = False) -> None:
+    """Check if object is write locked."""
 
-    Read lock check not needed yet.
-    """
+    if not await glob.LOCK.is_write_locked(obj_id, owner, locked_tree):
+        raise LockingException("Object is not write locked.")
 
-    if not await glob.LOCK.is_write_locked(obj_id, glob.USERS.user_name(ui), locked_tree):
-        raise LockingException(glob.LOCK.ErrMessages.NOT_LOCKED.value)
+
+async def ensure_read_locked(obj_id: str, owner: str, locked_tree: bool = False) -> None:
+    """Check if object is read locked."""
+
+    if not await glob.LOCK.is_read_locked(obj_id, owner):
+        raise LockingException("Object is not write locked.")
 
 
 async def get_unlocked_objects(obj_ids: Union[str, List[str]], owner: str) -> Set[str]:
