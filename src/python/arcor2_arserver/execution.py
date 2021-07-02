@@ -1,7 +1,6 @@
 import asyncio
 import base64
 import os
-import uuid
 from typing import TYPE_CHECKING, Dict, Optional
 
 import aiofiles
@@ -19,6 +18,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.scene import scene_started, start_scene, stop_scene
 from arcor2_arserver_data import events as sevts
+from arcor2_arserver_data import get_id
 from arcor2_build_data import URL as BUILD_URL
 from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc as erpc
@@ -50,7 +50,7 @@ async def run_temp_package(package_id: str) -> None:
 
     await project.close_project()
     req = erpc.RunPackage.Request
-    exe_req = req(uuid.uuid4().int, args=req.Args(package_id))
+    exe_req = req(get_id(), args=req.Args(package_id))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
@@ -62,7 +62,7 @@ async def run_temp_package(package_id: str) -> None:
 
     glob.TEMPORARY_PACKAGE = False
 
-    await manager_request(erpc.DeletePackage.Request(uuid.uuid4().int, args=rpc.common.IdArgs(package_id)))
+    await manager_request(erpc.DeletePackage.Request(get_id(), args=rpc.common.IdArgs(package_id)))
 
     await project.open_project(project_id)
 
@@ -104,7 +104,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             b64_str = b64_bytes.decode()
 
     # send data to execution service
-    exe_req = erpc.UploadPackage.Request(uuid.uuid4().int, args=erpc.UploadPackage.Request.Args(package_id, b64_str))
+    exe_req = erpc.UploadPackage.Request(get_id(), args=erpc.UploadPackage.Request.Args(package_id, b64_str))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:

@@ -1,5 +1,4 @@
 import asyncio
-import json
 import time
 from collections import deque
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
@@ -9,7 +8,7 @@ from aiologger.levels import LogLevel
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import env
+from arcor2 import env, json
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import RPC
 from arcor2.exceptions import Arcor2Exception
@@ -49,7 +48,7 @@ async def server(
 
         try:
             data = json.loads(msg)
-        except json.decoder.JSONDecodeError as e:
+        except json.JsonException as e:
             logger.error(f"Invalid data: '{msg}'.")
             logger.debug(e)
             return

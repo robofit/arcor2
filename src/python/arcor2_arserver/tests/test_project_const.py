@@ -5,7 +5,7 @@ from arcor2.data import common
 from arcor2.object_types.random_actions import RandomActions
 from arcor2_arserver.tests.conftest import event, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_project_const(start_processes: None, ars: ARServer) -> None:
@@ -13,7 +13,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     event(ars, events.c.ShowMainScreen)
 
     assert ars.call_rpc(
-        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args("Test scene")), rpc.s.NewScene.Response
+        rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args("Test scene")), rpc.s.NewScene.Response
     ).result
 
     scene_data = event(ars, events.s.OpenScene).data
@@ -24,7 +24,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.s.AddObjectToScene.Request(
-            uid(), rpc.s.AddObjectToScene.Request.Args("random_actions", RandomActions.__name__)
+            get_id(), rpc.s.AddObjectToScene.Request.Args("random_actions", RandomActions.__name__)
         ),
         rpc.s.AddObjectToScene.Response,
     ).result
@@ -35,7 +35,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     # ------------------------------------------------------------------------------------------------------------------
 
     assert ars.call_rpc(
-        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
+        rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
         rpc.p.NewProject.Response,
     ).result
 
@@ -56,7 +56,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.AddProjectParameter.Request(
-            uid(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.45))
+            get_id(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.45))
         ),
         rpc.p.AddProjectParameter.Response,
     ).result
@@ -66,14 +66,14 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert not ars.call_rpc(
         rpc.p.AddProjectParameter.Request(
-            uid(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.62))
+            get_id(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.62))
         ),
         rpc.p.AddProjectParameter.Response,
     ).result
 
     assert not ars.call_rpc(  # attempt to update without lock
         rpc.p.UpdateProjectParameter.Request(
-            uid(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_updated")
+            get_id(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_updated")
         ),
         rpc.p.UpdateProjectParameter.Response,
     ).result
@@ -85,14 +85,14 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.UpdateProjectParameter.Request(
-            uid(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_1"), dry_run=True
+            get_id(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_1"), dry_run=True
         ),
         rpc.p.UpdateProjectParameter.Response,
     ).result
 
     assert ars.call_rpc(
         rpc.p.UpdateProjectParameter.Request(
-            uid(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_2"), dry_run=True
+            get_id(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_2"), dry_run=True
         ),
         rpc.p.UpdateProjectParameter.Response,
     ).result
@@ -105,7 +105,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.UpdateProjectParameter.Request(
-            uid(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_updated")
+            get_id(), rpc.p.UpdateProjectParameter.Request.Args(c1.id, name="min_time_updated")
         ),
         rpc.p.UpdateProjectParameter.Response,
     ).result
@@ -124,7 +124,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.AddProjectParameter.Request(
-            uid(), rpc.p.AddProjectParameter.Request.Args("min_time_2", "double", json.dumps(0.62))
+            get_id(), rpc.p.AddProjectParameter.Request.Args("min_time_2", "double", json.dumps(0.62))
         ),
         rpc.p.AddProjectParameter.Response,
     ).result
@@ -133,7 +133,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     assert c2
 
     assert ars.call_rpc(
-        rpc.p.RemoveProjectParameter.Request(uid(), rpc.p.RemoveProjectParameter.Request.Args(c2.id)),
+        rpc.p.RemoveProjectParameter.Request(get_id(), rpc.p.RemoveProjectParameter.Request.Args(c2.id)),
         rpc.p.RemoveProjectParameter.Response,
     ).result
 
@@ -147,7 +147,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert not ars.call_rpc(
         rpc.p.AddProjectParameter.Request(
-            uid(), rpc.p.AddProjectParameter.Request.Args(c1u.name, "double", json.dumps(0.62))
+            get_id(), rpc.p.AddProjectParameter.Request.Args(c1u.name, "double", json.dumps(0.62))
         ),
         rpc.p.AddProjectParameter.Response,
     ).result
@@ -155,7 +155,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     # ------------------------------------------------------------------------------------------------------------------
 
     assert ars.call_rpc(
-        rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap1", common.Position())),
+        rpc.p.AddActionPoint.Request(get_id(), rpc.p.AddActionPoint.Request.Args("ap1", common.Position())),
         rpc.p.AddActionPoint.Response,
     ).result
 
@@ -164,7 +164,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.AddAction.Request(
-            uid(),
+            get_id(),
             rpc.p.AddAction.Request.Args(
                 ap.id,
                 "test_action",
@@ -185,20 +185,20 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     assert action
 
     assert not ars.call_rpc(
-        rpc.p.RemoveProjectParameter.Request(uid(), rpc.p.RemoveProjectParameter.Request.Args(c1.id)),
+        rpc.p.RemoveProjectParameter.Request(get_id(), rpc.p.RemoveProjectParameter.Request.Args(c1.id)),
         rpc.p.RemoveProjectParameter.Response,
     ).result
 
     # ------------------------------------------------------------------------------------------------------------------
     # try to execute action using constant parameter
 
-    assert ars.call_rpc((rpc.s.StartScene.Request(uid())), rpc.s.StartScene.Response).result
+    assert ars.call_rpc((rpc.s.StartScene.Request(get_id())), rpc.s.StartScene.Response).result
 
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Starting
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Started
 
     assert ars.call_rpc(
-        rpc.p.ExecuteAction.Request(uid(), rpc.p.ExecuteAction.Request.Args(action.id)), rpc.p.ExecuteAction.Response
+        rpc.p.ExecuteAction.Request(get_id(), rpc.p.ExecuteAction.Request.Args(action.id)), rpc.p.ExecuteAction.Response
     )
 
     event(ars, events.a.ActionExecution)
@@ -208,15 +208,17 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     assert res.data.action_id == action.id
     assert not res.data.error
 
-    assert ars.call_rpc((rpc.s.StopScene.Request(uid())), rpc.s.StopScene.Response).result
+    assert ars.call_rpc((rpc.s.StopScene.Request(get_id())), rpc.s.StopScene.Response).result
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Stopping
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Stopped
 
-    assert ars.call_rpc(rpc.p.RemoveAction.Request(uid(), rpc.p.IdArgs(action.id)), rpc.p.RemoveAction.Response).result
+    assert ars.call_rpc(
+        rpc.p.RemoveAction.Request(get_id(), rpc.p.IdArgs(action.id)), rpc.p.RemoveAction.Response
+    ).result
     assert event(ars, events.p.ActionChanged).data
 
     assert ars.call_rpc(
-        rpc.p.RemoveProjectParameter.Request(uid(), rpc.p.RemoveProjectParameter.Request.Args(c1.id)),
+        rpc.p.RemoveProjectParameter.Request(get_id(), rpc.p.RemoveProjectParameter.Request.Args(c1.id)),
         rpc.p.RemoveProjectParameter.Response,
     ).result
     event(ars, events.p.ProjectParameterChanged)

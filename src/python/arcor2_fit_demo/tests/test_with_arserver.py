@@ -12,7 +12,7 @@ from arcor2.data.events import Event
 from arcor2.data.rpc.common import TypeArgs
 from arcor2.helpers import find_free_port
 from arcor2_arserver_data import events, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_arserver_data.robot import RobotMeta
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
@@ -142,14 +142,14 @@ def test_objects(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
-    res = ars.call_rpc(rpc.o.GetObjectTypes.Request(uid()), rpc.o.GetObjectTypes.Response)
+    res = ars.call_rpc(rpc.o.GetObjectTypes.Request(get_id()), rpc.o.GetObjectTypes.Response)
     assert res.result
     assert res.data is not None
 
     for obj in res.data:
         assert not obj.disabled, f"ObjectType {obj.type} disabled. {obj.problem}"
 
-        actions = ars.call_rpc(rpc.o.GetActions.Request(uid(), TypeArgs(obj.type)), rpc.o.GetActions.Response)
+        actions = ars.call_rpc(rpc.o.GetActions.Request(get_id(), TypeArgs(obj.type)), rpc.o.GetActions.Response)
         assert actions.result
         assert actions.data is not None
 
@@ -162,7 +162,7 @@ def test_robot_meta(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
-    res = ars.call_rpc(rpc.r.GetRobotMeta.Request(uid()), rpc.r.GetRobotMeta.Response)
+    res = ars.call_rpc(rpc.r.GetRobotMeta.Request(get_id()), rpc.r.GetRobotMeta.Response)
     assert res.result
     assert res.data is not None
 

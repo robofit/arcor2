@@ -2,7 +2,6 @@
 
 import argparse
 import base64
-import json
 import os
 import shutil
 import tempfile
@@ -23,6 +22,7 @@ from flask import Response, jsonify, request, send_file
 from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
 
+from arcor2 import json
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import PackageInfo, PackageState, ProjectException
@@ -129,6 +129,9 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
     while True:
 
         data = json.loads(ws.recv())  # TODO handle WebSocketConnectionClosedException
+
+        if not isinstance(data, dict):
+            continue
 
         if "event" in data:
 

@@ -1,5 +1,4 @@
 import time
-import uuid
 from queue import Empty, Queue
 from typing import Dict, Optional, Type, TypeVar
 
@@ -10,6 +9,7 @@ from arcor2 import json
 from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
+from arcor2_arserver_data import get_id
 from arcor2_arserver_data import rpc as srpc
 
 
@@ -18,10 +18,6 @@ class ARServerClientException(Arcor2Exception):
 
 
 RR = TypeVar("RR", bound=rpc.common.RPC.Response)
-
-
-def uid() -> int:
-    return uuid.uuid4().int
 
 
 class ARServer:
@@ -60,7 +56,7 @@ class ARServer:
 
         self._ws.settimeout(timeout)
 
-        system_info = self._call_rpc(srpc.c.SystemInfo.Request(uid()), srpc.c.SystemInfo.Response).data
+        system_info = self._call_rpc(srpc.c.SystemInfo.Request(get_id()), srpc.c.SystemInfo.Response).data
 
         if system_info is None:
             raise ARServerClientException("Failed to get SystemInfo.")

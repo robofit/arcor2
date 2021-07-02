@@ -844,7 +844,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
         assert glob.LOCK.scene
 
         # add commonly used project parameters
-        import json  # TODO use parameter plugin
+        from arcor2 import json  # TODO use parameter plugin
 
         glob.LOCK.project.upsert_parameter(
             common.ProjectParameter("scene_id", "string", json.dumps(glob.LOCK.scene.id))
