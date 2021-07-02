@@ -12,7 +12,7 @@ from arcor2.data import common
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer, check_for_loops
-from arcor2.object_types.abstract import Robot
+from arcor2.object_types.abstract import Generic, Robot
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.parameter_plugins.pose import PosePlugin
 from arcor2.parameter_plugins.utils import plugin_from_type_name
@@ -23,12 +23,12 @@ from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import (
     ctx_read_lock,
     ctx_write_lock,
-    ensure_locked,
+    ensure_write_locked,
     get_unlocked_objects,
     make_name_unique,
     unique_name,
 )
-from arcor2_arserver.objects_actions import get_robot_instance, get_types_dict
+from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.project import (
     check_action_params,
     check_flows,
@@ -40,7 +40,7 @@ from arcor2_arserver.project import (
     project_problems,
 )
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose, get_pose_and_joints, get_robot_joints
-from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, open_scene
+from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, get_robot_instance, open_scene
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 
@@ -80,7 +80,7 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
 
     action = proj.action(glob.RUNNING_ACTION)
     obj_id, action_name = action.parse_type()
-    obj = get_instance(obj_id)
+    obj = get_instance(obj_id, Generic)
 
     if not find_object_action(scene, action).meta.cancellable:
         raise Arcor2Exception("Action is not cancellable.")
@@ -170,7 +170,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                     glob.logger.error(e)
                     raise Arcor2Exception(f"Failed to get value for parameter {param.name}.")
 
-        obj = get_instance(obj_id)
+        obj = get_instance(obj_id, Generic)
 
         if isinstance(obj, Robot):
             if obj.move_in_progress:
@@ -281,7 +281,7 @@ async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClien
 
         unique_name(req.args.name, proj.action_points_names)
 
-        robot_inst = await get_robot_instance(req.args.robot_id)
+        robot_inst = get_robot_instance(req.args.robot_id)
         await check_eef_arm(robot_inst, req.args.arm_id, req.args.end_effector_id)
 
         if req.dry_run:
@@ -310,7 +310,7 @@ async def add_action_point_joints_using_robot_cb(
 
         ensure_scene_started()
 
-        robot_inst = await get_robot_instance(req.args.robot_id)
+        robot_inst = get_robot_instance(req.args.robot_id)
         await check_eef_arm(robot_inst, req.args.arm_id)
 
         ap = proj.bare_action_point(req.args.action_point_id)
@@ -319,7 +319,7 @@ async def add_action_point_joints_using_robot_cb(
 
         new_joints = await get_robot_joints(robot_inst, req.args.arm_id)
 
-        await ensure_locked(ap.id, ui)
+        await ensure_write_locked(ap.id, glob.USERS.user_name(ui))
 
         if req.dry_run:
             return None
@@ -344,12 +344,12 @@ async def update_action_point_joints_using_robot_cb(
 
     ap, robot_joints = proj.ap_and_joints(req.args.joints_id)
 
-    async with ctx_read_lock(robot_joints.robot_id, glob.USERS.user_name(ui)):
-        await ensure_locked(ap.id, ui)
+    user_name = glob.USERS.user_name(ui)
 
-        robot_joints.joints = await get_robot_joints(
-            await get_robot_instance(robot_joints.robot_id), robot_joints.arm_id
-        )
+    async with ctx_read_lock(robot_joints.robot_id, user_name):
+        await ensure_write_locked(ap.id, user_name)
+
+        robot_joints.joints = await get_robot_joints(get_robot_instance(robot_joints.robot_id), robot_joints.arm_id)
         robot_joints.is_valid = True
 
         proj.update_modified()
@@ -369,7 +369,7 @@ async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Requ
     if {joint.name for joint in req.args.joints} != {joint.name for joint in robot_joints.joints}:
         raise Arcor2Exception("Joint names does not match the robot.")
 
-    await ensure_locked(ap.id, ui)
+    await ensure_write_locked(ap.id, glob.USERS.user_name(ui))
 
     # TODO maybe joints values should be normalized? To <0, 2pi> or to <-pi, pi>?
     robot_joints.joints = req.args.joints
@@ -397,7 +397,7 @@ async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Requ
                 raise Arcor2Exception(f"Joints used in action {act.name} (parameter {param.name}).")
 
     ap, _ = proj.ap_and_joints(req.args.joints_id)
-    await ensure_locked(ap.id, ui)
+    await ensure_write_locked(ap.id, glob.USERS.user_name(ui))
 
     joints_to_be_removed = proj.remove_joints(req.args.joints_id)
 
@@ -421,7 +421,8 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
     hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, proj.action_points_names)
 
-    await ensure_locked(req.args.action_point_id, ui)
+    user_name = glob.USERS.user_name(ui)
+    await ensure_write_locked(req.args.action_point_id, user_name)
 
     if req.dry_run:
         return None
@@ -430,7 +431,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
 
     proj.update_modified()
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_point_id, glob.USERS.user_name(ui), True))
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_point_id, user_name, True))
 
     evt = sevts.p.ActionPointChanged(ap)
     evt.change_type = Event.Type.UPDATE_BASE
@@ -482,7 +483,7 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         check_ap_parent(scene, proj, req.args.new_parent_id)
         detect_ap_loop(proj, ap, req.args.new_parent_id)
 
-        await ensure_locked(ap.id, ui)
+        await ensure_write_locked(ap.id, user_name)
 
         if req.dry_run:
             return
@@ -558,11 +559,12 @@ async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.
 
     proj = glob.LOCK.project_or_exception()
     ap = proj.bare_action_point(req.args.action_point_id)
+    user_name = glob.USERS.user_name(ui)
 
     if req.dry_run:
-        await glob.LOCK.check_lock_tree(req.args.action_point_id, glob.USERS.user_name(ui))
+        await glob.LOCK.check_lock_tree(req.args.action_point_id, user_name)
     else:
-        await ensure_locked(req.args.action_point_id, ui, True)
+        await ensure_write_locked(req.args.action_point_id, user_name, True)
 
     if req.dry_run:
         return
@@ -575,12 +577,13 @@ async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingR
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
     ensure_scene_started()
+    user_name = glob.USERS.user_name(ui)
 
     ap = proj.bare_action_point(req.args.action_point_id)
-    await ensure_locked(ap.id, ui)
+    await ensure_write_locked(ap.id, user_name)
 
-    async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
-        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+    async with ctx_read_lock(req.args.robot.robot_id, user_name):
+        robot_inst = get_robot_instance(req.args.robot.robot_id)
         await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
         new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector, req.args.robot.arm_id)
 
@@ -604,7 +607,7 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
     hlp.is_valid_identifier(req.args.name)
     unique_name(req.args.name, proj.ap_orientation_names(ap.id))
 
-    await ensure_locked(req.args.action_point_id, ui)
+    await ensure_write_locked(req.args.action_point_id, glob.USERS.user_name(ui))
 
     if req.dry_run:
         return None
@@ -628,7 +631,7 @@ async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrient
 
     proj = glob.LOCK.project_or_exception()
     orientation = proj.orientation(req.args.orientation_id)
-    await ensure_locked(orientation.id, ui)
+    await ensure_write_locked(orientation.id, glob.USERS.user_name(ui))
 
     orientation.orientation = req.args.orientation
 
@@ -651,18 +654,19 @@ async def add_action_point_orientation_using_robot_cb(
 
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
+    user_name = glob.USERS.user_name(ui)
 
-    async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
+    async with ctx_read_lock(req.args.robot.robot_id, user_name):
 
         ensure_scene_started()
 
         ap = proj.bare_action_point(req.args.action_point_id)
         hlp.is_valid_identifier(req.args.name)
         unique_name(req.args.name, proj.ap_orientation_names(ap.id))
-        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        robot_inst = get_robot_instance(req.args.robot.robot_id)
         await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
-        await ensure_locked(req.args.action_point_id, ui)
+        await ensure_write_locked(req.args.action_point_id, user_name)
 
         if req.dry_run:
             return None
@@ -693,16 +697,17 @@ async def update_action_point_orientation_using_robot_cb(
 
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
+    user_name = glob.USERS.user_name(ui)
 
-    async with ctx_read_lock(req.args.robot.robot_id, glob.USERS.user_name(ui)):
+    async with ctx_read_lock(req.args.robot.robot_id, user_name):
 
         ensure_scene_started()
-        robot_inst = await get_robot_instance(req.args.robot.robot_id)
+        robot_inst = get_robot_instance(req.args.robot.robot_id)
         await check_eef_arm(robot_inst, req.args.robot.arm_id, req.args.robot.end_effector)
 
         ap, ori = proj.bare_ap_and_orientation(req.args.orientation_id)
 
-        await ensure_locked(ori.id, ui)
+        await ensure_write_locked(ori.id, user_name)
 
         new_pose = await get_end_effector_pose(robot_inst, req.args.robot.end_effector, req.args.robot.arm_id)
 
@@ -1123,7 +1128,7 @@ async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> No
     check_flows(updated_project, updated_action, updated_action_meta)
     check_action_params(scene, updated_project, updated_action, updated_action_meta)
 
-    await ensure_locked(req.args.action_id, ui)
+    await ensure_write_locked(req.args.action_id, glob.USERS.user_name(ui))
 
     if req.dry_run:
         return None
@@ -1403,7 +1408,7 @@ async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request
     param = proj.parameter(req.args.id)
     user_name = glob.USERS.user_name(ui)
 
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, user_name)
 
     updated_param = copy.deepcopy(param)
 
@@ -1477,8 +1482,9 @@ async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> 
 async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> None:
 
     unique_name(req.args.new_name, (await project_names()))
+    user_name = glob.USERS.user_name(ui)
 
-    await ensure_locked(req.args.project_id, ui)
+    await ensure_write_locked(req.args.project_id, user_name)
 
     if req.dry_run:
         return None
@@ -1492,7 +1498,7 @@ async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> 
         evt.change_type = Event.Type.UPDATE_BASE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.project_id, glob.USERS.user_name(ui)))
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.project_id, user_name))
     return None
 
 
@@ -1561,7 +1567,7 @@ async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Requ
     hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, proj.ap_joint_names(ap.id))
 
-    await ensure_locked(ap.id, ui)
+    await ensure_write_locked(ap.id, glob.USERS.user_name(ui))
 
     if req.dry_run:
         return None
@@ -1584,7 +1590,7 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
     hlp.is_valid_identifier(req.args.new_name)
     unique_name(req.args.new_name, proj.ap_orientation_names(ap.id))
 
-    await ensure_locked(ori.id, ui)
+    await ensure_write_locked(ori.id, glob.USERS.user_name(ui))
 
     if req.dry_run:
         return None
@@ -1602,10 +1608,10 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
 async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
-
     unique_name(req.args.new_name, proj.action_names)
+    user_name = glob.USERS.user_name(ui)
 
-    await ensure_locked(req.args.action_id, ui)
+    await ensure_write_locked(req.args.action_id, user_name)
 
     if req.dry_run:
         return None
@@ -1615,7 +1621,7 @@ async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> No
 
     proj.update_modified()
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_id, glob.USERS.user_name(ui), True))
+    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_id, user_name, True))
 
     evt = sevts.p.ActionChanged(act)
     evt.change_type = Event.Type.UPDATE_BASE

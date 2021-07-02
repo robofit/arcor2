@@ -302,7 +302,7 @@ def put_focus() -> RespT:
                         $ref: Pose
     """
 
-    return jsonify(common.Pose().to_json())
+    return jsonify(common.Pose().to_dict())
 
 
 @app.route("/system/start", methods=["PUT"])

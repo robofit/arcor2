@@ -1,7 +1,7 @@
 # Lock & Lock Structures
 
 - Lock is used to providing exclusive access to objects. 
-  - UI elements (dobot, action point, etc.).
+  - UI elements (robot, action point, etc.).
   - Global variables.
 - Each lock record requires a lock owner.
 - Each UI element must be explicitly locked before editing in RPC code.

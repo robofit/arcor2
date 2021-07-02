@@ -265,16 +265,3 @@ async def get_object_types() -> None:
                 settings.OBJECT_TYPE_PATH,
                 settings.OBJECT_TYPE_MODULE,
             )
-
-
-async def get_robot_instance(robot_id: str) -> Robot:
-
-    try:
-        robot_inst = glob.SCENE_OBJECT_INSTANCES[robot_id]
-    except KeyError:
-        raise Arcor2Exception("Robot not found.")
-
-    if not isinstance(robot_inst, Robot):
-        raise Arcor2Exception("Not a robot.")
-
-    return robot_inst

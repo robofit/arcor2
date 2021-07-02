@@ -10,9 +10,8 @@ from arcor2.image import image_to_str
 from arcor2.object_types.abstract import Camera
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
-from arcor2_arserver.camera import get_camera_instance
-from arcor2_arserver.helpers import ensure_locked
-from arcor2_arserver.scene import ensure_scene_started, update_scene_object_pose
+from arcor2_arserver.helpers import ensure_write_locked
+from arcor2_arserver.scene import ensure_scene_started, get_instance, update_scene_object_pose
 from arcor2_arserver_data.events.common import ProcessState
 from arcor2_arserver_data.rpc.camera import CalibrateCamera, CameraColorImage, CameraColorParameters
 
@@ -21,10 +20,10 @@ async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> 
 
     glob.LOCK.scene_or_exception()
 
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
 
     ensure_scene_started()
-    camera = get_camera_instance(req.args.id)
+    camera = get_instance(req.args.id, Camera)
     resp = CameraColorImage.Response()
     resp.data = image_to_str(camera.color_image())
     return resp
@@ -36,10 +35,10 @@ async def camera_color_parameters_cb(
 
     glob.LOCK.scene_or_exception()
 
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
 
     ensure_scene_started()
-    camera = get_camera_instance(req.args.id)
+    camera = get_instance(req.args.id, Camera)
     resp = CameraColorParameters.Response()
     resp.data = camera.color_camera_params
     return resp
@@ -72,12 +71,12 @@ async def calibrate_camera_cb(req: CalibrateCamera.Request, ui: WsClient) -> Non
     scene = glob.LOCK.scene_or_exception()
 
     ensure_scene_started()
-    camera = get_camera_instance(req.args.id)
+    camera = get_instance(req.args.id, Camera)
 
     # TODO check camera features / meta if it supports getting color image
     if not camera.color_camera_params:
         raise Arcor2Exception("Camera parameters not available.")
 
-    await ensure_locked(req.args.id, ui)
+    await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
 
     asyncio.ensure_future(calibrate_camera(scene, camera))

@@ -87,7 +87,7 @@ class NewObjectType(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class FocusObjectStart(RPC):
+class ObjectAimingStart(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
@@ -96,6 +96,7 @@ class FocusObjectStart(RPC):
             robot: RobotArg
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
@@ -105,15 +106,28 @@ class FocusObjectStart(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class FocusObject(RPC):
+class ObjectAimingCancel(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class ObjectAimingAddPoint(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
-            object_id: str
             point_idx: int
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
@@ -127,14 +141,14 @@ class FocusObject(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class FocusObjectDone(RPC):
+class ObjectAimingDone(RPC):
     @dataclass
     class Request(RPC.Request):
-        args: IdArgs
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[FocusObject.Response.Data] = None
+        data: Optional[ObjectAimingAddPoint.Response.Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
