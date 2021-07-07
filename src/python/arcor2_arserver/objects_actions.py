@@ -8,10 +8,9 @@ from arcor2.clients import aio_project_service as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import convert_line_endings_to_unix
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
-from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources, prepare_object_types_dir
+from arcor2.object_types.utils import built_in_types_names, prepare_object_types_dir
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
@@ -76,20 +75,18 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
         glob.logger.debug(f"{obj_id} already processed, skipping...")
         return
 
-    obj = await storage.get_object_type(obj_id)
+    obj_iddesc = await storage.get_object_type_iddesc(obj_id)
 
-    if obj_id in glob.OBJECT_TYPES and glob.OBJECT_TYPES[obj_id].type_def is not None:
+    if obj_id in glob.OBJECT_TYPES:
 
-        stored_type_def = glob.OBJECT_TYPES[obj_id].type_def
-        assert stored_type_def
+        assert obj_iddesc.modified
+        assert glob.OBJECT_TYPES[obj_id].meta.modified, f"Object {obj_id} does not hove 'modified' in its meta."
 
-        # TODO do not compare sources but 'modified`
-        # the code we get from type_def has Unix line endings, while the code from Project service might have Windows...
-        obj.source = convert_line_endings_to_unix(obj.source)
-
-        if get_containing_module_sources(stored_type_def) == obj.source:
+        if obj_iddesc.modified == glob.OBJECT_TYPES[obj_id].meta.modified:
             glob.logger.debug(f"No need to update {obj_id}.")
             return
+
+    obj = await storage.get_object_type(obj_id)
 
     try:
         bases = otu.base_from_source(obj.source, obj_id)
@@ -135,12 +132,13 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
     try:
         meta = meta_from_def(type_def)
+        meta.modified = obj.modified
         otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:
         glob.logger.warning(f"Disabling object type {obj.id}.")
         glob.logger.debug(e, exc_info=True)
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=str(e))
+            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=str(e), modified=obj.modified)
         )
         return
 

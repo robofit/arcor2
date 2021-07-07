@@ -7,7 +7,7 @@ from arcor2.object_types.abstract import Settings as BaseSettings
 
 @dataclass
 class Settings(BaseSettings):
-    url: str
+    url: str = "http://"
 
 
 class AbstractSimple(Generic):

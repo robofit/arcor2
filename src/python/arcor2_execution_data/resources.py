@@ -1,12 +1,12 @@
+import concurrent.futures
 import importlib
 import os
 from types import TracebackType
-from typing import Dict, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Type, TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-import arcor2.object_types
 from arcor2 import json
 from arcor2 import transformations as tr
 from arcor2.action import get_action_name_to_id, patch_object_actions, print_event
@@ -27,12 +27,13 @@ class ResourcesException(Arcor2Exception):
     pass
 
 
+CUSTOM_OBJECT_TYPES_MODULE = "object_types"
 R = TypeVar("R", bound="IntResources")
 
 
 class IntResources:
 
-    CUSTOM_OBJECT_TYPES_MODULE = "object_types"
+    __slots__ = ("project", "scene", "objects")
 
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
@@ -44,14 +45,12 @@ class IntResources:
 
         self.objects: Dict[str, Generic] = {}
 
-        self.type_defs: TypesDict = {}
-
-        built_in = built_in_types_names()
+        type_defs: TypesDict = {}
 
         if scene_service.started():
-            scene_service.stop()
-
-        scene_service.delete_all_collisions()
+            scene_service.stop()  # also deletes all collisions
+        else:
+            scene_service.delete_all_collisions()  # in order to prepare a clean environment
 
         package_id = os.path.basename(os.getcwd())
         package_meta = package.read_package_meta(package_id)
@@ -59,42 +58,55 @@ class IntResources:
 
         for scene_obj_type in self.scene.object_types:  # get all type-defs
 
-            assert scene_obj_type not in self.type_defs
+            assert scene_obj_type not in type_defs
+            assert scene_obj_type not in built_in_types_names()
 
-            if scene_obj_type in built_in:
-                module = importlib.import_module(arcor2.object_types.__name__ + "." + humps.depascalize(scene_obj_type))
-            else:
-                module = importlib.import_module(
-                    Resources.CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type)
-                )
+            module = importlib.import_module(CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type))
 
             cls = getattr(module, scene_obj_type)
             patch_object_actions(cls, get_action_name_to_id(self.scene, self.project, cls.__name__))
-            self.type_defs[cls.__name__] = cls
+            type_defs[cls.__name__] = cls
 
-        scene_objects = list(self.scene.objects)
+        futures: List[concurrent.futures.Future] = []
 
-        # sort according to OT initialization priority (highest is initialized first)
-        scene_objects.sort(key=lambda x: self.type_defs[x.type].INIT_PRIORITY, reverse=True)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for scene_obj in self.scene.objects:
 
-        for scene_obj in scene_objects:
+                cls = type_defs[scene_obj.type]
 
-            cls = self.type_defs[scene_obj.type]
+                assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
-            assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
-
-            settings = settings_from_params(cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None))
-
-            if issubclass(cls, Robot):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, scene_obj.pose, settings)
-            elif issubclass(cls, GenericWithPose):
-                self.objects[scene_obj.id] = cls(
-                    scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
+                settings = settings_from_params(
+                    cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None)
                 )
-            elif issubclass(cls, Generic):
-                self.objects[scene_obj.id] = cls(scene_obj.id, scene_obj.name, settings)
+
+                if issubclass(cls, Robot):
+                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
+                elif issubclass(cls, GenericWithPose):
+                    futures.append(
+                        executor.submit(
+                            cls, scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
+                        )
+                    )
+                elif issubclass(cls, Generic):
+                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, settings))
+                else:
+                    raise Arcor2Exception("Unknown base class.")
+
+        exception_cnt: int = 0
+
+        for f in concurrent.futures.as_completed(futures):
+            try:
+                inst = f.result()  # if an object creation resulted in exception, it will be raised here
+            except Arcor2Exception as e:
+                print_exception(e)
+                exception_cnt += 1  # count of objects that failed to initialize
             else:
-                raise Arcor2Exception("Unknown base class.")
+                self.objects[inst.id] = inst  # successfully initialized objects
+
+        if exception_cnt:  # if something failed, tear down those that succeeded and stop
+            self.cleanup_all_objects()
+            raise Arcor2Exception(f"Failed to initialize {exception_cnt} object(s).")
 
         for model in models.values():
 
@@ -119,6 +131,22 @@ class IntResources:
             # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
             tr.make_relative_ap_global(self.scene, self.project, aps)
 
+    def cleanup_all_objects(self) -> None:
+        """Calls cleanup method of all objects in parallel.
+
+        Errors are just logged.
+        """
+
+        futures: List[concurrent.futures.Future] = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for obj in self.objects.values():
+                futures.append(executor.submit(obj.cleanup))
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Arcor2Exception as e:
+                print_exception(e)
+
     def __enter__(self: R) -> R:
         return self
 
@@ -134,12 +162,7 @@ class IntResources:
             print_exception(ex_value)
 
         scene_service.stop()
-
-        for obj in self.objects.values():
-            obj.cleanup()
-
-        # for a case of manually created collision models
-        scene_service.delete_all_collisions()
+        self.cleanup_all_objects()
 
         return True
 
@@ -175,4 +198,4 @@ class Resources(IntResources):
             except IOError:
                 models[obj.type] = None
 
-        super(Resources, self).__init__(scene, project, models)
+        super().__init__(scene, project, models)

@@ -1,6 +1,5 @@
 import asyncio
-from collections import defaultdict
-from typing import AsyncIterator, DefaultDict, Dict, List, Optional, Set
+from typing import AsyncIterator, Dict, List, Optional, Set
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -111,7 +110,7 @@ async def notify_scene_opened(evt: OpenScene) -> None:
 async def scenes() -> AsyncIterator[CachedScene]:
 
     for scene_id in await storage.get_scene_ids():
-        yield CachedScene(await storage.get_scene(scene_id))
+        yield await storage.get_scene(scene_id)
 
 
 async def scene_names() -> Set[str]:
@@ -247,7 +246,7 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
 async def open_scene(scene_id: str) -> None:
 
-    await asyncio.gather(scene_srv.delete_all_collisions(), get_object_types())
+    await get_object_types()
     glob.LOCK.scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
     try:
@@ -353,8 +352,12 @@ async def start_scene(scene: CachedScene) -> None:
 
         await set_scene_state(SceneState.Data.StateEnum.Starting)
 
+        # in order to prepare a clear environment
         try:
-            await scene_srv.stop()
+            if await scene_srv.started():
+                await scene_srv.stop()
+            else:
+                await scene_srv.delete_all_collisions()
         except Arcor2Exception:
             await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
             return False
@@ -364,33 +367,22 @@ async def start_scene(scene: CachedScene) -> None:
         if glob.LOCK.project:
             object_overrides = glob.LOCK.project.overrides
 
-        prio_dict: DefaultDict[int, List[SceneObject]] = defaultdict(list)
+        # object initialization could take some time - let's do it in parallel
+        tasks = [
+            asyncio.ensure_future(
+                create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
+            )
+            for obj in scene.objects
+        ]
 
-        for obj in scene.objects:
-            type_def = glob.OBJECT_TYPES[obj.type].type_def
-            assert type_def
-            prio_dict[type_def.INIT_PRIORITY].append(obj)
-
-        for prio in sorted(prio_dict.keys(), reverse=True):
-
-            assert prio_dict[prio]
-
-            # object initialization could take some time - let's do it in parallel (grouped by priority)
-            tasks = [
-                asyncio.ensure_future(
-                    create_object_instance(obj, object_overrides[obj.id] if obj.id in object_overrides else None)
-                )
-                for obj in prio_dict[prio]
-            ]
-
-            try:
-                await asyncio.gather(*tasks)
-            except Arcor2Exception as e:
-                for t in tasks:
-                    t.cancel()
-                glob.logger.exception("Failed to create instances.")
-                await stop_scene(scene, str(e), already_locked=True)
-                return False
+        try:
+            await asyncio.gather(*tasks)
+        except Arcor2Exception as e:
+            for t in tasks:
+                t.cancel()  # TODO maybe it would be better to let them finish?
+            glob.logger.exception("Failed to create instances.")
+            await stop_scene(scene, str(e), already_locked=True)
+            return False
 
         try:
             await scene_srv.start()

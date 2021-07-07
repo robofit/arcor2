@@ -348,6 +348,7 @@ def put_stop() -> RespT:
     global started
     delay()
     started = False
+    collision_objects.clear()
     return jsonify("ok"), 200
 
 

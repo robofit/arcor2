@@ -270,7 +270,7 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
         assert issubclass(type_def, base.type_def)
         actions = object_actions(type_def, ast)
 
-        await storage.update_object_type(obj)
+        meta.modified = await storage.update_object_type(obj)
 
         glob.OBJECT_TYPES[meta.type] = ObjectTypeData(meta, type_def, actions, ast)
         add_ancestor_actions(meta.type, glob.OBJECT_TYPES)
@@ -334,7 +334,7 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
                 glob.logger.error(str(e))
 
         del glob.OBJECT_TYPES[req.args.id]
-        await hlp.run_in_executor(remove_object_type, req.args.id)
+        await remove_object_type(req.args.id)
 
         evt = sevts.o.ChangedObjectTypes([obj_type.meta])
         evt.change_type = events.Event.Type.REMOVE

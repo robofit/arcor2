@@ -190,7 +190,7 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
         env=myenv,
     )
     if PROCESS.returncode is not None:
-        raise Arcor2Exception("Failed to start project.")
+        raise Arcor2Exception("Failed to start package.")
 
     meta = await run_in_executor(read_package_meta, req.args.id)
     meta.executed = datetime.now(tz=timezone.utc)
@@ -207,7 +207,7 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
     global RUNNING_PACKAGE_ID
 
     if not process_running():
-        raise Arcor2Exception("Project not running.")
+        raise Arcor2Exception("Package not running.")
 
     assert PROCESS is not None
     assert TASK is not None
@@ -225,7 +225,7 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
 async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
 
     if not process_running():
-        raise Arcor2Exception("Project not running.")
+        raise Arcor2Exception("Package not running.")
 
     assert PROCESS is not None
     assert PROCESS.stdin is not None
@@ -236,13 +236,14 @@ async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
     await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSING, RUNNING_PACKAGE_ID)))
     PROCESS.stdin.write("p\n".encode())
     await PROCESS.stdin.drain()
+    logger.info("Package paused.")
     return None
 
 
 async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> None:
 
     if not process_running():
-        raise Arcor2Exception("Project not running.")
+        raise Arcor2Exception("Package not running.")
 
     assert PROCESS is not None
     assert PROCESS.stdin is not None
@@ -252,6 +253,7 @@ async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> Non
 
     PROCESS.stdin.write("r\n".encode())
     await PROCESS.stdin.drain()
+    logger.info("Package resumed.")
     return None
 
 
@@ -290,9 +292,11 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
 
     await check_script(script_path)
 
-    evt = events.PackageChanged(await get_summary(target_path))
+    summary = await get_summary(target_path)
+    evt = events.PackageChanged(summary)
     evt.change_type = Event.Type.ADD
     asyncio.ensure_future(send_to_clients(evt))
+    logger.info(f"Package '{summary.package_meta.name}' was added.")
     return None
 
 
@@ -354,6 +358,7 @@ async def delete_package_cb(req: rpc.DeletePackage.Request, ui: WsClient) -> Non
     evt = events.PackageChanged(package_summary)
     evt.change_type = Event.Type.REMOVE
     asyncio.ensure_future(send_to_clients(evt))
+    logger.info(f"Package '{package_summary.package_meta.name}' was removed.")
     return None
 
 
@@ -362,6 +367,7 @@ async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> Non
     target_path = os.path.join(PROJECT_PATH, req.args.package_id, "package.json")
 
     pm = read_package_meta(req.args.package_id)
+    old_name = pm.name
     pm.name = req.args.new_name
 
     async with aiofiles.open(target_path, mode="w") as pkg_file:
@@ -370,6 +376,7 @@ async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> Non
     evt = events.PackageChanged(await get_summary(os.path.join(PROJECT_PATH, req.args.package_id)))
     evt.change_type = Event.Type.UPDATE
 
+    logger.info(f"Package '{old_name}' renamed to '{pm.name}'.")
     asyncio.ensure_future(send_to_clients(evt))
 
 
@@ -380,6 +387,9 @@ async def _version_cb(req: arcor2_rpc.common.Version.Request, ui: WsClient) -> a
 
 
 async def send_to_clients(event: events.Event) -> None:
+
+    if isinstance(event, ProjectException):
+        logger.error(f"Script raised {event.data.type}. {event.data.message}")
 
     if CLIENTS:
         data = event.to_json()
@@ -418,6 +428,10 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
 
 
 async def aio_main() -> None:
+
+    logger.info(
+        f"Execution service {arcor2_execution.version()} " f"(API version {arcor2_execution_data.version()}) started."
+    )
 
     await websockets.server.serve(
         functools.partial(ws_server.server, logger=logger, register=register, unregister=unregister, rpc_dict=RPC_DICT),

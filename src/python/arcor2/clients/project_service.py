@@ -97,7 +97,9 @@ def update_object_parameters(project_id: str, parameters: List[SceneObjectOverri
 
 @handle(ProjectServiceException, message="Failed to get the object type.")
 def get_object_type(object_type_id: str) -> ObjectType:
-    return rest.call(rest.Method.GET, f"{URL}/object_types/{object_type_id}", return_type=ObjectType)
+    obj_type = rest.call(rest.Method.GET, f"{URL}/object_types/{object_type_id}", return_type=ObjectType)
+    assert obj_type.modified, f"Project service returned object without 'modified': {obj_type.id}."
+    return obj_type
 
 
 @handle(ProjectServiceException, message="Failed to list object types.")

@@ -7,7 +7,7 @@ from arcor2.object_types.random_actions import RandomActions
 from arcor2.object_types.time_actions import TimeActions
 from arcor2_arserver.tests.conftest import LOGGER, add_logic_item, close_project, event, save_project, wait_for_event
 from arcor2_arserver_data import events, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_execution_data import events as eevents
 from arcor2_execution_data import rpc as erpc
 
@@ -17,7 +17,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     event(ars, events.c.ShowMainScreen)
 
     assert ars.call_rpc(
-        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args("Test scene")), rpc.s.NewScene.Response
+        rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args("Test scene")), rpc.s.NewScene.Response
     ).result
 
     scene_data = event(ars, events.s.OpenScene).data
@@ -28,7 +28,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.s.AddObjectToScene.Request(
-            uid(), rpc.s.AddObjectToScene.Request.Args("time_actions", TimeActions.__name__)
+            get_id(), rpc.s.AddObjectToScene.Request.Args("time_actions", TimeActions.__name__)
         ),
         rpc.s.AddObjectToScene.Response,
     ).result
@@ -38,7 +38,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.s.AddObjectToScene.Request(
-            uid(), rpc.s.AddObjectToScene.Request.Args("random_actions", RandomActions.__name__)
+            get_id(), rpc.s.AddObjectToScene.Request.Args("random_actions", RandomActions.__name__)
         ),
         rpc.s.AddObjectToScene.Response,
     ).result
@@ -49,7 +49,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     # ------------------------------------------------------------------------------------------------------------------
 
     assert ars.call_rpc(
-        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
+        rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args(scene.id, "Project name")),
         rpc.p.NewProject.Response,
     ).result
 
@@ -59,7 +59,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     event(ars, events.s.SceneState)
 
     assert ars.call_rpc(
-        rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap1", common.Position())),
+        rpc.p.AddActionPoint.Request(get_id(), rpc.p.AddActionPoint.Request.Args("ap1", common.Position())),
         rpc.p.AddActionPoint.Response,
     ).result
 
@@ -68,7 +68,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.AddProjectParameter.Request(
-            uid(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.45))
+            get_id(), rpc.p.AddProjectParameter.Request.Args("min_time", "double", json.dumps(0.45))
         ),
         rpc.p.AddActionPoint.Response,
     ).result
@@ -78,7 +78,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.AddAction.Request(
-            uid(),
+            get_id(),
             rpc.p.AddAction.Request.Args(
                 ap.id,
                 "test_action",
@@ -100,7 +100,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     assert ars.call_rpc(
         rpc.p.AddAction.Request(
-            uid(),
+            get_id(),
             rpc.p.AddAction.Request.Args(
                 ap.id,
                 "test_action2",
@@ -143,7 +143,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     event(ars, events.c.ShowMainScreen)
 
     assert ars.call_rpc(
-        rpc.b.BuildProject.Request(uid(), rpc.b.BuildProject.Request.Args(proj.project.id, "Package name")),
+        rpc.b.BuildProject.Request(get_id(), rpc.b.BuildProject.Request.Args(proj.project.id, "Package name")),
         rpc.b.BuildProject.Response,
     ).result
 
@@ -151,7 +151,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert package is not None
 
     assert ars.call_rpc(
-        erpc.RunPackage.Request(uid(), erpc.RunPackage.Request.Args(package.id)), erpc.RunPackage.Response
+        erpc.RunPackage.Request(get_id(), erpc.RunPackage.Request.Args(package.id)), erpc.RunPackage.Response
     ).result
 
     ps = event(ars, arcor2_events.PackageState).data
@@ -187,7 +187,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     # TODO pause, resume
 
-    assert ars.call_rpc(erpc.StopPackage.Request(uid()), erpc.StopPackage.Response).result
+    assert ars.call_rpc(erpc.StopPackage.Request(get_id()), erpc.StopPackage.Response).result
 
     ps2 = wait_for_event(ars, arcor2_events.PackageState).data
     assert ps2

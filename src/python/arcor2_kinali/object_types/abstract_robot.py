@@ -9,8 +9,8 @@ from arcor2.object_types.abstract import Settings as BaseSettings
 
 @dataclass
 class Settings(BaseSettings):
-    url: str
-    configuration_id: str
+    url: str = "http://"
+    configuration_id: str = ""
 
 
 # mypy work-around by GvR (https://github.com/python/mypy/issues/5107#issuecomment-529372406)

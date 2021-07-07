@@ -5,11 +5,9 @@ import argparse
 import asyncio
 import functools
 import inspect
-import json
 import os
 import shutil
 import sys
-import uuid
 from typing import Dict, List, Type, get_type_hints
 
 import websockets
@@ -23,7 +21,7 @@ import arcor2_arserver
 import arcor2_arserver_data
 import arcor2_execution_data
 from arcor2 import action as action_mod
-from arcor2 import ws_server
+from arcor2 import json, ws_server
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.exceptions import Arcor2Exception
@@ -59,6 +57,9 @@ async def handle_manager_incoming_messages(manager_client) -> None:
         async for message in manager_client:
 
             msg = json.loads(message)
+
+            if not isinstance(msg, dict):
+                continue
 
             if "event" in msg:
 
@@ -120,7 +121,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
 async def _initialize_server() -> None:
 
-    exe_version = await exe.manager_request(rpc.common.Version.Request(uuid.uuid4().int))
+    exe_version = await exe.manager_request(rpc.common.Version.Request(exe.get_id()))
     assert isinstance(exe_version, rpc.common.Version.Response)
     if not exe_version.result:
         raise Arcor2Exception("Failed to get Execution version.")
@@ -166,9 +167,10 @@ async def _initialize_server() -> None:
         verbose=glob.VERBOSE,
     )
 
-    glob.logger.info("Server initialized.")
+    glob.logger.info(
+        f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized."
+    )
     await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
-
     asyncio.create_task(run_lock_notification_worker())
 
 

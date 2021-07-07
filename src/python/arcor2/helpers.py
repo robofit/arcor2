@@ -24,14 +24,6 @@ class TypeDefException(Arcor2Exception):
     pass
 
 
-WINDOWS_LINE_ENDING = "\r\n"
-UNIX_LINE_ENDING = "\n"
-
-
-def convert_line_endings_to_unix(content: str) -> str:
-    return content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
-
-
 def is_valid_identifier(value: str) -> None:
     """
     Identifier (e.g. object id) will be used as variable name in the script - it should
@@ -192,6 +184,8 @@ def check_compatibility(my_version: str, their_version: str) -> None:
 
 class NonBlockingLock:
     """This lock can only be used as a context manager."""
+
+    __slots__ = ("_lock",)
 
     def __init__(self) -> None:
         self._lock = Lock()

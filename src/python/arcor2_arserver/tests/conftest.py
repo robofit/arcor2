@@ -15,8 +15,8 @@ from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_with_actions import ObjectWithActions
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
-from arcor2_arserver_data import events, objects, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data import events, get_id, objects, rpc
+from arcor2_arserver_data.client import ARServer
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 
 LOGGER = logging.getLogger(__name__)
@@ -108,7 +108,7 @@ def start_processes() -> Iterator[None]:
 
         while True:
             line = arserver_proc.stdout.readline().decode().strip()
-            if not line or "Server initialized." in line:  # TODO this is not ideal
+            if not line or (line.endswith(") initialized.")):  # TODO this is not ideal
                 break
 
         if arserver_proc.poll():
@@ -144,7 +144,7 @@ def ars() -> Iterator[ARServer]:
     with ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping) as ws:
         test_username = "testUser"
         assert ws.call_rpc(
-            rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args(test_username)),
+            rpc.u.RegisterUser.Request(get_id(), rpc.u.RegisterUser.Request.Args(test_username)),
             rpc.u.RegisterUser.Response,
         ).result
         yield ws
@@ -158,7 +158,7 @@ def scene(ars: ARServer) -> common.Scene:
     test = "Test scene"
 
     assert ars.call_rpc(
-        rpc.s.NewScene.Request(uid(), rpc.s.NewScene.Request.Args(test, test)), rpc.s.NewScene.Response
+        rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args(test, test)), rpc.s.NewScene.Response
     ).result
 
     scene_evt = event(ars, events.s.OpenScene)
@@ -169,7 +169,7 @@ def scene(ars: ARServer) -> common.Scene:
     test_type = "TestType"
 
     assert ars.call_rpc(
-        rpc.o.NewObjectType.Request(uid(), objects.ObjectTypeMeta(test_type, base=Generic.__name__)),
+        rpc.o.NewObjectType.Request(get_id(), objects.ObjectTypeMeta(test_type, base=Generic.__name__)),
         rpc.o.NewObjectType.Response,
     ).result
 
@@ -181,7 +181,7 @@ def scene(ars: ARServer) -> common.Scene:
     assert tt_evt.data[0].base == Generic.__name__
 
     assert ars.call_rpc(
-        rpc.s.AddObjectToScene.Request(uid(), rpc.s.AddObjectToScene.Request.Args("test_type", test_type)),
+        rpc.s.AddObjectToScene.Request(get_id(), rpc.s.AddObjectToScene.Request.Args("test_type", test_type)),
         rpc.s.AddObjectToScene.Response,
     ).result
 
@@ -190,7 +190,9 @@ def scene(ars: ARServer) -> common.Scene:
     test_type_with_pose = "TestTypeWithPose"
 
     assert ars.call_rpc(
-        rpc.o.NewObjectType.Request(uid(), objects.ObjectTypeMeta(test_type_with_pose, base=GenericWithPose.__name__)),
+        rpc.o.NewObjectType.Request(
+            get_id(), objects.ObjectTypeMeta(test_type_with_pose, base=GenericWithPose.__name__)
+        ),
         rpc.o.NewObjectType.Response,
     ).result
 
@@ -201,15 +203,15 @@ def scene(ars: ARServer) -> common.Scene:
     assert ttwp_evt.data[0].base == GenericWithPose.__name__
 
     assert ars.call_rpc(
-        rpc.s.AddObjectToScene.Request(uid(), rpc.s.AddObjectToScene.Request.Args("test_type_with_pose", test_type)),
+        rpc.s.AddObjectToScene.Request(get_id(), rpc.s.AddObjectToScene.Request.Args("test_type_with_pose", test_type)),
         rpc.s.AddObjectToScene.Response,
     ).result
 
     event(ars, events.s.SceneObjectChanged)
 
-    assert ars.call_rpc(rpc.s.SaveScene.Request(uid()), rpc.s.SaveScene.Response).result
+    assert ars.call_rpc(rpc.s.SaveScene.Request(get_id()), rpc.s.SaveScene.Response).result
     event(ars, events.s.SceneSaved)
-    assert ars.call_rpc(rpc.s.CloseScene.Request(uid()), rpc.s.CloseScene.Response).result
+    assert ars.call_rpc(rpc.s.CloseScene.Request(get_id()), rpc.s.CloseScene.Response).result
     event(ars, events.s.SceneClosed)
     event(ars, events.c.ShowMainScreen)
 
@@ -229,7 +231,8 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
     test = "Test project"
 
     assert ars.call_rpc(
-        rpc.p.NewProject.Request(uid(), rpc.p.NewProject.Request.Args(scene.id, test, test)), rpc.p.NewProject.Response
+        rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args(scene.id, test, test)),
+        rpc.p.NewProject.Response,
     ).result
 
     project_evt = event(ars, events.p.OpenProject)
@@ -238,7 +241,7 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
     event(ars, events.s.SceneState)
 
     assert ars.call_rpc(
-        rpc.p.AddActionPoint.Request(uid(), rpc.p.AddActionPoint.Request.Args("ap", common.Position(0, 0, 0))),
+        rpc.p.AddActionPoint.Request(get_id(), rpc.p.AddActionPoint.Request.Args("ap", common.Position(0, 0, 0))),
         rpc.p.AddActionPoint.Response,
     ).result
     ap_evt = event(ars, events.p.ActionPointChanged)
@@ -246,7 +249,7 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
 
     assert ars.call_rpc(
         rpc.p.AddActionPoint.Request(
-            uid(), rpc.p.AddActionPoint.Request.Args("ap_ap", common.Position(0, 0, 1), ap_evt.data.id)
+            get_id(), rpc.p.AddActionPoint.Request.Args("ap_ap", common.Position(0, 0, 1), ap_evt.data.id)
         ),
         rpc.p.AddActionPoint.Response,
     ).result
@@ -255,7 +258,7 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
 
     assert ars.call_rpc(
         rpc.p.AddActionPoint.Request(
-            uid(), rpc.p.AddActionPoint.Request.Args("ap_ap_ap", common.Position(0, 0, 2), ap_ap_evt.data.id)
+            get_id(), rpc.p.AddActionPoint.Request.Args("ap_ap_ap", common.Position(0, 0, 2), ap_ap_evt.data.id)
         ),
         rpc.p.AddActionPoint.Response,
     ).result
@@ -266,7 +269,7 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
 
     assert ars.call_rpc(
         rpc.p.AddActionPointOrientation.Request(
-            uid(), rpc.p.AddActionPointOrientation.Request.Args(ap_ap_ap_evt.data.id, common.Orientation(), "ori")
+            get_id(), rpc.p.AddActionPointOrientation.Request.Args(ap_ap_ap_evt.data.id, common.Orientation(), "ori")
         ),
         rpc.p.AddActionPointOrientation.Response,
     ).result
@@ -275,9 +278,9 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
 
     unlock_object(ars, ap_ap_ap_evt.data.id)
 
-    assert ars.call_rpc(rpc.p.SaveProject.Request(uid()), rpc.p.SaveProject.Response).result
+    assert ars.call_rpc(rpc.p.SaveProject.Request(get_id()), rpc.p.SaveProject.Response).result
     event(ars, events.p.ProjectSaved)
-    assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
+    assert ars.call_rpc(rpc.p.CloseProject.Request(get_id()), rpc.p.CloseProject.Response).result
     event(ars, events.p.ProjectClosed)
     event(ars, events.c.ShowMainScreen)
 
@@ -308,7 +311,7 @@ def add_logic_item(
 ) -> common.LogicItem:
 
     assert ars.call_rpc(
-        rpc.p.AddLogicItem.Request(uid(), rpc.p.AddLogicItem.Request.Args(start, end, condition)),
+        rpc.p.AddLogicItem.Request(get_id(), rpc.p.AddLogicItem.Request.Args(start, end, condition)),
         rpc.p.AddLogicItem.Response,
     ).result
 
@@ -319,20 +322,20 @@ def add_logic_item(
 
 def save_project(ars: ARServer) -> None:
 
-    assert ars.call_rpc(rpc.p.SaveProject.Request(uid()), rpc.p.SaveProject.Response).result
+    assert ars.call_rpc(rpc.p.SaveProject.Request(get_id()), rpc.p.SaveProject.Response).result
     event(ars, events.p.ProjectSaved)
 
 
 def close_project(ars: ARServer) -> None:
 
-    assert ars.call_rpc(rpc.p.CloseProject.Request(uid()), rpc.p.CloseProject.Response).result
+    assert ars.call_rpc(rpc.p.CloseProject.Request(get_id()), rpc.p.CloseProject.Response).result
     event(ars, events.p.ProjectClosed)
 
 
 def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
 
     assert ars.call_rpc(
-        rpc.lock.WriteLock.Request(uid(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
+        rpc.lock.WriteLock.Request(get_id(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
         rpc.lock.WriteLock.Response,
     ).result
 
@@ -342,7 +345,7 @@ def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
 def unlock_object(ars: ARServer, obj_id: str) -> None:
 
     assert ars.call_rpc(
-        rpc.lock.WriteUnlock.Request(uid(), rpc.lock.WriteUnlock.Request.Args(obj_id)), rpc.lock.WriteUnlock.Response
+        rpc.lock.WriteUnlock.Request(get_id(), rpc.lock.WriteUnlock.Request.Args(obj_id)), rpc.lock.WriteUnlock.Response
     )
 
     event(ars, events.lk.ObjectsUnlocked)

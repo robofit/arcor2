@@ -13,7 +13,7 @@ from arcor2_arserver.globals import Lock
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.tests.conftest import ars_connection_str, event, event_mapping, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 
 
 @pytest.fixture()
@@ -327,7 +327,7 @@ async def test_auto_release(lock: Lock) -> None:
     action = lock.project.ap_actions(ap_ap_ap.id)[0]
 
     # Test auto-release of locks and auto locking of child in tree
-    lock.LOCK_TIMEOUT = 2
+    lock._lock_timeout = 2
     await lock.write_lock(ap.id, test, True, True)
     assert await lock.is_write_locked(ap_ap_ap.id, test)
     assert await lock.is_write_locked(ap_ap.id, test)
@@ -346,7 +346,7 @@ async def test_auto_release(lock: Lock) -> None:
     assert ap.id in write
 
     await lock.schedule_auto_release(test)
-    await asyncio.sleep(lock.LOCK_TIMEOUT + 0.5)
+    await asyncio.sleep(lock._lock_timeout + 0.5)
     assert await lock.get_write_locks_count() == 0
     assert not await lock.is_read_locked(ap2.id, test)
     await check_notification_content(lock, test, [ap.id, ap_ap.id, ap_ap_ap.id, ori.id, action.id], False)
@@ -485,7 +485,7 @@ async def check_notification_content(
 
 def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, project: cmn.Project) -> None:
 
-    assert ars.call_rpc(rpc.p.OpenProject.Request(uid(), IdArgs(project.id)), rpc.p.OpenProject.Response).result
+    assert ars.call_rpc(rpc.p.OpenProject.Request(get_id(), IdArgs(project.id)), rpc.p.OpenProject.Response).result
     prj_evt = event(ars, events.p.OpenProject)
 
     event(ars, events.s.SceneState)
@@ -506,7 +506,7 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
     event(ars2, events.s.SceneState)
     second_ui = "ars2"
     assert ars2.call_rpc(
-        rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args(second_ui)),
+        rpc.u.RegisterUser.Request(get_id(), rpc.u.RegisterUser.Request.Args(second_ui)),
         rpc.u.RegisterUser.Response,
     ).result
     locked_evt = event(ars2, events.lk.ObjectsLocked)
@@ -518,16 +518,16 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
     for obj_id in (ap.id, ap_ap.id, ap_ap_ap.id, ori.id):
         # lock
         assert not ars2.call_rpc(
-            rpc.lock.WriteLock.Request(uid(), rpc.lock.WriteLock.Request.Args(obj_id)), rpc.lock.WriteLock.Response
+            rpc.lock.WriteLock.Request(get_id(), rpc.lock.WriteLock.Request.Args(obj_id)), rpc.lock.WriteLock.Response
         ).result
         # lock tree
         assert not ars2.call_rpc(
-            rpc.lock.WriteLock.Request(uid(), rpc.lock.WriteLock.Request.Args(obj_id, True)),
+            rpc.lock.WriteLock.Request(get_id(), rpc.lock.WriteLock.Request.Args(obj_id, True)),
             rpc.lock.WriteLock.Response,
         ).result
         # unlock
         assert not ars2.call_rpc(
-            rpc.lock.WriteUnlock.Request(uid(), rpc.lock.WriteUnlock.Request.Args(obj_id)),
+            rpc.lock.WriteUnlock.Request(get_id(), rpc.lock.WriteUnlock.Request.Args(obj_id)),
             rpc.lock.WriteUnlock.Response,
         ).result
 
@@ -548,7 +548,7 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
     event(ars2, events.p.OpenProject)
     event(ars2, events.s.SceneState)
     assert ars2.call_rpc(
-        rpc.u.RegisterUser.Request(uid(), rpc.u.RegisterUser.Request.Args("ars2")),
+        rpc.u.RegisterUser.Request(get_id(), rpc.u.RegisterUser.Request.Args("ars2")),
         rpc.u.RegisterUser.Response,
     ).result
     locked_evt = event(ars2, events.lk.ObjectsLocked)

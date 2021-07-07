@@ -1,5 +1,6 @@
-import json
 from typing import Any, Dict, Sequence, Type, TypeVar, Union
+
+import orjson
 
 from arcor2.exceptions import Arcor2Exception
 
@@ -17,7 +18,7 @@ T = TypeVar("T")
 def loads(value: str) -> JsonType:
 
     try:
-        return json.loads(value)
+        return orjson.loads(value)
     except (ValueError, TypeError) as e:
         raise JsonException(f"Not a JSON. {str(e)}") from e
 
@@ -35,6 +36,6 @@ def loads_type(value: str, output_type: Type[T]) -> T:
 def dumps(value: JsonType) -> str:
 
     try:
-        return json.dumps(value)
+        return orjson.dumps(value).decode()
     except (ValueError, TypeError) as e:
         raise JsonException(f"Not a JSON. {str(e)}") from e
