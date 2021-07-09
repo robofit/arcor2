@@ -84,7 +84,7 @@ async def delete_project(project_id: str) -> None:
     await run_in_executor(project_service.delete_project, project_id)
 
 
-async def save_mesh_file(mesh_id: str, path: str) -> None:
-    """Saves mesh file to a given path."""
+async def save_file(file_id: str, path: str) -> None:
+    """Saves a file to a given path."""
 
-    await run_in_executor(project_service.save_mesh_file, mesh_id, path)
+    await run_in_executor(project_service.save_file, file_id, path)

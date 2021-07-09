@@ -24,19 +24,22 @@ CYLINDERS: Dict[str, object_type.Cylinder] = {}
 SPHERES: Dict[str, object_type.Sphere] = {}
 MESHES: Dict[str, object_type.Mesh] = {}
 
-MESH_FILES: Dict[str, Tuple[BytesIO, Optional[str]]] = {}
+FILES: Dict[str, Tuple[BytesIO, Optional[str]]] = {}
 
 
-@app.route("/models/<string:mesh_id>/mesh/file", methods=["PUT"])
-def put_mesh_file(mesh_id: str) -> RespT:
-    """Puts mesh file.
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@app.route("/files/<string:fileId>", methods=["PUT"])
+def put_file(fileId: str) -> RespT:
+    """Puts file.
     ---
     put:
-        description: Puts mesh file.
+        description: Puts file.
         tags:
-           - Models
+           - Files
         parameters:
-            - name: mesh_id
+            - name: fileId
               in: path
               description: unique ID
               required: true
@@ -65,20 +68,20 @@ def put_mesh_file(mesh_id: str) -> RespT:
     buff = BytesIO()
     fs = request.files["file"]
     fs.save(buff)
-    MESH_FILES[mesh_id] = buff, fs.filename
+    FILES[fileId] = buff, fs.filename
     return jsonify("ok"), 200
 
 
-@app.route("/models/<string:mesh_id>/mesh/file", methods=["GET"])
-def get_mesh_file(mesh_id: str) -> RespT:
-    """Gets mesh file by id.
+@app.route("/files/<string:fileId>", methods=["GET"])
+def get_file(fileId: str) -> RespT:
+    """Gets file by id.
     ---
     get:
         tags:
-            - Models
-        summary: Gets mesh file by id.
+            - Files
+        summary: Gets file by id.
         parameters:
-            - name: mesh_id
+            - name: fileId
               in: path
               description: unique ID
               required: true
@@ -94,9 +97,72 @@ def get_mesh_file(mesh_id: str) -> RespT:
                         format: binary
     """
 
-    mesh_file, filename = MESH_FILES[mesh_id]
-    mesh_file.seek(0)
-    return send_file(mesh_file, as_attachment=True, cache_timeout=0, attachment_filename=filename)
+    file, filename = FILES[fileId]
+    file.seek(0)
+    return send_file(file, as_attachment=True, cache_timeout=0, attachment_filename=filename)
+
+
+@app.route("/files", methods=["GET"])
+def get_files() -> RespT:
+    """Gets files ids.
+    ---
+    get:
+        tags:
+        - Files
+        summary: Gets files ids.
+        responses:
+            '200':
+              description: Success
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                        type: string
+    """
+
+    return jsonify(list(FILES.keys()))
+
+
+@app.route("/files/<string:fileId>", methods=["DELETE"])
+def delete_file(fileId: str) -> RespT:
+    """Deletes file.
+    ---
+    delete:
+        tags:
+            - Files
+        summary: Deletes file.
+        parameters:
+            - name: fileId
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+            404:
+              description: File not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
+    """
+
+    try:
+        del FILES[fileId]
+    except KeyError:
+        return jsonify("Not found"), 404
+
+    return jsonify("ok"), 200
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 @app.route("/project", methods=["PUT"])
@@ -233,6 +299,9 @@ def get_projects() -> RespT:
         ret.append(common.IdDesc(proj.id, proj.name, proj.created, proj.modified, proj.description).to_dict())
 
     return jsonify(ret)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 @app.route("/scene", methods=["PUT"])
@@ -372,6 +441,9 @@ def get_scenes() -> RespT:
     return jsonify(ret)
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 @app.route("/object_type", methods=["PUT"])
 def put_object_type() -> RespT:
     """Add or update object type.
@@ -506,6 +578,9 @@ def get_object_types() -> RespT:
         ret.append(common.IdDesc(obj_type.id, "", obj_type.created, obj_type.modified, obj_type.description).to_dict())
 
     return jsonify(ret)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 @app.route("/models/box", methods=["PUT"])
@@ -805,6 +880,9 @@ def delete_model(id: str) -> RespT:
     return jsonify("ok"), 200
 
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=PROJECT_SERVICE_NAME)
@@ -815,7 +893,7 @@ def main() -> None:
         app,
         PROJECT_SERVICE_NAME,
         version(),
-        "0.8.0",
+        "0.9.0",
         PROJECT_PORT,
         [
             common.Project,

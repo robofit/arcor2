@@ -62,7 +62,7 @@ async def handle_robot_urdf(robot: Type[Robot]) -> None:
     file_path = os.path.join(settings.URDF_PATH, robot.urdf_package_name)
 
     try:
-        await ps.save_mesh_file(robot.urdf_package_name, file_path)
+        await ps.save_file(robot.urdf_package_name, file_path)
     except Arcor2Exception:
         glob.logger.exception(f"Failed to download URDF for {robot.__name__}.")
 
