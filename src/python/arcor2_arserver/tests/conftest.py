@@ -10,12 +10,13 @@ import pytest
 from arcor2.clients import project_service, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
+from arcor2.data.rpc import get_id
 from arcor2.helpers import find_free_port
 from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_with_actions import ObjectWithActions
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
-from arcor2_arserver_data import events, get_id, objects, rpc
+from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 

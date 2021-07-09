@@ -11,6 +11,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 from arcor2 import helpers as hlp
 from arcor2 import rest
 from arcor2.data import common, rpc
+from arcor2.data.rpc import get_id
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import events as server_events
 from arcor2_arserver import globals as glob
@@ -18,7 +19,6 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.scene import scene_started, start_scene, stop_scene
 from arcor2_arserver_data import events as sevts
-from arcor2_arserver_data import get_id
 from arcor2_build_data import URL as BUILD_URL
 from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc as erpc

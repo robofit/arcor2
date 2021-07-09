@@ -7,9 +7,9 @@ from dataclasses_jsonschema import ValidationError
 
 from arcor2 import json
 from arcor2.data import events, rpc
+from arcor2.data.rpc import get_id
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
-from arcor2_arserver_data import get_id
 from arcor2_arserver_data import rpc as srpc
 
 
