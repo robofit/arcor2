@@ -1,9 +1,9 @@
 import os
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from arcor2 import rest
-from arcor2.data.common import IdDesc, Project, ProjectParameter, ProjectSources, Scene, SceneObjectOverride
+from arcor2.data.common import Asset, IdDesc, Project, ProjectParameter, ProjectSources, Scene, SceneObjectOverride
 from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, MetaModel3d, Model, Model3dType, ObjectType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.helpers import handle
@@ -11,7 +11,7 @@ from arcor2.exceptions.helpers import handle
 URL = os.getenv("ARCOR2_PROJECT_SERVICE_URL", "http://0.0.0.0:10000")
 
 """
-Collection of functions to work with the Project service (0.8.0).
+Collection of functions to work with the Project service (0.9.0).
 
 All functions raise ProjectServiceException when any failure happens.
 
@@ -20,6 +20,84 @@ All functions raise ProjectServiceException when any failure happens.
 
 class ProjectServiceException(Arcor2Exception):
     pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Assets
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@handle(ProjectServiceException, message="Failed to list assets.")
+def assets_ids() -> Set[str]:
+    """Gets IDs of stored assets."""
+
+    ret_list = rest.call(rest.Method.GET, f"{URL}/assets", list_return_type=str)
+    ret_set = set(ret_list)
+    assert len(ret_list) == len(ret_set), f"There is a duplicate asset ID in {ret_list}."
+
+    return ret_set
+
+
+@handle(ProjectServiceException, message="Failed to update the asset.")
+def update_asset(asset: Asset) -> None:
+    """Adds or updates the asset."""
+
+    rest.call(rest.Method.PUT, f"{URL}/assets", body=asset)
+    assert asset.id in assets_ids()
+
+
+@handle(ProjectServiceException, message="Failed to get the asset.")
+def get_asset(asset_id: str) -> Asset:
+    """Gets the asset."""
+
+    return rest.call(rest.Method.GET, f"{URL}/assets/{asset_id}", return_type=Asset)
+
+
+@handle(ProjectServiceException, message="Failed to delete the asset.")
+def delete_asset(asset_id: str) -> None:
+    """Deletes the asset."""
+
+    rest.call(rest.Method.DELETE, f"{URL}/assets/{asset_id}")
+    assert asset_id not in assets_ids()
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Files
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+@handle(ProjectServiceException, message="Failed to list files.")
+def files_ids() -> Set[str]:
+    """Gets IDs of stored files."""
+
+    ret_list = rest.call(rest.Method.GET, f"{URL}/files", list_return_type=str)
+    ret_set = set(ret_list)
+    assert len(ret_list) == len(ret_set), f"There is a duplicate file ID in {ret_list}."
+    return ret_set
+
+
+@handle(ProjectServiceException, message="Failed to get the file.")
+def save_file(file_id: str, path: str) -> None:
+    """Saves the file to a given path."""
+
+    rest.download(f"{URL}/files/{file_id}", path)
+    assert os.path.isfile(path)
+
+
+@handle(ProjectServiceException, message="Failed to upload the file.")
+def upload_file(file_id: str, file_content: bytes) -> None:
+    """Uploads a file."""
+
+    rest.call(rest.Method.PUT, f"{URL}/files/{file_id}", files={"file": file_content})
+    assert file_id in files_ids()
+
+
+@handle(ProjectServiceException, message="Failed to delete the file.")
+def delete_file(file_id: str) -> None:
+    """Saves the file to a given path."""
+
+    rest.call(rest.Method.DELETE, f"{URL}/files/{file_id}")
+    assert file_id not in files_ids()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -57,20 +135,6 @@ def put_model(model: Model) -> None:
 @handle(ProjectServiceException, message="Failed to delete the model.")
 def delete_model(model_id: str) -> None:
     rest.call(rest.Method.DELETE, f"{URL}/models/{model_id}")
-
-
-@handle(ProjectServiceException, message="Failed to get the mesh.")
-def save_mesh_file(mesh_id: str, path: str) -> None:
-    """Saves mesh file to a given path."""
-
-    rest.download(f"{URL}/models/{mesh_id}/mesh/file", path)
-
-
-@handle(ProjectServiceException, message="Failed to upload the mesh.")
-def upload_mesh_file(mesh_id: str, file_content: bytes) -> None:
-    """Upload a mesh file."""
-
-    rest.call(rest.Method.PUT, f"{URL}/models/{mesh_id}/mesh/file", files={"file": file_content})
 
 
 # ----------------------------------------------------------------------------------------------------------------------

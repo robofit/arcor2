@@ -77,4 +77,4 @@ def upload_def(type_def: Type[Generic], model: Optional[Models] = None, urdf: Op
                     zf.write(path, os.path.relpath(path, prefix))
 
         mem_zip.seek(0)
-        ps.upload_mesh_file(urdf.archive_name, mem_zip.getvalue())
+        ps.upload_file(urdf.archive_name, mem_zip.getvalue())

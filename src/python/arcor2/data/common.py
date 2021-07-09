@@ -724,3 +724,16 @@ class BroadcastInfo(JsonSchemaMixin):
 
     host: str
     port: int
+
+
+@dataclass
+class Asset(JsonSchemaMixin):
+    """Untyped object (JSON)."""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    uri: Optional[str] = None
+    type: Optional[str] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[str] = None  # json
