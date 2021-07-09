@@ -1,4 +1,4 @@
-MODULE POSES_LEFT
+MODULE POSE_L
 
     !/////////////////////////////////////////////////////////////////////////////////////////////////////////
     !GLOBAL VARIABLES
@@ -12,10 +12,11 @@ MODULE POSES_LEFT
     VAR num params{10};
     VAR num nParams;
 
-    !PERS string ipController:="192.168.125.1";
-    !robot default IP
-    PERS string ipController:= "127.0.0.1"; !local IP for testing in simulation
-    VAR num serverPort:=5003;
+    PERS string ipController;
+    VAR num serverPort:=5002;
+    
+    PERS tooldata currentTool;
+    PERS wobjdata currentWobj;
 
     !//Motion of the robot
     VAR robtarget cartesianTarget;
