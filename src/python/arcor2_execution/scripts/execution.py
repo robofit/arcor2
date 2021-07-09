@@ -118,6 +118,8 @@ async def read_proc_stdout() -> None:
 
     PACKAGE_INFO_EVENT = None
 
+    await PROCESS.communicate()  # otherwise returncode might be still None
+
     if PROCESS.returncode:
 
         if printed_out:
@@ -136,6 +138,13 @@ async def read_proc_stdout() -> None:
                 await tb_file.write("".join(printed_out))
 
         else:
+
+            await send_to_clients(
+                ProjectException(
+                    ProjectException.Data(f"Process ended with non-zero return code ({PROCESS.returncode}).", "unknown")
+                )
+            )
+
             logger.warn(
                 f"Process ended with non-zero return code ({PROCESS.returncode}), but didn't printed out anything."
             )
