@@ -26,6 +26,7 @@ from arcor2 import json
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import PackageInfo, PackageState, ProjectException
+from arcor2.data.rpc import get_id
 from arcor2.flask import RespT, create_app, run_app
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
 from arcor2_execution_data import URL as EXE_URL
@@ -165,10 +166,6 @@ def call_rpc(req: arcor2_rpc.common.RPC.Request) -> arcor2_rpc.common.RPC.Respon
     resp = rpc_responses[req.id].get()
     del rpc_responses[req.id]
     return resp
-
-
-def get_id() -> int:
-    return uuid.uuid4().int
 
 
 def allowed_file(filename):
