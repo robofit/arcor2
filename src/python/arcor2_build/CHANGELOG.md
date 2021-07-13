@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.18.0] - WIP
+
+### Changed
+
+- Change constants to project parameters.
+
 ## [0.17.0] - 2021-06-14
 
 ### Changed

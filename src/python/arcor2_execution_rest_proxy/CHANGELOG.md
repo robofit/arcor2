@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.0] - WIP
+
+### Changed
+- Property `description` added to `SummaryProject`.
+- If more exceptions happen, they are combined into `exceptionMessage`.
+
+
 ## [0.12.0] - 2021-06-11
 
 ### Changed
