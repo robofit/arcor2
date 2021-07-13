@@ -3,6 +3,18 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
+## [0.17.0] - WIP
+
+### Changed
+
+- More stuff is now done asynchronously.
+- Listing packages is now done in parallel.
+- Improved logging (more events are logged).
+
+### Fixed
+
+- Exceptions were sometimes not reported.
+
 ## [0.16.0] - 2021-06-14
 
 ### Changed

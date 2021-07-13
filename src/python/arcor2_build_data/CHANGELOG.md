@@ -3,6 +3,15 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
+## [0.10.0] - WIP
+
+### Fixed
+
+- Added docstring to `ImportResult`.
+
+### Changed
+- `ImportedPackage` dataclass.
+
 ## [0.9.0] - 2021-03-30
 
 ### Changed

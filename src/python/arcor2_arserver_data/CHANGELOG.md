@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.16.0] - WIP
+
+- Support for multi arm robots.
+  - `arm_id` parameter added into relevant RPCs. 
+- Change constants to project parameters.
+- Object aiming RPCs updated.
+  - RPCs were renamed and all of them now have `dry_run`.
+  - There is a new method to cancel the process.
+
 ## [0.15.0] - 2021-06-11
 
 ### Changed

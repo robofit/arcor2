@@ -2,6 +2,31 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.19.0] - WIP
+
+### Changed
+
+- Support for multi arm robots.
+  - New base class `MultiArmRobot`.
+  - Its methods have an additional `arm_id` parameter.
+  - There is a method to get arm IDs.
+  - Relevant ARServer RPCs were extended with `arm_id`.
+  - `ProjectRobotJoints` model now also contains `arm_id`.
+  - There is `DummyMultiArmRobot` ObjectType for testing purposes.
+- `CachedProject`: `constants` renamed to `parameters`.
+- `Generic`: `INIT_PRIORITY` removed as useless.
+- `GenericWithPose`: do not delete collision models in `cleanup`.
+  - Collision models are removed by the Scene service on `stop`.
+- Usage of `orjson` in `arcor2/json` and for dataclasses.
+  - 40% speedup for serialization.
+  - 80% speedup for deserialization.
+  - Tested on `Project` dataclass.
+- Compatibility with Project service 0.9.0.
+
+### Fixed
+
+- Correct default port for Project service (10000).
+
 ## [0.18.0] - 2021-06-14
 
 ### Changed

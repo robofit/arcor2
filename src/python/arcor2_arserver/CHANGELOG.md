@@ -2,6 +2,35 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.20.0] - WIP
+
+### Changed
+
+- Support for multi arm robots.
+  - Dealing with `arm_id` parameter in RPCs.
+  - Streaming EEF poses for all arms.
+- Allow to reposition scene objects while online.
+  - It was allowed to reposition objects using robot,
+  - ...but disallowed to do it manually.
+  - This was inconsistent and unnecessarily restrictive.
+  - Now objects (except robots) can be repositioned anytime.
+- When creating a new project, common parameters are added automatically.
+  - At the moment those are `scene_id` and `project_id`.
+  - A user could use or remove them.
+- Collisions are not removed after stopping the scene.
+- ObjectType change detection is now based on `modified` instead of comparing source codes.
+- ARServer Project service client now stores cached scenes/projects.
+- Object aiming reworked.
+  - RPCs were renamed and all of them now have `dry_run`.
+  - There is a new method to cancel the process.
+  - One user can be aiming one object at the moment.
+  - Both the object and the selected robot have to be write-locked.
+  - Improved logging.
+  - Test was added.
+  
+### Fixed
+- All calls to the Scene service are guarded against exceptions.
+
 ## [0.19.0] - 2021-06-22
 
 - Update to API version 0.15.0.
