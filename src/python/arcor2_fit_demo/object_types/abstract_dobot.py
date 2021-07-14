@@ -92,7 +92,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         """Moves the robot's end-effector to a specific pose.
 
         :param pose: Target pose.
-        :move_type: Move type.
+        :param move_type: Move type.
         :param velocity: Speed of move (percent).
         :param acceleration: Acceleration of move (percent).
         :return:
@@ -110,16 +110,19 @@ class AbstractDobot(FitCommonMixin, Robot):
             )
 
     def suck(self, *, an: Optional[str] = None) -> None:
+        """Turns on the suction."""
         rest.call(rest.Method.PUT, f"{self.settings.url}/suck")
 
     def release(self, *, an: Optional[str] = None) -> None:
+        """Turns off the suction."""
+
         rest.call(rest.Method.PUT, f"{self.settings.url}/release")
 
     def pick(self, pick_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
         """Picks an item from given pose.
 
-        :param pick_pose:
-        :param vertical_offset:
+        :param pick_pose: Where to pick an object.
+        :param vertical_offset: Vertical offset for pre/post pick pose.
         :return:
         """
 
@@ -134,8 +137,8 @@ class AbstractDobot(FitCommonMixin, Robot):
     def place(self, place_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
         """Places an item to a given pose.
 
-        :param place_pose:
-        :param vertical_offset:
+        :param place_pose: Where to place the object.
+        :param vertical_offset: Vertical offset for pre/post place pose.
         :return:
         """
 
