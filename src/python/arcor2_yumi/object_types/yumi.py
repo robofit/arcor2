@@ -1127,8 +1127,8 @@ class YuMi(MultiArmRobot):
 
         :param arm: Selected arm.
         :param pose: Target pose.
-        :param speed:
-        :param linear: Selects linear movement over the joints default one.
+        :param speed: Speed of movement.
+        :param linear: Selects 'linear' movement over the 'joints' default one.
         :return:
         """
 
@@ -1181,6 +1181,11 @@ class YuMi(MultiArmRobot):
         """Commands both arms to go to assigned poses in sync.
 
         Sync means both motions will end at the same time.
+
+        :param left_pose: Target pose for the left arm.
+        :param right_pose: Target pose for the left arm.
+        :param speed: Speed of the movement.
+        :return:
         """
 
         assert 0.0 <= speed <= 1.0
