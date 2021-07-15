@@ -20,12 +20,16 @@ class RobotPoseException(Arcor2Exception):
     pass
 
 
+class SingleArmRobotException(Arcor2Exception):
+    pass
+
+
 def prepare_args(robot_inst: Robot, args: List[Any], arm_id: Optional[str]) -> List[Any]:
 
     if isinstance(robot_inst, MultiArmRobot):
         args.append(arm_id)
     elif arm_id:
-        raise Arcor2Exception("Single arm robot.")
+        raise SingleArmRobotException("Single arm robot.")
 
     return args
 
@@ -37,7 +41,7 @@ async def get_arms(robot_inst: Robot) -> Set[str]:
     """
 
     if not isinstance(robot_inst, MultiArmRobot):
-        raise Arcor2Exception(f"{robot_inst.__class__.__name__} has only one arm.")
+        raise SingleArmRobotException(f"{robot_inst.__class__.__name__} has only one arm.")
 
     return await hlp.run_in_executor(robot_inst.get_arm_ids)
 
