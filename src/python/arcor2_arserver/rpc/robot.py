@@ -1,7 +1,7 @@
 import asyncio
 import math
 import time
-from typing import Awaitable, Callable, Dict, List, Optional
+from typing import Awaitable, Callable, Dict, List, Optional, Set
 
 import numpy as np
 from arcor2_calibration_data import client as calib_client
@@ -43,9 +43,7 @@ EVENT_PERIOD = 0.1
 
 async def robot_joints_event(robot_inst: Robot) -> None:
 
-    global ROBOT_JOINTS_TASKS
-
-    glob.logger.info(f"Sending '{sevts.r.RobotJoints.__name__}' for robot '{robot_inst.id}' started.")
+    glob.logger.info(f"Sending joints for {robot_inst.name} started.")
     while scene_started() and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_inst.id]:
 
         start = time.monotonic()
@@ -55,7 +53,7 @@ async def robot_joints_event(robot_inst: Robot) -> None:
                 sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None)))
             )
         except Arcor2Exception as e:
-            glob.logger.error(f"Failed to get joints for {robot_inst.id}. {str(e)}")
+            glob.logger.error(f"Failed to get joints for {robot_inst.name}. {str(e)}")
             break
 
         evt_json = evt.to_json()
@@ -66,12 +64,12 @@ async def robot_joints_event(robot_inst: Robot) -> None:
         end = time.monotonic()
         await asyncio.sleep(EVENT_PERIOD - (end - start))
 
-    del ROBOT_JOINTS_TASKS[robot_inst.id]
+    ROBOT_JOINTS_TASKS.pop(robot_inst.id, None)
 
     # TODO notify UIs that registration was cancelled
-    del glob.ROBOT_JOINTS_REGISTERED_UIS[robot_inst.id]
+    glob.ROBOT_JOINTS_REGISTERED_UIS.pop(robot_inst.id, None)
 
-    glob.logger.info(f"Sending '{sevts.r.RobotJoints.__name__}' for robot '{robot_inst.id}' stopped.")
+    glob.logger.info(f"Sending joints for {robot_inst.name} stopped.")
 
 
 async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None) -> sevts.r.RobotEef.Data.EefPose:
@@ -83,44 +81,48 @@ async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None)
 
 async def robot_eef_pose_event(robot_inst: Robot) -> None:
 
-    global EEF_POSE_TASKS
+    eefs: Dict[Optional[str], Set[str]] = {}
 
-    glob.logger.info(f"Sending '{sevts.r.RobotEef.__name__}' for robot '{robot_inst.id}' started.")
-
-    arms = await robot.get_arms(robot_inst)
-
-    while scene_started() and glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]:
-
-        start = time.monotonic()
-
-        evt = sevts.r.RobotEef(sevts.r.RobotEef.Data(robot_inst.id))
-
+    try:
         try:
-            evt.data.end_effectors = await asyncio.gather(
-                *[
-                    eef_pose(robot_inst, eef_id, arm_id if len(arms) > 1 else None)
-                    for arm_id in arms
-                    for eef_id in (await robot.get_end_effectors(robot_inst, arm_id))
-                ]
+            for arm_id in await robot.get_arms(robot_inst):
+                eefs[arm_id] = await robot.get_end_effectors(robot_inst, arm_id)
+        except robot.SingleArmRobotException:
+            eefs = {None: await robot.get_end_effectors(robot_inst, None)}
+    except Arcor2Exception as e:
+        glob.logger.error(f"Failed to start sending poses for {robot_inst.name}. {str(e)}")
+    else:
+
+        glob.logger.info(f"Sending poses for {robot_inst.name} started. Arms/EEFs: {eefs}.")
+
+        while scene_started() and glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]:
+
+            start = time.monotonic()
+
+            evt = sevts.r.RobotEef(sevts.r.RobotEef.Data(robot_inst.id))
+
+            try:
+                evt.data.end_effectors = await asyncio.gather(
+                    *[eef_pose(robot_inst, eef_id, arm_id) for arm_id in eefs.keys() for eef_id in eefs[arm_id]]
+                )
+            except Arcor2Exception as e:
+                glob.logger.error(f"Failed to get eef pose for {robot_inst.name}. {str(e)}")
+                break
+
+            evt_json = evt.to_json()
+            await asyncio.gather(
+                *[ws_server.send_json_to_client(ui, evt_json) for ui in glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]]
             )
-        except Arcor2Exception as e:
-            glob.logger.error(f"Failed to get eef pose for {robot_inst.id}. {str(e)}")
-            break
 
-        evt_json = evt.to_json()
-        await asyncio.gather(
-            *[ws_server.send_json_to_client(ui, evt_json) for ui in glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]]
-        )
+            end = time.monotonic()
+            await asyncio.sleep(EVENT_PERIOD - (end - start))
 
-        end = time.monotonic()
-        await asyncio.sleep(EVENT_PERIOD - (end - start))
-
-    del EEF_POSE_TASKS[robot_inst.id]
+    EEF_POSE_TASKS.pop(robot_inst.id, None)
 
     # TODO notify UIs that registration was cancelled
-    del glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]
+    glob.ROBOT_EEF_REGISTERED_UIS.pop(robot_inst.id, None)
 
-    glob.logger.info(f"Sending '{sevts.r.RobotEef.__name__}' for robot '{robot_inst.id}' stopped.")
+    glob.logger.info(f"Sending poses for {robot_inst.name} stopped.")
 
 
 async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: WsClient) -> srpc.r.GetRobotMeta.Response:
