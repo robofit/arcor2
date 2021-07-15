@@ -5,7 +5,7 @@ aiorun==2020.12.1
 apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!
 apispec[yaml]==4.7.1
 autopep8==1.5.7
-Cython==0.29.23
+Cython==0.29.24
 dataclasses-jsonschema[fast-validation,apispec]==2.14.1
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
@@ -14,7 +14,7 @@ lru-dict==1.1.7
 numpy-quaternion[scipy,numba]==2021.6.9.13.34.11
 numpy==1.21.0
 openapi-spec-validator==0.3.1
-opencv-contrib-python==4.5.2.54
+opencv-contrib-python==4.5.3.56
 open3d==0.13.0
 orjson==3.6.0
 packaging==20.9
@@ -27,7 +27,7 @@ pytest-repeat==0.9.1
 pytest==6.2.4
 pyserial==3.5
 PyYAML==5.4.1
-requests==2.25.1
+requests==2.26.0
 sqlitedict==1.7.0
 typing-inspect==0.7.1
 urdfpy==0.0.22
