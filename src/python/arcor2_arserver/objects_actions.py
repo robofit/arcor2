@@ -4,7 +4,7 @@ from typing import List, Set, Union
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
 from arcor2.data.events import Event
-from arcor2.data.object_type import ObjectModel
+from arcor2.data.object_type import Mesh, ObjectModel
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
@@ -134,6 +134,13 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             glob.logger.error(f"{obj.model.id}: failed to get collision model of type {obj.model.type}.")
             meta.disabled = True
             meta.problem = "Can't get collision model."
+            object_types[obj_id] = ObjectTypeData(meta)
+            return
+
+        if isinstance(model, Mesh) and model.uri not in await storage.files_ids():
+            glob.logger.error(f"Disabling {meta.type} as its mesh file {model.uri} does not exist.")
+            meta.disabled = True
+            meta.problem = "Mesh file does not exist."
             object_types[obj_id] = ObjectTypeData(meta)
             return
 

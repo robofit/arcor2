@@ -15,6 +15,7 @@ from .fit_common_mixin import FitCommonMixin, UrlSettings
 class KinectAzure(FitCommonMixin, Camera):
 
     _ABSTRACT = False
+    mesh_filename = "kinect_azure.dae"
 
     def __init__(
         self,
