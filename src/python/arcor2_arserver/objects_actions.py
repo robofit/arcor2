@@ -1,10 +1,8 @@
 import asyncio
-import os
-from typing import List, Set, Type, Union
+from typing import List, Set, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
-from arcor2.clients import aio_project_service as ps
 from arcor2.data.events import Event
 from arcor2.data.object_type import ObjectModel
 from arcor2.exceptions import Arcor2Exception
@@ -52,19 +50,6 @@ def valid_object_types() -> ObjectTypeDict:
     """
 
     return {obj_type: obj for obj_type, obj in glob.OBJECT_TYPES.items() if not obj.meta.disabled}
-
-
-async def handle_robot_urdf(robot: Type[Robot]) -> None:
-
-    if not robot.urdf_package_name:
-        return
-
-    file_path = os.path.join(settings.URDF_PATH, robot.urdf_package_name)
-
-    try:
-        await ps.save_file(robot.urdf_package_name, file_path)
-    except Arcor2Exception:
-        glob.logger.exception(f"Failed to download URDF for {robot.__name__}.")
 
 
 async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
@@ -247,7 +232,6 @@ async def get_object_types() -> None:
 
         if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
             await get_robot_meta(obj_type)
-            asyncio.ensure_future(handle_robot_urdf(obj_type.type_def))
 
     # if object does not change but its base has changed, it has to be reloaded
     for obj_id, obj in glob.OBJECT_TYPES.items():

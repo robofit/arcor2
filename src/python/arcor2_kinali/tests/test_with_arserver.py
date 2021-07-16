@@ -65,7 +65,6 @@ def start_processes() -> Iterator[None]:
         my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
 
         my_env["ARCOR2_SERVER_PORT"] = str(_arserver_port)
-        my_env["ARCOR2_DATA_PATH"] = os.path.join(tmp_dir, "data")
 
         processes = []
 

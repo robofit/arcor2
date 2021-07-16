@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Set
 
 from arcor2.clients import project_service
 from arcor2.clients.project_service import ProjectServiceException  # noqa
@@ -88,3 +88,8 @@ async def save_file(file_id: str, path: str) -> None:
     """Saves a file to a given path."""
 
     await run_in_executor(project_service.save_file, file_id, path)
+
+
+async def files_ids() -> Set[str]:
+    """Gets IDs of stored files."""
+    return await run_in_executor(project_service.files_ids)

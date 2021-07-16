@@ -10,6 +10,7 @@ from arcor2.object_types.abstract import MultiArmRobot, Robot
 from arcor2_arserver import globals as glob
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
+from arcor2_arserver.clients import project_service as ps
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import function_implemented
 from arcor2_arserver_data import events as sevts
@@ -170,8 +171,14 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
         obj_type.type_def, Robot.set_hand_teaching_mode.__name__, base_class
     )
 
-    if obj_type.type_def.urdf_package_name:
-        obj_type.robot_meta.urdf_package_filename = obj_type.type_def.urdf_package_name
+    urdf_name = obj_type.type_def.urdf_package_name
+
+    if urdf_name:
+        if urdf_name not in await ps.files_ids():
+            glob.logger.error(f"URDF package {urdf_name} for {obj_type.meta.type} does not exist.")
+        else:
+            obj_type.robot_meta.urdf_package_filename = urdf_name
+            # TODO check if URDF is valid?
 
     glob.logger.debug(obj_type.robot_meta)
 

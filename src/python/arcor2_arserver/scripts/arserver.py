@@ -5,7 +5,6 @@ import argparse
 import asyncio
 import functools
 import inspect
-import os
 import shutil
 import sys
 from typing import Dict, List, Type, get_type_hints
@@ -329,10 +328,6 @@ def main() -> None:
     loop.set_debug(enabled=args.asyncio_debug)
 
     compile_json_schemas()
-
-    if os.path.exists(settings.URDF_PATH):
-        shutil.rmtree(settings.URDF_PATH)
-    os.makedirs(settings.URDF_PATH)
 
     run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
 
