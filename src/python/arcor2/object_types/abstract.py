@@ -78,6 +78,9 @@ class Generic(metaclass=abc.ABCMeta):
 
 
 class GenericWithPose(Generic):
+
+    mesh_filename: Optional[str] = None
+
     def __init__(
         self,
         obj_id: str,

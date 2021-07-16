@@ -13,14 +13,17 @@ from arcor2_arserver_data.client import ARServer, get_id
 
 def test_object_aiming(start_processes: None, ars: ARServer) -> None:
 
-    mesh = Mesh("MeshId", "uri", [Pose(), Pose(), Pose()])
-    assert mesh.focus_points
-    project_service.put_model(mesh)
-
     upload_def(Box)
 
     # assign mesh to some existing object
     ot = project_service.get_object_type(Box.__name__)
+
+    project_service.upload_file("mesh.dae", b"")
+
+    mesh = Mesh(ot.id, "mesh.dae", [Pose(), Pose(), Pose()])
+    assert mesh.focus_points
+    project_service.put_model(mesh)
+
     ot.model = mesh.metamodel()
     project_service.update_object_type(ot)
 
