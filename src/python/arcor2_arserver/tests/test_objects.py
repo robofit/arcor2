@@ -1,10 +1,13 @@
 import pytest
 
-from arcor2.data.object_type import Box, Cylinder, Model3dType, ObjectModel, Sphere
+from arcor2.data.common import Pose
+from arcor2.data.object_type import Box, Cylinder, Mesh, Model3dType, ObjectModel, Sphere
 from arcor2.object_types.abstract import GenericWithPose
-from arcor2_arserver.tests.conftest import event
+from arcor2_arserver.tests.conftest import event, project_service
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, get_id
+
+mesh_filename = "test_type.dae"
 
 
 # TODO find out way how to test invalid models (has to be constructed as a json)
@@ -15,6 +18,9 @@ from arcor2_arserver_data.client import ARServer, get_id
         ObjectModel(Model3dType.BOX, box=Box("", 0, 1, 1)),
         ObjectModel(Model3dType.SPHERE, sphere=Sphere("", 1)),
         ObjectModel(Model3dType.CYLINDER, cylinder=Cylinder("", 1, 1)),
+        ObjectModel(Model3dType.MESH, mesh=Mesh("", mesh_filename, [Pose(), Pose()])),
+        ObjectModel(Model3dType.MESH, mesh=Mesh("", mesh_filename, [])),
+        ObjectModel(Model3dType.MESH, mesh=Mesh("", mesh_filename)),
     ],
 )
 def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectModel) -> None:
@@ -24,6 +30,9 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
     type_name = "TestType"
 
     model.model().id = type_name
+
+    if model.mesh:
+        project_service.upload_file(mesh_filename, b"")
 
     assert ars.call_rpc(
         rpc.o.NewObjectType.Request(
@@ -39,3 +48,6 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
     assert evt.data[0].type == type_name
     assert evt.data[0].base == GenericWithPose.__name__
     assert evt.data[0].object_model == model
+
+    project_service.get_model(model.model().id, model.type)
+    project_service.get_object_type(type_name)

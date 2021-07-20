@@ -130,8 +130,8 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
     if obj.model:
         try:
             model = await storage.get_model(obj.model.id, obj.model.type)
-        except Arcor2Exception:
-            glob.logger.error(f"{obj.model.id}: failed to get collision model of type {obj.model.type}.")
+        except Arcor2Exception as e:
+            glob.logger.error(f"{obj.model.id}: failed to get collision model of type {obj.model.type}. {str(e)}")
             meta.disabled = True
             meta.problem = "Can't get collision model."
             object_types[obj_id] = ObjectTypeData(meta)

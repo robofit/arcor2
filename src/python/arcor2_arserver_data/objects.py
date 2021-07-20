@@ -5,7 +5,7 @@ from typing import List, Optional
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import ActionMetadata
-from arcor2.data.object_type import MetaModel3d, Model3dType, ObjectModel, ObjectType, ParameterMeta
+from arcor2.data.object_type import ObjectModel, ObjectType, ParameterMeta
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -31,16 +31,14 @@ class ObjectTypeMeta(JsonSchemaMixin):
         ot = ObjectType(self.type, "", self.description)
 
         if self.object_model:
-
-            if self.object_model.type == Model3dType.MESH:
-                assert self.object_model.mesh
-                m_id = self.object_model.mesh.id
-            else:
-                m_id = self.type
-
-            ot.model = MetaModel3d(m_id, self.object_model.type)
+            ot.model = self.object_model.model().metamodel()
 
         return ot
+
+    def __post_init__(self) -> None:
+
+        if self.object_model and self.object_model.model().id != self.type:
+            raise Arcor2Exception("Object model id must be equal to the ObjectType id.")
 
 
 @dataclass
