@@ -10,7 +10,7 @@ from flask import jsonify, request
 
 from arcor2 import env
 from arcor2.data import common, object_type, scene
-from arcor2.flask import RespT, create_app, run_app
+from arcor2.flask import Response, RespT, create_app, run_app
 from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 
 app = create_app(__name__)
@@ -238,10 +238,6 @@ def delete_collision(collisionId: str) -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
             404:
               description: Model not found.
               content:
@@ -255,7 +251,7 @@ def delete_collision(collisionId: str) -> RespT:
     except KeyError:
         return jsonify("Not found"), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/collisions", methods=["GET"])
@@ -316,16 +312,12 @@ def put_start() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                  application/json:
-                      schema:
-                        type: string
     """
 
     global started
     delay()
     started = True
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/system/stop", methods=["PUT"])
@@ -339,17 +331,13 @@ def put_stop() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                  application/json:
-                      schema:
-                        type: string
     """
 
     global started
     delay()
     started = False
     collision_objects.clear()
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/system/running", methods=["GET"])

@@ -10,6 +10,7 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError
 
 from arcor2 import env, json
+from arcor2.data.common import WebApiError
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 
@@ -36,6 +37,14 @@ class RestHttpException(RestException):
     def __init__(self, *args, error_code: int):
         super().__init__(*args)
         self.error_code = error_code
+
+
+class WebApiException(RestHttpException):
+    """Exception with associated WebApiError."""
+
+    def __init__(self, *args, error_code: int, web_api_error: WebApiError):
+        super().__init__(*args, error_code=error_code)
+        self.web_api_error = web_api_error
 
 
 class Method(Enum):
@@ -335,16 +344,28 @@ def _handle_response(resp: requests.Response) -> None:
     :return:
     """
 
-    if resp.status_code >= 400:
+    if resp.status_code < 400:
+        return
 
-        decoded_content = resp.content.decode()
+    decoded_content = resp.content.decode()
 
-        # here we try to handle different cases
+    # here we try to handle different cases
+    try:
+        cont = json.loads(decoded_content)
+    except json.JsonException:
+        # response contains invalid JSON
+        raise RestHttpException(decoded_content, error_code=resp.status_code)
+
+    if isinstance(cont, str):  # just plain text
+        raise RestHttpException(cont, error_code=resp.status_code)
+    elif isinstance(cont, dict):  # this could be WebApiError
+
         try:
-            raise RestHttpException(str(json.loads(decoded_content)), error_code=resp.status_code)
-        except json.JsonException:
-            # response contains invalid JSON
-            raise RestHttpException(decoded_content, error_code=resp.status_code)
+            err = WebApiError.from_dict(cont)
+        except ValidationError:
+            raise RestHttpException(str(cont), error_code=resp.status_code)
+
+        raise WebApiException(err.message, error_code=resp.status_code, web_api_error=err)
 
 
 def get_image(url: str) -> Image.Image:
