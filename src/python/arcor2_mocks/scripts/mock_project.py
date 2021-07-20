@@ -9,7 +9,7 @@ import humps
 from flask import jsonify, request, send_file
 
 from arcor2.data import common, object_type
-from arcor2.flask import FlaskException, RespT, create_app, run_app
+from arcor2.flask import FlaskException, Response, RespT, create_app, run_app
 from arcor2.json import JsonType
 from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
@@ -59,6 +59,8 @@ def put_file(fileId: str) -> RespT:
         responses:
             200:
               description: Ok
+            400:
+              description: Invalid file id provided.
               content:
                 application/json:
                   schema:
@@ -69,7 +71,7 @@ def put_file(fileId: str) -> RespT:
     fs = request.files["file"]
     fs.save(buff)
     FILES[fileId] = buff, fs.filename
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/files/<string:fileId>", methods=["GET"])
@@ -111,14 +113,14 @@ def get_files() -> RespT:
         - Files
         summary: Gets files ids.
         responses:
-            '200':
+            200:
               description: Success
               content:
                 application/json:
                   schema:
                     type: array
                     items:
-                        type: string
+                      type: string
     """
 
     return jsonify(list(FILES.keys()))
@@ -142,10 +144,6 @@ def delete_file(fileId: str) -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
             404:
               description: File not found.
               content:
@@ -159,7 +157,7 @@ def delete_file(fileId: str) -> RespT:
     except KeyError:
         return jsonify("Not found"), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -180,14 +178,24 @@ def put_project() -> RespT:
                     $ref: Project
         responses:
             200:
-              description: Ok
+              description: Timestamp of last project modification.
               content:
                 application/json:
                   schema:
                     type: string
+            404:
+              description: Scene with specific id related to project not found.
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     project = common.Project.from_dict(humps.decamelize(request.json))
+
+    if project.scene_id not in SCENES:
+        return common.WebApiError(f"Scene {id} does not exist.", PROJECT_SERVICE_NAME).to_json(), 404
+
     project.modified = datetime.now(tz=timezone.utc)
     project.int_modified = None
 
@@ -225,13 +233,13 @@ def get_project(id: str) -> RespT:
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        return jsonify(PROJECTS[id].to_dict())
+        return jsonify(humps.camelize(PROJECTS[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Project {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/projects/<string:id>", methods=["DELETE"])
@@ -252,24 +260,20 @@ def delete_project(id: str) -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
             404:
               description: Project not found.
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
         del PROJECTS[id]
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Project {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/projects", methods=["GET"])
@@ -296,7 +300,9 @@ def get_projects() -> RespT:
     for proj in PROJECTS.values():
         assert proj.created
         assert proj.modified
-        ret.append(common.IdDesc(proj.id, proj.name, proj.created, proj.modified, proj.description).to_dict())
+        ret.append(
+            humps.camelize(common.IdDesc(proj.id, proj.name, proj.created, proj.modified, proj.description).to_dict())
+        )
 
     return jsonify(ret)
 
@@ -319,15 +325,26 @@ def put_scene() -> RespT:
                     $ref: Scene
         responses:
             200:
-              description: Ok
+              description: Timestamp of last scene modification.
               content:
                 application/json:
                   schema:
                     type: string
                     format: date-time
+            404:
+              description: Object type with specific id related to putted scene not exist.
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     scene = common.Scene.from_dict(humps.decamelize(request.json))
+
+    for obj in scene.objects:
+        if obj.type not in OBJECT_TYPES:
+            return common.WebApiError(f"ObjectType {obj.type} does not exist.", PROJECT_SERVICE_NAME).to_json(), 404
+
     scene.modified = datetime.now(tz=timezone.utc)
     scene.int_modified = None
 
@@ -365,13 +382,13 @@ def get_scene(id: str) -> RespT:
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        return jsonify(SCENES[id].to_dict())
+        return jsonify(humps.camelize(SCENES[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Scene {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/scenes/<string:id>", methods=["DELETE"])
@@ -392,24 +409,20 @@ def delete_scene(id: str) -> RespT:
         responses:
           200:
             description: Ok
-            content:
-              application/json:
-                schema:
-                  type: string
           404:
             description: Scene not found.
             content:
               application/json:
                 schema:
-                  type: string
+                  $ref: WebApiError
     """
 
     try:
         del SCENES[id]
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Scene {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/scenes", methods=["GET"])
@@ -436,7 +449,11 @@ def get_scenes() -> RespT:
     for scene in SCENES.values():
         assert scene.created
         assert scene.modified
-        ret.append(common.IdDesc(scene.id, scene.name, scene.created, scene.modified, scene.description).to_dict())
+        ret.append(
+            humps.camelize(
+                common.IdDesc(scene.id, scene.name, scene.created, scene.modified, scene.description).to_dict()
+            )
+        )
 
     return jsonify(ret)
 
@@ -500,17 +517,17 @@ def get_object_type(id: str) -> RespT:
                 schema:
                   $ref: ObjectType
           404:
-            description: Scene not found.
+            description: ObjectType not found.
             content:
               application/json:
                 schema:
-                  type: string
+                  $ref: WebApiError
     """
 
     try:
-        return jsonify(OBJECT_TYPES[id].to_dict())
+        return jsonify(humps.camelize(OBJECT_TYPES[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"ObjectType {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/object_types/<string:id>", methods=["DELETE"])
@@ -531,24 +548,20 @@ def delete_object_type(id: str) -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
             404:
               description: ObjectType not found.
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
         del OBJECT_TYPES[id]
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"ObjectType {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/object_types", methods=["GET"])
@@ -575,12 +588,46 @@ def get_object_types() -> RespT:
     for obj_type in OBJECT_TYPES.values():
         assert obj_type.created
         assert obj_type.modified
-        ret.append(common.IdDesc(obj_type.id, "", obj_type.created, obj_type.modified, obj_type.description).to_dict())
+        ret.append(
+            humps.camelize(
+                common.IdDesc(obj_type.id, "", obj_type.created, obj_type.modified, obj_type.description).to_dict()
+            )
+        )
 
     return jsonify(ret)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
+
+
+@app.route("/models", methods=["GET"])
+def get_models() -> RespT:
+    """Get all models.
+    ---
+    get:
+        tags:
+            - Models
+        description: Get all models
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: MetaModel3d
+    """
+
+    models: List[Dict] = []
+
+    for mod_type in (BOXES, CYLINDERS, SPHERES, MESHES):
+        assert isinstance(mod_type, dict)
+        for mod in mod_type.values():
+            assert isinstance(mod, object_type.Model)
+            models.append(mod.metamodel().to_dict())
+
+    return jsonify(humps.camelize(models))
 
 
 @app.route("/models/box", methods=["PUT"])
@@ -599,10 +646,6 @@ def put_box() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
     """
 
     if not isinstance(request.json, dict):
@@ -611,7 +654,7 @@ def put_box() -> RespT:
     # box = object_type.Box.from_dict(humps.decamelize(request.json))  # TODO disabled because of bug in pyhumps
     box = object_type.Box(request.json["id"], request.json["sizeX"], request.json["sizeY"], request.json["sizeZ"])
     BOXES[box.id] = box
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/models/<string:id>/box", methods=["GET"])
@@ -641,13 +684,13 @@ def get_box(id: str) -> RespT:
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        return jsonify(BOXES[id].to_dict())
+        return jsonify(humps.camelize(BOXES[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Box {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/models/cylinder", methods=["PUT"])
@@ -666,15 +709,11 @@ def put_cylinder() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
     """
 
     cylinder = object_type.Cylinder.from_dict(humps.decamelize(request.json))
     CYLINDERS[cylinder.id] = cylinder
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/models/<string:id>/cylinder", methods=["GET"])
@@ -704,13 +743,13 @@ def get_cylinder(id: str) -> RespT:
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        return jsonify(CYLINDERS[id].to_dict())
+        return jsonify(humps.camelize(CYLINDERS[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Cylinder {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/models/sphere", methods=["PUT"])
@@ -729,15 +768,11 @@ def put_sphere() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
     """
 
     sphere = object_type.Sphere.from_dict(humps.decamelize(request.json))
     SPHERES[sphere.id] = sphere
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/models/<string:id>/sphere", methods=["GET"])
@@ -767,13 +802,13 @@ def get_sphere(id: str) -> RespT:
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        return jsonify(SPHERES[id].to_dict())
+        return jsonify(humps.camelize(SPHERES[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Sphere {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/models/mesh", methods=["PUT"])
@@ -792,15 +827,11 @@ def put_mesh() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
     """
 
     mesh = object_type.Mesh.from_dict(humps.decamelize(request.json))
     MESHES[mesh.id] = mesh
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/models/<string:id>/mesh", methods=["GET"])
@@ -830,13 +861,13 @@ def get_mesh(id: str) -> RespT:
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        return jsonify(MESHES[id].to_dict())
+        return jsonify(humps.camelize(MESHES[id].to_dict()))
     except KeyError:
-        return jsonify("Not found"), 404
+        return common.WebApiError(f"Mesh {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
 
 @app.route("/models/<string:id>", methods=["DELETE"])
@@ -857,10 +888,12 @@ def delete_model(id: str) -> RespT:
         responses:
             200:
               description: Ok
+            404:
+              description: Not found.
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
@@ -875,9 +908,9 @@ def delete_model(id: str) -> RespT:
                 try:
                     del MESHES[id]
                 except KeyError:
-                    return jsonify("Not found"), 404
+                    return common.WebApiError(f"Model {id} was not found.", PROJECT_SERVICE_NAME).to_json(), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -893,7 +926,7 @@ def main() -> None:
         app,
         PROJECT_SERVICE_NAME,
         version(),
-        "0.9.0",
+        "0.10.0",
         PROJECT_PORT,
         [
             common.Project,
@@ -904,6 +937,7 @@ def main() -> None:
             object_type.Cylinder,
             object_type.Sphere,
             object_type.Mesh,
+            common.WebApiError,
         ],
         args.swagger,
     )

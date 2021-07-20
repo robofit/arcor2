@@ -737,3 +737,19 @@ class Asset(JsonSchemaMixin):
     type: Optional[str] = None
     tags: Optional[List[str]] = None
     metadata: Optional[str] = None  # json
+
+
+@dataclass
+class Error(JsonSchemaMixin):
+    code: int
+    detail: str
+    type: Optional[str] = None
+    data: Optional[str] = None
+
+
+@dataclass
+class WebApiError(JsonSchemaMixin):
+
+    message: str
+    service: str
+    errors: Optional[List[Error]] = None
