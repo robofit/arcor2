@@ -49,7 +49,7 @@ extra_requirements.add = [
 [mypy]
 version = "mypy==0.910"
 extra_requirements.add = [
-  "numpy==1.21.0",
+  "numpy==1.21.1",
   "types-requests==2.25.0",
   "types-aiofiles==0.1.5",
   "types-orjson==0.1.1"
