@@ -9,7 +9,7 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
 from arcor2.data.common import Parameter, Pose, Position, SceneObject
-from arcor2.data.object_type import Model3dType
+from arcor2.data.object_type import Mesh, Model3dType
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import GenericWithPose, Robot
@@ -306,21 +306,15 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
 
         if meta.object_model:
 
-            if meta.object_model.type == Model3dType.MESH:
+            model = meta.object_model.model()
+            assert model.id == meta.type
 
-                # TODO check whether mesh id exists - if so, then use existing mesh, if not, upload a new one
-                # ...get whole mesh (focus_points) based on mesh id
-                assert meta.object_model.mesh
-                try:
-                    meta.object_model.mesh = await storage.get_mesh(meta.object_model.mesh.id)
-                except storage.ProjectServiceException as e:
-                    glob.logger.error(e)
-                    raise Arcor2Exception(f"Mesh ID {meta.object_model.mesh.id} does not exist.")
+            if isinstance(model, Mesh):
 
-            else:
+                if model.uri not in await storage.files_ids():
+                    raise Arcor2Exception(f"File {model.uri} associated to mesh {model.id} does not exist.")
 
-                meta.object_model.model().id = meta.type
-                await storage.put_model(meta.object_model.model())
+            await storage.put_model(model)
 
         type_def = await hlp.run_in_executor(
             hlp.save_and_import_type_def,
