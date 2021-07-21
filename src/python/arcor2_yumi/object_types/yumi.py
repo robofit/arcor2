@@ -63,6 +63,7 @@ class YumiSettings(Settings):
 
     ip: str = "192.168.104.107"
     max_tcp_speed: float = MAX_TCP_SPEED
+    home_on_start: bool = False
 
     def __post_init__(self) -> None:
 
@@ -292,6 +293,9 @@ class CmdCodes(IntEnum):
     ik = 42
     fk = 43
 
+    set_lead_through = 60
+    is_lead_through = 61
+
     close_connection = 99
 
     reset_home = 100  # MoveAbsJ to Home
@@ -362,7 +366,14 @@ class YumiSocket:
         self._lock = Lock()
 
         with self._lock:
+
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            self._socket.setsockopt(socket.SOL_TCP, socket.TCP_KEEPIDLE, 1)
+            self._socket.setsockopt(socket.SOL_TCP, socket.TCP_KEEPINTVL, 1)
+            self._socket.setsockopt(socket.SOL_TCP, socket.TCP_KEEPCNT, 2)
+
             self._socket.settimeout(self._timeout)
             try:
                 self._socket.connect((self._ip, self._port))
@@ -408,6 +419,7 @@ class YumiSocket:
             raise YuMiCommException("Empty response.")
 
         tokens = recv.split()
+
         try:
             res = RawResponse(int(tokens[0]), int(tokens[1]), " ".join(tokens[2:]))
         except (IndexError, ValueError):
@@ -493,8 +505,7 @@ class YuMiArm:
 
     @staticmethod
     def _construct_req(code: CmdCodes, body="") -> str:
-        req = "{0:d} {1}#".format(code.value, body)
-        return req
+        return "{0:d} {1}#".format(code.value, body)
 
     @staticmethod
     def _iter_to_str(template: str, iterable: Iterable):
@@ -528,7 +539,7 @@ class YuMiArm:
         tokens = res.message.split()
 
         if len(tokens) != self.JOINTS:
-            raise YumiException("Invalid format for states! Got: \n{0}".format(res.message))
+            raise YumiException(f"Invalid format for states! Got: '{res.message}'.")
         values = [math.radians(float(token)) for token in tokens]
 
         assert self.name
@@ -546,6 +557,19 @@ class YuMiArm:
 
         res = self._request(self._construct_req(CmdCodes.get_pose), socket=self._poses_socket)
         return message_to_pose(res.message)
+
+    @property
+    def lead_through(self) -> bool:
+
+        req = self._construct_req(CmdCodes.is_lead_through)
+        res = self._request(req)
+        return bool(int(res.message))
+
+    @lead_through.setter
+    def lead_through(self, enabled: bool) -> None:
+
+        req = self._construct_req(CmdCodes.set_lead_through, f"{int(enabled)} ")
+        self._request(req)
 
     def is_pose_reachable(self, pose: Pose) -> bool:
 
@@ -928,10 +952,10 @@ class YuMi(MultiArmRobot):
             elif state == "motoroff":
                 self._rws.motors_on()
 
-            self._rws.reset_pp()
-
             if self._rws.is_running():
                 self._rws.stop_RAPID()
+
+            self._rws.reset_pp()
 
             self._rws.activate_all_tasks()
             self._rws.start_RAPID()
@@ -966,6 +990,10 @@ class YuMi(MultiArmRobot):
         self._right.set_conf([0, 0, 0, 4])
 
         self.calibrate_grippers()  # TODO only if not calibrated
+
+        if self.settings.home_on_start:
+            self._left.reset_home()
+            self._right.reset_home()
 
     @property
     def settings(self) -> YumiSettings:
@@ -1038,11 +1066,10 @@ class YuMi(MultiArmRobot):
 
         assert 0.0 <= speed <= 1.0
 
-        self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
-        arm = self._arm_by_name(arm_id)
-
         with self._move_lock:
-            arm.goto_pose(tr.make_pose_rel(self.pose, target_pose), linear=False)
+
+            self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
+            self._arm_by_name(arm_id).goto_pose(tr.make_pose_rel(self.pose, target_pose), linear=False)
 
     def move_to_joints(
         self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
@@ -1057,21 +1084,18 @@ class YuMi(MultiArmRobot):
 
         assert 0.0 <= speed <= 1.0
 
-        self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
-
-        if arm_id is None:
-
-            left = [j for j in target_joints if j.name.endswith("_l")]
-            right = [j for j in target_joints if j.name.endswith("_r")]
-
-            with self._move_lock:
-                self.goto_joints_sync(left, right)
-                return
-
-        arm = self._arm_by_name(arm_id)
-
         with self._move_lock:
-            arm.goto_joints(target_joints)
+
+            self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
+
+            if arm_id is None:
+
+                left = [j for j in target_joints if j.name.endswith("_l")]
+                right = [j for j in target_joints if j.name.endswith("_r")]
+
+                self.goto_joints_sync(left, right)
+            else:
+                self._arm_by_name(arm_id).goto_joints(target_joints)
 
     def inverse_kinematics(
         self,
@@ -1101,6 +1125,12 @@ class YuMi(MultiArmRobot):
         """
 
         return tr.make_pose_abs(self.pose, self._arm_by_name(arm_id).fk(joints))
+
+    def get_hand_teaching_mode(self, arm_id: Optional[str] = None) -> bool:
+        return self._arm_by_name(arm_id).lead_through
+
+    def set_hand_teaching_mode(self, enabled: bool, arm_id: Optional[str] = None) -> None:
+        self._arm_by_name(arm_id).lead_through = enabled
 
     def cleanup(self) -> None:
 
