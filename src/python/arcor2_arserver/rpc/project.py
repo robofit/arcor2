@@ -1417,7 +1417,7 @@ async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request
     if req.args.value is not None:
         updated_param.value = req.args.value
 
-    check_parameter(proj, param)
+    check_parameter(proj, updated_param)
 
     if req.dry_run:
         return

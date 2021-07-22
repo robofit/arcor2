@@ -132,6 +132,12 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
     c2 = event(ars, events.p.ProjectParameterChanged).data
     assert c2
 
+    # attempt to rename param to already used name
+    assert not ars.call_rpc(
+        rpc.p.UpdateProjectParameter.Request(get_id(), rpc.p.UpdateProjectParameter.Request.Args(c2.id, c1u.name)),
+        rpc.p.AddProjectParameter.Response,
+    ).result
+
     assert ars.call_rpc(
         rpc.p.RemoveProjectParameter.Request(get_id(), rpc.p.RemoveProjectParameter.Request.Args(c2.id)),
         rpc.p.RemoveProjectParameter.Response,
