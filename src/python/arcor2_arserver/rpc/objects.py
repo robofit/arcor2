@@ -311,8 +311,8 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
 
             if isinstance(model, Mesh):
 
-                if model.uri not in await storage.files_ids():
-                    raise Arcor2Exception(f"File {model.uri} associated to mesh {model.id} does not exist.")
+                if model.data_id not in await storage.files_ids():
+                    raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
 
             await storage.put_model(model)
 

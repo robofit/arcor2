@@ -215,7 +215,7 @@ def put_mesh() -> RespT:
     """
 
     args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(args["mesh_id"], args["uri"])
+    mesh = object_type.Mesh(args["mesh_id"], args["data_id"], args.get("focus_points", None))
     collision_objects[mesh.id] = mesh
     return jsonify("ok"), 200
 

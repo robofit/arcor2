@@ -137,8 +137,8 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             object_types[obj_id] = ObjectTypeData(meta)
             return
 
-        if isinstance(model, Mesh) and model.uri not in await storage.files_ids():
-            glob.logger.error(f"Disabling {meta.type} as its mesh file {model.uri} does not exist.")
+        if isinstance(model, Mesh) and model.data_id not in await storage.files_ids():
+            glob.logger.error(f"Disabling {meta.type} as its mesh file {model.data_id} does not exist.")
             meta.disabled = True
             meta.problem = "Mesh file does not exist."
             object_types[obj_id] = ObjectTypeData(meta)
