@@ -27,9 +27,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Both the object and the selected robot have to be write-locked.
   - Improved logging.
   - Test was added.
+- Server no longer downloads URDF packages.
+  - `ARCOR2_DATA_PATH` environment variable is no longer used.
+  - Clients will get URDFs through reverse proxy from Project service.
+- `NewObjectType` no longer assumes that mesh already exists.
+  - A file associated to mesh must exist in advance.
+  
   
 ### Fixed
 - All calls to the Scene service are guarded against exceptions.
+- Renaming of project parameters fixed.
+  - It was possible to use already taken name.
 
 ## [0.19.0] - 2021-06-22
 
