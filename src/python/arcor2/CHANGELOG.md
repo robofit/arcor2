@@ -21,7 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 40% speedup for serialization.
   - 80% speedup for deserialization.
   - Tested on `Project` dataclass.
-- Compatibility with Project service 0.9.0.
+- Compatibility with Project service 0.10.0.
+- Uploading of meshes associated to ObjectTypes.
+  - Parameter `file_to_upload` was added to `upload_def`.
 
 ### Fixed
 
