@@ -62,15 +62,16 @@ def upload_def(
 
     if issubclass(type_def, GenericWithPose) and model:
 
-        if not type_def.mesh_filename:
-            raise UploadException("Mesh filename not set.")
-
         if model.id != obj_type.id:
             raise UploadException("Model id have to be the same as ObjectType id.")
 
         obj_type.model = model.metamodel()
 
         if isinstance(model, Mesh):
+
+            if not type_def.mesh_filename:
+                raise UploadException("Mesh filename not set.")
+
             if not file_to_upload:
                 raise UploadException("For mesh collision model, file_to_upload parameter have to be set.")
 
