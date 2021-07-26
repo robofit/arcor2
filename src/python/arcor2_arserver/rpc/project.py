@@ -502,7 +502,6 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         else:
 
             assert ap.parent
-
             # AP position and all orientations will become relative to another parent
             tr.make_relative_ap_global(scene, proj, ap)
             tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
@@ -510,7 +509,9 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         proj.update_child(ap.id, old_parent, req.args.new_parent_id)
         await glob.LOCK.update_write_lock(ap.id, current_root, user_name)
 
-        ap.parent = req.args.new_parent_id
+        assert (req.args.new_parent_id and ap.parent == req.args.new_parent_id) or (
+            req.args.new_parent_id == "" and ap.parent is None
+        )
         proj.update_modified()
 
         """
