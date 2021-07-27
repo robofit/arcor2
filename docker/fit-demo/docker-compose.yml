@@ -150,6 +150,8 @@ services:
       - "6790:80"
     networks:
       - testitoff-project-network
+    depends_on:
+      - project
 
 volumes:
   mongodb:
