@@ -374,6 +374,7 @@ async def start_scene(scene: CachedScene) -> None:
             else:
                 await scene_srv.delete_all_collisions()
         except Arcor2Exception:
+            glob.logger.exception("Failed to prepare for start.")
             await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
             return False
 
@@ -419,9 +420,9 @@ async def start_scene(scene: CachedScene) -> None:
             ret = await _start_scene()
     except Arcor2Exception as e:
         glob.logger.error(f"Failed to start the scene. {str(e)}")
-        return
 
     assert ret == scene_started()
     assert ret == await scene_srv.started()
 
-    glob.logger.info("Scene started.")
+    if ret:
+        glob.logger.info("Scene started. Enjoy!")
