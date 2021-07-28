@@ -343,12 +343,21 @@ def get_calibration() -> RespT:
             return jsonify("No known marker detected."), 404
 
         weights = [marker[1] for marker in known_markers]
+        wsum = sum(weights)
+
+        if wsum <= 0:
+            logger.warning(
+                f"Got invalid weights, probably bad input data.\n"
+                f"Camera matrix: {camera_matrix}\n"
+                f"Dist matrix: {dist_matrix}"
+            )
+            return jsonify("Invalid input data."), 500
 
         # combine all detections
         pose = Pose()
         for mpose, weight in known_markers:
             pose.position += mpose.position * weight
-        pose.position *= 1.0 / sum(weights)
+        pose.position *= 1.0 / wsum
 
         quaternions = np.array([quaternion.as_float_array(km[0].orientation.as_quaternion()) for km in known_markers])
         pose.orientation.set_from_quaternion(
