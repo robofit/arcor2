@@ -235,7 +235,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
     logger.info(f"Done with {package_name} (scene {scene.name}, project {project.name}).")
     mem_zip.seek(0)
-    return send_file(mem_zip, as_attachment=True, cache_timeout=0, attachment_filename="arcor2_project.zip")
+    return send_file(mem_zip, as_attachment=True, max_age=0, attachment_filename="arcor2_project.zip")
 
 
 @app.route("/project/<string:project_id>/publish", methods=["GET"])

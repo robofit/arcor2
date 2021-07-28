@@ -171,7 +171,7 @@ def get_image_color() -> RespT:
     return send_file(
         image_to_bytes_io(img, target_format="JPEG", target_mode="RGB"),
         mimetype="image/jpeg",
-        cache_timeout=0,
+        max_age=0,
     )
 
 
@@ -244,7 +244,7 @@ def get_image_depth() -> RespT:
         assert _kinect is not None
         img = _kinect.depth_image(averaged_frames=int(request.args.get("averagedFrames", default=1)))
 
-    return send_file(image_to_bytes_io(img, target_format="PNG"), mimetype="image/png", cache_timeout=0)
+    return send_file(image_to_bytes_io(img, target_format="PNG"), mimetype="image/png", max_age=0)
 
 
 @app.route("/synchronized/image", methods=["GET"])
@@ -285,7 +285,7 @@ def get_image_both() -> RespT:
 
     mem_zip.seek(0)
     return send_file(
-        mem_zip, mimetype="application/zip", cache_timeout=0, as_attachment=True, attachment_filename="synchronized.zip"
+        mem_zip, mimetype="application/zip", max_age=0, as_attachment=True, attachment_filename="synchronized.zip"
     )
 
 
