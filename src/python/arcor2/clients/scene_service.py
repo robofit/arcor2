@@ -63,8 +63,12 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshPa
     del params["id"]
     params[model.__class__.__name__.lower() + "Id"] = model_id
 
-    if model.type() == Model3dType.MESH and mesh_parameters:
-        params.update(mesh_parameters.to_dict())
+    if model.type() == Model3dType.MESH:
+
+        params["meshFileId"] = params.pop("data_id")
+
+        if mesh_parameters:
+            params.update(mesh_parameters.to_dict())
 
     rest.call(rest.Method.PUT, f"{URL}/collisions/{model.type().value.lower()}", body=pose, params=params)
 
