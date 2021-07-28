@@ -24,7 +24,12 @@ def detect_corners(
 
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2GRAY)
 
-    variance_of_laplacian = cv2.Laplacian(gray, cv2.CV_64F).var()
+    # scaling to a defined resolution is necessary in order to get similar results for different resolutions
+    # resolution is choosen to be the same as resolution used by arcore
+    # another approach could be to normalize computed variance by number of pixels
+    variance_of_laplacian = cv2.Laplacian(
+        cv2.resize(gray, (640, 480), interpolation=cv2.INTER_NEAREST), cv2.CV_64F
+    ).var()
 
     if variance_of_laplacian < BLUR_THRESHOLD:
         raise Arcor2Exception(f"Blur score {variance_of_laplacian:.2f} is below the threshold.")

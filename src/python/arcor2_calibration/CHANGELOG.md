@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 
 - Handle invalid input parameters (camera matrix).
+- Scale down images to a common resolution before computing blur score.
 
 ## [0.6.0] - 2021-06-11
 ### Changed
