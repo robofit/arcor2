@@ -148,7 +148,7 @@ async def _initialize_server() -> None:
         try:
             if await scene_srv.started():
                 glob.logger.warn("Scene already started, attempting to stop it...")
-                await scene_srv.stop()
+            await scene_srv.stop()  # if not started, call it anyway, it should be instant
             break
         except scene_srv.SceneServiceException as e:
             glob.logger.error(f"Failed to communicate with the Scene service. {str(e)}")

@@ -47,10 +47,8 @@ class IntResources:
 
         type_defs: TypesDict = {}
 
-        if scene_service.started():
-            scene_service.stop()  # also deletes all collisions
-        else:
-            scene_service.delete_all_collisions()  # in order to prepare a clean environment
+        # in order to prepare a clean environment (clears all configurations and all collisions)
+        scene_service.stop()
 
         package_id = os.path.basename(os.getcwd())
         package_meta = package.read_package_meta(package_id)

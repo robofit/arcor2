@@ -297,13 +297,12 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
 
         await set_scene_state(SceneState.Data.StateEnum.Stopping, message)
 
-        if await scene_srv.started():
-            try:
-                await scene_srv.stop()
-            except Arcor2Exception as e:
-                glob.logger.exception("Failed to go offline.")
-                await set_scene_state(SceneState.Data.StateEnum.Started, str(e))
-                return
+        try:
+            await scene_srv.stop()
+        except Arcor2Exception as e:
+            glob.logger.exception("Failed to go offline.")
+            await set_scene_state(SceneState.Data.StateEnum.Started, str(e))
+            return
 
         try:
             await asyncio.gather(*[cleanup_object(obj) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
@@ -369,10 +368,8 @@ async def start_scene(scene: CachedScene) -> None:
 
         # in order to prepare a clear environment
         try:
-            if await scene_srv.started():
-                await scene_srv.stop()
-            else:
-                await scene_srv.delete_all_collisions()
+            # stop deletes all configurations and clears all collisions
+            await scene_srv.stop()
         except Arcor2Exception:
             glob.logger.exception("Failed to prepare for start.")
             await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
