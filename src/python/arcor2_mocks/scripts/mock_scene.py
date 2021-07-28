@@ -334,7 +334,8 @@ def put_stop() -> RespT:
     """
 
     global started
-    delay()
+    if started:
+        delay()
     started = False
     collision_objects.clear()
     return Response(status=200)
