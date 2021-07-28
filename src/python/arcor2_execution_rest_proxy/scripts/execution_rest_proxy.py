@@ -453,7 +453,7 @@ def get_package(packageId: str) -> RespT:  # noqa
         archive_path = os.path.join(tmpdirname, packageId)
         shutil.make_archive(archive_path, "zip", os.path.join(PROJECT_PATH, packageId))
 
-        return send_file(archive_path + ".zip", as_attachment=True, cache_timeout=0)
+        return send_file(archive_path + ".zip", as_attachment=True, max_age=0)
 
 
 @app.route("/packages", methods=["GET"])
