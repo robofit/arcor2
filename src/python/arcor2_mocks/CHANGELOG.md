@@ -6,7 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Changed
 
-- Compatibility with Project service 0.9.0.
+- Compatibility with Project service 0.10.0.
+- Compatibility with Scene service 0.5.0.
 
 ## [0.15.0] - 2021-06-11
 

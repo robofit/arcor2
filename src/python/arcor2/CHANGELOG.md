@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - 80% speedup for deserialization.
   - Tested on `Project` dataclass.
 - Compatibility with Project service 0.10.0.
+- Compatibility with Scene service 0.5.0.  
 - Uploading of meshes associated to ObjectTypes.
   - Parameter `file_to_upload` was added to `upload_def`.
 

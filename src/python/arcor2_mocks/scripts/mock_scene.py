@@ -178,7 +178,7 @@ def put_mesh() -> RespT:
               in: query
               schema:
                 type: string
-            - name: uri
+            - name: meshFileId
               in: query
               schema:
                 type: string
@@ -215,7 +215,7 @@ def put_mesh() -> RespT:
     """
 
     args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(args["mesh_id"], args["data_id"], args.get("focus_points", None))
+    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"], args.get("focus_points", None))
     collision_objects[mesh.id] = mesh
     return jsonify("ok"), 200
 
@@ -370,7 +370,7 @@ def main() -> None:
         app,
         SCENE_SERVICE_NAME,
         version(),
-        "0.4.0",
+        "0.5.0",
         SCENE_PORT,
         [
             common.Pose,
