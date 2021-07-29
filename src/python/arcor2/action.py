@@ -46,8 +46,7 @@ try:
 
         while True:
 
-            x = msvcrt.kbhit()  # type: ignore
-            if x:
+            if msvcrt.kbhit():  # type: ignore
                 return msvcrt.getch().decode()  # type: ignore
 
             if not timeout or time.monotonic() > time_to_end:
@@ -76,15 +75,14 @@ def handle_stdin_commands() -> None:
     :return:
     """
 
-    ctrl_cmd = read_stdin()
+    if read_stdin() != "p":
+        return
 
-    if ctrl_cmd == "p":
-        print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
-        while True:
-            ctrl_cmd = read_stdin(0.1)
-            if ctrl_cmd == "r":
-                print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
-                break
+    print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
+    while True:
+        if read_stdin(0.1) == "r":
+            print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
+            break
 
 
 def print_event(event: Event) -> None:

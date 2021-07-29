@@ -76,8 +76,7 @@ class Users:
         except KeyError:
             raise UsersException("Unknown ui.")
 
-        user_name = self._ui_users.pop(ui, None)
-        if user_name:
+        if user_name := self._ui_users.pop(ui, None):
             self._users_ui.pop(user_name, None)
 
         self._assert_consistency()

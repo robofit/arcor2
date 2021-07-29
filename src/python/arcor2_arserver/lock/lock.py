@@ -8,6 +8,7 @@ from arcor2.cached import CachedProjectException, UpdateableCachedProject, Updat
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver.clients import project_service as storage
+from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.lock.structures import LockedObject, LockEventData
 from arcor2_arserver_data.rpc.lock import UpdateType
@@ -139,7 +140,7 @@ class Lock:
             if not yielded:
                 raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
 
-    async def read_lock(self, obj_ids: Union[Iterable[str], str], owner: str) -> bool:
+    async def read_lock(self, obj_ids: ObjIds, owner: str) -> bool:
         """Lock object ids by owner if all checks pass. No object is locked
         otherwise.
 
@@ -147,9 +148,7 @@ class Lock:
         :param owner: lock owner name
         """
 
-        if isinstance(obj_ids, str):
-            obj_ids = [obj_ids]
-
+        obj_ids = obj_ids_to_list(obj_ids)
         roots = [await self.get_root_id(obj_id) for obj_id in obj_ids]
 
         async with self._lock:
@@ -162,27 +161,22 @@ class Lock:
 
         locked = []
         for i, obj_id in enumerate(obj_ids):
-            lock_record = self._get_lock_record(roots[i])
-            acquired = lock_record.read_lock(obj_id, owner)
 
-            if acquired:
+            if self._get_lock_record(roots[i]).read_lock(obj_id, owner):
                 locked.append(obj_id)
             else:
                 self._read_unlock(roots, locked, owner)
                 return False
         return True
 
-    async def read_unlock(self, obj_ids: Union[Iterable[str], str], owner: str) -> None:
+    async def read_unlock(self, obj_ids: ObjIds, owner: str) -> None:
         """Check real lock owner and delete records from lock database.
 
         :param obj_ids: object identifiers to be unlocked
         :param owner: lock owner name
         """
 
-        if isinstance(obj_ids, str):
-            obj_ids = [obj_ids]
-        else:
-            obj_ids = list(obj_ids)
+        obj_ids = obj_ids_to_list(obj_ids)
 
         roots = [await self.get_root_id(obj_id) for obj_id in obj_ids]
 
@@ -195,19 +189,15 @@ class Lock:
         assert self._lock.locked()
 
         for i, obj_id in enumerate(obj_ids):
-            lock_record = self._get_lock_record(roots[i])
             try:
-                lock_record.read_unlock(obj_id, owner)
-
+                self._get_lock_record(roots[i]).read_unlock(obj_id, owner)
             except LockingException:
                 self._read_unlock(roots[i + 1 :], obj_ids[i + 1 :], owner)
                 raise
             finally:
                 self._check_and_clean_root(roots[i])
 
-    async def write_lock(
-        self, obj_ids: Union[Iterable[str], str], owner: str, lock_tree: bool = False, notify: bool = False
-    ) -> bool:
+    async def write_lock(self, obj_ids: ObjIds, owner: str, lock_tree: bool = False, notify: bool = False) -> bool:
         """Lock object or list of objects for writing, possible to lock whole
         tree where object(s) is located.
 
@@ -220,9 +210,7 @@ class Lock:
 
         assert isinstance(obj_ids, str) and lock_tree or not lock_tree
 
-        if isinstance(obj_ids, str):
-            obj_ids = [obj_ids]
-
+        obj_ids = obj_ids_to_list(obj_ids)
         roots = [await self.get_root_id(obj_id) for obj_id in obj_ids]
 
         async with self._lock:
@@ -243,19 +231,17 @@ class Lock:
 
         assert self._lock.locked()
 
-        locked = []
+        locked: List[str] = []
         for i, obj_id in enumerate(obj_ids):
-            lock_record = self._get_lock_record(roots[i])
-            acquired = lock_record.write_lock(obj_id, owner, lock_tree)
 
-            if acquired:
+            if self._get_lock_record(roots[i]).write_lock(obj_id, owner, lock_tree):
                 locked.append(obj_id)
             else:
                 self._write_unlock(roots, locked, owner)
                 return False
         return True
 
-    async def write_unlock(self, obj_ids: Union[Iterable[str], str], owner: str, notify: bool = False) -> None:
+    async def write_unlock(self, obj_ids: ObjIds, owner: str, notify: bool = False) -> None:
         """Check object lock real owner and remove it from lock database.
 
         :param obj_ids: object identifiers to be locked
@@ -263,10 +249,7 @@ class Lock:
         :param notify: if set, send-out notification about unlocked objects
         """
 
-        if isinstance(obj_ids, str):
-            obj_ids = [obj_ids]
-        else:
-            obj_ids = list(obj_ids)
+        obj_ids = obj_ids_to_list(obj_ids)
 
         roots = [await self.get_root_id(obj_id) for obj_id in obj_ids]
 
@@ -322,22 +305,21 @@ class Lock:
 
         assert self._lock.locked()
 
-        lock_record = self._locked_objects.get(root_id)
-        if not lock_record:
-            return False
+        if lock_record := self._locked_objects.get(root_id):
 
-        if obj_id in lock_record.write and owner == lock_record.write[obj_id]:
-            if check_tree_locked:
-                return lock_record.tree
-            return True
+            if obj_id in lock_record.write and owner == lock_record.write[obj_id]:
+                if check_tree_locked:
+                    return lock_record.tree
+                return True
 
-        if lock_record.tree:
-            write_locks = lock_record.write.values()
+            if lock_record.tree:
+                write_locks = lock_record.write.values()
 
-            # When tree is locked, always 1 write lock occurs
-            assert len(write_locks) == 1
+                # When tree is locked, always 1 write lock occurs
+                assert len(write_locks) == 1
 
-            return owner == next(iter(write_locks))
+                return owner == next(iter(write_locks))
+
         return False
 
     async def is_read_locked(self, obj_id: str, owner: str) -> bool:
@@ -357,11 +339,9 @@ class Lock:
 
         assert self._lock.locked()
 
-        lock_record = self._locked_objects.get(root_id)
-        if not lock_record:
-            return False
-
-        return obj_id in lock_record.read and owner in lock_record.read[obj_id]
+        if lock_record := self._locked_objects.get(root_id):
+            return obj_id in lock_record.read and owner in lock_record.read[obj_id]
+        return False
 
     async def get_locked_roots_count(self) -> int:
         """Count and return number of total locked roots."""
@@ -613,18 +593,18 @@ class Lock:
         children.add(obj_id)
 
         async with self._lock:
-            lock_record = self._locked_objects.get(root_id)
-            if not lock_record:
-                return False
+            if lock_record := self._locked_objects.get(root_id):
 
-            if lock_record.tree and owner != next(iter(lock_record.write.values())):
-                return False
+                if lock_record.tree and owner != next(iter(lock_record.write.values())):
+                    return False
 
-            if not check_children(root_id, children.intersection(lock_record.write)):
-                return False
-            if not check_children(root_id, children.intersection(lock_record.read), True):
-                return False
-            return True
+                if not check_children(root_id, children.intersection(lock_record.write)):
+                    return False
+                if not check_children(root_id, children.intersection(lock_record.read), True):
+                    return False
+                return True
+
+            return False
 
     def get_by_id(
         self, obj_id: str
@@ -703,14 +683,12 @@ class Lock:
         children.add(root_id)
 
         async with self._lock:
-            lock_record = self._locked_objects.get(root_id)
-            if not lock_record:
-                return
+            if lock_record := self._locked_objects.get(root_id):
 
-            for lock in children.intersection(lock_record.write):
-                if owner != lock_record.write[lock]:
-                    raise CannotLock(self.ErrMessages.SOMETHING_LOCKED_IN_TREE.value)
+                for lock in children.intersection(lock_record.write):
+                    if owner != lock_record.write[lock]:
+                        raise CannotLock(self.ErrMessages.SOMETHING_LOCKED_IN_TREE.value)
 
-            for lock in children.intersection(lock_record.read):
-                if len(lock_record.read[lock]) > 1 or owner not in lock_record.read[lock]:
-                    raise CannotLock(self.ErrMessages.SOMETHING_LOCKED_IN_TREE.value)
+                for lock in children.intersection(lock_record.read):
+                    if len(lock_record.read[lock]) > 1 or owner not in lock_record.read[lock]:
+                        raise CannotLock(self.ErrMessages.SOMETHING_LOCKED_IN_TREE.value)

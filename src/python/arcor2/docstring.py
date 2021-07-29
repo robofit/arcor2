@@ -49,8 +49,7 @@ def trim(docstring: str) -> str:
     # Determine minimum indentation (first line doesn't count):
     indent = sys.maxsize
     for line in lines[1:]:
-        stripped = line.lstrip()
-        if stripped:
+        if stripped := line.lstrip():
             indent = min(indent, len(line) - len(stripped))
     # Remove indentation (first line is special):
     trimmed = [lines[0].strip()]
@@ -95,8 +94,7 @@ def parse_docstring(docstring: Optional[str]) -> Docstring:
 
         params_returns_desc = None
 
-        match = PARAM_OR_RETURNS_REGEX.search(doc.long_description)
-        if match:
+        if match := PARAM_OR_RETURNS_REGEX.search(doc.long_description):
             long_desc_end = match.start()
             params_returns_desc = doc.long_description[long_desc_end:].strip()
             doc.long_description = doc.long_description[:long_desc_end].rstrip()
@@ -104,8 +102,7 @@ def parse_docstring(docstring: Optional[str]) -> Docstring:
         if params_returns_desc:
             doc.params = {name: trim(doc).strip() for name, doc in PARAM_REGEX.findall(params_returns_desc)}
 
-            match = RETURNS_REGEX.search(params_returns_desc)
-            if match:
+            if match := RETURNS_REGEX.search(params_returns_desc):
                 doc.returns = reindent(match.group("doc"))
 
     return doc

@@ -24,10 +24,9 @@ warnings.filterwarnings(
 
 def package_version(package: str, file: str = "VERSION") -> str:
 
-    res = pkgutil.get_data(package, file)
-    if not res:
-        return "unknown"
-    return res.decode().strip()
+    if res := pkgutil.get_data(package, file):
+        return res.decode().strip()
+    return "unknown"
 
 
 def version() -> str:
