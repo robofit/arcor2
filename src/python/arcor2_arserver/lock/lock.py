@@ -132,7 +132,7 @@ class Lock:
                     await asyncio.sleep(self._retry_wait)
         finally:
             if i > self._lock_retries * 0.25:
-                from arcor2_arserver.globals import logger
+                from arcor2_arserver.globals import logger  # TODO make a locking logger?
 
                 logger.warn(f"Retry took {i * self._lock_timeout}")
 
@@ -490,13 +490,16 @@ class Lock:
 
         async with self._lock:
             read, write = self._get_owner_locks(owner)
+
+            if read or write:
+                from arcor2_arserver.globals import logger  # TODO make a locking logger?
+
+                logger.warn(f"{len(read)+len(write)} lock(s) of {owner} were just discarded.")
+
             self._read_unlock(list(read), list(read.values()), owner)
             self._write_unlock(list(write), list(write.values()), owner)
 
-        to_notify = self._ui_user_locks[owner].copy()
-        del self._ui_user_locks[owner]
-
-        if to_notify:
+        if to_notify := self._ui_user_locks.pop(owner):
             self.notifications_q.put_nowait(LockEventData(to_notify, owner))
 
     async def get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:

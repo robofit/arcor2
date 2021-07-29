@@ -98,8 +98,6 @@ async def object_aiming_start_cb(req: srpc.o.ObjectAimingStart.Request, ui: WsCl
         f"{user_name} just started aiming of {scene_obj.name} using {scene.object(req.args.robot.robot_id).name}."
     )
 
-    asyncio.create_task(object_aiming_prune())
-
 
 class AimingTuple(NamedTuple):
     obj: AimedObject
@@ -109,19 +107,14 @@ class AimingTuple(NamedTuple):
 async def object_aiming_prune() -> None:
     """Deletes records for users that already lost their locks.
 
-    :param user_name:
     :return:
     """
 
     to_delete: List[str] = []
-    active_user_names = glob.USERS.user_names
 
+    # users in db but not holding a lock for the object should be deleted
     for un, fo in _objects_being_aimed.items():
 
-        if un in active_user_names:  # those users are certainly active, can be skipped here
-            continue
-
-        # those users are not active at the moment but might still hold a lock for object
         if not await glob.LOCK.is_write_locked(fo.obj_id, un):
             glob.logger.info(f"Object aiming cancelled for {un}.")
             to_delete.append(un)
