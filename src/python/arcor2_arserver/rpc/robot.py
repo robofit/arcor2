@@ -16,6 +16,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import run_in_executor
 from arcor2.object_types.abstract import Camera, MultiArmRobot, Robot
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import robot
 from arcor2_arserver.helpers import ctx_read_lock, ctx_write_lock, ensure_write_locked
@@ -43,7 +44,7 @@ EVENT_PERIOD = 0.1
 
 async def robot_joints_event(robot_inst: Robot) -> None:
 
-    glob.logger.info(f"Sending joints for {robot_inst.name} started.")
+    logger.info(f"Sending joints for {robot_inst.name} started.")
     while scene_started() and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_inst.id]:
 
         start = time.monotonic()
@@ -53,7 +54,7 @@ async def robot_joints_event(robot_inst: Robot) -> None:
                 sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None)))
             )
         except Arcor2Exception as e:
-            glob.logger.error(f"Failed to get joints for {robot_inst.name}. {str(e)}")
+            logger.error(f"Failed to get joints for {robot_inst.name}. {str(e)}")
             break
 
         evt_json = evt.to_json()
@@ -69,7 +70,7 @@ async def robot_joints_event(robot_inst: Robot) -> None:
     # TODO notify UIs that registration was cancelled
     glob.ROBOT_JOINTS_REGISTERED_UIS.pop(robot_inst.id, None)
 
-    glob.logger.info(f"Sending joints for {robot_inst.name} stopped.")
+    logger.info(f"Sending joints for {robot_inst.name} stopped.")
 
 
 async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None) -> sevts.r.RobotEef.Data.EefPose:
@@ -90,10 +91,10 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
         except robot.SingleArmRobotException:
             eefs = {None: await robot.get_end_effectors(robot_inst, None)}
     except Arcor2Exception as e:
-        glob.logger.error(f"Failed to start sending poses for {robot_inst.name}. {str(e)}")
+        logger.error(f"Failed to start sending poses for {robot_inst.name}. {str(e)}")
     else:
 
-        glob.logger.info(f"Sending poses for {robot_inst.name} started. Arms/EEFs: {eefs}.")
+        logger.info(f"Sending poses for {robot_inst.name} started. Arms/EEFs: {eefs}.")
 
         while scene_started() and glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]:
 
@@ -106,7 +107,7 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
                     *[eef_pose(robot_inst, eef_id, arm_id) for arm_id in eefs.keys() for eef_id in eefs[arm_id]]
                 )
             except Arcor2Exception as e:
-                glob.logger.error(f"Failed to get eef pose for {robot_inst.name}. {str(e)}")
+                logger.error(f"Failed to get eef pose for {robot_inst.name}. {str(e)}")
                 break
 
             evt_json = evt.to_json()
@@ -122,7 +123,7 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
     # TODO notify UIs that registration was cancelled
     glob.ROBOT_EEF_REGISTERED_UIS.pop(robot_inst.id, None)
 
-    glob.logger.info(f"Sending poses for {robot_inst.name} stopped.")
+    logger.info(f"Sending poses for {robot_inst.name} stopped.")
 
 
 async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: WsClient) -> srpc.r.GetRobotMeta.Response:
@@ -473,7 +474,7 @@ async def calibrate_robot(
             await notif.broadcast_event(
                 ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Failed, str(e)))
             )
-            glob.logger.exception("Failed to calibrate the robot.")
+            logger.exception("Failed to calibrate the robot.")
             return
 
         await update_scene_object_pose(scene, scene.object(robot_inst.id), new_pose, robot_inst)

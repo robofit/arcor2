@@ -17,6 +17,7 @@ from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.parameter_plugins.pose import PosePlugin
 from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.clients import project_service as storage
@@ -167,7 +168,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
                         )
                     )
                 except ParameterPluginException as e:
-                    glob.logger.error(e)
+                    logger.error(e)
                     raise Arcor2Exception(f"Failed to get value for parameter {param.name}.")
 
         obj = get_instance(obj_id, Generic)
@@ -185,7 +186,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
         glob.RUNNING_ACTION = action.id
         glob.RUNNING_ACTION_PARAMS = params
 
-        glob.logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
+        logger.debug(f"Running action {action.name} ({type(obj)}/{action_name}), params: {params}.")
 
         # schedule execution and return success
         asyncio.ensure_future(project.execute_action(getattr(obj, action_name), params))
@@ -246,7 +247,7 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     for res in await asyncio.gather(*tasks, return_exceptions=True):
 
         if isinstance(res, Arcor2Exception):
-            glob.logger.error(str(res))
+            logger.error(str(res))
         elif isinstance(res, Exception):
             raise res  # zero toleration for other exceptions
         else:
@@ -804,7 +805,7 @@ async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None
 
         start = time.monotonic()
         proj.modified = await storage.update_project(proj)
-        glob.logger.info(f"Updating the project took {time.monotonic()-start:.3f}s.")
+        logger.info(f"Updating the project took {time.monotonic()-start:.3f}s.")
 
     asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
     return None
@@ -1050,7 +1051,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
                 try:
                     param.value = json.dumps(old_ori_to_new_ori[old_ori_id])
                 except KeyError:
-                    glob.logger.error(f"Failed to find a new orientation ID for {old_ori_id}.")
+                    logger.error(f"Failed to find a new orientation ID for {old_ori_id}.")
 
             action_added_evt = sevts.p.ActionChanged(new_act)
             action_added_evt.change_type = Event.Type.ADD

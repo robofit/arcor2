@@ -15,6 +15,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import GenericWithPose, Robot
 from arcor2.source.utils import tree_to_str
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.clients import project_service as storage
@@ -94,7 +95,7 @@ async def object_aiming_start_cb(req: srpc.o.ObjectAimingStart.Request, ui: WsCl
         return
 
     _objects_being_aimed[user_name] = AimedObject(req.args.object_id, req.args.robot)
-    glob.logger.info(
+    logger.info(
         f"{user_name} just started aiming of {scene_obj.name} using {scene.object(req.args.robot.robot_id).name}."
     )
 
@@ -116,7 +117,7 @@ async def object_aiming_prune() -> None:
     for un, fo in _objects_being_aimed.items():
 
         if not await glob.LOCK.is_write_locked(fo.obj_id, un):
-            glob.logger.info(f"Object aiming cancelled for {un}.")
+            logger.info(f"Object aiming cancelled for {un}.")
             to_delete.append(un)
 
     for td in to_delete:
@@ -160,7 +161,7 @@ async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: Ws
     _objects_being_aimed.pop(user_name, None)
     await glob.LOCK.write_unlock([fo.obj_id, fo.robot.robot_id], user_name, True)
     if glob.LOCK.scene:
-        glob.logger.info(f"Aiming for {glob.LOCK.scene.object(fo.obj_id).name} cancelled by {user_name}.")
+        logger.info(f"Aiming for {glob.LOCK.scene.object(fo.obj_id).name} cancelled by {user_name}.")
 
 
 async def object_aiming_add_point_cb(
@@ -195,7 +196,7 @@ async def object_aiming_add_point_cb(
     if not req.dry_run:
         fo.poses[pt_idx] = await get_end_effector_pose(robot_inst, end_effector, arm_id)
         r.data = r.Data(finished_indexes=list(fo.poses.keys()))
-        glob.logger.info(
+        logger.info(
             f"{user_name} just aimed index {pt_idx} for {scene_obj.name}. Done indexes: {r.data.finished_indexes}."
         )
 
@@ -245,15 +246,15 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
 
     mfa = MeshFocusAction(fp, rp)
 
-    glob.logger.debug(f"Attempt to aim object {obj_inst.name}, data: {mfa}")
+    logger.debug(f"Attempt to aim object {obj_inst.name}, data: {mfa}")
 
     try:
         new_pose = await scene_srv.focus(mfa)  # TODO how long does it take?
     except scene_srv.SceneServiceException as e:
-        glob.logger.error(f"Aiming failed with: {e}, mfa: {mfa}.")
+        logger.error(f"Aiming failed with: {e}, mfa: {mfa}.")
         raise Arcor2Exception(f"Aiming failed. {str(e)}") from e
 
-    glob.logger.info(f"Done aiming for {obj_inst.name}.")
+    logger.info(f"Done aiming for {obj_inst.name}.")
 
     await glob.LOCK.write_unlock(fo.robot.robot_id, user_name, True)
     asyncio.create_task(update_scene_object_pose(scene, obj, new_pose, obj_inst, user_name))
@@ -381,7 +382,7 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
             try:
                 await storage.delete_model(obj_type.meta.object_model.model().id)
             except storage.ProjectServiceException as e:
-                glob.logger.error(str(e))
+                logger.error(str(e))
 
         del glob.OBJECT_TYPES[req.args.id]
         await remove_object_type(req.args.id)

@@ -3,6 +3,7 @@ import asyncio
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver.lock.structures import LockEventData
 from arcor2_arserver.rpc.objects import object_aiming_prune
 from arcor2_arserver_data import rpc as srpc
@@ -11,7 +12,7 @@ from arcor2_arserver_data import rpc as srpc
 async def register_user_cb(req: srpc.u.RegisterUser.Request, ui: WsClient) -> None:
 
     await glob.USERS.login(req.args.user_name, ui)
-    glob.logger.debug(f"User {req.args.user_name} just logged in. Known user names are: {glob.USERS.user_names}")
+    logger.debug(f"User {req.args.user_name} just logged in. Known user names are: {glob.USERS.user_names}")
 
     await glob.LOCK.cancel_auto_release(req.args.user_name)
 

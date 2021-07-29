@@ -9,6 +9,7 @@ from arcor2.helpers import run_in_executor
 from arcor2.image import image_to_str
 from arcor2.object_types.abstract import Camera
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.helpers import ensure_write_locked
 from arcor2_arserver.scene import ensure_scene_started, get_instance, update_scene_object_pose
@@ -59,7 +60,7 @@ async def calibrate_camera(scene: UpdateableCachedScene, camera: Camera) -> None
         await notif.broadcast_event(
             ProcessState(ProcessState.Data(CAMERA_CALIB, ProcessState.Data.StateEnum.Failed, str(e)))
         )
-        glob.logger.exception("Failed to calibrate the camera.")
+        logger.exception("Failed to calibrate the camera.")
         return
 
     await update_scene_object_pose(scene, scene.object(camera.id), estimated_pose.pose, camera)
