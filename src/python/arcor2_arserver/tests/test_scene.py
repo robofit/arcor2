@@ -1,6 +1,12 @@
+import time
+
+from arcor2.data.common import Pose, Position
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import IdArgs
-from arcor2_arserver.tests.conftest import ars_connection_str, event, event_mapping
+from arcor2.object_types.upload import upload_def
+from arcor2.test_objects.box import Box
+from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
+from arcor2_arserver.tests.conftest import ars_connection_str, event, event_mapping, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
@@ -98,3 +104,91 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     list_of_scenes_2 = ars.call_rpc(rpc.s.ListScenes.Request(get_id()), rpc.s.ListScenes.Response)
     assert list_of_scenes_2.result
     assert not list_of_scenes_2.data
+
+
+def test_update_object_pose(start_processes: None, ars: ARServer) -> None:
+
+    upload_def(Box)
+    upload_def(DummyMultiArmRobot)
+
+    test = "test"
+
+    event(ars, events.c.ShowMainScreen)
+
+    time.sleep(1)  # otherwise ARServer might not notice new ObjectTypes
+
+    assert ars.call_rpc(
+        rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args(test)), rpc.s.NewScene.Response
+    ).result
+
+    assert len(event(ars, events.o.ChangedObjectTypes).data) == 2
+
+    event(ars, events.s.OpenScene)
+    event(ars, events.s.SceneState)
+
+    assert ars.call_rpc(
+        rpc.s.AddObjectToScene.Request(get_id(), rpc.s.AddObjectToScene.Request.Args("obj", Box.__name__, Pose())),
+        rpc.s.AddObjectToScene.Response,
+    ).result
+
+    scene_obj = event(ars, events.s.SceneObjectChanged).data
+
+    assert ars.call_rpc(
+        rpc.s.AddObjectToScene.Request(
+            get_id(), rpc.s.AddObjectToScene.Request.Args("robot", DummyMultiArmRobot.__name__, Pose())
+        ),
+        rpc.s.AddObjectToScene.Response,
+    ).result
+
+    scene_robot = event(ars, events.s.SceneObjectChanged).data
+
+    new_pose = Pose(Position(1))
+
+    lock_object(ars, scene_obj.id)
+
+    assert ars.call_rpc(
+        rpc.s.UpdateObjectPose.Request(get_id(), rpc.s.UpdateObjectPose.Request.Args(scene_obj.id, new_pose)),
+        rpc.s.UpdateObjectPose.Response,
+    ).result
+
+    assert event(ars, events.s.SceneObjectChanged).data.pose == new_pose
+    unlock_object(ars, scene_obj.id)
+
+    lock_object(ars, scene_robot.id)
+
+    assert ars.call_rpc(
+        rpc.s.UpdateObjectPose.Request(get_id(), rpc.s.UpdateObjectPose.Request.Args(scene_robot.id, new_pose)),
+        rpc.s.UpdateObjectPose.Response,
+    ).result
+
+    assert event(ars, events.s.SceneObjectChanged).data.pose == new_pose
+    unlock_object(ars, scene_robot.id)
+
+    assert ars.call_rpc(
+        rpc.s.StartScene.Request(get_id()),
+        rpc.s.StartScene.Response,
+    ).result
+
+    assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Starting
+    assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Started
+
+    lock_object(ars, scene_obj.id)
+
+    # with started scene, it should still be possible to manipulate the object
+    assert ars.call_rpc(
+        rpc.s.UpdateObjectPose.Request(get_id(), rpc.s.UpdateObjectPose.Request.Args(scene_obj.id, Pose())),
+        rpc.s.UpdateObjectPose.Response,
+    ).result
+
+    assert event(ars, events.s.SceneObjectChanged).data.pose == Pose()
+    unlock_object(ars, scene_obj.id)
+
+    lock_object(ars, scene_robot.id)
+
+    # ...but it should not be possible to manipulate the robot
+    assert not ars.call_rpc(
+        rpc.s.UpdateObjectPose.Request(get_id(), rpc.s.UpdateObjectPose.Request.Args(scene_robot.id, Pose())),
+        rpc.s.UpdateObjectPose.Response,
+    ).result
+
+    unlock_object(ars, scene_robot.id)
