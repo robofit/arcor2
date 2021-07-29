@@ -430,11 +430,13 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
 
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
 
-    try:
-        if scene_started() and get_robot_instance(req.args.object_id):
+    if scene_started():
+        try:
+            get_robot_instance(req.args.object_id)
+        except Arcor2Exception:
+            pass  # ok, it should not be a robot
+        else:
             raise Arcor2Exception("Robot's pose can be only updated offline.")
-    except Arcor2Exception:
-        pass
 
     obj = scene.object(req.args.object_id)
 
