@@ -311,12 +311,10 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
 
 async def get_summary(path: str) -> PackageSummary:
 
-    sum = await get_opt_summary(path)
+    if summary := await get_opt_summary(path):
+        return summary
 
-    if not sum:
-        raise Arcor2Exception("Invalid package.")
-
-    return sum
+    raise Arcor2Exception("Invalid package.")
 
 
 async def get_opt_summary(path: str) -> Optional[PackageSummary]:

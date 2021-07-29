@@ -134,8 +134,7 @@ def _feature(type_def: Type[Robot], method_name: str, base_class: Type[Robot]) -
         return False
 
     sign = inspect.signature(getattr(where_it_is_defined.type_def, method_name))
-    res = inspect.signature(getattr(base_class, method_name)) == sign
-    if not res:
+    if not (res := inspect.signature(getattr(base_class, method_name)) == sign):
         glob.logger.debug(f"{type_def.__name__}/{method_name} has invalid signature.")
     return res
 
@@ -171,9 +170,8 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
         obj_type.type_def, Robot.set_hand_teaching_mode.__name__, base_class
     )
 
-    urdf_name = obj_type.type_def.urdf_package_name
+    if urdf_name := obj_type.type_def.urdf_package_name:
 
-    if urdf_name:
         if urdf_name not in await ps.files_ids():
             glob.logger.error(f"URDF package {urdf_name} for {obj_type.meta.type} does not exist.")
         else:

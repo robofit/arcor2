@@ -54,15 +54,13 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
     evt = ActionResult(ActionResult.Data(glob.RUNNING_ACTION))
 
     try:
-        action_result = await hlp.run_in_executor(action_method, *params)
+        if action_result := await hlp.run_in_executor(action_method, *params) is not None:
+            glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
     except Arcor2Exception as e:
         glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
         glob.logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
     else:
-        if action_result is not None:
-            glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
-
         try:
             evt.data.results = results_to_json(action_result)
         except Arcor2Exception:
@@ -325,9 +323,7 @@ def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
     scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
     problems: List[str] = []
 
-    unknown_types = {obj.type for obj in scene.objects} - glob.OBJECT_TYPES.keys()
-
-    if unknown_types:
+    if unknown_types := {obj.type for obj in scene.objects} - glob.OBJECT_TYPES.keys():
         return [f"Scene invalid, contains unknown types: {unknown_types}."]
 
     possible_parents = scene.object_ids | project.action_points_ids

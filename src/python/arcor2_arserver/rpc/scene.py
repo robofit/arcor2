@@ -511,9 +511,8 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Opti
     user_name = glob.USERS.user_name(ui)
 
     async with ctx_write_lock(req.args.id, user_name, auto_unlock=req.dry_run):
-        assoc_projects = await associated_projects(req.args.id)
 
-        if assoc_projects:
+        if assoc_projects := await associated_projects(req.args.id):
             resp = srpc.s.DeleteScene.Response(result=False)
             resp.messages = ["Scene has associated projects."]
             resp.data = assoc_projects

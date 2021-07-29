@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, List, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
+from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
 from arcor2_arserver.lock.exceptions import CannotUnlock, LockingException
 
 
 class LockEventData:
     __slots__ = "obj_ids", "owner", "lock", "client"
 
-    def __init__(
-        self, obj_ids: Union[Iterable[str], str], owner: str, lock: bool = False, client: Optional[WsClient] = None
-    ):
-        if isinstance(obj_ids, str):
-            self.obj_ids = [obj_ids]
-        else:
-            self.obj_ids = list(obj_ids)
+    def __init__(self, obj_ids: ObjIds, owner: str, lock: bool = False, client: Optional[WsClient] = None):
+        self.obj_ids = obj_ids_to_list(obj_ids)
         self.owner = owner
         self.lock = lock
         self.client = client
@@ -36,14 +32,10 @@ class LockedObject:
     def read_lock(self, obj_id: str, owner: str) -> bool:
         """Perform all necessary check if object can be locked and locks it."""
 
-        if self.tree:
+        if self.tree or obj_id in self.write:
             return False
 
-        if obj_id in self.write:
-            return False
-
-        already_locked = obj_id in self.read
-        if already_locked:
+        if obj_id in self.read:  # already locked
             self.read[obj_id].append(owner)
         else:
             self.read[obj_id] = [owner]
