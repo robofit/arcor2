@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.19.0
+    image: arcor2/arcor2_arserver:0.20.0
     container_name: arserver
     depends_on:
       - project
@@ -41,7 +41,7 @@ services:
     networks:           
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.16.0
+    image: arcor2/arcor2_execution:0.17.0
     container_name: execution
     networks:
       - testitoff-execution-network
@@ -140,6 +140,18 @@ services:
       - "27017"
     networks:
       - testitoff-project-network
+
+  nginx:
+    image: nginx:latest
+    container_name: "nginx"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "6790:80"
+    networks:
+      - testitoff-project-network
+    depends_on:
+      - project
 
 volumes:
   mongodb:

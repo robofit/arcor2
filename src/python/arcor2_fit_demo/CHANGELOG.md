@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.6.1] - 2021-07-29
+
+## Changed
+
+- Default values for url fields of object parameters.
+- Added docstrings to some actions.
+- Added mesh for KinectAzure.
+
 ## [0.6.0] - 2021-05-21
 
 ## Changed
