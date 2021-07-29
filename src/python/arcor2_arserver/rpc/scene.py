@@ -16,6 +16,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.image import image_from_str
 from arcor2.object_types.abstract import Generic
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import (
@@ -307,7 +308,7 @@ async def action_param_values_cb(
         try:
             method = getattr(inst, method_name)
         except AttributeError:
-            glob.logger.error(
+            logger.error(
                 f"Unable to get values for parameter {req.args.param_id}, "
                 f"object/service {inst.id} has no method named {method_name}."
             )
@@ -585,7 +586,7 @@ async def get_camera_pose_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) ->
     except calibration.MarkerNotFound:  # this is ok
         raise
     except calibration.CalibrationException as e:  # this means a serious problem and should be logged
-        glob.logger.warn(f"Failed to get camera pose. {str(e)}")
+        logger.warn(f"Failed to get camera pose. {str(e)}")
         raise
 
 

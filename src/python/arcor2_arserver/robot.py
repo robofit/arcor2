@@ -8,6 +8,7 @@ from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import MultiArmRobot, Robot
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver.clients import project_service as ps
@@ -120,7 +121,7 @@ def _feature(type_def: Type[Robot], method_name: str, base_class: Type[Robot]) -
             f"Origin {where_it_is_defined.meta.type} for {type_def.__name__}/{method_name} is disabled."
         )
 
-    glob.logger.debug(
+    logger.debug(
         f"Processing {type_def.__name__}/{method_name} "
         f"(defined in {where_it_is_defined.type_def.__name__}), with base class {base_class.__name__}."
     )
@@ -130,12 +131,12 @@ def _feature(type_def: Type[Robot], method_name: str, base_class: Type[Robot]) -
         return False
 
     if not function_implemented(where_it_is_defined.ast, method_name):
-        glob.logger.debug(f"{type_def.__name__}/{method_name} not implemented.")
+        logger.debug(f"{type_def.__name__}/{method_name} not implemented.")
         return False
 
     sign = inspect.signature(getattr(where_it_is_defined.type_def, method_name))
     if not (res := inspect.signature(getattr(base_class, method_name)) == sign):
-        glob.logger.debug(f"{type_def.__name__}/{method_name} has invalid signature.")
+        logger.debug(f"{type_def.__name__}/{method_name} has invalid signature.")
     return res
 
 
@@ -173,12 +174,12 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
     if urdf_name := obj_type.type_def.urdf_package_name:
 
         if urdf_name not in await ps.files_ids():
-            glob.logger.error(f"URDF package {urdf_name} for {obj_type.meta.type} does not exist.")
+            logger.error(f"URDF package {urdf_name} for {obj_type.meta.type} does not exist.")
         else:
             obj_type.robot_meta.urdf_package_filename = urdf_name
             # TODO check if URDF is valid?
 
-    glob.logger.debug(obj_type.robot_meta)
+    logger.debug(obj_type.robot_meta)
 
 
 async def stop(robot_inst: Robot) -> None:
@@ -252,7 +253,7 @@ async def _move_to_pose(
             robot_inst.move_to_pose, *prepare_args(robot_inst, [end_effector_id, pose, speed, safe], arm_id)
         )
     except Arcor2Exception as e:
-        glob.logger.error(f"Robot movement failed with: {str(e)}")
+        logger.error(f"Robot movement failed with: {str(e)}")
         raise
 
 
@@ -341,7 +342,7 @@ async def _move_to_joints(
     try:
         await hlp.run_in_executor(robot_inst.move_to_joints, *prepare_args(robot_inst, [joints, speed, safe], arm_id))
     except Arcor2Exception as e:
-        glob.logger.error(f"Robot movement failed with: {str(e)}")
+        logger.error(f"Robot movement failed with: {str(e)}")
         raise
 
 

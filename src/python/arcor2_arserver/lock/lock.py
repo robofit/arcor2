@@ -7,6 +7,7 @@ from typing import AsyncGenerator, Dict, Iterable, List, Optional, Set, Tuple, U
 from arcor2.cached import CachedProjectException, UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
+from arcor2_arserver import logger
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
@@ -133,8 +134,6 @@ class Lock:
                     await asyncio.sleep(self._retry_wait)
         finally:
             if i > self._lock_retries * 0.25:
-                from arcor2_arserver.globals import logger  # TODO make a locking logger?
-
                 logger.warn(f"Retry took {i * self._lock_timeout}")
 
             if not yielded:
@@ -472,8 +471,6 @@ class Lock:
             read, write = self._get_owner_locks(owner)
 
             if read or write:
-                from arcor2_arserver.globals import logger  # TODO make a locking logger?
-
                 logger.warn(f"{len(read)+len(write)} lock(s) of {owner} were just discarded.")
 
             self._read_unlock(list(read), list(read.values()), owner)

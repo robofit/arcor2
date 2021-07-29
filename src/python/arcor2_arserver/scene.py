@@ -11,6 +11,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import ctx_write_lock
@@ -187,7 +188,7 @@ async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dr
         return None
 
     scene.upsert_object(obj)
-    glob.logger.debug(f"Object {obj.id} ({obj.type}) added to scene.")
+    logger.debug(f"Object {obj.id} ({obj.type}) added to scene.")
 
 
 async def create_object_instance(obj: SceneObject, overrides: Optional[List[Parameter]] = None) -> None:
@@ -196,7 +197,7 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
     # settings -> dataclass
     assert obj_type.type_def
-    glob.logger.debug(
+    logger.debug(
         f"Creating instance of {obj_type.type_def.__name__} with name {obj.name}. "
         f"Parameters: {obj.parameters}, overrides: {overrides}."
     )
@@ -300,14 +301,14 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
         try:
             await scene_srv.stop()
         except Arcor2Exception as e:
-            glob.logger.exception("Failed to go offline.")
+            logger.exception("Failed to go offline.")
             await set_scene_state(SceneState.Data.StateEnum.Started, str(e))
             return
 
         try:
             await asyncio.gather(*[cleanup_object(obj) for obj in glob.SCENE_OBJECT_INSTANCES.values()])
         except Arcor2Exception as e:
-            glob.logger.exception("Exception occurred while cleaning up objects.")
+            logger.exception("Exception occurred while cleaning up objects.")
             await set_scene_state(SceneState.Data.StateEnum.Stopped, str(e))
         else:
             await set_scene_state(SceneState.Data.StateEnum.Stopped)
@@ -317,7 +318,7 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
 
     if already_locked:
 
-        glob.logger.info(f"Stopping the {scene.name} scene after unsuccessful start.")
+        logger.info(f"Stopping the {scene.name} scene after unsuccessful start.")
 
         assert await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME)
         assert (glob.LOCK.project is not None) == await glob.LOCK.is_write_locked(
@@ -327,7 +328,7 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
         await _stop_scene()
     else:
 
-        glob.logger.info(f"Stopping the {scene.name} scene.")
+        logger.info(f"Stopping the {scene.name} scene.")
 
         assert not await glob.LOCK.is_write_locked(
             glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME
@@ -348,13 +349,13 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
             async with ctx_write_lock(to_lock, glob.LOCK.SpecialValues.SERVER_NAME):
                 await _stop_scene()
         except Arcor2Exception as e:
-            glob.logger.error(f"Failed to stop the scene. {str(e)}")
+            logger.error(f"Failed to stop the scene. {str(e)}")
             return
 
     assert not scene_started()
     assert not await scene_srv.started()
 
-    glob.logger.info("Scene stopped.")
+    logger.info("Scene stopped.")
 
 
 async def start_scene(scene: CachedScene) -> None:
@@ -362,7 +363,7 @@ async def start_scene(scene: CachedScene) -> None:
 
     async def _start_scene() -> bool:
 
-        glob.logger.info(f"Starting the {scene.name} scene.")
+        logger.info(f"Starting the {scene.name} scene.")
 
         await set_scene_state(SceneState.Data.StateEnum.Starting)
 
@@ -371,7 +372,7 @@ async def start_scene(scene: CachedScene) -> None:
             # stop deletes all configurations and clears all collisions
             await scene_srv.stop()
         except Arcor2Exception:
-            glob.logger.exception("Failed to prepare for start.")
+            logger.exception("Failed to prepare for start.")
             await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
             return False
 
@@ -393,14 +394,14 @@ async def start_scene(scene: CachedScene) -> None:
         except Arcor2Exception as e:
             for t in tasks:
                 t.cancel()  # TODO maybe it would be better to let them finish?
-            glob.logger.exception("Failed to create instances.")
+            logger.exception("Failed to create instances.")
             await stop_scene(scene, str(e), already_locked=True)
             return False
 
         try:
             await scene_srv.start()
         except Arcor2Exception as e:
-            glob.logger.exception("Failed to go online.")
+            logger.exception("Failed to go online.")
             await stop_scene(scene, str(e), already_locked=True)
             return False
 
@@ -416,10 +417,10 @@ async def start_scene(scene: CachedScene) -> None:
         async with ctx_write_lock(to_lock, glob.LOCK.SpecialValues.SERVER_NAME):
             ret = await _start_scene()
     except Arcor2Exception as e:
-        glob.logger.error(f"Failed to start the scene. {str(e)}")
+        logger.error(f"Failed to start the scene. {str(e)}")
 
     assert ret == scene_started()
     assert ret == await scene_srv.started()
 
     if ret:
-        glob.logger.info("Scene started. Enjoy!")
+        logger.info("Scene started. Enjoy!")

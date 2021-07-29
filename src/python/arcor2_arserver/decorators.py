@@ -2,7 +2,7 @@ import functools
 from asyncio import sleep
 from typing import Any, Callable, Coroutine, Type, TypeVar, cast
 
-from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver.lock.exceptions import LockingException
 
 F = TypeVar("F", bound=Callable[..., Coroutine[Any, Any, Any]])
@@ -25,12 +25,12 @@ def retry(exc: Type[Exception] = LockingException, tries: int = 1, delay: float 
             try:
                 ret = await coro(*args, **kwargs)
                 if _tries < tries * 0.75:
-                    glob.logger.warn(f"Retry timeout took {(tries - _tries) * delay}")
+                    logger.warn(f"Retry timeout took {(tries - _tries) * delay}")
                 return ret
             except exc:
                 _tries -= 1
                 if _tries == 0:
-                    glob.logger.warn("Retry raised")
+                    logger.warn("Retry raised")
                     raise
 
                 if delay > 0:

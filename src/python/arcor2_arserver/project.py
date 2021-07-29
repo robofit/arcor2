@@ -9,6 +9,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.objects_actions import get_types_dict
@@ -57,14 +58,14 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
         if action_result := await hlp.run_in_executor(action_method, *params) is not None:
             glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
     except Arcor2Exception as e:
-        glob.logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
-        glob.logger.debug(str(e), exc_info=True)
+        logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
+        logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
     else:
         try:
             evt.data.results = results_to_json(action_result)
         except Arcor2Exception:
-            glob.logger.error(f"Method {action_method.__name__} returned unsupported type of result: {action_result}.")
+            logger.error(f"Method {action_method.__name__} returned unsupported type of result: {action_result}.")
 
     if glob.RUNNING_ACTION is None:
         # action was cancelled, do not send any event
@@ -237,7 +238,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
         await storage.update_project(project)
         updated_project_ids.add(project.id)
 
-    glob.logger.info("Updated projects: {}".format(updated_project_ids))
+    logger.info("Updated projects: {}".format(updated_project_ids))
 
 
 async def projects(scene_id: str) -> AsyncIterator[UpdateableCachedProject]:
@@ -305,7 +306,7 @@ async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> N
             if ap.parent != obj.id:
                 continue
 
-            glob.logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
+            logger.debug(f"Invalidating joints for {project.name}/{ap.name}.")
             project.invalidate_joints(ap.id)
 
         await storage.update_project(project)

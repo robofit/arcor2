@@ -28,7 +28,7 @@ from arcor2.parameter_plugins.utils import known_parameter_types
 from arcor2_arserver import events as server_events
 from arcor2_arserver import execution as exe
 from arcor2_arserver import globals as glob
-from arcor2_arserver import models
+from arcor2_arserver import logger, models
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
@@ -70,7 +70,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 try:
                     evt = event_mapping[msg["event"]].from_dict(msg)
                 except ValidationError as e:
-                    glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
+                    logger.error("Invalid event: {}, error: {}".format(msg, e))
                     continue
 
                 if isinstance(evt, events.PackageInfo):
@@ -115,7 +115,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 exe.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
     except websockets.exceptions.ConnectionClosed:
-        glob.logger.error("Connection to manager closed.")
+        logger.error("Connection to manager closed.")
 
 
 async def _initialize_server() -> None:
@@ -141,24 +141,24 @@ async def _initialize_server() -> None:
             await storage.initialize_module()
             break
         except storage.ProjectServiceException as e:
-            glob.logger.error(f"Failed to communicate with Project service. {str(e)}")
+            logger.error(f"Failed to communicate with Project service. {str(e)}")
             await asyncio.sleep(1)
 
     while True:
         try:
             if await scene_srv.started():
-                glob.logger.warn("Scene already started, attempting to stop it...")
+                logger.warn("Scene already started, attempting to stop it...")
             await scene_srv.stop()  # if not started, call it anyway, it should be instant
             break
         except scene_srv.SceneServiceException as e:
-            glob.logger.error(f"Failed to communicate with the Scene service. {str(e)}")
+            logger.error(f"Failed to communicate with the Scene service. {str(e)}")
             await asyncio.sleep(1)
 
     await osa.get_object_types()
 
     bound_handler = functools.partial(
         ws_server.server,
-        logger=glob.logger,
+        logger=logger,
         register=register,
         unregister=unregister,
         rpc_dict=RPC_DICT,
@@ -166,9 +166,7 @@ async def _initialize_server() -> None:
         verbose=glob.VERBOSE,
     )
 
-    glob.logger.info(
-        f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized."
-    )
+    logger.info(f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized.")
     await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
     asyncio.create_task(run_lock_notification_worker())
 
@@ -179,7 +177,7 @@ async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_r
 
 async def register(websocket: WsClient) -> None:
 
-    glob.logger.info("Registering new ui")
+    logger.info("Registering new ui")
     glob.USERS.add_interface(websocket)
 
     if glob.LOCK.project:
@@ -210,14 +208,14 @@ async def unregister(websocket: WsClient) -> None:
     try:
         user_name = glob.USERS.user_name(websocket)
     except Arcor2Exception:
-        glob.logger.info("Unregistering ui")
+        logger.info("Unregistering ui")
     else:
         await glob.LOCK.schedule_auto_release(user_name)
-        glob.logger.info(f"Unregistering ui {user_name}")
+        logger.info(f"Unregistering ui {user_name}")
 
     glob.USERS.logout(websocket)
 
-    glob.logger.debug(f"Known user names: {glob.USERS.user_names}")
+    logger.debug(f"Known user names: {glob.USERS.user_names}")
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
         if websocket in registered_uis:
@@ -321,7 +319,7 @@ def main() -> None:
         print_openapi_models()
         return
 
-    glob.logger.level = args.debug
+    logger.level = args.debug
     glob.VERBOSE = args.verbose
 
     loop = asyncio.get_event_loop()

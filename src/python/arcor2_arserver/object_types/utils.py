@@ -18,8 +18,7 @@ from arcor2.object_types.utils import built_in_types, get_settings_def, iterate_
 from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import SourceException, find_function, parse_def
-from arcor2_arserver import globals as glob
-from arcor2_arserver import settings
+from arcor2_arserver import logger, settings
 from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeDict
 from arcor2_arserver_data.objects import ObjectAction, ObjectTypeMeta
 
@@ -31,7 +30,7 @@ class ObjectTypeException(Arcor2Exception):
 async def remove_object_type(obj_type_id: str) -> None:
 
     path = os.path.join(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE, f"{humps.depascalize(obj_type_id)}.py")
-    glob.logger.debug(f"Deleting {path}.")
+    logger.debug(f"Deleting {path}.")
 
     try:
         await hlp.run_in_executor(os.remove, path, propagate=[FileNotFoundError])
@@ -227,7 +226,7 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
         except Arcor2Exception as e:
             data.disabled = True
             data.problem = str(e)
-            glob.logger.warn(f"Disabling action {method_name} of  {type_def.__name__}. {str(e)}")
+            logger.warn(f"Disabling action {method_name} of  {type_def.__name__}. {str(e)}")
 
         ret[data.name] = data
 

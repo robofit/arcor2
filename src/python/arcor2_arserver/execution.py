@@ -15,6 +15,7 @@ from arcor2.data.rpc import get_id
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import events as server_events
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.scene import scene_started, start_scene, stop_scene
@@ -54,11 +55,11 @@ async def run_temp_package(package_id: str) -> None:
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
-        glob.logger.warning(f"Execution of temporary package failed with: {exe_resp.messages}.")
+        logger.warning(f"Execution of temporary package failed with: {exe_resp.messages}.")
     else:
         await server_events.package_started.wait()
         await server_events.package_stopped.wait()
-        glob.logger.info("Temporary package stopped, let's remove it and reopen project.")
+        logger.info("Temporary package stopped, let's remove it and reopen project.")
 
     glob.TEMPORARY_PACKAGE = False
 
@@ -130,13 +131,13 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
 
     while True:
 
-        glob.logger.info("Attempting connection to manager...")
+        logger.info("Attempting connection to manager...")
 
         try:
 
             async with websockets.connect(EXE_URL) as manager_client:  # type: ignore  # TODO not sure what is wrong
 
-                glob.logger.info("Connected to manager.")
+                logger.info("Connected to manager.")
 
                 future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
 
@@ -156,5 +157,5 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
                         await MANAGER_RPC_REQUEST_QUEUE.put(msg)
                         break
         except ConnectionRefusedError as e:
-            glob.logger.error(e)
+            logger.error(e)
             await asyncio.sleep(delay=1.0)
