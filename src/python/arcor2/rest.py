@@ -82,7 +82,7 @@ OptTimeout = Optional[Timeout]
 
 # module-level variables
 debug = env.get_bool("ARCOR2_REST_DEBUG", False)
-headers = {"accept": "application/json", "content-type": "application/json"}
+headers = {"accept": "application/json", "content-type": "application/json; charset=utf-8"}
 session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
 
@@ -273,7 +273,9 @@ def call(
         if files:
             resp = method.value(url, files=files, timeout=timeout, params=params)
         else:
-            resp = method.value(url, data=json.dumps(d), timeout=timeout, headers=headers, params=params)
+            resp = method.value(
+                url, data=json.dumps(d).encode("utf-8"), timeout=timeout, headers=headers, params=params
+            )
     except requests.exceptions.RequestException as e:
         logger.debug("Request failed.", exc_info=True)
         # TODO would be good to provide more meaningful message but the original one could be very very long
