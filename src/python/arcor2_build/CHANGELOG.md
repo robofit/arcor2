@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.19.0] - 2021-07-30
+
+### Changed
+- Depending on `arcor2==0.20.0`.
+
+### Fixed
+
+- Package import failed in cases where files contained non-ascii characters.
+  - The problem was in `arcor2.rest` module which was not encoding data properly.
+- Scene/project `overWrite` flags were required all the time.
+
 ## [0.18.0] - 2021-07-29
 
 ### Changed

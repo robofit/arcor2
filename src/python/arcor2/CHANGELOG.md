@@ -2,6 +2,20 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.20.0] - WIP
+
+### Changed
+
+- Object hierarchy modified.
+  - `GenericWithPose` now can't have a collision model.
+  - A new `CollisionObject` must have collision model.
+- Scene/Project clients now log underlying error messages.
+
+### Fixed
+
+- `rest` module now encodes body data as utf-8. 
+
+
 ## [0.19.0] - 2021-07-29
 
 ### Changed

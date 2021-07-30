@@ -4,18 +4,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.2.3] - 2021-05-21
 
-## Fixed
+### Fixed
  - EEF orientation.
  - State controller paths.
 
 ## [0.2.2] - 2021-03-17
 
-## Fixed
+### Fixed
  - Suction offset for M1 adjusted
 
 ## [0.2.1] - 2021-03-15
 
-## Fixed
+### Fixed
  - Dobot axis Z is in mm
  - Added fixed offset for suction
 
