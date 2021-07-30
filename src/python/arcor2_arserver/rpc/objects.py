@@ -256,6 +256,7 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
 
     logger.info(f"Done aiming for {obj_inst.name}.")
 
+    _objects_being_aimed.pop(user_name, None)
     await glob.LOCK.write_unlock(fo.robot.robot_id, user_name, True)
     asyncio.create_task(update_scene_object_pose(scene, obj, new_pose, obj_inst, user_name))
     return None
