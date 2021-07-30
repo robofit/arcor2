@@ -30,7 +30,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:0.17.0
+    image: arcor2/arcor2_build:0.18.0
     container_name: build
     depends_on:
       - project
@@ -65,7 +65,7 @@ services:
       - ARCOR2_KINECT_SIMULATOR=true
 
   calibration:
-    image: arcor2/arcor2_calibration:0.6.0
+    image: arcor2/arcor2_calibration:0.6.1
     networks:
       - testitoff-calibration-network
     ports:
@@ -107,7 +107,7 @@ services:
       - ARCOR2_DOBOT_SIMULATOR=true
 
   mocks:
-    image: arcor2/arcor2_mocks:0.15.0
+    image: arcor2/arcor2_mocks:0.16.0
     container_name: mocks
     networks:
           - testitoff-robot-network
