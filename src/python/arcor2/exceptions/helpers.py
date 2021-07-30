@@ -1,4 +1,5 @@
 import functools
+import logging
 from typing import Any, Callable, Optional, Type, TypeVar, cast
 
 from arcor2.exceptions import Arcor2Exception
@@ -8,6 +9,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 def handle(
     raise_type: Type[Arcor2Exception],
+    logger: logging.Logger,
     except_type: Type[Arcor2Exception] = Arcor2Exception,
     message: Optional[str] = None,
 ) -> Callable[[F], F]:
@@ -19,8 +21,10 @@ def handle(
                 return func(*args, **kwargs)
             except except_type as e:
                 if message is not None:
+                    logger.error(f"{message} {str(e)}")
                     raise raise_type(message) from e
                 else:
+                    logger.error(str(e))
                     raise raise_type(str(e)) from e
 
         return cast(F, wrapper)
