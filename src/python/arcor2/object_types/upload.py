@@ -6,7 +6,7 @@ from typing import List, NamedTuple, Optional, Type
 from arcor2.clients import project_service as ps
 from arcor2.data.object_type import Mesh, Models, ObjectType
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
+from arcor2.object_types.abstract import CollisionObject, Generic, Robot
 from arcor2.object_types.utils import check_object_type, get_containing_module_sources
 
 
@@ -42,14 +42,8 @@ def upload_def(
     :return:
     """
 
-    if not issubclass(type_def, GenericWithPose) and model:
-        raise UploadException("Object without pose can't have collision model.")
-
     if not issubclass(type_def, Robot) and urdf:
-        raise UploadException("Parameter urdf set for non-Robot.")
-
-    if issubclass(type_def, Robot) and model:
-        raise UploadException("Parameter 'model' should not be set for robots.")
+        raise UploadException("Parameter 'urdf' set for non-Robot.")
 
     try:
         check_object_type(type_def)
@@ -60,7 +54,9 @@ def upload_def(
         id=type_def.__name__, source=get_containing_module_sources(type_def), description=type_def.description()
     )
 
-    if issubclass(type_def, GenericWithPose) and model:
+    if issubclass(type_def, CollisionObject):
+        if not model:
+            raise UploadException("Parameter 'model' must be set for CollisionObject.")
 
         if model.id != obj_type.id:
             raise UploadException("Model id have to be the same as ObjectType id.")
@@ -82,6 +78,10 @@ def upload_def(
                 raise UploadException(f"Failed to read mesh file. {str(e)}")
 
         ps.put_model(model)
+
+    else:
+        if model:
+            raise UploadException("Parameter 'model' set for non-CollisionObject.")
 
     print(f"Storing '{obj_type.id}'...")
     ps.update_object_type(obj_type)

@@ -2,6 +2,7 @@ import time
 
 from arcor2.data.common import Pose, Position
 from arcor2.data.events import Event
+from arcor2.data.object_type import Box as BoxModel
 from arcor2.data.rpc.common import IdArgs
 from arcor2.object_types.upload import upload_def
 from arcor2.test_objects.box import Box
@@ -108,7 +109,7 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
 
 def test_update_object_pose(start_processes: None, ars: ARServer) -> None:
 
-    upload_def(Box)
+    upload_def(Box, BoxModel("Box", 0.1, 0.1, 0.1))
     upload_def(DummyMultiArmRobot)
 
     test = "test"

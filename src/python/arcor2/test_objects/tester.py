@@ -2,10 +2,10 @@ import time
 from typing import List, Optional
 
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import GenericWithPose
+from arcor2.object_types.abstract import CollisionObject
 
 
-class Tester(GenericWithPose):
+class Tester(CollisionObject):
     """A generic tester."""
 
     _ABSTRACT = False

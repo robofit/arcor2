@@ -1,10 +1,10 @@
 from typing import Optional
 
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import GenericWithPose
+from arcor2.object_types.abstract import CollisionObject
 
 
-class Box(GenericWithPose):
+class Box(CollisionObject):
 
     _ABSTRACT = False
 

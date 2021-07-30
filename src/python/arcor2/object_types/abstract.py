@@ -1,5 +1,4 @@
 import abc
-import copy
 import inspect
 from dataclasses import dataclass
 from typing import List, Optional, Set
@@ -10,7 +9,7 @@ from PIL import Image
 from arcor2 import CancelDict, DynamicParamDict
 from arcor2.clients import scene_service
 from arcor2.data.camera import CameraParameters
-from arcor2.data.common import Joint, Pose, SceneObject
+from arcor2.data.common import ActionMetadata, Joint, Pose, SceneObject
 from arcor2.data.object_type import Models
 from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
@@ -78,27 +77,16 @@ class Generic(metaclass=abc.ABCMeta):
 
 
 class GenericWithPose(Generic):
-
-    mesh_filename: Optional[str] = None
-
     def __init__(
         self,
         obj_id: str,
         name: str,
         pose: Pose,
-        collision_model: Optional[Models] = None,
         settings: Optional[Settings] = None,
     ) -> None:
 
         super(GenericWithPose, self).__init__(obj_id, name, settings)
-
         self._pose = pose
-        self.collision_model = copy.deepcopy(collision_model)
-        self._enabled = True
-        if self.collision_model:
-            # originally, each model has id == object type (e.g. BigBox) but here we need to set it to something unique
-            self.collision_model.id = self.id
-            scene_service.upsert_collision(self.collision_model, pose)
 
     def scene_object(self) -> SceneObject:
         return SceneObject(self.name, self.__class__.__name__, self._pose, id=self.id)
@@ -115,7 +103,50 @@ class GenericWithPose(Generic):
     @pose.setter
     def pose(self, pose: Pose) -> None:
         self._pose = pose
-        if self.collision_model and self._enabled:
+
+    def update_pose(self, new_pose: Pose, *, an: Optional[str] = None) -> None:
+        """Enables control over object's pose in the world.
+
+        :param new_pose: New pose for the object.
+        :return:
+        """
+
+        self.pose = new_pose
+
+    update_pose.__action__ = ActionMetadata()  # type: ignore
+
+
+class CollisionObject(GenericWithPose):
+
+    # name of the file that should be uploaded to the Project service together with this ObjectType
+    mesh_filename: Optional[str] = None
+
+    def __init__(
+        self,
+        obj_id: str,
+        name: str,
+        pose: Pose,
+        collision_model: Models,
+        settings: Optional[Settings] = None,
+    ) -> None:
+
+        super().__init__(obj_id, name, pose, settings)
+
+        self.collision_model = collision_model
+        self._enabled = True
+
+        # originally, each model has id == object type (e.g. BigBox) but here we need to set it to something unique
+        self.collision_model.id = self.id
+        scene_service.upsert_collision(self.collision_model, pose)
+
+    @property  # workaround for https://github.com/python/mypy/issues/5936
+    def pose(self) -> Pose:
+        return super().pose
+
+    @pose.setter
+    def pose(self, pose: Pose) -> None:
+        self._pose = pose  # TODO how to set it through super() correctly?
+        if self._enabled:
             scene_service.upsert_collision(self.collision_model, pose)
 
     @property
@@ -127,20 +158,28 @@ class GenericWithPose(Generic):
         :return:
         """
 
-        if self.collision_model:
-            assert self.id in scene_service.collision_ids() == self._enabled
+        assert self.id in scene_service.collision_ids() == self._enabled
         return self._enabled
 
     @enabled.setter
     def enabled(self, enabled: bool) -> None:
 
-        if self.collision_model:
-            if not self._enabled and enabled:
-                assert self.id not in scene_service.collision_ids()
-                scene_service.upsert_collision(self.collision_model, self.pose)
-            if self._enabled and not enabled:
-                scene_service.delete_collision_id(self.id)
+        if not self._enabled and enabled:
+            assert self.id not in scene_service.collision_ids()
+            scene_service.upsert_collision(self.collision_model, self.pose)
+        if self._enabled and not enabled:
+            scene_service.delete_collision_id(self.id)
         self._enabled = enabled
+
+    def set_enabled(self, state: bool, *, an: Optional[str] = None) -> None:
+        """Enables control of the object's collision model.
+
+        :param state: State of a collision model.
+        :return:
+        """
+        self.enabled = state
+
+    set_enabled.__action__ = ActionMetadata()  # type: ignore
 
 
 class RobotException(Arcor2Exception):
@@ -151,7 +190,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     """Abstract class representing robot and its basic capabilities (motion)"""
 
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
-        super(Robot, self).__init__(obj_id, name, pose, None, settings)
+        super(Robot, self).__init__(obj_id, name, pose, settings)
         self._move_lock = NonBlockingLock()
 
     robot_type = RobotType.ARTICULATED
@@ -389,7 +428,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         raise Arcor2NotImplemented()
 
 
-class Camera(GenericWithPose, metaclass=abc.ABCMeta):
+class Camera(CollisionObject, metaclass=abc.ABCMeta):
     """Abstract class representing camera and its basic capabilities."""
 
     def __init__(
@@ -397,7 +436,7 @@ class Camera(GenericWithPose, metaclass=abc.ABCMeta):
         obj_id: str,
         name: str,
         pose: Pose,
-        collision_model: Optional[Models] = None,
+        collision_model: Models,
         settings: Optional[Settings] = None,
     ) -> None:
         super(Camera, self).__init__(obj_id, name, pose, collision_model, settings)

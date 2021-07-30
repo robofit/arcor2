@@ -3,12 +3,13 @@ import time
 from arcor2_calibration_data import client as calib_client
 
 from arcor2.data.common import Pose
+from arcor2.data.object_type import Box
 from arcor2_fit_demo.object_types.kinect_azure import KinectAzure, UrlSettings
 
 
 def main() -> None:
 
-    kinect = KinectAzure("", "", Pose(), settings=UrlSettings("http://localhost:5016"))
+    kinect = KinectAzure("", "", Pose(), Box("", 0.1, 0.1, 0.1), UrlSettings("http://localhost:5016"))
     # print(kinect.color_camera_params)
     assert kinect.color_camera_params
     ci_start = time.monotonic()
