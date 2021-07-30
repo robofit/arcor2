@@ -501,7 +501,9 @@ def project_import() -> RespT:
             pass
         else:
 
-            ps_scene.modified = scene.modified  # modified is updated with each PUT
+            # do not take created / modified into account
+            ps_scene.created = scene.created = None
+            ps_scene.modified = scene.modified = None
 
             if ps_scene != scene:
                 raise FlaskException("Scene difference detected. Overwrite needed.", error_code=402)
@@ -514,7 +516,9 @@ def project_import() -> RespT:
             pass
         else:
 
-            ps_project.modified = project.modified
+            # do not take created / modified into account
+            ps_project.created = project.created = None
+            ps_project.modified = project.modified = None
 
             if ps_project != project:
                 raise FlaskException("Project difference detected. Overwrite needed.", error_code=402)
