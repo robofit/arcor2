@@ -8,7 +8,7 @@ from arcor2.data.common import Parameter, Pose, SceneObject
 from arcor2.data.events import Event
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
+from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
@@ -209,12 +209,13 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
         try:
 
+            # the order must be from specific to the generic types
             if issubclass(obj_type.type_def, Robot):
                 assert obj.pose is not None
                 glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
                     obj_type.type_def, obj.id, obj.name, obj.pose, settings
                 )
-            elif issubclass(obj_type.type_def, GenericWithPose):
+            elif issubclass(obj_type.type_def, CollisionObject):
                 assert obj.pose is not None
                 coll_model: Optional[Models] = None
                 if obj_type.meta.object_model:
@@ -223,7 +224,12 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
                 glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
                     obj_type.type_def, obj.id, obj.name, obj.pose, coll_model, settings
                 )
+            elif issubclass(obj_type.type_def, GenericWithPose):
+                assert obj.pose is not None
 
+                glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(
+                    obj_type.type_def, obj.id, obj.name, obj.pose, settings
+                )
             elif issubclass(obj_type.type_def, Generic):
                 assert obj.pose is None
                 glob.SCENE_OBJECT_INSTANCES[obj.id] = await hlp.run_in_executor(

@@ -12,7 +12,7 @@ from arcor2.data.common import Parameter, Pose, Position, SceneObject
 from arcor2.data.object_type import Mesh, Model3dType
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import GenericWithPose, Robot
+from arcor2.object_types.abstract import CollisionObject, GenericWithPose, Robot
 from arcor2.source.utils import tree_to_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
@@ -231,7 +231,7 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     obj = scene.object(fo.obj_id)
     assert obj.pose
 
-    obj_inst = get_instance(fo.obj_id, GenericWithPose)
+    obj_inst = get_instance(fo.obj_id, CollisionObject)
 
     if req.dry_run:
         return
@@ -289,8 +289,12 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
 
         meta.has_pose = issubclass(base.type_def, GenericWithPose)
 
-        if not meta.has_pose and meta.object_model:
-            raise Arcor2Exception("Object without pose can't have collision model.")
+        if issubclass(base.type_def, CollisionObject):
+            if not meta.object_model:
+                raise Arcor2Exception("Objects based on CollisionObject must have collision model.")
+        else:
+            if meta.object_model:
+                raise Arcor2Exception("Only objects based on CollisionObject can have collision model.")
 
         if req.dry_run:
             return None

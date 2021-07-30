@@ -2,7 +2,7 @@ import pytest
 
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box, Cylinder, Mesh, Model3dType, ObjectModel, Sphere
-from arcor2.object_types.abstract import GenericWithPose
+from arcor2.object_types.abstract import CollisionObject
 from arcor2_arserver.tests.conftest import event, project_service
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, get_id
@@ -36,7 +36,7 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
 
     assert ars.call_rpc(
         rpc.o.NewObjectType.Request(
-            get_id(), objects.ObjectTypeMeta(type_name, base=GenericWithPose.__name__, object_model=model)
+            get_id(), objects.ObjectTypeMeta(type_name, base=CollisionObject.__name__, object_model=model)
         ),
         rpc.o.NewObjectType.Response,
     ).result
@@ -46,7 +46,7 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
     assert len(evt.data) == 1
     assert evt.data[0].has_pose
     assert evt.data[0].type == type_name
-    assert evt.data[0].base == GenericWithPose.__name__
+    assert evt.data[0].base == CollisionObject.__name__
     assert evt.data[0].object_model == model
 
     project_service.get_model(model.model().id, model.type)

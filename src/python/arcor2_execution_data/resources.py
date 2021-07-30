@@ -16,7 +16,7 @@ from arcor2.data.common import Project, Scene
 from arcor2.data.events import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic, GenericWithPose, Robot
+from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2_execution_data import package
@@ -80,12 +80,14 @@ class IntResources:
 
                 if issubclass(cls, Robot):
                     futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
-                elif issubclass(cls, GenericWithPose):
+                elif issubclass(cls, CollisionObject):
                     futures.append(
                         executor.submit(
                             cls, scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
                         )
                     )
+                elif issubclass(cls, GenericWithPose):
+                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
                 elif issubclass(cls, Generic):
                     futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, settings))
                 else:

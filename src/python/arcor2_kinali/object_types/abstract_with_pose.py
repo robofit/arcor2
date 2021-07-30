@@ -1,9 +1,8 @@
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import cast
 
 from arcor2 import rest
 from arcor2.data.common import Pose
-from arcor2.data.object_type import Models
 from arcor2.object_types.abstract import GenericWithPose
 from arcor2.object_types.abstract import Settings as BaseSettings
 
@@ -23,10 +22,9 @@ class AbstractWithPose(GenericWithPose):
         obj_id: str,
         name: str,
         pose: Pose,
-        collision_model: Optional[Models] = None,
-        settings: Optional[Settings] = None,
+        settings: Settings,
     ) -> None:
-        super(AbstractWithPose, self).__init__(obj_id, name, pose, collision_model, settings)
+        super(AbstractWithPose, self).__init__(obj_id, name, pose, settings)
         rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/system/set",

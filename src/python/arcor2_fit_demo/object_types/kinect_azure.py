@@ -22,8 +22,8 @@ class KinectAzure(FitCommonMixin, Camera):
         obj_id: str,
         name: str,
         pose: Pose,
-        collision_model: Optional[Models] = None,
-        settings: Optional[UrlSettings] = None,
+        collision_model: Models,
+        settings: UrlSettings,
     ) -> None:
 
         super(KinectAzure, self).__init__(obj_id, name, pose, collision_model, settings)

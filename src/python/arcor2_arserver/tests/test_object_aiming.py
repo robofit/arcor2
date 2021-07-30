@@ -1,3 +1,4 @@
+import tempfile
 import time
 
 from arcor2.data.common import Pose
@@ -6,26 +7,19 @@ from arcor2.data.rpc.common import RobotArg
 from arcor2.object_types.upload import upload_def
 from arcor2.test_objects.box import Box
 from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
-from arcor2_arserver.tests.conftest import event, lock_object, project_service
+from arcor2_arserver.tests.conftest import event, lock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_object_aiming(start_processes: None, ars: ARServer) -> None:
 
-    upload_def(Box)
-
-    # assign mesh to some existing object
-    ot = project_service.get_object_type(Box.__name__)
-
-    project_service.upload_file("mesh.dae", b"")
-
-    mesh = Mesh(ot.id, "mesh.dae", [Pose(), Pose(), Pose()])
+    mesh = Mesh(Box.__name__, "mesh.dae", [Pose(), Pose(), Pose()])
     assert mesh.focus_points
-    project_service.put_model(mesh)
+    Box.mesh_filename = mesh.data_id
 
-    ot.model = mesh.metamodel()
-    project_service.update_object_type(ot)
+    with tempfile.NamedTemporaryFile("wb") as file:
+        upload_def(Box, model=mesh, file_to_upload=file.name)
 
     upload_def(DummyMultiArmRobot)
 
