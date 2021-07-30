@@ -7,7 +7,7 @@ from arcor2.data.rpc.common import RobotArg
 from arcor2.object_types.upload import upload_def
 from arcor2.test_objects.box import Box
 from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
-from arcor2_arserver.tests.conftest import event, lock_object
+from arcor2_arserver.tests.conftest import event, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
@@ -90,7 +90,8 @@ def test_object_aiming(start_processes: None, ars: ARServer) -> None:
         rpc.o.ObjectAimingCancel.Response,
     ).result
 
-    assert set(event(ars, events.lk.ObjectsUnlocked).data.object_ids) == {scene_robot.id, scene_obj.id}
+    unlock_object(ars, scene_obj.id)
+    unlock_object(ars, scene_robot.id)
 
     # ------------------------------------------------------------------------------------------------------------------
 
@@ -129,6 +130,7 @@ def test_object_aiming(start_processes: None, ars: ARServer) -> None:
         rpc.o.ObjectAimingDone.Response,
     ).result
 
-    assert event(ars, events.lk.ObjectsUnlocked).data.object_ids == [scene_robot.id]
     assert event(ars, events.s.SceneObjectChanged).data.id == scene_obj.id
-    assert event(ars, events.lk.ObjectsUnlocked).data.object_ids == [scene_obj.id]
+
+    unlock_object(ars, scene_obj.id)
+    unlock_object(ars, scene_robot.id)

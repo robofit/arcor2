@@ -147,7 +147,6 @@ async def object_aiming_check(ui: WsClient) -> AimingTuple:
 async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: WsClient) -> None:
     """Cancel aiming of the object.
 
-    Automatically unlocks the object and the robot.
     :param req:
     :param ui:
     :return:
@@ -159,7 +158,6 @@ async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: Ws
         return
 
     _objects_being_aimed.pop(user_name, None)
-    await glob.LOCK.write_unlock([fo.obj_id, fo.robot.robot_id], user_name, True)
     if glob.LOCK.scene:
         logger.info(f"Aiming for {glob.LOCK.scene.object(fo.obj_id).name} cancelled by {user_name}.")
 
@@ -206,7 +204,7 @@ async def object_aiming_add_point_cb(
 async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClient) -> None:
     """Calls scene service to get a new pose for the object.
 
-    In case of success, robot and object are automatically unlocked.
+    In case of success, robot and object are kept locked, unlocking is responsibility of ui.
     On failure, UI may do another attempt or call ObjectAimingCancel.
 
     :param req:
@@ -257,8 +255,7 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     logger.info(f"Done aiming for {obj_inst.name}.")
 
     _objects_being_aimed.pop(user_name, None)
-    await glob.LOCK.write_unlock(fo.robot.robot_id, user_name, True)
-    asyncio.create_task(update_scene_object_pose(scene, obj, new_pose, obj_inst, user_name))
+    asyncio.create_task(update_scene_object_pose(scene, obj, new_pose, obj_inst))
     return None
 
 
