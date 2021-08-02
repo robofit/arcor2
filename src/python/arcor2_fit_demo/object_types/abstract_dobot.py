@@ -65,10 +65,12 @@ class AbstractDobot(FitCommonMixin, Robot):
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
         return rest.call(rest.Method.GET, f"{self.settings.url}/eef/pose", return_type=Pose)
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
+    def move_to_pose(
+        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, linear: bool = True
+    ) -> None:
         if safe:
             raise DobotException("Dobot does not support safe moves.")
-        self.move(target_pose, MoveType.LINEAR, speed * 100)
+        self.move(target_pose, MoveType.LINEAR if linear else MoveType.JOINTS, speed * 100)
 
     def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
         if safe:

@@ -88,7 +88,13 @@ class DummyMultiArmRobot(MultiArmRobot):
         return self._get_from_dict(self.SUCTIONS, arm_id)
 
     def move_to_pose(
-        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self,
+        end_effector_id: str,
+        target_pose: Pose,
+        speed: float,
+        safe: bool = True,
+        linear: bool = True,
+        arm_id: Optional[str] = None,
     ) -> None:
         """Move given robot's end effector to the selected pose.
 

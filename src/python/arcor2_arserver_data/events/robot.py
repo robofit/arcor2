@@ -54,6 +54,7 @@ class RobotMoveToPose(Event):
         end_effector_id: str
         target_pose: common.Pose
         safe: bool
+        linear: bool
         message: Optional[str] = None
         arm_id: Optional[str] = None
 
@@ -85,6 +86,7 @@ class RobotMoveToActionPointOrientation(Event):
         end_effector_id: str
         orientation_id: str
         safe: bool
+        linear: bool
         message: Optional[str] = None
         arm_id: Optional[str] = None
 

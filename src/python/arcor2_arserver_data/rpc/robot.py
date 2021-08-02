@@ -164,6 +164,7 @@ class MoveToPose(RPC):
             position: Optional[Position]
             orientation: Optional[Orientation]
             safe: bool = True
+            linear: bool = False
             arm_id: Optional[str] = None
 
         args: Args
@@ -225,6 +226,7 @@ class MoveToActionPoint(RPC):
             orientation_id: Optional[str] = None
             joints_id: Optional[str] = None
             safe: bool = True
+            linear: bool = False
             arm_id: Optional[str] = None
 
         args: Args
@@ -327,6 +329,7 @@ class SetEefPerpendicularToWorld(RPC):
             end_effector_id: str
             safe: bool = True
             speed: float = 0.25
+            linear: bool = True
             arm_id: Optional[str] = None
 
         args: Args
@@ -369,6 +372,7 @@ class StepRobotEef(RPC):
             safe: bool = True
             pose: Optional[Pose] = None
             speed: float = 0.25
+            linear: bool = True
             arm_id: Optional[str] = None
 
             def __post_init__(self) -> None:

@@ -239,7 +239,9 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     def suctions(self) -> Set[str]:
         return set()
 
-    def move_to_pose(self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True) -> None:
+    def move_to_pose(
+        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, linear: bool = True
+    ) -> None:
         """Move given robot's end effector to the selected pose.
 
         :param end_effector_id:
@@ -362,7 +364,13 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
                 pass
 
     def move_to_pose(
-        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self,
+        end_effector_id: str,
+        target_pose: Pose,
+        speed: float,
+        safe: bool = True,
+        linear: bool = True,
+        arm_id: Optional[str] = None,
     ) -> None:
         """Move given robot's end effector to the selected pose.
 
