@@ -112,6 +112,7 @@ MODULE SERVER_RIGHT
         VAR jointtarget joints;
 
         joints:=CalcJointT(pose,tool,\WObj:=wobj);
+        jointsTarget := joints;
         RETURN reachable;
 
     ERROR
