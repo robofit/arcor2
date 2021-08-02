@@ -1053,7 +1053,13 @@ class YuMi(MultiArmRobot):
         return set()
 
     def move_to_pose(
-        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self,
+        end_effector_id: str,
+        target_pose: Pose,
+        speed: float,
+        safe: bool = True,
+        linear: bool = True,
+        arm_id: Optional[str] = None,
     ) -> None:
         """Move given robot's end effector to the selected pose.
 
@@ -1069,7 +1075,7 @@ class YuMi(MultiArmRobot):
         with self._move_lock:
 
             self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
-            self._arm_by_name(arm_id).goto_pose(tr.make_pose_rel(self.pose, target_pose), linear=False)
+            self._arm_by_name(arm_id).goto_pose(tr.make_pose_rel(self.pose, target_pose), linear)
 
     def move_to_joints(
         self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
@@ -1171,9 +1177,7 @@ class YuMi(MultiArmRobot):
 
     move_arm.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
-    def close_gripper(
-        self, arm: YumiArms, force: float = 20.0, width: float = 0.0, *, an: Optional[str] = None
-    ) -> None:
+    def close_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 0.0, *, an: Optional[str] = None) -> None:
         """Closes the gripper as close to as possible with maximum force.
 
         :param arm: Selected arm.
@@ -1182,14 +1186,14 @@ class YuMi(MultiArmRobot):
         :return:
         """
 
-        assert 0.0 <= force <= 20.0
-        assert 0.0 <= width <= 25.0
+        assert 0.0 <= force <= 1.0
+        assert 0.0 <= width <= 1.0
 
-        self._arm_by_name(arm).close_gripper(force, width)
+        self._arm_by_name(arm).close_gripper(force * MAX_GRIPPER_FORCE, width * MAX_GRIPPER_WIDTH)
 
     close_gripper.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
-    def open_gripper(self, arm: YumiArms, force: float = 20.0, width: float = 1.0, *, an: Optional[str] = None) -> None:
+    def open_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 1.0, *, an: Optional[str] = None) -> None:
         """Opens the gripper to the target width.
 
         :param arm: Selected arm.
@@ -1198,10 +1202,10 @@ class YuMi(MultiArmRobot):
         :return:
         """
 
-        assert 0.0 <= force <= 20.0
-        assert 0.0 <= width <= 25.0
+        assert 0.0 <= force <= 1.0
+        assert 0.0 <= width <= 1.0
 
-        self._arm_by_name(arm).open_gripper(force, width)
+        self._arm_by_name(arm).open_gripper(force * MAX_GRIPPER_FORCE, width * MAX_GRIPPER_WIDTH)
 
     open_gripper.__action__ = ActionMetadata(blocking=True)  # type: ignore
 

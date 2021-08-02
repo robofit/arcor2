@@ -318,6 +318,7 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
                 target_pose,
                 req.args.speed,
                 req.args.safe,
+                req.args.linear,
                 user_name,
             )
         )
@@ -385,6 +386,7 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
                     req.args.speed,
                     req.args.orientation_id,
                     req.args.safe,
+                    req.args.linear,
                 )
             )
 
@@ -590,7 +592,9 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
         return
 
     asyncio.ensure_future(
-        robot.move_to_pose(robot_inst, req.args.end_effector_id, req.args.arm_id, tp, req.args.speed, req.args.safe)
+        robot.move_to_pose(
+            robot_inst, req.args.end_effector_id, req.args.arm_id, tp, req.args.speed, req.args.safe, req.args.linear
+        )
     )
 
 
@@ -603,6 +607,7 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
 
     await check_feature(robot_inst, Robot.move_to_pose.__name__)
     await check_feature(robot_inst, Robot.inverse_kinematics.__name__)
+    await check_feature(robot_inst, Robot.forward_kinematics.__name__)
     await robot.check_robot_before_move(robot_inst)
 
     await ensure_write_locked(req.args.robot_id, glob.USERS.user_name(ui))
@@ -612,44 +617,53 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
 
     tp, current_joints = await robot.get_pose_and_joints(robot_inst, req.args.end_effector_id, req.args.arm_id)
 
-    target_joints: Optional[List[common.Joint]] = None
     target_joints_diff: float = 0.0
+    winning_idx: int = -1
+
+    poses: List[common.Pose] = [
+        common.Pose(
+            tp.position,
+            common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(z=z_rot),
+        )
+        for z_rot in np.linspace(-math.pi, math.pi, 360)
+    ]
 
     # select best (closest joint configuration) reachable pose
     tasks = [
         robot.ik(robot_inst, req.args.end_effector_id, req.args.arm_id, pose, current_joints, req.args.safe)
-        for pose in [
-            common.Pose(
-                tp.position,
-                common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(z=z_rot),
-            )
-            for z_rot in np.linspace(-math.pi, math.pi, 360)
-        ]
+        for pose in poses
     ]
 
-    for res in await asyncio.gather(*tasks, return_exceptions=True):
+    # order of results from gather corresponds to order of tasks
+    for idx, res in enumerate(await asyncio.gather(*tasks, return_exceptions=True)):
 
         if not isinstance(res, list):
             continue
 
-        if not target_joints:
-            target_joints = res
-            for f, b in zip(current_joints, target_joints):
-                assert f.name == b.name
-                target_joints_diff += (f.value - b.value) ** 2
-        else:
-            diff = 0.0
-            for f, b in zip(current_joints, res):
-                assert f.name == b.name
-                diff += (f.value - b.value) ** 2
+        diff = 0.0
 
-            if diff < target_joints_diff:
-                target_joints = res
-                target_joints_diff = diff
+        for f, b in zip(current_joints, res):
+            assert f.name == b.name
+            diff += (f.value - b.value) ** 2
 
-    if not target_joints:
+        if winning_idx < 0:
+            target_joints_diff = diff
+            winning_idx = idx
+        elif diff < target_joints_diff:
+            winning_idx = idx
+            target_joints_diff = diff
+
+    if winning_idx < 0:
         raise Arcor2Exception("Could not find reachable pose.")
 
     asyncio.ensure_future(
-        robot.move_to_joints(robot_inst, target_joints, req.args.speed, req.args.safe, req.args.arm_id)
+        robot.move_to_pose(
+            robot_inst,
+            req.args.end_effector_id,
+            req.args.arm_id,
+            poses[winning_idx],
+            req.args.speed,
+            req.args.safe,
+            req.args.linear,
+        )
     )

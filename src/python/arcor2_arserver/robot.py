@@ -244,13 +244,19 @@ async def check_robot_before_move(robot_inst: Robot) -> None:
 
 
 async def _move_to_pose(
-    robot_inst: Robot, end_effector_id: str, arm_id: Optional[str], pose: common.Pose, speed: float, safe: bool
+    robot_inst: Robot,
+    end_effector_id: str,
+    arm_id: Optional[str],
+    pose: common.Pose,
+    speed: float,
+    safe: bool,
+    linear: bool,
 ) -> None:
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
 
     try:
         await hlp.run_in_executor(
-            robot_inst.move_to_pose, *prepare_args(robot_inst, [end_effector_id, pose, speed, safe], arm_id)
+            robot_inst.move_to_pose, *prepare_args(robot_inst, [end_effector_id, pose, speed, safe, linear], arm_id)
         )
     except Arcor2Exception as e:
         logger.error(f"Robot movement failed with: {str(e)}")
@@ -264,6 +270,7 @@ async def move_to_pose(
     pose: common.Pose,
     speed: float,
     safe: bool,
+    linear: bool,
     lock_owner: Optional[str] = None,
 ) -> None:
 
@@ -272,24 +279,24 @@ async def move_to_pose(
 
         await notif.broadcast_event(
             sevts.r.RobotMoveToPose(
-                Data(Data.MoveEventType.START, robot_inst.id, end_effector_id, pose, safe, arm_id=arm_id)
+                Data(Data.MoveEventType.START, robot_inst.id, end_effector_id, pose, safe, linear, arm_id=arm_id)
             )
         )
 
         try:
-            await _move_to_pose(robot_inst, end_effector_id, arm_id, pose, speed, safe)
+            await _move_to_pose(robot_inst, end_effector_id, arm_id, pose, speed, safe, linear)
 
         except Arcor2Exception as e:
             await notif.broadcast_event(
                 sevts.r.RobotMoveToPose(
-                    Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, pose, safe, str(e), arm_id)
+                    Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, pose, safe, linear, str(e), arm_id)
                 )
             )
             return
 
         await notif.broadcast_event(
             sevts.r.RobotMoveToPose(
-                Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, pose, safe, arm_id=arm_id)
+                Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, pose, safe, linear, arm_id=arm_id)
             )
         )
     finally:
@@ -305,30 +312,31 @@ async def move_to_ap_orientation(
     speed: float,
     orientation_id: str,
     safe: bool,
+    linear: bool,
 ) -> None:
 
     Data = sevts.r.RobotMoveToActionPointOrientation.Data
 
     await notif.broadcast_event(
         sevts.r.RobotMoveToActionPointOrientation(
-            Data(Data.MoveEventType.START, robot_inst.id, end_effector_id, orientation_id, safe, arm_id=arm_id)
+            Data(Data.MoveEventType.START, robot_inst.id, end_effector_id, orientation_id, safe, linear, arm_id=arm_id)
         )
     )
 
     try:
-        await _move_to_pose(robot_inst, end_effector_id, arm_id, pose, speed, safe)
+        await _move_to_pose(robot_inst, end_effector_id, arm_id, pose, speed, safe, linear)
 
     except Arcor2Exception as e:
         await notif.broadcast_event(
             sevts.r.RobotMoveToActionPointOrientation(
-                Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, orientation_id, safe, str(e), arm_id)
+                Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, orientation_id, safe, linear, str(e), arm_id)
             )
         )
         return
 
     await notif.broadcast_event(
         sevts.r.RobotMoveToActionPointOrientation(
-            Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, orientation_id, safe, arm_id=arm_id)
+            Data(Data.MoveEventType.END, robot_inst.id, end_effector_id, orientation_id, safe, linear, arm_id=arm_id)
         )
     )
 
