@@ -173,6 +173,8 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     assert act_state_after
     assert act_state_after.action_id == action.id
     assert act_state_after.results
+    assert len(act_state_after.results) == 1
+    assert isinstance(json.loads(act_state_after.results[0]), float)
 
     # sleep action
     act2_state_before = event(ars, arcor2_events.ActionStateBefore).data
@@ -183,7 +185,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     act2_state_after = event(ars, arcor2_events.ActionStateAfter).data
     assert act2_state_after
     assert act2_state_after.action_id == action2.id
-    assert not act2_state_after.results
+    assert act2_state_after.results is None
 
     # TODO pause, resume
 
