@@ -97,13 +97,15 @@ async def get_end_effector_pose(robot_inst: Robot, end_effector: str, arm_id: Op
     )
 
 
-async def get_robot_joints(robot_inst: Robot, arm_id: Optional[str]) -> List[common.Joint]:
+async def get_robot_joints(
+    robot_inst: Robot, arm_id: Optional[str], include_gripper: bool = False
+) -> List[common.Joint]:
     """
     :param robot_inst:
     :return: List of joints
     """
 
-    return await hlp.run_in_executor(robot_inst.robot_joints, *prepare_args(robot_inst, [], arm_id))
+    return await hlp.run_in_executor(robot_inst.robot_joints, *prepare_args(robot_inst, [include_gripper], arm_id))
 
 
 def _feature(type_def: Type[Robot], method_name: str, base_class: Type[Robot]) -> bool:
@@ -329,7 +331,16 @@ async def move_to_ap_orientation(
     except Arcor2Exception as e:
         await notif.broadcast_event(
             sevts.r.RobotMoveToActionPointOrientation(
-                Data(Data.MoveEventType.FAILED, robot_inst.id, end_effector_id, orientation_id, safe, linear, str(e), arm_id)
+                Data(
+                    Data.MoveEventType.FAILED,
+                    robot_inst.id,
+                    end_effector_id,
+                    orientation_id,
+                    safe,
+                    linear,
+                    str(e),
+                    arm_id,
+                )
             )
         )
         return

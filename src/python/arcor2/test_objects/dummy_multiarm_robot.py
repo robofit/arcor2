@@ -65,7 +65,7 @@ class DummyMultiArmRobot(MultiArmRobot):
 
         return tr.make_pose_abs(self.pose, self._poses[arm_id][end_effector])
 
-    def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> List[Joint]:
         """With no arm specified, returns all robot joints. Otherwise, returns
         joints for the given arm.
 

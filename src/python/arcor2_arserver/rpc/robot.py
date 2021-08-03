@@ -51,7 +51,7 @@ async def robot_joints_event(robot_inst: Robot) -> None:
 
         try:
             evt = sevts.r.RobotJoints(
-                sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None)))
+                sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None, True)))
             )
         except Arcor2Exception as e:
             logger.error(f"Failed to get joints for {robot_inst.name}. {str(e)}")
