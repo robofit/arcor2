@@ -153,7 +153,7 @@ class AbstractRobot(Robot):
         with self._move_lock:
             rest.call(rest.Method.PUT, url, body=joints.joints, params=params, timeout=self.move_timeout)
 
-    def robot_joints(self) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
 
     # --- Robot Controller ---------------------------------------------------------------------------------------------

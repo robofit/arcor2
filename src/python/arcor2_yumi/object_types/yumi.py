@@ -548,10 +548,17 @@ class YuMiArm:
     def _joints_to_str(self, joints: List[Joint]) -> str:
         return self._iter_to_str("{:.2f}", [math.degrees(j.value) for j in joints])
 
-    def joints(self) -> List[Joint]:
-        return self._response_to_joints(
+    def joints(self, include_gripper: bool = False) -> List[Joint]:
+        joints = self._response_to_joints(
             self._request(self._construct_req(CmdCodes.get_joints), socket=self._joints_socket)
         )
+
+        if include_gripper:
+            w = self.get_gripper_width()
+            joints.append(Joint(f"gripper_{self.name[0]}_joint", w))
+            joints.append(Joint(f"gripper_{self.name[0]}_joint_m", w))
+
+        return joints
 
     def get_pose(self) -> Pose:
 
@@ -1024,7 +1031,7 @@ class YuMi(MultiArmRobot):
         arm = self._arm_by_name(arm_id)
         return tr.make_pose_abs(self.pose, arm.get_pose())
 
-    def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> List[Joint]:
 
         if arm_id is None:
 
@@ -1032,8 +1039,8 @@ class YuMi(MultiArmRobot):
 
             futures: List[cf.Future] = []
             with cf.ThreadPoolExecutor() as executor:
-                futures.append(executor.submit(self._left.joints))
-                futures.append(executor.submit(self._right.joints))
+                futures.append(executor.submit(self._left.joints, include_gripper))
+                futures.append(executor.submit(self._right.joints, include_gripper))
             try:
                 states = [f.result(timeout=self._comm_timeout) for f in futures]
             except cf.TimeoutError:
@@ -1044,7 +1051,7 @@ class YuMi(MultiArmRobot):
 
             return ret
 
-        return self._arm_by_name(arm_id).joints()
+        return self._arm_by_name(arm_id).joints(include_gripper)
 
     def grippers(self, arm_id: Optional[str] = None) -> Set[str]:
         return set(self._mapping)

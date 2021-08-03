@@ -228,7 +228,12 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def robot_joints(self) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
+        """Get list of robot's joints.
+
+        :param include_gripper: Whether gripper joints should be added (e.g. for visualization).
+        :return:
+        """
         pass
 
     @abc.abstractmethod
@@ -327,7 +332,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def robot_joints(self, arm_id: Optional[str] = None) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> List[Joint]:
         """With no arm specified, returns all robot joints. Otherwise, returns
         joints for the given arm.
 

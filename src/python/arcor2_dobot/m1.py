@@ -34,7 +34,7 @@ class DobotM1(Dobot):
         pose.position.y += 0.0
         pose.position.z -= 0.01
 
-    def robot_joints(self) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
 
         if self.simulator:
             return self._joint_values

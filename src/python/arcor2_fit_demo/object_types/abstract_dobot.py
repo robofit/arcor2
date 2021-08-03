@@ -152,7 +152,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         place_pose.position.z += vertical_offset
         self.move(place_pose, MoveType.JOINTS)  # pre-place pose
 
-    def robot_joints(self) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
 
     home.__action__ = ActionMetadata(blocking=True)  # type: ignore
