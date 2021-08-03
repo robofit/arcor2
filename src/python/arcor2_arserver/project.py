@@ -55,17 +55,21 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
     evt = ActionResult(ActionResult.Data(glob.RUNNING_ACTION))
 
     try:
-        if action_result := await hlp.run_in_executor(action_method, *params) is not None:
-            glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
+        action_result = await hlp.run_in_executor(action_method, *params)
     except Arcor2Exception as e:
         logger.error(f"Failed to run method {action_method.__name__} with params {params}. {str(e)}")
         logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
     else:
-        try:
-            evt.data.results = results_to_json(action_result)
-        except Arcor2Exception:
-            logger.error(f"Method {action_method.__name__} returned unsupported type of result: {action_result}.")
+
+        if action_result is not None:
+
+            glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
+
+            try:
+                evt.data.results = results_to_json(action_result)
+            except Arcor2Exception:
+                logger.error(f"Method {action_method.__name__} returned unsupported type of result: {action_result}.")
 
     if glob.RUNNING_ACTION is None:
         # action was cancelled, do not send any event
