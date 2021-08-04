@@ -742,7 +742,7 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_execution_rest_proxy.version(),
-        "0.5.0",
+        "0.7.0",
         PORT,
         [SummaryPackage, ExecutionInfo, Token],
         args.swagger,
