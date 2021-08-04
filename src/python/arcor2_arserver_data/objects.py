@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -34,6 +34,9 @@ class ObjectTypeMeta(JsonSchemaMixin):
             ot.model = self.object_model.model().metamodel()
 
         return ot
+
+    def parameters_dict(self) -> Dict[str, ParameterMeta]:
+        return {param.name: param for param in self.settings}
 
     def __post_init__(self) -> None:
 
