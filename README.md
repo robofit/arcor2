@@ -173,7 +173,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution_rest_proxy/README.md) | [CHANGELOG](src/python/arcor2_execution_rest_proxy/CHANGELOG.md)
 
- - 2021-07-29: [0.13.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F0.13.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution_proxy/tags?page=1&ordering=last_updated&name=0.13.0), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/0.13.0/)).
+ - 2021-08-04: [0.13.1](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F0.13.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution_proxy/tags?page=1&ordering=last_updated&name=0.13.1), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/0.13.1/)).
  
 ### arcor2_fit_demo
 
