@@ -92,7 +92,7 @@ def can_modify_scene() -> None:
 
 
 def ensure_scene_started() -> None:
-    """" Raises exception if scene is not started."""
+    """Raises exception if scene is not started."""
 
     if _scene_state.data.state != SceneState.Data.StateEnum.Started:
         raise Arcor2Exception("Scene offline.")
