@@ -132,7 +132,21 @@ def check_object_parameters(obj_type: ObjectTypeData, parameters: List[Parameter
     if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in parameters}:
         raise Arcor2Exception("Some required parameter is missing.")
 
-    # TODO check types of parameters, ranges, etc.
+    param_dict = obj_type.meta.parameters_dict()
+
+    for param in parameters:
+
+        if param_dict[param.name].type != param.type:
+            raise Arcor2Exception(f"Type mismatch for parameter {param}.")
+
+        # TODO check using (some) plugin
+        from arcor2 import json
+
+        val = json.loads(param.value)
+
+        # however, analysis in get_dataclass_params() can handle also (nested) dataclasses, etc.
+        if not isinstance(val, (int, float, str, bool)):
+            raise Arcor2Exception("Only basic types are supported so far.")
 
 
 def check_object(scene: CachedScene, obj: SceneObject, new_one: bool = False) -> None:
