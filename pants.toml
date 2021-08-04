@@ -60,7 +60,8 @@ pytest_plugins.add = [
   "pytest-repeat",
   "pytest-randomly",
   "pytest-icdiff",
-  "pygments"
+  "pygments",
+  "pytest-asyncio"
 ]
 
 args = ["--count=3 -x"]
