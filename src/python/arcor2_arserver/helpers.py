@@ -54,20 +54,41 @@ async def ctx_write_lock(
 async def ctx_read_lock(
     obj_ids: ObjIds, owner: str, auto_unlock: bool = True, dry_run: bool = False
 ) -> AsyncGenerator[None, None]:
+    """Acquires and releases read lock for objects, unless they are already
+    locked.
+
+    :param obj_ids:
+    :param owner:
+    :param auto_unlock:
+    :param dry_run:
+    :return:
+    """
+
     @retry(exc=CannotLock, tries=glob.LOCK._lock_retries, delay=glob.LOCK._retry_wait)
-    async def lock():
+    async def lock() -> None:
+
         if not await glob.LOCK.read_lock(obj_ids, owner):
             raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)
 
-    await lock()
+    already_locked = False
+
+    obj_ids = obj_ids_to_list(obj_ids)
+
+    for obj_id in obj_ids:
+        if not (await glob.LOCK.is_read_locked(obj_id, owner) or await glob.LOCK.is_write_locked(obj_id, owner)):
+            await lock()
+            break
+    else:
+        already_locked = True
+
     try:
         yield
     except Arcor2Exception:
-        if not dry_run and not auto_unlock:
+        if not dry_run and not auto_unlock and not already_locked:
             await glob.LOCK.read_unlock(obj_ids, owner)
         raise
     finally:
-        if dry_run or auto_unlock:
+        if (dry_run or auto_unlock) and not already_locked:
             await glob.LOCK.read_unlock(obj_ids, owner)
 
 

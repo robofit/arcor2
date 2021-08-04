@@ -8,8 +8,10 @@ from arcor2.cached import UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import common as cmn
 from arcor2.data.rpc.common import IdArgs
 from arcor2.exceptions import Arcor2Exception
+from arcor2_arserver import globals as glob
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.globals import Lock
+from arcor2_arserver.helpers import ctx_read_lock
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.tests.conftest import ars_connection_str, event, event_mapping, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
@@ -45,6 +47,45 @@ def lock() -> Lock:
     action = cmn.Action("action", "test/type", parameters=[], flows=[])
     lock.project.upsert_action(ap_ap_ap.id, action)
     return lock
+
+
+@pytest.mark.asyncio()
+async def test_ctx_read_lock() -> None:
+
+    test = "test"
+    user = "user"
+
+    glob.LOCK = Lock()
+    assert await glob.LOCK.get_locked_roots_count() == 0
+
+    glob.LOCK.scene = UpdateableCachedScene(cmn.Scene(test, description=test))
+    glob.LOCK.project = UpdateableCachedProject(cmn.Project(test, glob.LOCK.scene.id, description=test, has_logic=True))
+
+    async def patch() -> Set[str]:
+        return {glob.LOCK.project_or_exception().id, glob.LOCK.scene_or_exception().id}
+
+    storage.get_project_ids = storage.get_scene_ids = patch
+
+    # add some scene and project objects
+    test_object = cmn.SceneObject(test, "TestType")
+    glob.LOCK.scene.upsert_object(test_object)
+    ap = glob.LOCK.project.upsert_action_point(cmn.BareActionPoint.uid(), "ap", cmn.Position(0, 0, 0), test_object.id)
+    ap_ap = glob.LOCK.project.upsert_action_point(cmn.BareActionPoint.uid(), "ap_ap", cmn.Position(0, 0, 1), ap.id)
+
+    assert await glob.LOCK.get_locked_roots_count() == 0
+
+    await glob.LOCK.write_lock(ap_ap.id, user, True)
+
+    assert await glob.LOCK.is_write_locked(test_object.id, user)
+    assert await glob.LOCK.is_write_locked(ap.id, user)
+    assert await glob.LOCK.is_write_locked(ap_ap.id, user)
+
+    async with ctx_read_lock(test_object.id, user):
+        pass
+
+    assert await glob.LOCK.is_write_locked(test_object.id, user)
+    assert await glob.LOCK.is_write_locked(ap.id, user)
+    assert await glob.LOCK.is_write_locked(ap_ap.id, user)
 
 
 @pytest.mark.asyncio()

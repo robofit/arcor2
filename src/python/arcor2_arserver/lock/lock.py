@@ -158,7 +158,7 @@ class Lock:
 
         assert self._lock.locked()
 
-        locked = []
+        locked: List[str] = []
         for i, obj_id in enumerate(obj_ids):
 
             if self._get_lock_record(roots[i]).read_lock(obj_id, owner):
