@@ -116,6 +116,17 @@ def test_make_pose_rel_and_abs_again_random() -> None:
     assert cc == c
 
 
+def check_ap(ap: ActionPoint) -> None:
+    """Make sure that the poses can be serialized a deserialized."""
+
+    for val in ap.position:
+        assert isinstance(val, float)
+    for no in ap.orientations:
+        for val in no.orientation:
+            assert isinstance(val, float)
+    assert ap == ActionPoint.from_json(ap.to_json())
+
+
 def test_make_relative_ap_global_and_relative_again() -> None:
 
     scene = Scene("s1")
@@ -128,7 +139,9 @@ def test_make_relative_ap_global_and_relative_again() -> None:
     project.action_points.append(ap1)
     ap2 = ActionPoint("ap2", Position(-1, 0, 0), parent=ap1.id)
     project.action_points.append(ap2)
-    ap3 = ActionPoint("ap3", Position(-1, 0, 0), parent=ap2.id)
+    ap3 = ActionPoint(
+        "ap3", Position(-1, 0, 0), parent=ap2.id, orientations=[NamedOrientation("bla", random_orientation())]
+    )
     project.action_points.append(ap3)
 
     cached_project = CachedProject(project)
@@ -141,10 +154,14 @@ def test_make_relative_ap_global_and_relative_again() -> None:
 
     make_relative_ap_global(cached_scene, cached_project, ap3)
 
+    check_ap(ap3)
+
     assert ap3.parent is None
     assert ap3.position.x == 0.0  # type: ignore
 
     make_global_ap_relative(cached_scene, cached_project, ap3, ap2.id)
+
+    check_ap(ap3)
 
     assert ap3.parent == ap2.id
     assert ap3.position.x == -1
@@ -174,6 +191,7 @@ def test_obj_relative_ap_global() -> None:
     cached_project = CachedProject(project)
 
     make_relative_ap_global(cached_scene, cached_project, ap2)
+    check_ap(ap2)
 
     assert ap2.position == Position(1, -2, 0)
     assert so1.pose
@@ -183,3 +201,4 @@ def test_obj_relative_ap_global() -> None:
 
     assert ap2.position == Position(1, 0, 0)
     assert no1.orientation == Orientation()
+    check_ap(ap2)

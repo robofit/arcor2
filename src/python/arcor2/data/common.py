@@ -11,7 +11,7 @@ from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Typ
 
 import numpy as np
 import quaternion
-from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema import JsonDict, JsonSchemaMixin
 
 from arcor2 import json
 from arcor2.exceptions import Arcor2Exception
@@ -97,7 +97,7 @@ class Position(IterableIndexable):
 
         rotated_vector = quaternion.rotate_vectors([q], [list(self)])[0][0]
 
-        return Position(float(rotated_vector[0]), float(rotated_vector[1]), float(rotated_vector[2]))
+        return Position(rotated_vector[0], rotated_vector[1], rotated_vector[2])
 
     def __eq__(self, other: object) -> bool:
 
@@ -148,6 +148,11 @@ class Position(IterableIndexable):
 
         return self
 
+    def to_dict(self, omit_none: bool = True, validate: bool = False, validate_enums: bool = True) -> JsonDict:
+
+        # orjson does not like numpy.float64
+        return {"x": float(self.x), "y": float(self.y), "z": float(self.z)}
+
 
 @dataclass
 class Orientation(IterableIndexable):
@@ -163,7 +168,7 @@ class Orientation(IterableIndexable):
 
     @classmethod
     def from_quaternion(cls, q: quaternion.quaternion) -> Orientation:
-        return Orientation(float(q.x), float(q.y), float(q.z), float(q.w))
+        return Orientation(q.x, q.y, q.z, q.w)
 
     @staticmethod
     def _normalized(q: quaternion.quaternion) -> quaternion.quaternion:
@@ -188,10 +193,10 @@ class Orientation(IterableIndexable):
 
         nq = self._normalized(q)
 
-        self.x = float(nq.x)
-        self.y = float(nq.y)
-        self.z = float(nq.z)
-        self.w = float(nq.w)
+        self.x = nq.x
+        self.y = nq.y
+        self.z = nq.z
+        self.w = nq.w
 
     def as_tr_matrix(self) -> np.ndarray:
         """Returns 4x4 transformation matrix.
@@ -230,10 +235,15 @@ class Orientation(IterableIndexable):
 
         nq = self.as_quaternion()  # in order to get normalized quaternion
 
-        self.x = float(nq.x)
-        self.y = float(nq.y)
-        self.z = float(nq.z)
-        self.w = float(nq.w)
+        self.x = nq.x
+        self.y = nq.y
+        self.z = nq.z
+        self.w = nq.w
+
+    def to_dict(self, omit_none: bool = True, validate: bool = False, validate_enums: bool = True) -> JsonDict:
+
+        # orjson does not like numpy.float64
+        return {"x": float(self.x), "y": float(self.y), "z": float(self.z), "w": float(self.w)}
 
 
 class ModelMixin(abc.ABC):
