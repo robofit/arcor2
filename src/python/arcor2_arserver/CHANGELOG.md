@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Locks are not automatically released when aiming is done or cancelled.
+- Linear movements are used by default for stepping and table alignment.
+- Joints stream (`RobotJoints` event) now contains also gripper joints when available (depends on the particular ObjectType).
+
+### Fixed
+
+- Getting action results (the result was always `False`).
+- `ctx_read_lock` made some RPCs impossible to success.
+- Object parameters checking.
+  - Values and types of object parameters were not checked at all.
+  - For now, only basic types are supported.
 
 ## [0.20.0] - 2021-07-29
 

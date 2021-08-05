@@ -2,13 +2,21 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.20.0] - WIP
+## [0.20.0] - 2021-08-05
 
 ### Changed
 
 - Object hierarchy modified.
   - `GenericWithPose` now can't have a collision model.
   - A new `CollisionObject` must have collision model.
+- `Robot` base class API changed.
+  - Parameter `linear` was added to `move_to_pose`.
+    - A robot not supporting linear movements should raise exception when `linear==True`.  
+  - Parameter `include_gripper` was added to `robot_joints`.
+    - By default, the method should return only arm's joints.
+    - With the parameter set, the list should contain also gripper joints.
+    - This is needed for visualization of grippers.
+    - Makes only sense (so far) when gripper is part of URDF.
 - Scene/Project clients now log underlying error messages.
 
 ### Fixed
