@@ -55,7 +55,8 @@ async def robot_joints_event(robot_inst: Robot) -> None:
             )
         except Arcor2Exception as e:
             logger.error(f"Failed to get joints for {robot_inst.name}. {str(e)}")
-            break
+            await asyncio.sleep(1)
+            continue
 
         evt_json = evt.to_json()
         await asyncio.gather(
@@ -108,7 +109,8 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
                 )
             except Arcor2Exception as e:
                 logger.error(f"Failed to get eef pose for {robot_inst.name}. {str(e)}")
-                break
+                await asyncio.sleep(1)
+                continue
 
             evt_json = evt.to_json()
             await asyncio.gather(
