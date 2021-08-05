@@ -93,16 +93,16 @@ class IntResources:
                 else:
                     raise Arcor2Exception("Unknown base class.")
 
-        exception_cnt: int = 0
+            exception_cnt: int = 0
 
-        for f in concurrent.futures.as_completed(futures):
-            try:
-                inst = f.result()  # if an object creation resulted in exception, it will be raised here
-            except Arcor2Exception as e:
-                print_exception(e)
-                exception_cnt += 1  # count of objects that failed to initialize
-            else:
-                self.objects[inst.id] = inst  # successfully initialized objects
+            for f in concurrent.futures.as_completed(futures):
+                try:
+                    inst = f.result()  # if an object creation resulted in exception, it will be raised here
+                except Arcor2Exception as e:
+                    print_exception(e)
+                    exception_cnt += 1  # count of objects that failed to initialize
+                else:
+                    self.objects[inst.id] = inst  # successfully initialized objects
 
         if exception_cnt:  # if something failed, tear down those that succeeded and stop
             self.cleanup_all_objects()
@@ -141,11 +141,11 @@ class IntResources:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for obj in self.objects.values():
                 futures.append(executor.submit(obj.cleanup))
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Arcor2Exception as e:
-                print_exception(e)
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    future.result()
+                except Arcor2Exception as e:
+                    print_exception(e)
 
     def __enter__(self: R) -> R:
         return self
