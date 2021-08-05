@@ -112,7 +112,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2021-07-29: [0.19.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.19.0) ([pypi](https://pypi.org/project/arcor2/0.19.0/)).
+ - 2021-08-05: [0.20.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.20.0) ([pypi](https://pypi.org/project/arcor2/0.20.0/)).
 
 
  
@@ -120,7 +120,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2021-07-29: [0.20.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.20.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=0.20.0), [pypi](https://pypi.org/project/arcor2-arserver/0.20.0/)).
+ - 2021-08-05: [0.21.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.21.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=0.21.0), [pypi](https://pypi.org/project/arcor2-arserver/0.21.0/)).
 
 
  
@@ -161,7 +161,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2021-07-29: [0.17.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.17.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.17.0), [pypi](https://pypi.org/project/arcor2-execution/0.17.0/)).
+ - 2021-08-05: [0.18.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.18.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.18.0), [pypi](https://pypi.org/project/arcor2-execution/0.18.0/)).
  
 ### arcor2_execution_data
 
