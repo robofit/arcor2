@@ -2,7 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - 2021-08-05
+
+### Changed
+
+- Flag for linear movement for added to some RPCs.
+
+
 ## [0.16.0] - 2021-07-29
+
+### Changed
 
 - Support for multi arm robots.
   - `arm_id` parameter added into relevant RPCs. 
