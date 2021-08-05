@@ -46,7 +46,6 @@ extra_requirements.add = [
   "flake8-pantsbuild",
   "vulture"
 ]
-args = ["--output-file=reports/report.txt"]
 
 
 [mypy]
