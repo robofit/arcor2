@@ -529,6 +529,9 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     # in this case, method name does not correspond to feature name
     await check_feature(robot_inst, "hand_teaching")
 
+    if robot_inst.move_in_progress:
+        raise Arcor2Exception("Not possible while robot moves.")
+
     hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode, req.args.arm_id)
 
     if req.args.enable == hand_teaching_mode:
