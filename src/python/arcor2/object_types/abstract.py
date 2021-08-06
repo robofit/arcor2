@@ -189,6 +189,9 @@ class RobotException(Arcor2Exception):
 class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     """Abstract class representing robot and its basic capabilities (motion)"""
 
+    class KinematicsException(Arcor2Exception):
+        pass
+
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
         super(Robot, self).__init__(obj_id, name, pose, settings)
         self._move_lock = NonBlockingLock()
@@ -283,6 +286,8 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     ) -> List[Joint]:
         """Computes inverse kinematics.
 
+        Should raise KinematicsException when unable to compute.
+
         :param end_effector_id: IK target pose end-effector
         :param pose: IK target pose
         :param start_joints: IK start joints
@@ -293,6 +298,8 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
+
+        Should raise KinematicsException when unable to compute.
 
         :param end_effector_id: Target end effector name
         :param joints: Input joint values

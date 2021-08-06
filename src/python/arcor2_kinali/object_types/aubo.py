@@ -200,13 +200,18 @@ class Aubo(AbstractRobot):
 
         body = IKPoseJointsParameters(pose, start_joints)
 
-        return rest.call(
-            rest.Method.PUT,
-            f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",
-            params={"avoidCollisions": avoid_collisions},
-            body=body,
-            list_return_type=Joint,
-        )
+        try:
+            return rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/endEffectors/{end_effector_id}/inverseKinematics",
+                params={"avoidCollisions": avoid_collisions},
+                body=body,
+                list_return_type=Joint,
+            )
+        except rest.RestHttpException as e:
+            if e.error_code == 914:
+                raise self.KinematicsException("Failed to compute IK.")
+            raise
 
     def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
         """Computes forward kinematics.
@@ -215,12 +220,18 @@ class Aubo(AbstractRobot):
         :param joints: Input joint values
         :return: Pose of the given end effector
         """
-        return rest.call(
-            rest.Method.PUT,
-            f"{self.settings.url}/endEffectors/{end_effector_id}/forwardKinematics",
-            body=joints,
-            return_type=Pose,
-        )
+
+        try:
+            return rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/endEffectors/{end_effector_id}/forwardKinematics",
+                body=joints,
+                return_type=Pose,
+            )
+        except rest.RestHttpException as e:
+            if e.error_code == 911:
+                raise self.KinematicsException("Failed to compute FK.")
+            raise
 
     # --- Suctions Controller ------------------------------------------------------------------------------------------
 

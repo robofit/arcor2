@@ -227,8 +227,11 @@ async def check_reachability(
     if otd.robot_meta and otd.robot_meta.features.inverse_kinematics:
         try:
             await ik(robot_inst, end_effector_id, arm_id, pose, avoid_collisions=safe)
+        except Robot.KinematicsException:
+            raise Arcor2Exception("Unreachable pose.")
         except Arcor2Exception as e:
-            raise Arcor2Exception("Unreachable pose.") from e
+            logger.exception("Failed to check reachability.")
+            raise Arcor2Exception("Error on getting IK.") from e
 
 
 async def check_robot_before_move(robot_inst: Robot) -> None:
