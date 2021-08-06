@@ -2,7 +2,7 @@ version: '3'
 
 services:
   arserver:
-    image: arcor2/arcor2_arserver:0.20.0
+    image: arcor2/arcor2_arserver:0.21.0
     container_name: arserver
     depends_on:
       - project
@@ -30,7 +30,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:0.18.0
+    image: arcor2/arcor2_build:0.19.0
     container_name: build
     depends_on:
       - project
@@ -41,7 +41,7 @@ services:
     networks:           
       - testitoff-project-network
   execution:
-    image: arcor2/arcor2_execution:0.17.0
+    image: arcor2/arcor2_execution:0.18.0
     container_name: execution
     networks:
       - testitoff-execution-network
@@ -115,7 +115,7 @@ services:
       - "5013:5013"
 
   project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.10.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.11.0
     container_name: "project"
     ports:
       - "10000-10001:10000-10001"
@@ -129,7 +129,7 @@ services:
       - testitoff-project-network
 
   mongodb:
-    image: mongo:4.2.0-bionic
+    image: mongo:4.2.15-bionic
     container_name: "mongodb"
     environment:
       - MONGO_DATA_DIR=/data/db
@@ -142,7 +142,7 @@ services:
       - testitoff-project-network
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.21.1
     container_name: "nginx"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
