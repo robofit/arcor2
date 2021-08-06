@@ -648,7 +648,9 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
         diff = 0.0
 
         for f, b in zip(current_joints, res):
-            assert f.name == b.name
+            assert (
+                f.name == b.name
+            ), f"current joints: {[j.name for j in current_joints]}, joints from ik {[j.name for j in res]}."
             diff += (f.value - b.value) ** 2
 
         if winning_idx < 0:

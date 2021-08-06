@@ -81,7 +81,7 @@ async def get_pose_and_joints(
 
     return await asyncio.gather(
         hlp.run_in_executor(robot_inst.get_end_effector_pose, *prepare_args(robot_inst, [end_effector], arm_id)),
-        hlp.run_in_executor(robot_inst.robot_joints, *prepare_args(robot_inst, [], arm_id)),
+        hlp.run_in_executor(robot_inst.robot_joints, *prepare_args(robot_inst, [False], arm_id)),
     )
 
 
