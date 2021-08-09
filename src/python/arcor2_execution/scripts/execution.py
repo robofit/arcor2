@@ -42,7 +42,7 @@ RUNNING_PACKAGE_ID: Optional[str] = None
 # in case of man. written scripts, this might not be sent
 PACKAGE_INFO_EVENT: Optional[PackageInfo] = None
 
-TASK = None
+TASK: Optional[asyncio.Task] = None
 
 CLIENTS: Set = set()
 
@@ -58,16 +58,12 @@ def process_running() -> bool:
 
 async def package_state(event: PackageState) -> None:
 
-    global PACKAGE_STATE_EVENT
-    PACKAGE_STATE_EVENT = event
+    PACKAGE_STATE_EVENT.data = event.data
     await send_to_clients(event)
 
 
 async def read_proc_stdout() -> None:
 
-    global PACKAGE_STATE_EVENT
-    global ACTION_EVENT
-    global ACTION_ARGS_EVENT
     global PACKAGE_INFO_EVENT
     global RUNNING_PACKAGE_ID
 
@@ -76,8 +72,6 @@ async def read_proc_stdout() -> None:
     assert PROCESS is not None
     assert PROCESS.stdout is not None
     assert RUNNING_PACKAGE_ID is not None
-
-    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING, RUNNING_PACKAGE_ID)))
 
     printed_out: List[str] = []
 
@@ -162,13 +156,20 @@ async def check_script(script_path: str) -> None:
 
 
 async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
+    async def _update_executed(package_id: str) -> None:
+
+        meta = await run_in_executor(read_package_meta, package_id)
+        meta.executed = datetime.now(tz=timezone.utc)
+        await run_in_executor(write_package_meta, package_id, meta)
 
     global PROCESS
     global TASK
     global RUNNING_PACKAGE_ID
 
-    if process_running():
-        raise Arcor2Exception("Already running!")
+    if PACKAGE_STATE_EVENT.data.state not in PackageState.RUNNABLE_STATES:
+        raise Arcor2Exception("Package not stopped!")
+
+    assert not process_running()
 
     package_path = os.path.join(PROJECT_PATH, req.args.id)
 
@@ -201,72 +202,83 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     if PROCESS.returncode is not None:
         raise Arcor2Exception("Failed to start package.")
 
-    meta = await run_in_executor(read_package_meta, req.args.id)
-    meta.executed = datetime.now(tz=timezone.utc)
-    await run_in_executor(write_package_meta, req.args.id, meta)
-
     RUNNING_PACKAGE_ID = req.args.id
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING, RUNNING_PACKAGE_ID)))
 
-    TASK = asyncio.ensure_future(read_proc_stdout())  # run task in background
+    TASK = asyncio.create_task(read_proc_stdout())  # run task in background
+    asyncio.create_task(_update_executed(req.args.id))
 
 
 async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
+    async def _terminate_task() -> None:
 
-    global PACKAGE_INFO_EVENT
-    global RUNNING_PACKAGE_ID
+        global PACKAGE_INFO_EVENT
+        global RUNNING_PACKAGE_ID
 
-    if not process_running():
+        assert PROCESS
+        assert TASK
+
+        logger.info("Terminating process")
+        PROCESS.send_signal(signal.SIGINT)  # the same as when a user presses ctrl+c
+
+        logger.info("Waiting for process to finish...")
+        await asyncio.wait([TASK])
+        PACKAGE_INFO_EVENT = None
+        RUNNING_PACKAGE_ID = None
+
+    if PACKAGE_STATE_EVENT.data.state not in PackageState.RUN_STATES:
         raise Arcor2Exception("Package not running.")
 
-    assert PROCESS is not None
-    assert TASK is not None
+    assert process_running()
 
     await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.STOPPING, RUNNING_PACKAGE_ID)))
-
-    logger.info("Terminating process")
-    PROCESS.send_signal(signal.SIGINT)  # the same as when a user presses ctrl+c
-    logger.info("Waiting for process to finish...")
-    await asyncio.wait([TASK])
-    PACKAGE_INFO_EVENT = None
-    RUNNING_PACKAGE_ID = None
+    asyncio.create_task(_terminate_task())
 
 
 async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
+    async def _pause() -> None:
 
-    if not process_running():
-        raise Arcor2Exception("Package not running.")
+        assert PROCESS is not None
+        assert PROCESS.stdin is not None
 
-    assert PROCESS is not None
-    assert PROCESS.stdin is not None
+        PROCESS.stdin.write("p\n".encode())
+        await PROCESS.stdin.drain()
+        logger.info("Package paused.")
 
     if PACKAGE_STATE_EVENT.data.state != PackageState.Data.StateEnum.RUNNING:
         raise Arcor2Exception("Cannot pause.")
 
     await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSING, RUNNING_PACKAGE_ID)))
-    PROCESS.stdin.write("p\n".encode())
-    await PROCESS.stdin.drain()
-    logger.info("Package paused.")
-    return None
+    assert process_running()
+    asyncio.create_task(_pause())
 
 
 async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> None:
+    async def _resume() -> None:
 
-    if not process_running():
-        raise Arcor2Exception("Package not running.")
+        assert PROCESS is not None
+        assert PROCESS.stdin is not None
 
-    assert PROCESS is not None
-    assert PROCESS.stdin is not None
+        PROCESS.stdin.write("r\n".encode())
+        await PROCESS.stdin.drain()
+        logger.info("Package resumed.")
+
+    assert process_running()
 
     if PACKAGE_STATE_EVENT.data.state != PackageState.Data.StateEnum.PAUSED:
         raise Arcor2Exception("Cannot resume.")
 
-    PROCESS.stdin.write("r\n".encode())
-    await PROCESS.stdin.drain()
-    logger.info("Package resumed.")
-    return None
+    asyncio.create_task(_resume())
 
 
 async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> None:
+    async def _upload_event(path_to_package: str) -> None:
+
+        summary = await get_summary(path_to_package)
+        evt = events.PackageChanged(summary)
+        evt.change_type = Event.Type.ADD
+        await send_to_clients(evt)
+        logger.info(f"Package '{summary.package_meta.name}' was added.")
 
     target_path = os.path.join(PROJECT_PATH, req.args.id)
 
@@ -291,22 +303,16 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
 
         await aiofiles.os.remove(zip_path)
 
+        script_path = os.path.join(tmpdirname, MAIN_SCRIPT_NAME)
+        await check_script(script_path)
+
         try:
             await run_in_executor(shutil.rmtree, target_path, propagate=[FileNotFoundError])
         except FileNotFoundError:
             pass
         await run_in_executor(shutil.copytree, tmpdirname, target_path)
 
-    script_path = os.path.join(target_path, MAIN_SCRIPT_NAME)
-
-    await check_script(script_path)
-
-    summary = await get_summary(target_path)
-    evt = events.PackageChanged(summary)
-    evt.change_type = Event.Type.ADD
-    asyncio.ensure_future(send_to_clients(evt))
-    logger.info(f"Package '{summary.package_meta.name}' was added.")
-    return None
+    asyncio.create_task(_upload_event(target_path))
 
 
 async def get_summary(path: str) -> PackageSummary:
