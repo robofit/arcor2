@@ -82,7 +82,8 @@ class PackageState(Event):
         state: StateEnum = StateEnum.UNDEFINED
         package_id: Optional[str] = None
 
-    RUN_STATES = (Data.StateEnum.PAUSED, Data.StateEnum.RUNNING)
+    RUN_STATES = (Data.StateEnum.PAUSED, Data.StateEnum.RUNNING)  # package (process) is up and running
+    RUNNABLE_STATES = (Data.StateEnum.STOPPED, Data.StateEnum.UNDEFINED)  # package can be started
 
     data: Data
 
