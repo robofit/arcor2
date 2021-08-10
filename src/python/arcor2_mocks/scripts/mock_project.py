@@ -201,6 +201,8 @@ def put_project() -> RespT:
 
     if project.id not in PROJECTS:
         project.created = project.modified
+    else:
+        project.created = PROJECTS[project.id].created
 
     PROJECTS[project.id] = project
     return jsonify(project.modified.isoformat())
@@ -350,6 +352,8 @@ def put_scene() -> RespT:
 
     if scene.id not in SCENES:
         scene.created = scene.modified
+    else:
+        scene.created = SCENES[scene.id].created
 
     SCENES[scene.id] = scene
     return jsonify(scene.modified.isoformat())
@@ -489,6 +493,8 @@ def put_object_type() -> RespT:
 
     if obj_type.id not in OBJECT_TYPES:
         obj_type.created = obj_type.modified
+    else:
+        obj_type.created = OBJECT_TYPES[obj_type.id].created
 
     OBJECT_TYPES[obj_type.id] = obj_type
     return jsonify(obj_type.modified.isoformat()), 200
