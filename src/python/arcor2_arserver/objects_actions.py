@@ -37,11 +37,7 @@ def get_types_dict() -> TypesDict:
 
 
 def get_obj_type_data(scene: CachedScene, object_id: str) -> ObjectTypeData:
-
-    try:
-        return glob.OBJECT_TYPES[scene.object(object_id).type]
-    except KeyError:
-        raise Arcor2Exception("Unknown object type.")
+    return glob.OBJECT_TYPES[scene.object(object_id).type]
 
 
 def valid_object_types() -> ObjectTypeDict:

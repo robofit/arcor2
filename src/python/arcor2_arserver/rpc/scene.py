@@ -121,7 +121,7 @@ async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
     :return:
     """
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE_NAME, glob.USERS.user_name(ui), dry_run=req.dry_run):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE, glob.USERS.user_name(ui), dry_run=req.dry_run):
 
         scene = glob.LOCK.scene_or_exception()
 
@@ -199,7 +199,7 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
 
 async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsClient) -> None:
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE_NAME, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE, glob.USERS.user_name(ui)):
 
         scene = glob.LOCK.scene_or_exception()
 
@@ -612,10 +612,10 @@ async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
     if not glob.LOCK.project and await glob.LOCK.get_write_locks_count():
         raise LockingException(glob.LOCK.ErrMessages.SOMETHING_LOCKED.value)
 
-    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE, glob.LOCK.Owners.SERVER):
         raise Arcor2Exception("Scene locked.")
 
-    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER):
         raise Arcor2Exception("Project locked.")
 
     if req.dry_run:
@@ -631,10 +631,10 @@ async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
     if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Started:
         raise Arcor2Exception("Scene not started.")
 
-    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE, glob.LOCK.Owners.SERVER):
         raise Arcor2Exception("Scene locked.")
 
-    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME):
+    if await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER):
         raise Arcor2Exception("Project locked.")
 
     if glob.RUNNING_ACTION:  # TODO acquire lock?

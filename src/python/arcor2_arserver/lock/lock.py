@@ -12,18 +12,21 @@ from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 from arcor2_arserver.lock.structures import LockedObject, LockEventData
+from arcor2_arserver.object_types.data import ObjectTypeDict
 from arcor2_arserver_data.rpc.lock import UpdateType
 
 
 class Lock:
+    class Owners(cmn.StrEnum):
+        """Values that can be used as lock owner substitution."""
+
+        SERVER: str = "SERVER"
+
     class SpecialValues(cmn.StrEnum):
-        """Values for special locking cases e.g. global variable access
-        SERVER_NAME can be used only as lock owner substitution."""
+        """Values for special locking cases e.g. global variable access."""
 
-        SERVER_NAME: str = "SERVER"  # TODO make a SpecialOwners enum
-
-        SCENE_NAME: str = "SCENE"
-        PROJECT_NAME: str = "PROJECT"
+        SCENE: str = "SCENE"
+        PROJECT: str = "PROJECT"
         RUNNING_ACTION: str = "ACTION"
         ADDING_OBJECT: str = "ADDING_OBJECT"
 
@@ -46,11 +49,13 @@ class Lock:
         "_lock_timeout",
         "_lock_retries",
         "_retry_wait",
+        "_object_types",
     )
 
-    def __init__(self) -> None:
+    def __init__(self, obj_types: ObjectTypeDict) -> None:
         self._scene: Optional[UpdateableCachedScene] = None
         self._project: Optional[UpdateableCachedProject] = None
+        self._object_types = obj_types
 
         self._lock: asyncio.Lock = asyncio.Lock()
         self._locked_objects: Dict[str, LockedObject] = {}
@@ -368,21 +373,17 @@ class Lock:
         :param obj_id: object to search root for
         """
 
-        if obj_id in (
-            self.SpecialValues.SCENE_NAME,
-            self.SpecialValues.PROJECT_NAME,
-            self.SpecialValues.RUNNING_ACTION,
-            self.SpecialValues.ADDING_OBJECT,
-        ):
+        if obj_id in self.SpecialValues.set() | self._object_types.keys():
             return obj_id
-
         elif self.project and self.scene:
-            if obj_id in (self.scene.id, self.project.id, cmn.LogicItem.START, cmn.LogicItem.END):
+            if (
+                obj_id
+                in {self.scene.id, self.project.id, cmn.LogicItem.START, cmn.LogicItem.END}
+                | self.project.parameters_ids
+            ):
                 return obj_id
             elif obj_id in self.scene.object_ids:
                 # TODO implement with scene object hierarchy
-                return obj_id
-            elif obj_id in self.project.parameters_ids:
                 return obj_id
             else:
                 parent = self.project.get_parent_id(obj_id)
@@ -401,10 +402,10 @@ class Lock:
             return obj_id
 
         # locking on dashboard, check if scene or project exists
-        if obj_id in await storage.get_scene_ids() | await storage.get_project_ids():
+        if obj_id in set.union(*await asyncio.gather(storage.get_scene_ids(), storage.get_project_ids())):
             return obj_id
 
-        raise Arcor2Exception(f"Unknown object '{obj_id}'")
+        raise Arcor2Exception(f"Unknown object '{obj_id}'.")
 
     def _get_lock_record(self, root_id: str) -> LockedObject:
         """Create and/or retrieve lock record for root_id."""

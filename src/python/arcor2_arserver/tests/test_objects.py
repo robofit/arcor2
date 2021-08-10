@@ -1,9 +1,15 @@
+import time
+
 import pytest
 
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box, Cylinder, Mesh, Model3dType, ObjectModel, Sphere
+from arcor2.data.rpc.common import IdArgs
 from arcor2.object_types.abstract import CollisionObject
-from arcor2_arserver.tests.conftest import event, project_service
+from arcor2.object_types.upload import upload_def
+from arcor2.test_objects.box import Box as BoxType
+from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
+from arcor2_arserver.tests.conftest import event, lock_object, project_service, unlock_object
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
@@ -51,3 +57,78 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
 
     project_service.get_model(model.model().id, model.type)
     project_service.get_object_type(type_name)
+
+
+def test_update_object_model(start_processes: None, ars: ARServer) -> None:
+
+    upload_def(BoxType, Box(BoxType.__name__, 0.1, 0.1, 0.1))
+    upload_def(DummyMultiArmRobot)
+
+    event(ars, events.c.ShowMainScreen)
+
+    time.sleep(1)  # otherwise ARServer might not notice new ObjectTypes
+
+    assert ars.call_rpc(
+        rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args("TestScene")), rpc.s.NewScene.Response
+    ).result
+
+    assert len(event(ars, events.o.ChangedObjectTypes).data) == 2
+
+    event(ars, events.s.OpenScene)
+    event(ars, events.s.SceneState)
+
+    lock_object(ars, BoxType.__name__)
+
+    om = ObjectModel(Model3dType.SPHERE, sphere=Sphere(BoxType.__name__, 0.1))
+
+    assert ars.call_rpc(
+        rpc.o.UpdateObjectModel.Request(get_id(), rpc.o.UpdateObjectModel.Request.Args(BoxType.__name__, om)),
+        rpc.o.UpdateObjectModel.Response,
+    ).result
+
+    ot_evt = event(ars, events.o.ChangedObjectTypes)
+    assert ot_evt.change_type == ot_evt.Type.UPDATE
+    assert len(ot_evt.data) == 1
+    assert ot_evt.data[0].object_model == om
+    assert ot_evt.data[0].type == BoxType.__name__
+    assert ot_evt.data[0].has_pose
+    assert not ot_evt.data[0].disabled
+
+    assert BoxType.__name__ in {obj.id for obj in project_service.get_object_type_ids()}
+    assert BoxType.__name__ in {mod.id for mod in project_service.get_models()}
+
+    unlock_object(ars, BoxType.__name__)
+
+    lock_object(ars, DummyMultiArmRobot.__name__)
+
+    assert not ars.call_rpc(
+        rpc.o.UpdateObjectModel.Request(
+            get_id(),
+            rpc.o.UpdateObjectModel.Request.Args(
+                DummyMultiArmRobot.__name__,
+                ObjectModel(Model3dType.SPHERE, sphere=Sphere(DummyMultiArmRobot.__name__, 0.1)),
+            ),
+        ),
+        rpc.o.UpdateObjectModel.Response,
+    ).result
+
+    unlock_object(ars, DummyMultiArmRobot.__name__)
+
+    assert ars.call_rpc(
+        rpc.o.DeleteObjectType.Request(get_id(), IdArgs(BoxType.__name__), dry_run=True),
+        rpc.o.UpdateObjectModel.Response,
+    ).result
+
+    assert ars.call_rpc(
+        rpc.o.DeleteObjectType.Request(get_id(), IdArgs(BoxType.__name__)),
+        rpc.o.UpdateObjectModel.Response,
+    ).result
+
+    ot_evt2 = event(ars, events.o.ChangedObjectTypes)
+    assert ot_evt2.change_type == ot_evt.Type.REMOVE
+    assert len(ot_evt2.data) == 1
+    assert ot_evt2.data[0].object_model == om
+    assert ot_evt2.data[0].type == BoxType.__name__
+
+    assert BoxType.__name__ not in {obj.id for obj in project_service.get_object_type_ids()}
+    assert BoxType.__name__ not in {mod.id for mod in project_service.get_models()}

@@ -22,7 +22,7 @@ from arcor2_arserver_data.client import ARServer, get_id
 def lock() -> Lock:
     """Creates lock with initialized scene and project."""
     test = "test"
-    lock = Lock()
+    lock = Lock({})
 
     scene = UpdateableCachedScene(cmn.Scene(test, description=test))
     lock.scene = scene
@@ -55,7 +55,7 @@ async def test_ctx_read_lock() -> None:
     test = "test"
     user = "user"
 
-    glob.LOCK = Lock()
+    glob.LOCK = Lock({})
     assert await glob.LOCK.get_locked_roots_count() == 0
 
     glob.LOCK.scene = UpdateableCachedScene(cmn.Scene(test, description=test))
@@ -133,7 +133,7 @@ async def test_locking_special_names(lock: Lock) -> None:
 
     for special_id in lock.SpecialValues:
         # server id could be used only as lock owner
-        if special_id == lock.SpecialValues.SERVER_NAME:
+        if special_id == lock.Owners.SERVER:
             with pytest.raises(Arcor2Exception):
                 await lock.read_lock(special_id, test)
             with pytest.raises(Arcor2Exception):

@@ -340,9 +340,9 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
 
         logger.info(f"Stopping the {scene.name} scene after unsuccessful start.")
 
-        assert await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME)
+        assert await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE, glob.LOCK.Owners.SERVER)
         assert (glob.LOCK.project is not None) == await glob.LOCK.is_write_locked(
-            glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME
+            glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER
         )
 
         await _stop_scene()
@@ -350,23 +350,17 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
 
         logger.info(f"Stopping the {scene.name} scene.")
 
-        assert not await glob.LOCK.is_write_locked(
-            glob.LOCK.SpecialValues.SCENE_NAME, glob.LOCK.SpecialValues.SERVER_NAME
-        )
-        assert not await glob.LOCK.is_write_locked(
-            glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME
-        )
+        assert not await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE, glob.LOCK.Owners.SERVER)
+        assert not await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER)
 
-        to_lock = [glob.LOCK.SpecialValues.SCENE_NAME]
+        to_lock = [glob.LOCK.SpecialValues.SCENE]
 
         if glob.LOCK.project:
-            assert not await glob.LOCK.is_write_locked(
-                glob.LOCK.SpecialValues.PROJECT_NAME, glob.LOCK.SpecialValues.SERVER_NAME
-            )
-            to_lock.append(glob.LOCK.SpecialValues.PROJECT_NAME)
+            assert not await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER)
+            to_lock.append(glob.LOCK.SpecialValues.PROJECT)
 
         try:
-            async with ctx_write_lock(to_lock, glob.LOCK.SpecialValues.SERVER_NAME):
+            async with ctx_write_lock(to_lock, glob.LOCK.Owners.SERVER):
                 await _stop_scene()
         except Arcor2Exception as e:
             logger.error(f"Failed to stop the scene. {str(e)}")
@@ -428,13 +422,13 @@ async def start_scene(scene: CachedScene) -> None:
         await set_scene_state(SceneState.Data.StateEnum.Started)
         return True
 
-    to_lock = [glob.LOCK.SpecialValues.SCENE_NAME]
+    to_lock = [glob.LOCK.SpecialValues.SCENE]
 
     if glob.LOCK.project:
-        to_lock.append(glob.LOCK.SpecialValues.PROJECT_NAME)
+        to_lock.append(glob.LOCK.SpecialValues.PROJECT)
 
     try:
-        async with ctx_write_lock(to_lock, glob.LOCK.SpecialValues.SERVER_NAME):
+        async with ctx_write_lock(to_lock, glob.LOCK.Owners.SERVER):
             ret = await _start_scene()
     except Arcor2Exception as e:
         logger.error(f"Failed to start the scene. {str(e)}")

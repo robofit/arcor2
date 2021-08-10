@@ -9,7 +9,7 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
 from arcor2.data.common import Parameter, Pose, Position, SceneObject
-from arcor2.data.object_type import Mesh, Model3dType
+from arcor2.data.object_type import Mesh, Model3dType, ObjectModel
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import CollisionObject, GenericWithPose, Robot
@@ -20,11 +20,12 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import ctx_write_lock, ensure_write_locked
-from arcor2_arserver.object_types.data import ObjectTypeData
+from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeMeta
 from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose
 from arcor2_arserver.scene import (
+    can_modify_scene,
     ensure_scene_started,
     get_instance,
     get_robot_instance,
@@ -259,6 +260,28 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     return None
 
 
+async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
+
+    if not meta.object_model:
+        return
+
+    model = om.model()
+
+    if model.id != meta.type:
+        raise Arcor2Exception("Model id must be equal to ObjectType id.")
+
+    if isinstance(model, Mesh):
+
+        if model.data_id not in await storage.files_ids():
+            raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
+
+    # when updating model of an already existing object, the type might be different
+    if meta.object_model.type != om.type:
+        await storage.delete_model(model.id)  # ...otherwise it is going to be an orphan
+
+    await storage.put_model(model)
+
+
 async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) -> None:
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.ADDING_OBJECT, glob.USERS.user_name(ui)):
@@ -301,16 +324,7 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
         obj.source = tree_to_str(ast)
 
         if meta.object_model:
-
-            model = meta.object_model.model()
-            assert model.id == meta.type
-
-            if isinstance(model, Mesh):
-
-                if model.data_id not in await storage.files_ids():
-                    raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
-
-            await storage.put_model(model)
+            await update_object_model(meta, meta.object_model)
 
         type_def = await hlp.run_in_executor(
             hlp.save_and_import_type_def,
@@ -334,12 +348,45 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
         return None
 
 
-async def get_object_actions_cb(req: srpc.o.GetActions.Request, ui: WsClient) -> srpc.o.GetActions.Response:
+async def update_object_model_cb(req: srpc.o.UpdateObjectModel.Request, ui: WsClient) -> None:
 
-    try:
-        return srpc.o.GetActions.Response(data=list(glob.OBJECT_TYPES[req.args.type].actions.values()))
-    except KeyError:
-        raise Arcor2Exception(f"Unknown object type: '{req.args.type}'.")
+    can_modify_scene()
+    glob.LOCK.scene_or_exception(True)  # only allow while editing scene
+
+    obj_data = glob.OBJECT_TYPES[req.args.object_type_id]
+
+    if not obj_data.type_def:
+        raise Arcor2Exception("ObjectType disabled.")
+
+    if not issubclass(obj_data.type_def, CollisionObject):
+        raise Arcor2Exception("Not a CollisionObject.")
+
+    assert obj_data.meta.object_model
+    assert obj_data.ast
+
+    if req.args.object_model == obj_data.meta.object_model:
+        raise Arcor2Exception("No change requested.")
+
+    await ensure_write_locked(req.args.object_type_id, glob.USERS.user_name(ui))
+
+    if req.dry_run:
+        return
+
+    await update_object_model(obj_data.meta, req.args.object_model)
+    obj_data.meta.object_model = req.args.object_model
+
+    ot = obj_data.meta.to_object_type()
+    ot.source = tree_to_str(obj_data.ast)
+
+    obj_data.meta.modified = await storage.update_object_type(ot)
+
+    evt = sevts.o.ChangedObjectTypes([obj_data.meta])
+    evt.change_type = events.Event.Type.UPDATE
+    asyncio.ensure_future(notif.broadcast_event(evt))
+
+
+async def get_object_actions_cb(req: srpc.o.GetActions.Request, ui: WsClient) -> srpc.o.GetActions.Response:
+    return srpc.o.GetActions.Response(data=list(glob.OBJECT_TYPES[req.args.type].actions.values()))
 
 
 async def get_object_types_cb(req: srpc.o.GetObjectTypes.Request, ui: WsClient) -> srpc.o.GetObjectTypes.Response:
@@ -353,13 +400,21 @@ def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
 
 
 async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClient) -> None:
+    async def _delete_model(obj_type: ObjectTypeData) -> None:
 
-    async with glob.LOCK.get_lock(req.dry_run):
+        # do not care so much if delete_model fails
+        if not obj_type.meta.object_model:
+            return
 
         try:
-            obj_type = glob.OBJECT_TYPES[req.args.id]
-        except KeyError:
-            raise Arcor2Exception("Unknown object type.")
+            await storage.delete_model(obj_type.meta.object_model.model().id)
+        except storage.ProjectServiceException as e:
+            logger.error(str(e))
+
+    user_name = glob.USERS.user_name(ui)
+    async with ctx_write_lock(req.args.id, user_name, auto_unlock=False, dry_run=req.dry_run):
+
+        obj_type = glob.OBJECT_TYPES[req.args.id]
 
         if obj_type.meta.built_in:
             raise Arcor2Exception("Can't delete built-in type.")
@@ -377,21 +432,16 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
         if req.dry_run:
             return
 
-        await storage.delete_object_type(req.args.id)
+        await asyncio.gather(
+            storage.delete_object_type(req.args.id), _delete_model(obj_type), remove_object_type(req.args.id)
+        )
 
-        # do not care so much if delete_model fails
-        if obj_type.meta.object_model:
-            try:
-                await storage.delete_model(obj_type.meta.object_model.model().id)
-            except storage.ProjectServiceException as e:
-                logger.error(str(e))
-
+        await glob.LOCK.write_unlock(req.args.id, user_name)  # need to be unlocked while it exists in glob.OBJECT_TYPES
         del glob.OBJECT_TYPES[req.args.id]
-        await remove_object_type(req.args.id)
 
         evt = sevts.o.ChangedObjectTypes([obj_type.meta])
         evt.change_type = events.Event.Type.REMOVE
-        asyncio.ensure_future(notif.broadcast_event(evt))
+        asyncio.create_task(notif.broadcast_event(evt))
 
 
 def check_override(

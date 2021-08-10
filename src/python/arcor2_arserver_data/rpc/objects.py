@@ -4,7 +4,7 @@ from typing import List, Optional, Set
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdValue, Parameter, StrEnum
-from arcor2.data.object_type import MeshList
+from arcor2.data.object_type import MeshList, ObjectModel
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg, TypeArgs
 from arcor2_arserver_data.objects import ObjectActions, ObjectTypeMeta
 
@@ -77,6 +77,25 @@ class NewObjectType(RPC):
     class Request(RPC.Request):
 
         args: ObjectTypeMeta
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class UpdateObjectModel(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            object_type_id: str = field(metadata=dict(description="Object or service id."))
+            object_model: ObjectModel  # can't use Models (Union) because of C# generator
+
+        args: Args
         dry_run: bool = False
 
     @dataclass
