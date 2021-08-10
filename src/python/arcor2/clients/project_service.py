@@ -110,7 +110,7 @@ def delete_file(file_id: str) -> None:
 
 @handle(ProjectServiceException, logger, message="Failed to list models.")
 def get_models() -> List[MetaModel3d]:
-    return rest.call(rest.Method.GET, f"{URL}/models/", list_return_type=MetaModel3d)
+    return rest.call(rest.Method.GET, f"{URL}/models", list_return_type=MetaModel3d)
 
 
 @handle(ProjectServiceException, logger, message="Failed to get the mesh.")
