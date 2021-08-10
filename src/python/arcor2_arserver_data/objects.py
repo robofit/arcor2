@@ -17,7 +17,7 @@ class ObjectTypeMeta(JsonSchemaMixin):
     description: str = field(default_factory=str)
     built_in: bool = False
     base: str = field(default_factory=str)
-    object_model: Optional[ObjectModel] = None
+    object_model: Optional[ObjectModel] = None  # can't use Models (Union) because of C# generator
     needs_parent_type: Optional[str] = None
     has_pose: bool = False
     abstract: bool = False

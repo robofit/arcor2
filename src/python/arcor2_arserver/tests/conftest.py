@@ -100,7 +100,10 @@ def start_processes() -> Iterator[None]:
         LOGGER.info(f"Starting ARServer listening on port  {_arserver_port}.")
 
         arserver_proc = sp.Popen(
-            "./src.python.arcor2_arserver.scripts/arserver.pex", env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT
+            ["./src.python.arcor2_arserver.scripts/arserver.pex", "--debug"],
+            env=my_env,
+            stdout=sp.PIPE,
+            stderr=sp.STDOUT,
         )
 
         processes.append(arserver_proc)

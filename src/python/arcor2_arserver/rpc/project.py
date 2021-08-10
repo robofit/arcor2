@@ -816,7 +816,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
     if glob.LOCK.project:
         raise Arcor2Exception("Project has to be closed first.")
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui), dry_run=req.dry_run):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT, glob.USERS.user_name(ui), dry_run=req.dry_run):
         if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
             raise Arcor2Exception("Can't create project while package runs.")
 
@@ -902,7 +902,7 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT, glob.USERS.user_name(ui)):
 
         hlp.is_valid_identifier(req.args.name)
         unique_name(req.args.name, proj.action_points_names)
@@ -1388,7 +1388,7 @@ async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: 
 
     proj = glob.LOCK.project_or_exception()
 
-    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT_NAME, glob.USERS.user_name(ui)):
+    async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT, glob.USERS.user_name(ui)):
 
         pparam = common.ProjectParameter(req.args.name, req.args.type, req.args.value)
         check_parameter(proj, pparam)

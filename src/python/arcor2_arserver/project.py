@@ -182,11 +182,7 @@ def find_object_action(scene: CachedScene, action: common.Action) -> ObjectActio
 
     obj_id, action_type = action.parse_type()
     obj = scene.object(obj_id)
-
-    try:
-        obj_type = glob.OBJECT_TYPES[obj.type]
-    except KeyError:
-        raise Arcor2Exception("Unknown object type.")
+    obj_type = glob.OBJECT_TYPES[obj.type]
 
     try:
         act = obj_type.actions[action_type]
