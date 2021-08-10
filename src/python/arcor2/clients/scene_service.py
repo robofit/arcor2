@@ -40,7 +40,7 @@ def wait_for(timeout: float = 10.0) -> None:
             started()
             return
         except SceneServiceException:
-            pass
+            time.sleep(1.0)
 
     raise SceneServiceException("Failed to contact Scene service.")
 
