@@ -3,7 +3,7 @@ aiofiles==0.7.0
 aiologger==0.6.1
 aiorun==2020.12.1
 apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!
-apispec[yaml]==5.0.0
+apispec[yaml]==5.1.0
 autopep8==1.5.7
 Cython==0.29.24
 dataclasses-jsonschema[fast-validation,apispec]==2.14.1
@@ -31,5 +31,5 @@ requests==2.26.0
 sqlitedict==1.7.0
 typing-inspect==0.7.1
 urdfpy==0.0.22
-websocket-client==1.1.1
+websocket-client==1.2.0
 websockets==9.1
