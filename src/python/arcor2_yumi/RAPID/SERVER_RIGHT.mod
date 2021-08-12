@@ -112,7 +112,7 @@ MODULE SERVER_RIGHT
         VAR jointtarget joints;
 
         joints:=CalcJointT(pose,tool,\WObj:=wobj);
-        jointsTarget := joints;
+        jointsTarget:=joints;
         RETURN reachable;
 
     ERROR
@@ -130,6 +130,71 @@ MODULE SERVER_RIGHT
 
     ERROR
         reachable:=FALSE;
+        TRYNEXT;
+    ENDFUNC
+
+    FUNC string GripOut()
+
+        VAR string str:="";
+        ok:=SERVER_OK;
+
+        IF nParams=0 THEN
+            g_GripOut;
+
+        ELSEIF nParams=1 THEN
+            g_GripOut\holdForce:=params{1};
+
+            ! holdForce range = 0 - 20 N, targetPos = 0 - 25 mm, posAllowance = tolerance of gripper closure value
+        ELSEIF nParams=2 THEN
+            g_GripOut\holdForce:=params{1}\targetPos:=params{2};
+
+            ! Program won't wait until gripper completion or failure to move on.
+        ELSEIF nParams=3 THEN
+            g_GripOut\holdForce:=params{1}\targetPos:=params{2}\NoWait;
+        ELSE
+            ok:=SERVER_BAD_MSG;
+        ENDIF
+        RETURN str;
+    ERROR
+        ok:=SERVER_BAD_MSG;
+
+        TEST ERRNO
+        CASE ERR_HAND_FAILEDGRIPPOS:
+            str:="Failed to grasp object.";
+        CASE ERR_HAND_FAILEDGRIPOUTWARD:
+            str:="Target position smaller than current position.";
+        CASE ERR_HAND_FAILEDGRIPINWARD:
+            str:="Target position larger than current position.";
+        ENDTEST
+        TRYNEXT;
+    ENDFUNC
+
+    FUNC string GripIn()
+        VAR string str:="";
+        ok:=SERVER_OK;
+
+        IF nParams=0 THEN
+            g_GripIn;
+            ! holdForce range = 0 - 20 N, targetPos = 0 - 25 mm, posAllowance = tolerance of gripper closure value
+        ELSEIF nParams=2 THEN
+            g_GripIn\holdForce:=params{1}\targetPos:=params{2};
+            ! Program won't wait until gripper completion or failure to move on.
+        ELSEIF nParams=3 THEN
+            g_GripIn\holdForce:=params{1}\targetPos:=params{2}\NoWait;
+        ELSE
+            ok:=SERVER_BAD_MSG;
+        ENDIF
+        RETURN str;
+    ERROR
+        ok:=SERVER_BAD_MSG;
+        TEST ERRNO
+        CASE ERR_HAND_FAILEDGRIPPOS:
+            str:="Failed to grasp object.";
+        CASE ERR_HAND_FAILEDGRIPOUTWARD:
+            str:="Target position smaller than current position.";
+        CASE ERR_HAND_FAILEDGRIPINWARD:
+            str:="Target position larger than current position.";
+        ENDTEST
         TRYNEXT;
     ENDFUNC
 
@@ -499,44 +564,11 @@ MODULE SERVER_RIGHT
                 !---------------------------------------------------------------------------------------------------------------
             CASE 20:
                 !Gripper Close
-                IF nParams=0 THEN
-                    g_GripIn;
-                    ok:=SERVER_OK;
-                    ! holdForce range = 0 - 20 N, targetPos = 0 - 25 mm, posAllowance = tolerance of gripper closure value
-                ELSEIF nParams=2 THEN
-                    g_GripIn\holdForce:=params{1}\targetPos:=params{2};
-                    ok:=SERVER_OK;
-                    ! Program won't wait until gripper completion or failure to move on.
-                ELSEIF nParams=3 THEN
-                    g_GripIn\holdForce:=params{1}\targetPos:=params{2}\NoWait;
-                    ok:=SERVER_OK;
-
-                ELSE
-                    ok:=SERVER_BAD_MSG;
-                ENDIF
+                addString:=GripIn();
                 !---------------------------------------------------------------------------------------------------------------
             CASE 21:
                 !Gripper Open
-                IF nParams=0 THEN
-                    g_GripOut;
-                    ok:=SERVER_OK;
-
-                ELSEIF nParams=1 THEN
-                    g_GripOut\holdForce:=params{1};
-                    ok:=SERVER_OK;
-
-                    ! holdForce range = 0 - 20 N, targetPos = 0 - 25 mm, posAllowance = tolerance of gripper closure value
-                ELSEIF nParams=2 THEN
-                    g_GripOut\holdForce:=params{1}\targetPos:=params{2};
-                    ok:=SERVER_OK;
-
-                    ! Program won't wait until gripper completion or failure to move on.
-                ELSEIF nParams=3 THEN
-                    g_GripOut\holdForce:=params{1}\targetPos:=params{2}\NoWait;
-                    ok:=SERVER_OK;
-                ELSE
-                    ok:=SERVER_BAD_MSG;
-                ENDIF
+                addString:=GripOut();
                 !---------------------------------------------------------------------------------------------------------------
             CASE 22:
                 ! Initialize gripper with specified values
@@ -733,7 +765,7 @@ MODULE SERVER_RIGHT
                                         currentConf,
                                         externalAxis];
                     IF isPoseReachable(cartesianTarget,currentTool,currentWobj) THEN
-                        addString:=NumToStr(jointsPose.robax.rax_1,2)+" ";
+                        addString:=NumToStr(jointsTarget.robax.rax_1,2)+" ";
                         addString:=addString+NumToStr(jointsTarget.robax.rax_2,2)+" ";
                         addString:=addString+NumToStr(jointsTarget.robax.rax_3,2)+" ";
                         addString:=addString+NumToStr(jointsTarget.robax.rax_4,2)+" ";
@@ -746,7 +778,6 @@ MODULE SERVER_RIGHT
                         ok:=SERVER_BAD_MSG;
                         addString:="Unreachable Pose";
                     ENDIF
-                    ok:=SERVER_OK;
                 ELSE
                     ok:=SERVER_BAD_MSG;
                 ENDIF
@@ -756,7 +787,7 @@ MODULE SERVER_RIGHT
                 IF nParams=7 THEN
                     jointsTarget:=[[params{1},params{2},params{3},params{4},params{5},params{6}],externalAxis];
                     IF isJointsReachable(jointsTarget,currentTool,currentWobj) THEN
-                        addString:=NumToStr(cartesianPose.trans.x,2)+" ";
+                        addString:=NumToStr(cartesianTarget.trans.x,2)+" ";
                         addString:=addString+NumToStr(cartesianTarget.trans.y,2)+" ";
                         addString:=addString+NumToStr(cartesianTarget.trans.z,2)+" ";
                         addString:=addString+NumToStr(cartesianTarget.rot.q1,3)+" ";
@@ -797,6 +828,15 @@ MODULE SERVER_RIGHT
                 ELSE
                     ok:=SERVER_BAD_MSG;
                 ENDIF
+                !---------------------------------------------------------------------------------------------------------------
+            CASE 70:
+                !returns 1 if gripper is calibrated. 0 other wise.
+                IF g_IsCalibrated() THEN
+                    addString:="1";
+                ELSE
+                    addString:="0";
+                ENDIF
+                ok:=SERVER_OK;
                 !---------------------------------------------------------------------------------------------------------------
             CASE 98:
                 !returns current robot info: serial number, robotware version, and robot type
@@ -867,13 +907,13 @@ MODULE SERVER_RIGHT
             should_send_res:=TRUE;
             RETRY;
         CASE ERR_HAND_NOTCALIBRATED:
-            SocketSend clientSocket\Str:=FormateRes("ERR_HAND_NOTCALIBRATED: "+NumToStr(ERRNO,0));
+            SocketSend clientSocket\Str:=FormateRes("Gripper is not calibrated.");
             ! Gripper not calibrated.
             g_Init\Calibrate;
             RETRY;
         CASE ERR_COLL_STOP:
-            TPWrite "Collision Error R";
-            SocketSend clientSocket\Str:=FormateRes("ERR_COLL_STOP: "+NumToStr(ERRNO,0));
+            TPWrite "Collision Error L";
+            SocketSend clientSocket\Str:=FormateRes("Collision occured.");
             StopMove\Quick;
             ClearPath;
             StorePath;
@@ -909,4 +949,3 @@ MODULE SERVER_RIGHT
     ENDPROC
 
 ENDMODULE
-{"mode":"full","isActive":false}
