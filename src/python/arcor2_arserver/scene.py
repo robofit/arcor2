@@ -15,6 +15,7 @@ from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import ctx_write_lock
+from arcor2_arserver.lock.exceptions import CannotLock
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver_data.events.common import ShowMainScreen
@@ -348,20 +349,18 @@ async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_
         await _stop_scene()
     else:
 
-        logger.info(f"Stopping the {scene.name} scene.")
-
-        assert not await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE, glob.LOCK.Owners.SERVER)
-        assert not await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER)
-
         to_lock = [glob.LOCK.SpecialValues.SCENE]
 
         if glob.LOCK.project:
-            assert not await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.PROJECT, glob.LOCK.Owners.SERVER)
             to_lock.append(glob.LOCK.SpecialValues.PROJECT)
 
         try:
             async with ctx_write_lock(to_lock, glob.LOCK.Owners.SERVER):
+                logger.info(f"Stopping the {scene.name} scene.")
                 await _stop_scene()
+        except CannotLock:
+            logger.warning(f"Failed attempt to stop the scene. Can't lock {to_lock}.")
+            return
         except Arcor2Exception as e:
             logger.error(f"Failed to stop the scene. {str(e)}")
             return
@@ -430,6 +429,9 @@ async def start_scene(scene: CachedScene) -> None:
     try:
         async with ctx_write_lock(to_lock, glob.LOCK.Owners.SERVER):
             ret = await _start_scene()
+    except CannotLock:
+        logger.warning(f"Failed attempt to start the scene. Can't lock {to_lock}.")
+        return
     except Arcor2Exception as e:
         logger.error(f"Failed to start the scene. {str(e)}")
 
