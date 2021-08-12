@@ -1000,6 +1000,8 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         position: Optional[common.Position] = None,
     ) -> None:
 
+        assert await glob.LOCK.is_read_locked(orig_ap.id, user_name)
+
         ap = proj.upsert_action_point(
             common.ActionPoint.uid(),
             make_name_unique(f"{orig_ap.name}_copy", proj.action_points_names),
@@ -1012,6 +1014,9 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         await notif.broadcast_event(ap_added_evt)
 
         for ori in proj.ap_orientations(orig_ap.id):
+
+            assert await glob.LOCK.is_read_locked(ori.id, user_name)
+
             new_ori = ori.copy()
             old_ori_to_new_ori[ori.id] = new_ori.id
             proj.upsert_orientation(ap.id, new_ori)
@@ -1022,6 +1027,9 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             await notif.broadcast_event(ori_added_evt)
 
         for joints in proj.ap_joints(orig_ap.id):
+
+            assert await glob.LOCK.is_read_locked(joints.id, user_name)
+
             new_joints = joints.copy()
             proj.upsert_joints(ap.id, new_joints)
 
@@ -1032,16 +1040,51 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
         action_names = proj.action_names  # action name has to be globally unique
         for act in proj.ap_actions(orig_ap.id):
+            assert await glob.LOCK.is_read_locked(act.id, user_name)
             new_act = act.copy()
             new_act.name = make_name_unique(f"{act.name}_copy", action_names)
             proj.upsert_action(ap.id, new_act)
+            new_action_ids.add(new_act.id)
+
+        # find direct child-APs and copy them too
+        # TODO find a more efficient way?
+        await asyncio.gather(
+            *[
+                copy_action_point(child_ap, ap.id)
+                for child_ap in proj.action_points_with_parent
+                if child_ap.parent == orig_ap.id
+            ]
+        )
+
+    user_name = glob.USERS.user_name(ui)
+
+    async with ctx_read_lock(glob.LOCK.get_all_children(req.args.id) | {req.args.id}, user_name):
+        original_ap = proj.bare_action_point(req.args.id)
+
+        if req.dry_run:
+            return
+
+        old_ori_to_new_ori: Dict[str, str] = {}
+        new_action_ids: Set[str] = set()
+        # let's do it within the RPC, should not take long time...
+        await copy_action_point(original_ap, position=req.args.position)
+
+        for act_id in new_action_ids:  # this has to be done once old_ori_to_new_ori is complete
+
+            ap, new_act = proj.action_point_and_action(act_id)
 
             for param in new_act.parameters:
 
-                if param.type != PosePlugin.type_name():
+                if param.type != PosePlugin.type_name():  # TODO also handle joints!
                     continue
 
                 old_ori_id = PosePlugin.orientation_id(proj, new_act.id, param.name)
+
+                if proj.bare_ap_and_orientation(old_ori_id)[0].id not in proj.childs(req.args.id):
+                    # orientation belongs to another AP tree, no need to update anything
+                    continue
+
+                # orientation belongs to the tree being copied so it has to be updated
 
                 # TODO this is hacky - plugins are missing methods to set/update parameters
                 from arcor2 import json
@@ -1057,19 +1100,6 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             action_added_evt.change_type = Event.Type.ADD
             action_added_evt.parent_id = ap.id
             await notif.broadcast_event(action_added_evt)
-
-        for child_ap in proj.action_points_with_parent:
-            if child_ap.parent == orig_ap.id:
-                await copy_action_point(child_ap, ap.id)
-
-    async with ctx_read_lock(req.args.id, glob.USERS.user_name(ui)):
-        original_ap = proj.bare_action_point(req.args.id)
-
-        if req.dry_run:
-            return
-
-        old_ori_to_new_ori: Dict[str, str] = {}
-        asyncio.ensure_future(copy_action_point(original_ap, position=req.args.position))
 
 
 async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
