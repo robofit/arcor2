@@ -360,6 +360,8 @@ class CmdCodes(IntEnum):
     set_lead_through = 60
     is_lead_through = 61
 
+    is_gripper_calibrated = 70
+
     close_connection = 99
 
     reset_home = 100  # MoveAbsJ to Home
@@ -656,6 +658,12 @@ class YuMiArm:
         res = self._request(req)
         return bool(int(res.message))
 
+    def is_gripper_calibrated(self) -> bool:
+
+        req = self._construct_req(CmdCodes.is_gripper_calibrated)
+        res = self._request(req)
+        return bool(int(res.message))
+
     def ik(self, pose: Pose) -> List[Joint]:
         try:
             return self._response_to_joints(self._request(self._construct_req(CmdCodes.ik, self._get_pose_body(pose))))
@@ -936,6 +944,7 @@ class YuMiArm:
         max_speed: Optional[float] = None,
         hold_force: Optional[float] = None,
         phys_limit: Optional[float] = None,
+        skip_if_already_calibrated=True,
     ) -> None:
         """Calibrates the gripper.
 
@@ -955,6 +964,10 @@ class YuMiArm:
         -----
         All 3 values must be provided, or they'll all default to None.
         """
+
+        if skip_if_already_calibrated and self.is_gripper_calibrated():
+            return
+
         if None in (max_speed, hold_force, phys_limit):
             body = ""
         else:
@@ -1357,7 +1370,10 @@ class YuMi(MultiArmRobot):
 
         with self._move_lock:
 
+            evt = Event()
+
             futures: List[cf.Future] = [
+                self._executor.submit(self._rws.block_while_running, evt),
                 self._executor.submit(self._left.goto_pose_sync, tr.make_pose_rel(self.pose, left_pose)),
                 self._executor.submit(self._right.goto_pose_sync, tr.make_pose_rel(self.pose, right_pose)),
             ]
@@ -1365,8 +1381,16 @@ class YuMi(MultiArmRobot):
             try:
                 for f in cf.as_completed(futures, self._motion_timeout):
                     f.result()
-            except cf.TimeoutError:
-                raise YuMiCommException("Failed to move arms in sync.")
+            except YumiException:
+                evt.set()
+                raise
+            except ProgramStopped:
+                self.recover()
+
+                # TODO read log and give proper message?
+                raise YumiException("Impossible motion.")
+            else:
+                evt.set()  # this terminates block_while_running
 
     move_both_arms.__action__ = ActionMetadata(blocking=True)  # type: ignore
 
