@@ -4,7 +4,6 @@ import pytest
 
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box, Cylinder, Mesh, Model3dType, ObjectModel, Sphere
-from arcor2.data.rpc.common import IdArgs
 from arcor2.object_types.abstract import CollisionObject
 from arcor2.object_types.upload import upload_def
 from arcor2.test_objects.box import Box as BoxType
@@ -114,15 +113,21 @@ def test_update_object_model(start_processes: None, ars: ARServer) -> None:
 
     unlock_object(ars, DummyMultiArmRobot.__name__)
 
-    assert ars.call_rpc(
-        rpc.o.DeleteObjectType.Request(get_id(), IdArgs(BoxType.__name__), dry_run=True),
-        rpc.o.UpdateObjectModel.Response,
-    ).result
+    delete_res_1 = ars.call_rpc(
+        rpc.o.DeleteObjectTypes.Request(get_id(), {BoxType.__name__}, dry_run=True),
+        rpc.o.DeleteObjectTypes.Response,
+    )
 
-    assert ars.call_rpc(
-        rpc.o.DeleteObjectType.Request(get_id(), IdArgs(BoxType.__name__)),
-        rpc.o.UpdateObjectModel.Response,
-    ).result
+    assert delete_res_1.result
+    assert delete_res_1.data is None
+
+    delete_res_2 = ars.call_rpc(
+        rpc.o.DeleteObjectTypes.Request(get_id(), {BoxType.__name__}),
+        rpc.o.DeleteObjectTypes.Response,
+    )
+
+    assert delete_res_2.result
+    assert delete_res_2.data is None
 
     ot_evt2 = event(ars, events.o.ChangedObjectTypes)
     assert ot_evt2.change_type == ot_evt.Type.REMOVE

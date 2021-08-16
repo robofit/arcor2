@@ -68,7 +68,7 @@ class UpdateableMixin:
 
 class CachedScene(CachedBase):
 
-    __slots__ = ("_objects",)
+    __slots__ = ("_objects", "_object_types")
 
     def __init__(self, scene: Union[cmn.Scene, CachedScene]) -> None:
 
@@ -87,6 +87,8 @@ class CachedScene(CachedBase):
                     raise CachedSceneException(f"Duplicate object id: {obj.id}.")
 
                 self._objects[obj.id] = obj
+
+        self._object_types = {obj.type for obj in self.objects}
 
     @property
     def bare(self) -> cmn.BareScene:
@@ -122,7 +124,8 @@ class CachedScene(CachedBase):
 
     @property
     def object_types(self) -> Set[str]:
-        return {obj.type for obj in self.objects}
+        assert self._object_types == {obj.type for obj in self.objects}
+        return self._object_types
 
     @property
     def scene(self) -> cmn.Scene:
@@ -144,14 +147,20 @@ class UpdateableCachedScene(UpdateableMixin, CachedScene):
     def upsert_object(self, obj: cmn.SceneObject) -> None:
 
         self._objects[obj.id] = obj
+        self._object_types.add(obj.type)
         self.update_modified()
 
     def delete_object(self, obj_id: str) -> None:
 
         try:
-            del self._objects[obj_id]
+            obj = self._objects.pop(obj_id)
         except KeyError as e:
             raise Arcor2Exception("Object id not found.") from e
+
+        if not any(True for _ in self.objects_of_type(obj.type)):
+            self._object_types.discard(obj.type)
+
+        assert self._object_types == {obj.type for obj in self.objects}
 
         self.update_modified()
 

@@ -42,16 +42,21 @@ class GetObjectTypes(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class DeleteObjectType(RPC):
+class DeleteObjectTypes(RPC):
     @dataclass
     class Request(RPC.Request):
 
-        args: IdArgs
+        args: Optional[Set[str]] = None  # None means all of them
         dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
-        pass
+        @dataclass
+        class Data(JsonSchemaMixin):
+            id: str
+            error: str
+
+        data: Optional[List[Data]] = None  # list of types that can't be deleted
 
 
 # ----------------------------------------------------------------------------------------------------------------------
