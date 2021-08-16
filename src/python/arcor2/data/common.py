@@ -606,11 +606,8 @@ class Range(JsonSchemaMixin):
 
 
 @dataclass
-class ProjectParameter(JsonSchemaMixin, ModelMixin):
+class ProjectParameter(Parameter, ModelMixin):
 
-    name: str
-    type: str
-    value: str
     range: Optional[Range] = None  # TODO use it in parameter plugins?
     display_name: Optional[str] = None
     description: Optional[str] = None

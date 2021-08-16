@@ -125,7 +125,7 @@ class ListScenes(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(IdDesc):
-            pass
+            problems: Optional[List[str]] = None
 
         data: Optional[List[Data]] = None
 

@@ -18,6 +18,7 @@ from arcor2.object_types.abstract import Generic
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
+from arcor2_arserver.checks import check_object_parameters
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import (
     ctx_read_lock,
@@ -38,10 +39,10 @@ from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose
 from arcor2_arserver.scene import (
     add_object_to_scene,
     can_modify_scene,
-    check_object_parameters,
     ensure_scene_started,
     get_instance,
     get_robot_instance,
+    get_scene_problems,
     get_scene_state,
     notify_scene_closed,
     notify_scene_opened,
@@ -192,7 +193,11 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
     async for scene in scenes():
         assert scene.created
         assert scene.modified
-        resp.data.append(resp.Data(scene.id, scene.name, scene.created, scene.modified, scene.description))
+        resp.data.append(
+            resp.Data(
+                scene.id, scene.name, scene.created, scene.modified, scene.description, await get_scene_problems(scene)
+            )
+        )
 
     return resp
 

@@ -1,5 +1,7 @@
 import asyncio
-from typing import AsyncIterator, Dict, List, Optional, Set, Type, TypeVar
+from dataclasses import dataclass
+from datetime import datetime
+from typing import AsyncIterator, Dict, List, MutableMapping, Optional, Set, Type, TypeVar
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -13,16 +15,67 @@ from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
+from arcor2_arserver.checks import check_object, scene_problems
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import ctx_write_lock
 from arcor2_arserver.lock.exceptions import CannotLock
-from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.objects_actions import get_object_types
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.scene import OpenScene, SceneClosed, SceneObjectChanged, SceneState
 
 # TODO maybe this could be property of ARServerScene(CachedScene)?
 _scene_state: SceneState = SceneState(SceneState.Data(SceneState.Data.StateEnum.Stopped))
+
+
+@dataclass
+class SceneProblems:
+    scene_modified: datetime
+    ot_modified: Dict[str, datetime]
+    problems: List[str]
+
+
+_scene_problems: Dict[str, SceneProblems] = {}
+
+
+async def prune_problems(problems: MutableMapping[str, SceneProblems], item_id: str, ots: Set[str]) -> None:
+    """Removes item from cache, when used ObjectTypes has changed."""
+
+    if item_id in problems:
+        if problems[item_id].ot_modified.keys() != ots:  # some OT was added or removed
+            del problems[item_id]
+        else:
+            for ot in ots:
+                # some OT was updated
+                if (await storage.get_object_type_iddesc(ot)).modified > problems[item_id].ot_modified[ot]:
+                    del problems[item_id]
+                    break
+
+
+async def get_scene_problems(scene: CachedScene) -> Optional[List[str]]:
+    """Handle caching of scene problems."""
+
+    assert scene.modified
+
+    ots = scene.object_types
+
+    await prune_problems(_scene_problems, scene.id, ots)
+
+    if scene.id not in _scene_problems or _scene_problems[scene.id].scene_modified < scene.modified:
+        logger.debug(f"Updating scene_problems for {scene.name}.")
+        _scene_problems[scene.id] = SceneProblems(
+            scene.modified,
+            {ot: (await storage.get_object_type_iddesc(ot)).modified for ot in ots},
+            scene_problems(glob.OBJECT_TYPES, scene),
+        )
+
+    # prune removed scenes
+    for csi in set(_scene_problems.keys()) - await storage.get_scene_ids():
+        logger.debug(f"Pruning cached problems for removed scene {csi}.")
+        _scene_problems.pop(csi, None)
+
+    sp = _scene_problems[scene.id].problems
+
+    return sp if sp else None
 
 
 async def update_scene_object_pose(
@@ -128,67 +181,6 @@ async def notify_scene_closed(scene_id: str) -> None:
     )
 
 
-def check_object_parameters(obj_type: ObjectTypeData, parameters: List[Parameter]) -> None:
-
-    if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in parameters}:
-        raise Arcor2Exception("Some required parameter is missing.")
-
-    param_dict = obj_type.meta.parameters_dict()
-
-    for param in parameters:
-
-        if param_dict[param.name].type != param.type:
-            raise Arcor2Exception(f"Type mismatch for parameter {param}.")
-
-        # TODO check using (some) plugin
-        from arcor2 import json
-
-        val = json.loads(param.value)
-
-        # however, analysis in get_dataclass_params() can handle also (nested) dataclasses, etc.
-        if not isinstance(val, (int, float, str, bool)):
-            raise Arcor2Exception("Only basic types are supported so far.")
-
-
-def check_object(scene: CachedScene, obj: SceneObject, new_one: bool = False) -> None:
-    """Checks if object can be added into the scene."""
-
-    assert not obj.children
-
-    if obj.type not in glob.OBJECT_TYPES:
-        raise Arcor2Exception("Unknown object type.")
-
-    obj_type = glob.OBJECT_TYPES[obj.type]
-
-    if obj_type.meta.disabled:
-        raise Arcor2Exception("Object type disabled.")
-
-    check_object_parameters(obj_type, obj.parameters)
-
-    # TODO check whether object needs parent and if so, if the parent is in scene and parent_id is set
-    if obj_type.meta.needs_parent_type:
-        pass
-
-    if obj_type.meta.has_pose and obj.pose is None:
-        raise Arcor2Exception("Object requires pose.")
-
-    if not obj_type.meta.has_pose and obj.pose is not None:
-        raise Arcor2Exception("Object do not have pose.")
-
-    if obj_type.meta.abstract:
-        raise Arcor2Exception("Cannot instantiate abstract type.")
-
-    if new_one:
-
-        if obj.id in scene.object_ids:
-            raise Arcor2Exception("Object/service with that id already exists.")
-
-        if obj.name in scene.object_names():
-            raise Arcor2Exception("Name is already used.")
-
-    hlp.is_valid_identifier(obj.name)
-
-
 async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dry_run: bool = False) -> None:
     """
 
@@ -197,7 +189,7 @@ async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dr
     :return:
     """
 
-    check_object(scene, obj, new_one=True)
+    check_object(glob.OBJECT_TYPES, scene, obj, new_one=True)
 
     if dry_run:
         return None
@@ -267,14 +259,16 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 async def open_scene(scene_id: str) -> None:
 
     await get_object_types()
-    glob.LOCK.scene = UpdateableCachedScene(await storage.get_scene(scene_id))
 
-    try:
-        for obj in glob.LOCK.scene.objects:
-            check_object(glob.LOCK.scene, obj)
-    except Arcor2Exception as e:
-        glob.LOCK.scene = None
-        raise Arcor2Exception(f"Failed to open scene. {str(e)}") from e
+    scene = await storage.get_scene(scene_id)
+
+    if sp := await get_scene_problems(scene):
+        logger.warning(f"Scene {scene.name} can't be opened due to the following problem(s)...")
+        for spp in sp:
+            logger.warning(spp)
+        raise Arcor2Exception("Scene has some problems.")
+
+    glob.LOCK.scene = UpdateableCachedScene(scene)
 
 
 def get_robot_instance(obj_id: str) -> Robot:  # TODO remove once https://github.com/python/mypy/issues/5374 is solved

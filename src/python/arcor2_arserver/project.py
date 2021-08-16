@@ -1,23 +1,63 @@
 import asyncio
-from typing import Any, AsyncIterator, Callable, Dict, List, Set, Union
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, AsyncIterator, Callable, Dict, List, MutableMapping, Optional, Set, cast
 
 from arcor2 import helpers as hlp
 from arcor2.action import results_to_json
 from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
-from arcor2.parameter_plugins import ParameterPluginException
-from arcor2.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
+from arcor2_arserver.checks import project_problems
 from arcor2_arserver.clients import project_service as storage
-from arcor2_arserver.objects_actions import get_types_dict
-from arcor2_arserver.scene import get_scene_state, open_scene
+from arcor2_arserver.scene import SceneProblems, get_scene_state, open_scene, prune_problems
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import OpenProject, ProjectClosed
-from arcor2_arserver_data.objects import ObjectAction
+
+
+@dataclass
+class ProjectProblems(SceneProblems):
+    project_modified: datetime
+
+
+_project_problems: Dict[str, ProjectProblems] = {}
+
+
+async def get_project_problems(scene: CachedScene, project: CachedProject) -> Optional[List[str]]:
+    """Handle caching of project problems."""
+
+    assert scene.modified
+    assert project.modified
+
+    ots = scene.object_types
+
+    await prune_problems(cast(MutableMapping[str, SceneProblems], _project_problems), project.id, ots)
+
+    if (
+        project.id not in _project_problems
+        or _project_problems[project.id].scene_modified < scene.modified
+        or _project_problems[project.id].project_modified < project.modified
+    ):
+        logger.debug(f"Updating project_problems for {project.name}.")
+        _project_problems[project.id] = ProjectProblems(
+            scene.modified,
+            {ot: (await storage.get_object_type_iddesc(ot)).modified for ot in ots},
+            project_problems(glob.OBJECT_TYPES, scene, project),
+            project.modified,
+        )
+
+    # prune removed projects
+    for csi in set(_project_problems.keys()) - await storage.get_project_ids():
+        logger.debug(f"Pruning cached problems for removed project {csi}.")
+        _project_problems.pop(csi, None)
+
+    sp = _project_problems[project.id].problems
+
+    return sp if sp else None
 
 
 async def notify_project_opened(evt: OpenProject) -> None:
@@ -78,121 +118,6 @@ async def execute_action(action_method: Callable, params: List[Any]) -> None:
     glob.RUNNING_ACTION = None
     glob.RUNNING_ACTION_PARAMS = None
     await notif.broadcast_event(evt)
-
-
-def check_action_params(
-    scene: CachedScene, project: CachedProject, action: common.Action, object_action: ObjectAction
-) -> None:
-
-    _, action_type = action.parse_type()
-
-    assert action_type == object_action.name
-
-    if len(object_action.parameters) != len(action.parameters):
-        raise Arcor2Exception("Unexpected number of parameters.")
-
-    for req_param in object_action.parameters:
-
-        param = action.parameter(req_param.name)
-
-        if param.type == common.ActionParameter.TypeEnum.PROJECT_PARAMETER:
-
-            pparam = project.parameter(param.str_from_value())
-
-            param_meta = object_action.parameter(param.name)
-            if param_meta.type != pparam.type:
-                raise Arcor2Exception("Action parameter type does not match project parameter type.")
-
-        elif param.type == common.ActionParameter.TypeEnum.LINK:
-
-            parsed_link = param.parse_link()
-
-            if parsed_link.action_id == action.id:
-                raise Arcor2Exception("Can't use own result as a parameter.")
-
-            parent_action = project.action(parsed_link.action_id)
-            source_action_pt = parent_action.parse_type()
-
-            parent_action_meta = glob.OBJECT_TYPES[scene.object(source_action_pt.obj_id).type].actions[
-                source_action_pt.action_type
-            ]
-
-            if len(parent_action.flow(parsed_link.flow_name).outputs) != len(parent_action_meta.returns):
-                raise Arcor2Exception("Source action does not have outputs specified.")
-
-            param_meta = object_action.parameter(param.name)
-
-            try:
-                if param_meta.type != parent_action_meta.returns[parsed_link.output_index]:
-                    raise Arcor2Exception("Param type does not match action output type.")
-            except IndexError:
-                raise Arcor2Exception(
-                    f"Index {parsed_link.output_index} is invalid for action {object_action.name},"
-                    f" which returns {len(object_action.returns)} values."
-                )
-
-        else:
-
-            if param.type not in known_parameter_types():
-                raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has unknown type: {param.type}.")
-
-            try:
-                plugin_from_type_name(param.type).parameter_value(
-                    get_types_dict(), scene, project, action.id, param.name
-                )
-            except ParameterPluginException as e:
-                raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has invalid value. {str(e)}")
-
-
-def check_flows(
-    parent: Union[CachedProject, common.ProjectFunction], action: common.Action, action_meta: ObjectAction
-) -> None:
-    """Raises exception if there is something wrong with flow(s).
-
-    :param parent:
-    :param action:
-    :param action_meta:
-    :return:
-    """
-
-    flow = action.flow()  # searches default flow (just this flow is supported so far)
-
-    # it is ok to not specify any output (if the values are not going to be used anywhere)
-    # return value(s) won't be stored in variable(s)
-    if not flow.outputs:
-        return
-
-    # otherwise, all return values have to be stored in variables
-    if len(flow.outputs) != len(action_meta.returns):
-        raise Arcor2Exception("Number of the flow outputs does not match the number of action outputs.")
-
-    for output in flow.outputs:
-        hlp.is_valid_identifier(output)
-
-    outputs: Set[str] = set()
-
-    for act in parent.actions:
-        for fl in act.flows:
-            for output in fl.outputs:
-                if output in outputs:
-                    raise Arcor2Exception(f"Output '{output}' is not unique.")
-
-
-def find_object_action(scene: CachedScene, action: common.Action) -> ObjectAction:
-
-    obj_id, action_type = action.parse_type()
-    obj = scene.object(obj_id)
-    obj_type = glob.OBJECT_TYPES[obj.type]
-
-    try:
-        act = obj_type.actions[action_type]
-    except KeyError:
-        raise Arcor2Exception("Unknown type of action.")
-
-    if act.disabled:
-        raise Arcor2Exception("Action is disabled.")
-
-    return act
 
 
 async def project_names() -> Set[str]:
@@ -319,60 +244,9 @@ async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterat
             yield project
 
 
-def project_problems(scene: CachedScene, project: CachedProject) -> List[str]:
-
-    scene_objects: Dict[str, str] = {obj.id: obj.type for obj in scene.objects}
-    problems: List[str] = []
-
-    if unknown_types := {obj.type for obj in scene.objects} - glob.OBJECT_TYPES.keys():
-        return [f"Scene invalid, contains unknown types: {unknown_types}."]
-
-    possible_parents = scene.object_ids | project.action_points_ids
-
-    for ap in project.action_points:
-
-        # test if all objects exists in scene
-        if ap.parent and ap.parent not in possible_parents:
-            problems.append(f"Action point {ap.name} has non-existing parent: {ap.parent}.")
-            continue
-
-        for joints in project.ap_joints(ap.id):
-            if joints.robot_id not in scene.object_ids:
-                problems.append(
-                    f"Action point {ap.name} has joints ({joints.name}) for an unknown robot: {joints.robot_id}."
-                )
-
-        for action in project.actions:
-
-            # check if objects have used actions
-            obj_id, action_type = action.parse_type()
-
-            if obj_id not in scene_objects.keys():
-                problems.append(f"Object ID {obj_id} which action is used in {action.name} does not exist in scene.")
-                continue
-
-            try:
-                os_type = scene_objects[obj_id]  # object type
-            except KeyError:
-                os_type = obj_id  # service
-
-            if action_type not in glob.OBJECT_TYPES[os_type].actions:
-                problems.append(
-                    f"Object type {scene_objects[obj_id]} does not have action {action_type} used in {action.id}."
-                )
-                continue
-
-            try:
-                check_action_params(scene, project, action, glob.OBJECT_TYPES[os_type].actions[action_type])
-            except Arcor2Exception as e:
-                problems.append(str(e))
-
-    return problems
-
-
 async def open_project(project_id: str) -> None:
 
-    project = UpdateableCachedProject(await storage.get_project(project_id))
+    project = await storage.get_project(project_id)
 
     if glob.LOCK.scene:
         if glob.LOCK.scene.id != project.scene_id:
@@ -381,12 +255,12 @@ async def open_project(project_id: str) -> None:
         await open_scene(project.scene_id)
 
     assert glob.LOCK.scene
-    for ap in project.action_points_with_parent:
 
-        assert ap.parent
+    if pp := await get_project_problems(glob.LOCK.scene, project):
+        glob.LOCK.scene = None
+        logger.warning(f"Project {project.name} can't be opened due to the following problem(s)...")
+        for ppp in pp:
+            logger.warning(ppp)
+        raise Arcor2Exception("Project has some problems.")
 
-        if ap.parent not in glob.LOCK.scene.object_ids | project.action_points_ids:
-            glob.LOCK.scene = None
-            raise Arcor2Exception(f"Action point's {ap.name} parent not available.")
-
-    glob.LOCK.project = project
+    glob.LOCK.project = UpdateableCachedProject(project)
