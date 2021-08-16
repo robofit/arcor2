@@ -395,11 +395,13 @@ async def get_object_types_cb(req: srpc.o.GetObjectTypes.Request, ui: WsClient) 
 
 def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
 
-    for _ in scene.objects_of_type(object_type):
-        raise Arcor2Exception(f"Object type used in scene {scene.name}.")
+    if object_type in scene.object_types:
+        raise Arcor2Exception(f"Used in scene {scene.name}.")
 
 
-async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClient) -> None:
+async def delete_object_type_cb(
+    req: srpc.o.DeleteObjectTypes.Request, ui: WsClient
+) -> srpc.o.DeleteObjectTypes.Response:
     async def _delete_model(obj_type: ObjectTypeData) -> None:
 
         # do not care so much if delete_model fails
@@ -411,37 +413,65 @@ async def delete_object_type_cb(req: srpc.o.DeleteObjectType.Request, ui: WsClie
         except storage.ProjectServiceException as e:
             logger.error(str(e))
 
-    user_name = glob.USERS.user_name(ui)
-    async with ctx_write_lock(req.args.id, user_name, auto_unlock=False, dry_run=req.dry_run):
+    async def _delete_ot(ot: str) -> None:
 
-        obj_type = glob.OBJECT_TYPES[req.args.id]
+        obj_type = glob.OBJECT_TYPES[ot]
 
         if obj_type.meta.built_in:
             raise Arcor2Exception("Can't delete built-in type.")
 
         for obj in glob.OBJECT_TYPES.values():
-            if obj.meta.base == req.args.id:
+            if obj.meta.base == ot:
                 raise Arcor2Exception(f"Object type is base of '{obj.meta.type}'.")
 
         async for scene in scenes():
-            check_scene_for_object_type(scene, req.args.id)
+            check_scene_for_object_type(scene, ot)
 
         if glob.LOCK.scene:
-            check_scene_for_object_type(glob.LOCK.scene, req.args.id)
+            check_scene_for_object_type(glob.LOCK.scene, ot)
 
         if req.dry_run:
             return
 
-        await asyncio.gather(
-            storage.delete_object_type(req.args.id), _delete_model(obj_type), remove_object_type(req.args.id)
-        )
+        await asyncio.gather(storage.delete_object_type(ot), _delete_model(obj_type), remove_object_type(ot))
 
-        await glob.LOCK.write_unlock(req.args.id, user_name)  # need to be unlocked while it exists in glob.OBJECT_TYPES
-        del glob.OBJECT_TYPES[req.args.id]
+        await glob.LOCK.write_unlock(ot, user_name)  # need to be unlocked while it exists in glob.OBJECT_TYPES
+        del glob.OBJECT_TYPES[ot]
 
         evt = sevts.o.ChangedObjectTypes([obj_type.meta])
         evt.change_type = events.Event.Type.REMOVE
         asyncio.create_task(notif.broadcast_event(evt))
+
+    user_name = glob.USERS.user_name(ui)
+
+    obj_types_to_delete: List[str] = (
+        list(req.args)
+        if req.args is not None
+        else [obj.meta.type for obj in glob.OBJECT_TYPES.values() if not obj.meta.built_in]
+    )
+
+    response = srpc.o.DeleteObjectTypes.Response()
+    response.data = []
+
+    async with ctx_write_lock(obj_types_to_delete, user_name, auto_unlock=False, dry_run=req.dry_run):
+
+        res = await asyncio.gather(*[_delete_ot(ot) for ot in obj_types_to_delete], return_exceptions=True)
+
+        for idx, r in enumerate(res):
+            if isinstance(r, Arcor2Exception):
+                response.data.append(srpc.o.DeleteObjectTypes.Response.Data(obj_types_to_delete[idx], str(r)))
+            else:
+                assert r is None
+
+    if not response.data:
+        response.data = None
+
+    if response.data:
+        response.result = False
+        response.messages = []
+        response.messages.append("Failed to delete one or more ObjectTypes.")
+
+    return response
 
 
 def check_override(
