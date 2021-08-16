@@ -7,11 +7,11 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2 import transformations as tr
-from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
+from arcor2.cached import CachedProject, UpdateableCachedProject
 from arcor2.data import common
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
-from arcor2.logic import LogicContainer, check_for_loops
+from arcor2.logic import check_for_loops
 from arcor2.object_types.abstract import Generic, Robot
 from arcor2.parameter_plugins.base import ParameterPluginException
 from arcor2.parameter_plugins.pose import PosePlugin
@@ -20,6 +20,14 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
+from arcor2_arserver.checks import (
+    check_action_params,
+    check_ap_parent,
+    check_flows,
+    check_logic_item,
+    check_project_parameter,
+    find_object_action,
+)
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import (
     ctx_read_lock,
@@ -31,14 +39,11 @@ from arcor2_arserver.helpers import (
 )
 from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.project import (
-    check_action_params,
-    check_flows,
     close_project,
-    find_object_action,
+    get_project_problems,
     notify_project_opened,
     open_project,
     project_names,
-    project_problems,
 )
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose, get_pose_and_joints, get_robot_joints
 from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, get_robot_instance, open_scene
@@ -83,7 +88,7 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
     obj_id, action_name = action.parse_type()
     obj = get_instance(obj_id, Generic)
 
-    if not find_object_action(scene, action).meta.cancellable:
+    if not find_object_action(glob.OBJECT_TYPES, scene, action).meta.cancellable:
         raise Arcor2Exception("Action is not cancellable.")
 
     try:
@@ -193,58 +198,39 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
         return None
 
 
-async def project_info(
-    project_id: str, scenes_lock: asyncio.Lock, scenes: Dict[str, CachedScene]
-) -> srpc.p.ListProjects.Response.Data:
-
-    project = await storage.get_project(project_id)
-
-    assert project.created
-    assert project.modified
-
-    pd = srpc.p.ListProjects.Response.Data(
-        project.name,
-        project.scene_id,
-        project.description,
-        project.has_logic,
-        project.created,
-        project.modified,
-        id=project.id,
-    )
-
-    try:
-        async with scenes_lock:
-            if project.scene_id not in scenes:
-                scenes[project.scene_id] = await storage.get_scene(project.scene_id)
-    except storage.ProjectServiceException:
-        pd.problems.append("Scene does not exist.")
-        return pd
-
-    pd.problems = project_problems(scenes[project.scene_id], project)
-    pd.valid = not pd.problems
-
-    if not pd.valid:
-        return pd
-
-    try:
-        # TODO call build service!!!
-        pd.executable = True
-    except Arcor2Exception as e:
-        pd.problems.append(str(e))
-
-    return pd
-
-
 async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> srpc.p.ListProjects.Response:
+    async def project_info(project_id: str) -> srpc.p.ListProjects.Response.Data:
 
-    scenes_lock = asyncio.Lock()
-    scenes: Dict[str, CachedScene] = {}
+        project = await storage.get_project(project_id)
+
+        assert project.created
+        assert project.modified
+
+        pd = srpc.p.ListProjects.Response.Data(
+            project.name,
+            project.scene_id,
+            project.description,
+            project.has_logic,
+            project.created,
+            project.modified,
+            id=project.id,
+        )
+
+        try:
+            scene = await storage.get_scene(project.scene_id)
+        except storage.ProjectServiceException:
+            pd.problems = ["Scene does not exist."]
+            return pd
+
+        pd.problems = await get_project_problems(scene, project)
+        return pd
 
     resp = srpc.p.ListProjects.Response()
-    tasks = [project_info(proj_id, scenes_lock, scenes) for proj_id in (await storage.get_project_ids())]
 
     resp.data = []
-    for res in await asyncio.gather(*tasks, return_exceptions=True):
+    for res in await asyncio.gather(
+        *[project_info(proj_id) for proj_id in (await storage.get_project_ids())], return_exceptions=True
+    ):
 
         if isinstance(res, Arcor2Exception):
             logger.error(str(res))
@@ -773,7 +759,6 @@ async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None
         if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
             raise Arcor2Exception("Can't open project while package runs.")
 
-        # TODO validate using project_problems?
         await open_project(req.args.id)
 
         assert glob.LOCK.scene
@@ -883,18 +868,6 @@ async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> No
 
         await close_project()
         return None
-
-
-def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: Optional[str]) -> None:
-
-    if not parent:
-        return
-
-    if parent in scene.object_ids:
-        if scene.object(parent).pose is None:
-            raise Arcor2Exception("AP can't have object without pose as parent.")
-    elif parent not in proj.action_points_ids:
-        raise Arcor2Exception("AP has invalid parent ID (not an object or another AP).")
 
 
 async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) -> None:
@@ -1121,13 +1094,13 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
 
         new_action = common.Action(req.args.name, req.args.type, parameters=req.args.parameters, flows=req.args.flows)
 
-        action_meta = find_object_action(scene, new_action)
+        action_meta = find_object_action(glob.OBJECT_TYPES, scene, new_action)
 
         updated_project = copy.deepcopy(proj)
         updated_project.upsert_action(req.args.action_point_id, new_action)
 
         check_flows(updated_project, new_action, action_meta)
-        check_action_params(scene, updated_project, new_action, action_meta)
+        check_action_params(glob.OBJECT_TYPES, scene, updated_project, new_action, action_meta)
 
         if req.dry_run:
             return None
@@ -1155,10 +1128,10 @@ async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> No
     if req.args.flows is not None:
         updated_action.flows = req.args.flows
 
-    updated_action_meta = find_object_action(scene, updated_action)
+    updated_action_meta = find_object_action(glob.OBJECT_TYPES, scene, updated_action)
 
     check_flows(updated_project, updated_action, updated_action_meta)
-    check_action_params(scene, updated_project, updated_action, updated_action_meta)
+    check_action_params(glob.OBJECT_TYPES, scene, updated_project, updated_action, updated_action_meta)
 
     await ensure_write_locked(req.args.action_id, glob.USERS.user_name(ui))
 
@@ -1175,30 +1148,28 @@ async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> No
     return None
 
 
-def check_action_usage(proj: CachedProject, action: common.Action) -> None:
-
-    # check parameters
-    for act in proj.actions:
-        for param in act.parameters:
-            if param.type == common.ActionParameter.TypeEnum.LINK:
-                link = param.parse_link()
-                if action.id == link.action_id:
-                    raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.name}.")
-
-    # check logic
-    for log in proj.logic:
-
-        if log.start == action.id or log.end == action.id:
-            raise Arcor2Exception("Action used in logic.")
-
-        if log.condition:
-            action_id, _, _ = log.condition.what.split("/")
-
-            if action_id == action.id:
-                raise Arcor2Exception("Action used in condition.")
-
-
 async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> None:
+    def check_action_usage(proj: CachedProject, action: common.Action) -> None:
+
+        # check parameters
+        for act in proj.actions:
+            for param in act.parameters:
+                if param.type == common.ActionParameter.TypeEnum.LINK:
+                    link = param.parse_link()
+                    if action.id == link.action_id:
+                        raise Arcor2Exception(f"Action output used as parameter of {act.name}/{param.name}.")
+
+        # check logic
+        for log in proj.logic:
+
+            if log.start == action.id or log.end == action.id:
+                raise Arcor2Exception("Action used in logic.")
+
+            if log.condition:
+                action_id, _, _ = log.condition.what.split("/")
+
+                if action_id == action.id:
+                    raise Arcor2Exception("Action used in condition.")
 
     proj = glob.LOCK.project_or_exception()
     user_name = glob.USERS.user_name(ui)
@@ -1222,92 +1193,6 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
         return None
 
 
-def check_logic_item(scene: CachedScene, parent: LogicContainer, logic_item: common.LogicItem) -> None:
-    """Checks if newly added/updated ProjectLogicItem is ok.
-
-    :param parent:
-    :param logic_item:
-    :return:
-    """
-
-    action_ids = parent.action_ids()
-
-    if logic_item.start == common.LogicItem.START and logic_item.end == common.LogicItem.END:
-        raise Arcor2Exception("This does not make sense.")
-
-    if logic_item.start != common.LogicItem.START:
-
-        start_action_id, start_flow = logic_item.parse_start()
-
-        if start_action_id == logic_item.end:
-            raise Arcor2Exception("Start and end can't be the same.")
-
-        if start_action_id not in action_ids:
-            raise Arcor2Exception("Logic item has unknown start.")
-
-        if start_flow != "default":
-            raise Arcor2Exception("Only flow 'default' is supported so far.'")
-
-    if logic_item.end != common.LogicItem.END:
-
-        if logic_item.end not in action_ids:
-            raise Arcor2Exception("Logic item has unknown end.")
-
-    if logic_item.condition is not None:
-
-        what = logic_item.condition.parse_what()
-        action = parent.action(what.action_id)  # action that produced the result which we depend on here
-        flow = action.flow(what.flow_name)
-        try:
-            flow.outputs[what.output_index]
-        except IndexError:
-            raise Arcor2Exception(f"Flow {flow.type} does not have output with index {what.output_index}.")
-
-        action_meta = find_object_action(scene, action)
-
-        try:
-            return_type = action_meta.returns[what.output_index]
-        except IndexError:
-            raise Arcor2Exception(f"Invalid output index {what.output_index} for action {action_meta.name}.")
-
-        return_type_plugin = plugin_from_type_name(return_type)
-
-        if not return_type_plugin.COUNTABLE:
-            raise Arcor2Exception(f"Output of type {return_type} can't be branched.")
-
-        # TODO for now there is only support for bool
-        if return_type_plugin.type() != bool:
-            raise Arcor2Exception("Unsupported condition type.")
-
-        # check that condition value is ok, actual value is not interesting
-        # TODO perform this check using plugin
-        from arcor2 import json
-
-        if not isinstance(json.loads(logic_item.condition.value), bool):
-            raise Arcor2Exception("Invalid condition value.")
-
-    for existing_item in parent.logic:
-
-        if existing_item.id == logic_item.id:  # item is updated
-            continue
-
-        if logic_item.start == logic_item.START and existing_item.start == logic_item.START:
-            raise Arcor2Exception("START already defined.")
-
-        if logic_item.start == existing_item.start:
-
-            if None in (logic_item.condition, existing_item.condition):
-                raise Arcor2Exception("Two junctions has the same start action without condition.")
-
-            # when there are more logical connections from A to B, their condition values must be different
-            if logic_item.condition == existing_item.condition:
-                raise Arcor2Exception("Two junctions with the same start should have different conditions.")
-
-        if logic_item.end == existing_item.end:
-            if logic_item.start == existing_item.start:
-                raise Arcor2Exception("Junctions can't have the same start and end.")
-
-
 async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> None:
 
     scene = glob.LOCK.scene_or_exception()
@@ -1317,7 +1202,7 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
     to_lock = await get_unlocked_objects([req.args.start, req.args.end], user_name)
     async with ctx_write_lock(to_lock, user_name):
         logic_item = common.LogicItem(req.args.start, req.args.end, req.args.condition)
-        check_logic_item(scene, proj, logic_item)
+        check_logic_item(glob.OBJECT_TYPES, scene, proj, logic_item)
 
         if logic_item.start != logic_item.START:
             updated_project = copy.deepcopy(proj)
@@ -1354,7 +1239,7 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient
     updated_logic_item.end = req.args.end
     updated_logic_item.condition = req.args.condition
 
-    check_logic_item(scene, updated_project, updated_logic_item)
+    check_logic_item(glob.OBJECT_TYPES, scene, updated_project, updated_logic_item)
 
     if updated_logic_item.start != updated_logic_item.START:
         check_for_loops(updated_project, updated_logic_item.parse_start().start_action_id)
@@ -1393,27 +1278,6 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
     return None
 
 
-def check_parameter(proj: CachedProject, parameter: common.ProjectParameter) -> None:
-
-    hlp.is_valid_identifier(parameter.name)
-
-    for pparam in proj.parameters:
-
-        if parameter.id == pparam.id:
-            continue
-
-        if parameter.name == pparam.name:
-            raise Arcor2Exception("Name has to be unique.")
-
-    # TODO check using (constant?) plugin
-    from arcor2 import json
-
-    val = json.loads(parameter.value)
-
-    if not isinstance(val, (int, float, str, bool)):
-        raise Arcor2Exception("Only basic types are supported so far.")
-
-
 async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: WsClient) -> None:
 
     proj = glob.LOCK.project_or_exception()
@@ -1421,7 +1285,7 @@ async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: 
     async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT, glob.USERS.user_name(ui)):
 
         pparam = common.ProjectParameter(req.args.name, req.args.type, req.args.value)
-        check_parameter(proj, pparam)
+        check_project_parameter(proj, pparam)
 
         if req.dry_run:
             return
@@ -1449,7 +1313,7 @@ async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request
     if req.args.value is not None:
         updated_param.value = req.args.value
 
-    check_parameter(proj, updated_param)
+    check_project_parameter(proj, updated_param)
 
     if req.dry_run:
         return

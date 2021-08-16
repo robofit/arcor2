@@ -82,10 +82,7 @@ class ListProjects(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(BareProject):
-
-            valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
-            executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
-            problems: List[str] = field(default_factory=list)
+            problems: Optional[List[str]] = None
 
         data: Optional[List[Data]] = None
 
