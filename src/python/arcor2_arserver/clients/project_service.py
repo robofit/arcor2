@@ -54,6 +54,10 @@ _scenes_list = CachedListing({}, 0)
 _projects_list = CachedListing({}, 0)
 _object_type_list = CachedListing({}, 0)
 
+_scenes_list_lock = asyncio.Lock()
+_projects_list_lock = asyncio.Lock()
+_object_type_lock = asyncio.Lock()
+
 # here we can forget least used items
 if TYPE_CHECKING:
     _scenes: Dict[str, CachedScene] = {}
@@ -94,43 +98,50 @@ async def initialize_module() -> None:
 
 async def get_project_ids() -> Set[str]:
 
-    await _update_list(ps.get_projects, _projects_list, _projects)
+    async with _projects_list_lock:
+        await _update_list(ps.get_projects, _projects_list, _projects)
     return set(_projects_list.listing)
 
 
 async def get_projects() -> List[IdDesc]:
 
-    await _update_list(ps.get_projects, _projects_list, _projects)
+    async with _projects_list_lock:
+        await _update_list(ps.get_projects, _projects_list, _projects)
     return list(_projects_list.listing.values())
 
 
 async def get_scene_ids() -> Set[str]:
 
-    await _update_list(ps.get_scenes, _scenes_list, _scenes)
+    async with _scenes_list_lock:
+        await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return set(_scenes_list.listing)
 
 
 async def get_scenes() -> List[IdDesc]:
 
-    await _update_list(ps.get_scenes, _scenes_list, _scenes)
+    async with _scenes_list_lock:
+        await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return list(_scenes_list.listing.values())
 
 
 async def get_object_type_ids() -> Set[str]:
 
-    await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
+    async with _object_type_lock:
+        await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     return set(_object_type_list.listing)
 
 
 async def get_object_types() -> List[IdDesc]:
 
-    await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
+    async with _object_type_lock:
+        await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     return list(_object_type_list.listing.values())
 
 
 async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
 
-    await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
+    async with _object_type_lock:
+        await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     try:
         return _object_type_list.listing[object_type_id]
     except KeyError:
@@ -139,69 +150,72 @@ async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
 
 async def get_project(project_id: str) -> CachedProject:
 
-    try:
-        project = _projects[project_id]
-        assert project.modified
-    except KeyError:
-        project = CachedProject(await ps.get_project(project_id))
-        _projects[project_id] = project
-    else:
-        await _update_list(ps.get_projects, _projects_list, _projects)
-
-        if project_id not in _projects_list.listing:
-            _projects.pop(project_id, None)
-            raise Arcor2Exception("Project removed externally.")
-
-        # project in cache is outdated
-        if project.modified < _projects_list.listing[project_id].modified:
+    async with _projects_list_lock:
+        try:
+            project = _projects[project_id]
+            assert project.modified
+        except KeyError:
             project = CachedProject(await ps.get_project(project_id))
             _projects[project_id] = project
+        else:
+            await _update_list(ps.get_projects, _projects_list, _projects)
+
+            if project_id not in _projects_list.listing:
+                _projects.pop(project_id, None)
+                raise Arcor2Exception("Project removed externally.")
+
+            # project in cache is outdated
+            if project.modified < _projects_list.listing[project_id].modified:
+                project = CachedProject(await ps.get_project(project_id))
+                _projects[project_id] = project
 
     return project
 
 
 async def get_scene(scene_id: str) -> CachedScene:
 
-    try:
-        scene = _scenes[scene_id]
-        assert scene.modified
-    except KeyError:
-        scene = CachedScene(await ps.get_scene(scene_id))
-        _scenes[scene_id] = scene
-    else:
-        await _update_list(ps.get_scenes, _scenes_list, _scenes)
-
-        if scene_id not in _scenes_list.listing:
-            _scenes.pop(scene_id, None)
-            raise Arcor2Exception("Scene removed externally.")
-
-        # scene in cache is outdated
-        if scene.modified < _scenes_list.listing[scene_id].modified:
+    async with _scenes_list_lock:
+        try:
+            scene = _scenes[scene_id]
+            assert scene.modified
+        except KeyError:
             scene = CachedScene(await ps.get_scene(scene_id))
             _scenes[scene_id] = scene
+        else:
+            await _update_list(ps.get_scenes, _scenes_list, _scenes)
+
+            if scene_id not in _scenes_list.listing:
+                _scenes.pop(scene_id, None)
+                raise Arcor2Exception("Scene removed externally.")
+
+            # scene in cache is outdated
+            if scene.modified < _scenes_list.listing[scene_id].modified:
+                scene = CachedScene(await ps.get_scene(scene_id))
+                _scenes[scene_id] = scene
 
     return scene
 
 
 async def get_object_type(object_type_id: str) -> ObjectType:
 
-    try:
-        ot = _object_types[object_type_id]
-        assert ot.modified
-    except KeyError:
-        ot = await ps.get_object_type(object_type_id)
-        _object_types[object_type_id] = ot
-    else:
-        await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
-
-        if object_type_id not in _object_type_list.listing:
-            _object_types.pop(object_type_id, None)
-            raise Arcor2Exception("ObjectType removed externally.")
-
-        # ObjectType in cache is outdated
-        if ot.modified < _object_type_list.listing[object_type_id].modified:
+    async with _object_type_lock:
+        try:
+            ot = _object_types[object_type_id]
+            assert ot.modified
+        except KeyError:
             ot = await ps.get_object_type(object_type_id)
             _object_types[object_type_id] = ot
+        else:
+            await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
+
+            if object_type_id not in _object_type_list.listing:
+                _object_types.pop(object_type_id, None)
+                raise Arcor2Exception("ObjectType removed externally.")
+
+            # ObjectType in cache is outdated
+            if ot.modified < _object_type_list.listing[object_type_id].modified:
+                ot = await ps.get_object_type(object_type_id)
+                _object_types[object_type_id] = ot
 
     return ot
 
