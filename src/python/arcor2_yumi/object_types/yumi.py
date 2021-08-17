@@ -1455,16 +1455,15 @@ class YuMi(MultiArmRobot):
             If communication times out or socket error.
         """
 
-        if self._speed is None:
-            self._speed = n
-        elif self._speed == n:
+        # do not set speed if no change is requested
+        if self._speed is not None and self._speed == n:
             return
 
         speed_data = self.get_v(n)
         self.wait_for_all(
             [self._executor.submit(arm.set_speed, speed_data) for arm in self.arms],
             self._comm_timeout,
-            "Failed to move to joints in sync.",
+            "Failed to set speed.",
         )
 
     def set_z(self, name: str) -> None:
