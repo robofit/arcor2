@@ -226,7 +226,7 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
         except Arcor2Exception as e:
             data.disabled = True
             data.problem = str(e)
-            logger.warn(f"Disabling action {method_name} of  {type_def.__name__}. {str(e)}")
+            logger.warn(f"Disabling action {method_name} of {type_def.__name__}. {str(e)}")
 
         ret[data.name] = data
 
