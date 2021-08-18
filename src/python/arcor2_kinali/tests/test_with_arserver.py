@@ -100,7 +100,8 @@ def start_processes() -> Iterator[None]:
 
         while True:
             line = arserver_proc.stdout.readline().decode().strip()
-            if not line or (line.endswith(") initialized.")):  # TODO this is not ideal
+            LOGGER.info(line)
+            if not line or ") initialized." in line:  # TODO this is not ideal
                 break
 
         if arserver_proc.poll():
