@@ -1,23 +1,41 @@
 import logging
+from typing import Optional
 
 import aiologger
-
-LOG_FORMAT = "%(asctime)s - %(levelname)-8s: %(message)s", "%Y-%m-%d %H:%M:%S"
-
-
-def aiologger_formatter() -> aiologger.formatters.base.Formatter:
-
-    return aiologger.formatters.base.Formatter(*LOG_FORMAT)
+import colorlog
 
 
-def logger_formatter() -> logging.Formatter:
+def getMessage(self):
+    """backwards compatibility for python builtin logger ref.
 
-    return logging.Formatter(*LOG_FORMAT)
+    python3.7/logging/__init__.py", line 608
+    """
+    return self.get_message()
 
 
-def get_aiologger(name: str, level: aiologger.levels.LogLevel = aiologger.levels.LogLevel.INFO) -> aiologger.Logger:
+# see https://github.com/b2wdigital/aiologger/pull/85
+aiologger.records.LogRecord.getMessage = getMessage
 
-    return aiologger.Logger.with_default_handlers(name=name, formatter=aiologger_formatter(), level=level)
+
+DEFAULT_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+DEFAULT_LOG_FORMAT = "%(asctime)s %(log_color)s%(levelname)-8s%(reset)s %(message)s"
+
+
+def logger_formatter(log_format=DEFAULT_LOG_FORMAT, date_format=DEFAULT_DATE_FORMAT) -> logging.Formatter:
+
+    return colorlog.ColoredFormatter(log_format, date_format)
+
+
+def get_aiologger(
+    name: str,
+    level: aiologger.levels.LogLevel = aiologger.levels.LogLevel.INFO,
+    formatter: Optional[logging.Formatter] = None,
+) -> aiologger.Logger:
+
+    if formatter is None:
+        formatter = logger_formatter()
+
+    return aiologger.Logger.with_default_handlers(name=name, formatter=formatter, level=level)
 
 
 def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:

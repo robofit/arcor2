@@ -6,6 +6,7 @@ apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually
 apispec[yaml]==5.1.0
 autopep8==1.5.7
 Cython==0.29.24
+colorlog==5.0.1
 dataclasses-jsonschema[fast-validation,apispec]==2.14.1
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
@@ -16,7 +17,7 @@ numpy==1.21.2
 openapi-spec-validator==0.3.1
 opencv-contrib-python==4.5.3.56
 open3d==0.13.0
-orjson==3.6.1
+orjson==3.6.2
 packaging==20.9
 Pillow==8.3.1
 pyhumps==3.0.2
