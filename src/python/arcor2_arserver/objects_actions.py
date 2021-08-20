@@ -62,7 +62,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
     if obj_id in glob.OBJECT_TYPES:
 
         assert obj_iddesc.modified
-        assert glob.OBJECT_TYPES[obj_id].meta.modified, f"Object {obj_id} does not hove 'modified' in its meta."
+        assert glob.OBJECT_TYPES[obj_id].meta.modified, f"Object {obj_id} does not have 'modified' in its meta."
 
         if obj_iddesc.modified == glob.OBJECT_TYPES[obj_id].meta.modified:
             logger.debug(f"No need to update {obj_id}.")
@@ -72,7 +72,12 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
     try:
         bases = otu.base_from_source(obj.source, obj_id)
-        if bases and bases[0] not in object_types.keys() | built_in_types_names():
+
+        if not bases:
+            logger.debug(f"{obj_id} is definitely not an ObjectType (subclass of {object.__name__}), maybe mixin?")
+            return
+
+        if bases[0] not in object_types.keys() | built_in_types_names():
             logger.debug(f"Getting base class {bases[0]} for {obj_id}.")
             await get_object_data(object_types, bases[0])
 
@@ -89,9 +94,9 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             )
 
     except Arcor2Exception as e:
-        logger.warn(f"Disabling object type {obj.id}: can't get a base. {str(e)}")
+        logger.error(f"Disabling ObjectType {obj.id}: can't get a base. {str(e)}")
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem="Can't get base.")
+            ObjectTypeMeta(obj_id, "ObjectType disabled.", disabled=True, problem="Can't get base.")
         )
         return
 
@@ -107,7 +112,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             settings.OBJECT_TYPE_MODULE,
         )
     except Arcor2Exception as e:
-        logger.debug(f"{obj.id} is probably not an object type. {str(e)}")
+        logger.debug(f"{obj.id} is probably not an ObjectType. {str(e)}")
         return
 
     assert issubclass(type_def, Generic)
@@ -117,10 +122,10 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
         meta.modified = obj.modified
         otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:
-        logger.warning(f"Disabling object type {obj.id}.")
+        logger.error(f"Disabling ObjectType {obj.id}.")
         logger.debug(e, exc_info=True)
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=str(e), modified=obj.modified)
+            ObjectTypeMeta(obj_id, "ObjectType disabled.", disabled=True, problem=str(e), modified=obj.modified)
         )
         return
 
@@ -162,7 +167,7 @@ async def get_object_types() -> None:
 
     # initialize with built-in types, this has to be done just once
     if not glob.OBJECT_TYPES:
-        logger.debug("Initialization of object types.")
+        logger.debug("Initialization of ObjectTypes.")
         initialization = True
         await hlp.run_in_executor(prepare_object_types_dir, settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
         glob.OBJECT_TYPES.update(built_in_types_data())
