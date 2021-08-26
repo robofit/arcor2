@@ -61,7 +61,7 @@ logger = get_logger("YuMi")
 @dataclass
 class YumiSettings(Settings):
 
-    ip: str = "192.168.104.107"
+    ip: str = "192.168.104.101"
     max_tcp_speed: float = MAX_TCP_SPEED
     home_on_start: bool = False
 
