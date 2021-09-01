@@ -67,6 +67,7 @@ def start_processes() -> Iterator[None]:
         my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
 
         my_env["ARCOR2_SERVER_PORT"] = str(_arserver_port)
+        my_env["ARCOR2_ARSERVER_CACHE_TIMEOUT"] = str(0.0)  # effectively disables the cache
 
         my_env["ARCOR2_BUILD_URL"] = f"http://0.0.0.0:{find_free_port()}"
 

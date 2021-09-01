@@ -1,5 +1,4 @@
 import tempfile
-import time
 
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Mesh
@@ -26,8 +25,6 @@ def test_object_aiming(start_processes: None, ars: ARServer) -> None:
     test = "test"
 
     event(ars, events.c.ShowMainScreen)
-
-    time.sleep(1)  # otherwise ARServer might not notice new ObjectTypes
 
     assert ars.call_rpc(
         rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args(test)), rpc.s.NewScene.Response

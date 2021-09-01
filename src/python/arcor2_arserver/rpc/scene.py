@@ -531,7 +531,7 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Opti
             return None
 
         scene = UpdateableCachedScene(await storage.get_scene(req.args.id))
-        asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name))
+        await glob.LOCK.write_unlock(req.args.id, user_name)
         await storage.delete_scene(req.args.id)
         evt = sevts.s.SceneChanged(scene.bare)
         evt.change_type = Event.Type.REMOVE

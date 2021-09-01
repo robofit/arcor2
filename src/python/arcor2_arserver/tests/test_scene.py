@@ -1,6 +1,5 @@
-import time
-
-from arcor2.data.common import Pose, Position
+from arcor2.clients import project_service
+from arcor2.data.common import Pose, Position, Project, Scene, SceneObject
 from arcor2.data.events import Event
 from arcor2.data.object_type import Box as BoxModel
 from arcor2.data.rpc.common import IdArgs
@@ -116,8 +115,6 @@ def test_update_object_pose(start_processes: None, ars: ARServer) -> None:
 
     event(ars, events.c.ShowMainScreen)
 
-    time.sleep(1)  # otherwise ARServer might not notice new ObjectTypes
-
     assert ars.call_rpc(
         rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args(test)), rpc.s.NewScene.Response
     ).result
@@ -193,3 +190,64 @@ def test_update_object_pose(start_processes: None, ars: ARServer) -> None:
     ).result
 
     unlock_object(ars, scene_robot.id)
+
+
+def test_list_problems(start_processes: None, ars: ARServer) -> None:
+    """This is a test for a bug in get_scene_problems and get_project_problems
+    functions.
+
+    Because of the bug, the RPC returned result=False when there was non-existing ObjectType.
+
+    :param start_processes:
+    :param ars:
+    :return:
+    """
+
+    upload_def(DummyMultiArmRobot)  # OT has to exist first, otherwise scene can't be stored
+    invalid_scene_1 = Scene("invalidScene", objects=[SceneObject("invalidObject", DummyMultiArmRobot.__name__, Pose())])
+    invalid_project_1 = Project("invalidProject", invalid_scene_1.id)
+    project_service.update_scene(invalid_scene_1)
+    project_service.update_project(invalid_project_1)
+    project_service.delete_object_type(DummyMultiArmRobot.__name__)  # now the OT can be deleted
+
+    # initial event
+    show_main_screen_event = event(ars, events.c.ShowMainScreen)
+    assert show_main_screen_event.data
+    assert show_main_screen_event.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
+
+    scenes = ars.call_rpc(rpc.s.ListScenes.Request(get_id()), rpc.s.ListScenes.Response)
+    assert scenes.result
+    assert scenes.data
+    assert len(scenes.data) == 1
+    assert scenes.data[0].id == invalid_scene_1.id
+    assert scenes.data[0].name == invalid_scene_1.name
+    assert scenes.data[0].problems
+    assert len(scenes.data[0].problems) == 1
+
+    projects = ars.call_rpc(rpc.p.ListProjects.Request(get_id()), rpc.p.ListProjects.Response)
+    assert projects.result
+    assert projects.data
+    assert len(projects.data) == 1
+    assert projects.data[0].id == invalid_project_1.id
+    assert projects.data[0].name == invalid_project_1.name
+    assert projects.data[0].problems
+    assert len(projects.data[0].problems) == 1
+
+    upload_def(DummyMultiArmRobot)
+
+    # now the ObjectType exists, so the scene/project should be ok
+    scenes2 = ars.call_rpc(rpc.s.ListScenes.Request(get_id()), rpc.s.ListScenes.Response)
+    assert scenes2.result
+    assert scenes2.data
+    assert len(scenes2.data) == 1
+    assert scenes2.data[0].id == invalid_scene_1.id
+    assert scenes2.data[0].name == invalid_scene_1.name
+    assert scenes2.data[0].problems is None
+
+    projects2 = ars.call_rpc(rpc.p.ListProjects.Request(get_id()), rpc.p.ListProjects.Response)
+    assert projects2.result
+    assert projects2.data
+    assert len(projects2.data) == 1
+    assert projects2.data[0].id == invalid_project_1.id
+    assert projects2.data[0].name == invalid_project_1.name
+    assert projects2.data[0].problems is None

@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncIterator, Dict, List, MutableMapping, Optional, Set, Type, TypeVar
+from typing import AsyncIterator, Dict, List, Optional, Set, Type, TypeVar
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -30,25 +30,15 @@ _scene_state: SceneState = SceneState(SceneState.Data(SceneState.Data.StateEnum.
 @dataclass
 class SceneProblems:
     scene_modified: datetime
-    ot_modified: Dict[str, datetime]
     problems: List[str]
+    ot_modified: Dict[str, datetime]
 
 
 _scene_problems: Dict[str, SceneProblems] = {}
 
 
-async def prune_problems(problems: MutableMapping[str, SceneProblems], item_id: str, ots: Set[str]) -> None:
-    """Removes item from cache, when used ObjectTypes has changed."""
-
-    if item_id in problems:
-        if problems[item_id].ot_modified.keys() != ots:  # some OT was added or removed
-            del problems[item_id]
-        else:
-            for ot in ots:
-                # some OT was updated
-                if (await storage.get_object_type_iddesc(ot)).modified > problems[item_id].ot_modified[ot]:
-                    del problems[item_id]
-                    break
+def get_ot_modified(ots: Set[str]) -> Dict[str, datetime]:
+    return {k: v.meta.modified for k, v in glob.OBJECT_TYPES.items() if k in ots and v.meta.modified is not None}
 
 
 async def get_scene_problems(scene: CachedScene) -> Optional[List[str]]:
@@ -57,15 +47,21 @@ async def get_scene_problems(scene: CachedScene) -> Optional[List[str]]:
     assert scene.modified
 
     ots = scene.object_types
+    await get_object_types()
+    ot_modified = get_ot_modified(ots)
 
-    await prune_problems(_scene_problems, scene.id, ots)
+    if (
+        scene.id not in _scene_problems
+        or _scene_problems[scene.id].scene_modified < scene.modified
+        or _scene_problems[scene.id].ot_modified != ot_modified
+    ):
 
-    if scene.id not in _scene_problems or _scene_problems[scene.id].scene_modified < scene.modified:
         logger.debug(f"Updating scene_problems for {scene.name}.")
+
         _scene_problems[scene.id] = SceneProblems(
             scene.modified,
-            {ot: (await storage.get_object_type_iddesc(ot)).modified for ot in ots},
             scene_problems(glob.OBJECT_TYPES, scene),
+            get_ot_modified(ots),
         )
 
     # prune removed scenes
@@ -258,11 +254,9 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[List[Para
 
 async def open_scene(scene_id: str) -> None:
 
-    await get_object_types()
-
     scene = await storage.get_scene(scene_id)
 
-    if sp := await get_scene_problems(scene):
+    if sp := await get_scene_problems(scene):  # this also refreshes ObjectTypes / calls get_object_types()
         logger.warning(f"Scene {scene.name} can't be opened due to the following problem(s)...")
         for spp in sp:
             logger.warning(spp)
