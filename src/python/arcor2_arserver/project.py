@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, AsyncIterator, Callable, Dict, List, MutableMapping, Optional, Set, cast
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Set
 
 from arcor2 import helpers as hlp
 from arcor2.action import results_to_json
@@ -13,7 +13,8 @@ from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.checks import project_problems
 from arcor2_arserver.clients import project_service as storage
-from arcor2_arserver.scene import SceneProblems, get_scene_state, open_scene, prune_problems
+from arcor2_arserver.objects_actions import get_object_types
+from arcor2_arserver.scene import SceneProblems, get_ot_modified, get_scene_state, open_scene
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import OpenProject, ProjectClosed
@@ -34,19 +35,22 @@ async def get_project_problems(scene: CachedScene, project: CachedProject) -> Op
     assert project.modified
 
     ots = scene.object_types
-
-    await prune_problems(cast(MutableMapping[str, SceneProblems], _project_problems), project.id, ots)
+    await get_object_types()
+    ot_modified = get_ot_modified(ots)
 
     if (
         project.id not in _project_problems
         or _project_problems[project.id].scene_modified < scene.modified
         or _project_problems[project.id].project_modified < project.modified
+        or _project_problems[project.id].ot_modified != ot_modified
     ):
+
         logger.debug(f"Updating project_problems for {project.name}.")
+
         _project_problems[project.id] = ProjectProblems(
             scene.modified,
-            {ot: (await storage.get_object_type_iddesc(ot)).modified for ot in ots},
             project_problems(glob.OBJECT_TYPES, scene, project),
+            ot_modified,
             project.modified,
         )
 
