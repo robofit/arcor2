@@ -13,7 +13,7 @@ from arcor2_arserver_data.events.common import ShowMainScreen
 
 VERBOSE: bool = False
 
-PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
+PORT: int = int(os.getenv("ARCOR2_ARSERVER_PORT", 6789))
 
 MAIN_SCREEN: Optional[ShowMainScreen.Data] = ShowMainScreen.Data(ShowMainScreen.Data.WhatEnum.ScenesList)
 

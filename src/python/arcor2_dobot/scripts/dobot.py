@@ -11,6 +11,7 @@ from arcor2_dobot.m1 import DobotM1
 from arcor2_dobot.magician import DobotMagician
 from flask import jsonify, request
 
+from arcor2 import env
 from arcor2.data.common import Joint, Pose
 from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
@@ -446,7 +447,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
-    parser.add_argument("-m", "--mock", action="store_true", default=False)
+    parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_DOBOT_MOCK"))
     args = parser.parse_args()
 
     global _mock

@@ -11,6 +11,7 @@ from arcor2_kinect_azure import get_data, version
 from flask import jsonify, request, send_file
 from PIL import Image
 
+from arcor2 import env
 from arcor2.data.camera import CameraParameters
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
@@ -293,7 +294,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
-    parser.add_argument("-m", "--mock", action="store_true", default=False)
+    parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_KINECT_AZURE_MOCK"))
     args = parser.parse_args()
 
     global _mock

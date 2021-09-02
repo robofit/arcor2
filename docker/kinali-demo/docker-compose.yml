@@ -12,7 +12,6 @@ services:
       - calibration
     ports:
       - "6789:6789"
-      - "6780:8888"
     networks:
       - testitoff-execution-network
       - testitoff-scene-network
@@ -29,7 +28,6 @@ services:
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_EXECUTION_URL=ws://execution:6790
       - ARCOR2_BUILD_URL=http://build:5008
-      - ARCOR2_DATA_PATH=/root/data
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
 
   build:
@@ -86,10 +84,9 @@ services:
       - "5014:5014"
     environment:
       - ARCOR2_CALIBRATION_URL=http://calibration:5014
-      - ARCOR2_CALIBRATION_SIMULATOR=false
+      - ARCOR2_CALIBRATION_MOCK=false
     volumes:
       - ./calibration.yaml:/root/calibration.yaml
-
 
   testitoff-robot-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/robot:0.12.0
@@ -260,7 +257,6 @@ services:
       networks:
         - testitoff-project-network
 
-
   testitoff-interaction-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/interaction:0.1.4
       container_name: "testitoff-interaction-webapi"
@@ -320,7 +316,6 @@ services:
       - testitoff-project-network
     depends_on:
       - project
-
 
 volumes:
   mongodb:

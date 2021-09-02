@@ -63,7 +63,7 @@ def start_processes() -> Iterator[None]:
         my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
         my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
 
-        my_env["ARCOR2_SERVER_PORT"] = str(_arserver_port)
+        my_env["ARCOR2_ARSERVER_PORT"] = str(_arserver_port)
 
         processes = []
 
