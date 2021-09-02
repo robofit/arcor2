@@ -18,6 +18,7 @@ from flask import jsonify, request
 from PIL import Image
 
 import arcor2_calibration
+from arcor2 import env
 from arcor2 import transformations as tr
 from arcor2.data.common import Pose, Position
 from arcor2.flask import RespT, create_app, run_app
@@ -385,27 +386,39 @@ def main() -> None:
         help="Set logging level to debug.",
         action="store_const",
         const=logging.DEBUG,
-        default=logging.INFO,
+        default=logging.DEBUG if env.get_bool("ARCOR2_CALIBRATION_DEBUG") else logging.INFO,
     )
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    run_as_mock = env.get_bool("ARCOR2_CALIBRATION_MOCK")
 
-    group.add_argument(
-        "--config-file",
-        "-c",
-        type=argparse.FileType("r"),
-        help="Config file name containing a valid YAML configuration.",
-    )
+    # argparse has not support for env vars so this is kind of workaround
+    # TODO maybe it could be solved using a custom action like https://gist.github.com/orls/51525c86ee77a56ad396
+    if not run_as_mock:
 
-    sub_group = group.add_mutually_exclusive_group()
-    sub_group.add_argument("-s", "--swagger", action="store_true", default=False)
-    sub_group.add_argument("-m", "--mock", action="store_true", default=False)
+        group = parser.add_mutually_exclusive_group(required=True)
+
+        group.add_argument(
+            "--config-file",
+            "-c",
+            type=argparse.FileType("r"),
+            help="Config file name containing a valid YAML configuration.",
+        )
+
+        sub_group = group.add_mutually_exclusive_group()
+        sub_group.add_argument("-s", "--swagger", action="store_true", default=False)
+        sub_group.add_argument(
+            "-m",
+            "--mock",
+            action="store_true",
+            default=False,
+            help="Run the service in a mock mode. The same can be done by setting ARCOR2_CALIBRATION_MOCK.",
+        )
 
     args = parser.parse_args()
 
     logger.setLevel(args.debug)
 
-    if not (args.swagger or args.mock):
+    if not (run_as_mock or args.swagger or args.mock):
 
         data = args.config_file.read()
 
@@ -438,7 +451,7 @@ def main() -> None:
         sys.exit(1)
 
     global _mock
-    _mock = args.mock
+    _mock = run_as_mock or args.mock
     if _mock:
         logger.info("Starting as a mock!")
 
@@ -449,7 +462,7 @@ def main() -> None:
         arcor2_calibration.version(),
         port_from_url(CALIBRATION_URL),
         [Pose, CalibrateRobotArgs, MarkerCorners, EstimatedPose],
-        args.swagger,
+        getattr(args, "swagger", False),
     )
 
 

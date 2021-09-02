@@ -20,7 +20,7 @@ import arcor2_arserver
 import arcor2_arserver_data
 import arcor2_execution_data
 from arcor2 import action as action_mod
-from arcor2 import json, ws_server
+from arcor2 import env, json, ws_server
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.exceptions import Arcor2Exception
@@ -300,7 +300,7 @@ def main() -> None:
         help="Set logging level to debug.",
         action="store_const",
         const=LogLevel.DEBUG,
-        default=LogLevel.INFO,
+        default=LogLevel.DEBUG if env.get_bool("ARCOR2_ARSERVER_DEBUG") else LogLevel.INFO,
     )
     parser.add_argument(
         "--version", action="version", version=arcor2_arserver.version(), help="Shows version and exits."
@@ -309,7 +309,12 @@ def main() -> None:
         "--api_version", action="version", version=arcor2_arserver_data.version(), help="Shows API version and exits."
     )
     parser.add_argument(
-        "-a", "--asyncio_debug", help="Turn on asyncio debug mode.", action="store_const", const=True, default=False
+        "-a",
+        "--asyncio_debug",
+        help="Turn on asyncio debug mode.",
+        action="store_const",
+        const=True,
+        default=env.get_bool("ARCOR2_ARSERVER_ASYNCIO_DEBUG"),
     )
     parser.add_argument("--openapi", action="store_true", help="Prints OpenAPI models and exits.")
 
