@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.19.1] - 2021-09-02
+
+### Changed
+- Added EXPOSE to dockerfile
+
 ## [0.19.0] - 2021-07-30
 
 ### Changed
