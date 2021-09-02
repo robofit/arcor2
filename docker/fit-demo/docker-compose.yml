@@ -115,7 +115,7 @@ services:
       - "5013:5013"
 
   project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.11.1
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.11.2
     container_name: "project"
     ports:
       - "10000-10001:10000-10001"

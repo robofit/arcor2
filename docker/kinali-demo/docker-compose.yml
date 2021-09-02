@@ -118,7 +118,7 @@ services:
       - testitoff-scene-network
 
   testitoff-robotsystem-webapi:
-      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem:0.10.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem:0.10.2
       container_name: "testitoff-robotsystem-webapi"
       expose:
           - "14000"
@@ -153,7 +153,7 @@ services:
           - "14017:27017"
 
   testitoff-robotsystem-configurations:
-    image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/configurations:0.10.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/robotsystem/configurations:0.10.2
     container_name: "testitoff-robotsystem-configurations"
     networks:
       - testitoff-robot-network
@@ -234,7 +234,7 @@ services:
         - testitoff-scene-network
 
   project:
-      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.11.1
+      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.11.2
       container_name: "project"
       ports:
         - "10000-10001:10000-10001"
