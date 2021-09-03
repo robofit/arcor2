@@ -215,6 +215,7 @@ class CachedProject(CachedBase):
         "_functions",
         "overrides",
         "_childs",
+        "project_objects_ids",
     )
 
     def __init__(self, project: Union[cmn.Project, CachedProject]):
@@ -223,6 +224,7 @@ class CachedProject(CachedBase):
 
         self.scene_id: str = project.scene_id
         self.has_logic: bool = project.has_logic
+        self.project_objects_ids: Optional[List[str]] = project.project_objects_ids
 
         self._action_points: Dict[str, cmn.BareActionPoint] = {}
 
@@ -333,6 +335,7 @@ class CachedProject(CachedBase):
         proj.parameters = list(self.parameters)
         proj.functions = list(self.functions)
         proj.logic = list(self.logic)
+        proj.project_objects_ids = self.project_objects_ids
         return proj
 
     @property

@@ -2,10 +2,8 @@
 
 The service provides logging capabilities through the network. Logging-related methods are added to ObjectTypes using a mixin class.
 
-- Messages are sent using the websocket protocol.
-- Call to `log_` methods are non-blocking.
-- The logging level for messages from ObjectTypes can be set using `ARCOR2_LOGGER_LEVEL`. Default level is `info` and other possible values are `warning`, `error` and `debug`.
-- The connection string / port where the service is running is set using `ARCOR2_LOGGER_URL`, which has the following default value `ws://0.0.0.0:8765`.
+- Messages are sent using the websockets protocol.
+- Calls to `log_` methods are non-blocking.
 
 ## Example usage
 
@@ -28,3 +26,11 @@ class MyObject(LoggingMixin, Generic):
         self.logger = self.get_logger()
         self.logger.info("Initialized.")
 ```
+
+## Environment variables
+
+- `ARCOR2_LOGGER_URL=ws://0.0.0.0:8765` - by default, the service listens on port 8765.
+- `ARCOR2_LOGGER_LEVEL=info` - by default, messages from objects with level `info` and higher are logged.
+  - Other possible values are `warning`, `error` and `debug`. 
+- `ARCOR2_LOGGER_DEBUG=1` - switches logger to the `DEBUG` level.
+- `ARCOR2_LOGGER_ASYNCIO_DEBUG=1` - turns on `asyncio` debug output (helpful to debug problems related to concurrency).

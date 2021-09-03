@@ -695,6 +695,7 @@ class Project(BareProject):
     functions: List[ProjectFunction] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
     object_overrides: List[SceneObjectOverride] = field(default_factory=list)
+    project_objects_ids: Optional[List[str]] = None  # not used at the moment
 
     @staticmethod
     def from_bare(bare: BareProject) -> Project:

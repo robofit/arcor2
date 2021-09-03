@@ -1,13 +1,16 @@
+import argparse
 import os
 import sys
 
 import websockets
+from aiologger.levels import LogLevel
 from aiorun import run
 from arcor2_logger import version
 from arcor2_logger.object_types.logging_mixin import Level, LogMessage, Register
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
+from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_aiologger
@@ -82,6 +85,28 @@ async def aio_main() -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Set logging level to debug.",
+        action="store_const",
+        const=LogLevel.DEBUG,
+        default=LogLevel.DEBUG if env.get_bool("ARCOR2_LOGGER_DEBUG") else LogLevel.INFO,
+    )
+    parser.add_argument("--version", action="version", version=version(), help="Shows version and exits.")
+    parser.add_argument(
+        "-a",
+        "--asyncio_debug",
+        help="Turn on asyncio debug mode.",
+        action="store_const",
+        const=True,
+        default=env.get_bool("ARCOR2_LOGGER_ASYNCIO_DEBUG"),
+    )
+
+    args = parser.parse_args()
+    logger.level = args.debug
 
     run(aio_main(), stop_on_unhandled_errors=True)
 

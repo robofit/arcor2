@@ -35,7 +35,7 @@ class CachedListing:
     ts: float
 
     def time_to_update(self) -> bool:
-        return time.monotonic() - self.ts > 1.0
+        return time.monotonic() - self.ts > _cache_timeout
 
 
 """
@@ -45,6 +45,7 @@ Caching can be disabled by setting respective environment variable - this is use
 where ARServer is not the only one who touches Project service.
 """
 
+_cache_timeout = max(env.get_float("ARCOR2_ARSERVER_CACHE_TIMEOUT", 1.0), 0)
 _cache_scenes = max(env.get_int("ARCOR2_ARSERVER_CACHE_SCENES", 32), 1)
 _cache_projects = max(env.get_int("ARCOR2_ARSERVER_CACHE_PROJECTS", 64), 1)
 _cache_object_types = max(env.get_int("ARCOR2_ARSERVER_CACHE_OBJECT_TYPES", 64), 1)

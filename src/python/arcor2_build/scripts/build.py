@@ -16,7 +16,7 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from flask import request, send_file
 
 import arcor2_build
-from arcor2 import json
+from arcor2 import env, json
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import project_service as ps
 from arcor2.data.common import Project, ProjectSources, Scene
@@ -585,7 +585,7 @@ def main() -> None:
         help="Set logging level to debug.",
         action="store_const",
         const=logging.DEBUG,
-        default=logging.INFO,
+        default=logging.DEBUG if env.get_bool("ARCOR2_BUILD_DEBUG") else logging.INFO,
     )
 
     args = parser.parse_args()

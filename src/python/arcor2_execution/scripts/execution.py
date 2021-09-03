@@ -22,7 +22,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2_execution
 import arcor2_execution_data
-from arcor2 import json, ws_server
+from arcor2 import env, json, ws_server
 from arcor2.data import common, compile_json_schemas
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
@@ -458,12 +458,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-v",
-        "--verbose",
-        help="Increase output verbosity",
+        "-d",
+        "--debug",
+        help="Set logging level to debug.",
         action="store_const",
         const=LogLevel.DEBUG,
-        default=LogLevel.INFO,
+        default=LogLevel.DEBUG if env.get_bool("ARCOR2_EXECUTION_DEBUG") else LogLevel.INFO,
     )
     parser.add_argument(
         "--version", action="version", version=arcor2_execution.version(), help="Shows version and exits."
@@ -472,11 +472,16 @@ def main() -> None:
         "--api_version", action="version", version=arcor2_execution_data.version(), help="Shows API version and exits."
     )
     parser.add_argument(
-        "-a", "--asyncio_debug", help="Turn on asyncio debug mode.", action="store_const", const=True, default=False
+        "-a",
+        "--asyncio_debug",
+        help="Turn on asyncio debug mode.",
+        action="store_const",
+        const=True,
+        default=env.get_bool("ARCOR2_EXECUTION_ASYNCIO_DEBUG"),
     )
 
     args = parser.parse_args()
-    logger.level = args.verbose
+    logger.level = args.debug
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)

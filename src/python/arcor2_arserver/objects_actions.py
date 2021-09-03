@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Set, Union
+from typing import List, NamedTuple, Set, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
@@ -155,13 +155,22 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
     object_types[obj_id] = otd
 
 
-async def get_object_types() -> None:
+class UpdatedObjectTypes(NamedTuple):
+
+    new: Set[str]
+    updated: Set[str]
+    removed: Set[str]
+
+    @property
+    def all(self) -> Set[str]:
+        return self.new | self.updated | self.removed
+
+
+async def get_object_types() -> UpdatedObjectTypes:
     """Serves to initialize or update knowledge about awailable ObjectTypes.
 
     :return:
     """
-
-    assert glob.LOCK.scene is None
 
     initialization = False
 
@@ -258,3 +267,5 @@ async def get_object_types() -> None:
                 settings.OBJECT_TYPE_PATH,
                 settings.OBJECT_TYPE_MODULE,
             )
+
+    return UpdatedObjectTypes(new_object_ids, updated_object_ids, removed_object_ids)

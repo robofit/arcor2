@@ -1,5 +1,3 @@
-import time
-
 import pytest
 
 from arcor2.data.common import Pose
@@ -64,8 +62,6 @@ def test_update_object_model(start_processes: None, ars: ARServer) -> None:
     upload_def(DummyMultiArmRobot)
 
     event(ars, events.c.ShowMainScreen)
-
-    time.sleep(1)  # otherwise ARServer might not notice new ObjectTypes
 
     assert ars.call_rpc(
         rpc.s.NewScene.Request(get_id(), rpc.s.NewScene.Request.Args("TestScene")), rpc.s.NewScene.Response
