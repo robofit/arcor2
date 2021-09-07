@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.20.0] - WIP
+
+### Changed
+- Updated `arcor2` dependency.
+- New environment variable `ARCOR2_BUILD_DEBUG` - to turn on debugging output.
+
 ## [0.19.1] - 2021-09-02
 
 ### Changed

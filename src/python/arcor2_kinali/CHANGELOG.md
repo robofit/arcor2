@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.16.0] - WIP
+
+### Changed
+
+- Changes regarding updated signatures of `Robot` methods (`__init__`, `move_to_pose`, `robot_joints`).
+- Raise `KinematicsException` where it makes sense.
+
 ## [0.15.0] - 2021-07-29
 
 ### Changed

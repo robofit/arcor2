@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.19.0] - WIP
+
+### Changed
+
+- Make RPCs less blocking.
+- New environment variables `ARCOR2_EXECUTION_DEBUG` and `ARCOR2_EXECUTION_ASYNCIO_DEBUG` (see README for details).
+- Added dependency on `3rdparty:websocket-client` to make `LoggingMixin` work.
+
 ## [0.18.1] - 2021-09-02
 
 ### Changed
