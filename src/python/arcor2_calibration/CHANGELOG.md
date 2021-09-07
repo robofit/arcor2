@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.7.0] - WIP
+
+### Changed
+
+- New environment variables: 
+  - `ARCOR2_CALIBRATION_DEBUG` to turn on debugging.
+  - `ARCOR2_CALIBRATION_MOCK` to start in mock mode.
+
 ## [0.6.1] - 2021-07-29
 
 ### Fixed

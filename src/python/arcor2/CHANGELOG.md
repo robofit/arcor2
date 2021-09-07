@@ -2,6 +2,25 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.21.0] - WIP
+
+### Changed
+
+- Added `Robot` specific exception `KinematicsException`.
+  - So far used to give more precise error messages.
+- `ProjectParameter` now derives from `Parameter`.
+- `CachedScene` now caches ObjectTypes used in a scene.
+- Logs are now colored.
+- `Project` now has optional `project_objects_ids` property (not used at the moment).
+
+### Fixed
+
+- Make sure that `Pose` contain only floats.
+  - When any value is e.g. np.float64, `orjson` complains.
+  - Because of this, `to_dict` methods of `Position` and `Orientation` are overridden.
+- Typo in URL within `get_models` of `project_service` client.
+- Missing sleep in `wait_for` of `scene_service` client.
+
 ## [0.20.0] - 2021-08-05
 
 ### Changed

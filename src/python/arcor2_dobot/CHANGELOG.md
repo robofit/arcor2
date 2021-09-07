@@ -2,6 +2,11 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.3.0] - WIP
+
+### Changed
+ - New environment variable `ARCOR2_DOBOT_MOCK` to start the service in a mock mode.
+
 ## [0.2.3] - 2021-05-21
 
 ### Fixed

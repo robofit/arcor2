@@ -2,7 +2,42 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.21.0] - WIP
+## [0.22.0] - WIP
+
+### Changed
+
+- When getting pose/joints from a robot fails, continue trying instead of giving up.
+- Handle `KinematicsException` to deliver a more precise error message.
+- Updating object models.
+  - New RPC `UpdateObjectModel`.
+  - Ability to lock individual ObjectTypes.
+  - Various improvements regarding locking.
+- Proper handling of scene/project problems.
+  - Any problem makes scene/project invalid, and then it can't be opened.  
+  - Scene/project problems are now checked when:
+    - Scene/project is listed.
+    - Opening a scene/project is requested.
+  - Found problems are cached for better performance.
+  - ObjectTypes are checked for changes during each listing of scenes/projects.
+- Deleting ObjectTypes reworked.
+  - `DeleteObjectType` replaced with `DeleteObjectTypes`.
+  - The new RPC takes list of ObjectType IDs.
+  - Empty list means all ObjectTypes.
+  - It returns list of id/error for types that could not be removed.
+  - This is especially useful for usage with `dry_run`.
+
+### Fixed
+
+- Ban HT mode changes while moving.
+- Arguments for getting robot joints (only affected multi-arm robots).
+- Handle locking exceptions on scene start/stop.
+- Copying of action points.
+  - Fixed locking within `CopyActionPoint`.
+  - Fixed update of orientation IDs.
+- Added locking to Project client to make the cache caching properly.
+
+
+## [0.21.0] - 2021-08-05
 
 ### Changed
 

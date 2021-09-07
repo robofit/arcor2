@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - WIP
+
+### Changed
+
+- Dependency on `arcor2==0.21.0`.
+
+### Fixed
+
+- Handling of `created` property.
+
 ## [0.16.0] - 2021-07-29
 
 ### Changed
