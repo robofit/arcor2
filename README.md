@@ -112,7 +112,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2021-08-05: [0.20.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.20.0) ([pypi](https://pypi.org/project/arcor2/0.20.0/)).
+ - 2021-09-07: [0.21.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.21.0) ([pypi](https://pypi.org/project/arcor2/0.21.0/)).
 
 
  
