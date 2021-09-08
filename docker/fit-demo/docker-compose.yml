@@ -28,7 +28,7 @@ services:
       - ARCOR2_DOBOT_URL=http://dobot:5018
 
   build:
-    image: arcor2/arcor2_build:0.19.0
+    image: arcor2/arcor2_build:0.20.0
     container_name: build
     depends_on:
       - project
