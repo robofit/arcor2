@@ -1053,7 +1053,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
                 old_ori_id = PosePlugin.orientation_id(proj, new_act.id, param.name)
 
-                if proj.bare_ap_and_orientation(old_ori_id)[0].id not in proj.childs(req.args.id):
+                if proj.bare_ap_and_orientation(old_ori_id)[1].id not in proj.childs(req.args.id):
                     # orientation belongs to another AP tree, no need to update anything
                     continue
 
@@ -1062,8 +1062,6 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
                 # TODO this is hacky - plugins are missing methods to set/update parameters
                 from arcor2 import json
 
-                # TODO this won't work if action on AP is using orientation from AP's descendant
-                #  ...which is not in the mapping yet
                 try:
                     param.value = json.dumps(old_ori_to_new_ori[old_ori_id])
                 except KeyError:
