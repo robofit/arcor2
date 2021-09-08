@@ -96,7 +96,9 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
     except Arcor2Exception as e:
         logger.error(f"Disabling ObjectType {obj.id}: can't get a base. {str(e)}")
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "ObjectType disabled.", disabled=True, problem="Can't get base.")
+            ObjectTypeMeta(
+                obj_id, "ObjectType disabled.", disabled=True, problem="Can't get base.", modified=obj.modified
+            )
         )
         return
 
