@@ -115,6 +115,9 @@ class Lock:
         """
 
         if self._ui_user_locks:
+            # TODO turn warn into debug once the issue with "Locking failed" is gone
+            if not dry_run:
+                logger.warn(f"Locking failed... ui_user_locks: {self._ui_user_locks}")
             raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
 
         i = 0
@@ -123,7 +126,7 @@ class Lock:
             for _ in range(self._lock_retries):
                 i += 1
                 try:
-                    async with self._lock:
+                    async with self._lock:  # TODO maybe use some timeout here?
                         if self._get_write_locks_count():
                             raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
 
@@ -142,6 +145,10 @@ class Lock:
                 logger.warn(f"Retry took {i * self._lock_timeout}")
 
             if not yielded:
+                # TODO turn warn into debug once the issue with "Locking failed" is gone
+                logger.warn(
+                    f"Locking failed... locked_objects: {self._locked_objects}, ui_user_locks: {self._ui_user_locks}."
+                )
                 raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
 
     async def read_lock(self, obj_ids: ObjIds, owner: str) -> bool:

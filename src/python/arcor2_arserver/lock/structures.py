@@ -29,6 +29,9 @@ class LockedObject:
 
         self.tree: bool = False
 
+    def __repr__(self) -> str:
+        return f"LockedObject(read={self.read}, write={self.write}, tree={self.tree})"
+
     def read_lock(self, obj_id: str, owner: str) -> bool:
         """Perform all necessary check if object can be locked and locks it."""
 
