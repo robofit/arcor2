@@ -121,8 +121,6 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
     try:
         meta = meta_from_def(type_def)
-        meta.modified = obj.modified
-        otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:
         logger.error(f"Disabling ObjectType {obj.id}.")
         logger.debug(e, exc_info=True)
@@ -130,6 +128,8 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             ObjectTypeMeta(obj_id, "ObjectType disabled.", disabled=True, problem=str(e), modified=obj.modified)
         )
         return
+
+    meta.modified = obj.modified
 
     if obj.model:
         try:
@@ -271,3 +271,25 @@ async def get_object_types() -> UpdatedObjectTypes:
             )
 
     return UpdatedObjectTypes(new_object_ids, updated_object_ids, removed_object_ids)
+
+
+async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
+
+    if not meta.object_model:
+        return
+
+    model = om.model()
+
+    if model.id != meta.type:
+        raise Arcor2Exception("Model id must be equal to ObjectType id.")
+
+    if isinstance(model, Mesh):
+
+        if model.data_id not in await storage.files_ids():
+            raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
+
+    # when updating model of an already existing object, the type might be different
+    if meta.object_model.type != om.type:
+        await storage.delete_model(model.id)  # ...otherwise it is going to be an orphan
+
+    await storage.put_model(model)

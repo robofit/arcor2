@@ -9,7 +9,7 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
 from arcor2.data.common import Parameter, Pose, Position, SceneObject
-from arcor2.data.object_type import Mesh, Model3dType, ObjectModel
+from arcor2.data.object_type import Model3dType
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import CollisionObject, GenericWithPose, Robot
@@ -20,9 +20,10 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import ctx_write_lock, ensure_write_locked
-from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeMeta
+from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
 from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
+from arcor2_arserver.objects_actions import update_object_model
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose
 from arcor2_arserver.scene import (
     can_modify_scene,
@@ -258,28 +259,6 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     _objects_being_aimed.pop(user_name, None)
     asyncio.create_task(update_scene_object_pose(scene, obj, new_pose, obj_inst))
     return None
-
-
-async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
-
-    if not meta.object_model:
-        return
-
-    model = om.model()
-
-    if model.id != meta.type:
-        raise Arcor2Exception("Model id must be equal to ObjectType id.")
-
-    if isinstance(model, Mesh):
-
-        if model.data_id not in await storage.files_ids():
-            raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
-
-    # when updating model of an already existing object, the type might be different
-    if meta.object_model.type != om.type:
-        await storage.delete_model(model.id)  # ...otherwise it is going to be an orphan
-
-    await storage.put_model(model)
 
 
 async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) -> None:

@@ -14,10 +14,12 @@ from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.image import image_from_str
-from arcor2.object_types.abstract import Generic
+from arcor2.object_types.abstract import Generic, VirtualCollisionObject
+from arcor2.source.utils import tree_to_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
+from arcor2_arserver import settings
 from arcor2_arserver.checks import check_object_parameters
 from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.helpers import (
@@ -28,7 +30,10 @@ from arcor2_arserver.helpers import (
     unique_name,
 )
 from arcor2_arserver.lock.exceptions import LockingException
-from arcor2_arserver.objects_actions import get_object_types
+from arcor2_arserver.object_types.data import ObjectTypeData
+from arcor2_arserver.object_types.source import new_object_type
+from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
+from arcor2_arserver.objects_actions import get_object_types, update_object_model
 from arcor2_arserver.project import (
     associated_projects,
     invalidate_joints_using_object_as_parent,
@@ -56,6 +61,7 @@ from arcor2_arserver.scene import (
 )
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
+from arcor2_arserver_data.objects import ObjectTypeMeta
 
 
 @asynccontextmanager
@@ -325,6 +331,30 @@ async def action_param_values_cb(
 
 
 async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient) -> None:
+    async def _delete_if_not_used(meta: ObjectTypeMeta) -> None:
+
+        if glob.LOCK.scene and any(glob.LOCK.scene.objects_of_type(meta.type)):
+            return
+
+        async for scn in scenes():
+            if scn.objects_of_type(meta.type):
+                break
+        else:  # object not used anywhere, let's remove it
+
+            try:
+                await asyncio.gather(
+                    storage.delete_object_type(meta.type),
+                    storage.delete_model(meta.type),
+                    remove_object_type(meta.type),
+                )
+            except Arcor2Exception as e:
+                logger.warn(str(e))
+
+            del glob.OBJECT_TYPES[obj.type]
+
+            evtr = sevts.o.ChangedObjectTypes([meta])
+            evtr.change_type = Event.Type.REMOVE
+            await notif.broadcast_event(evtr)
 
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
     user_name = glob.USERS.user_name(ui)
@@ -357,7 +387,11 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
 
         # TODO this should be done after scene is saved
         asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
-        return None
+
+        meta = glob.OBJECT_TYPES[obj.type].meta
+
+        if meta.base == VirtualCollisionObject.__name__:  # those are auto-removed when the last instance is removed
+            asyncio.create_task(_delete_if_not_used(meta))
 
 
 async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRobot.Request, ui: WsClient) -> None:
@@ -649,3 +683,67 @@ async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
         return
 
     asyncio.ensure_future(stop_scene(scene))
+
+
+async def add_virtual_collision_object_to_scene_cb(
+    req: srpc.s.AddVirtualCollisionObjectToScene.Request, ui: WsClient
+) -> None:
+
+    async with ctx_write_lock(
+        (glob.LOCK.SpecialValues.SCENE, glob.LOCK.SpecialValues.ADDING_OBJECT), glob.USERS.user_name(ui)
+    ):
+
+        scene = glob.LOCK.scene_or_exception()
+
+        if glob.LOCK.project:
+            raise Arcor2Exception("Project has to be closed first.")
+
+        can_modify_scene()
+
+        if req.args.name in glob.OBJECT_TYPES:
+            raise Arcor2Exception("ObjectType already exists.")
+
+        if req.args.name in scene.object_names():
+            raise Arcor2Exception("Name has to be unique.")
+
+        hlp.is_valid_identifier(req.args.name)
+
+        if req.dry_run:
+            return None
+
+        meta = ObjectTypeMeta(
+            req.args.name, base=VirtualCollisionObject.__name__, object_model=req.args.model, has_pose=True
+        )
+        ast = new_object_type(glob.OBJECT_TYPES[VirtualCollisionObject.__name__].meta, meta)
+        source = tree_to_str(ast)
+
+        assert meta.object_model
+        await update_object_model(meta, meta.object_model)
+
+        type_def = await hlp.run_in_executor(
+            hlp.save_and_import_type_def,
+            source,
+            req.args.name,
+            VirtualCollisionObject,
+            settings.OBJECT_TYPE_PATH,
+            settings.OBJECT_TYPE_MODULE,
+        )
+        assert issubclass(type_def, VirtualCollisionObject)
+        actions = object_actions(type_def, ast)
+
+        meta.modified = await storage.update_object_type(meta.to_object_type())
+
+        glob.OBJECT_TYPES[meta.type] = ObjectTypeData(meta, type_def, actions, ast)
+        add_ancestor_actions(meta.type, glob.OBJECT_TYPES)
+
+        evt = sevts.o.ChangedObjectTypes([meta])
+        evt.change_type = Event.Type.ADD
+        asyncio.ensure_future(notif.broadcast_event(evt))
+
+        obj = common.SceneObject(req.args.name, req.args.name, req.args.pose)
+        scene.upsert_object(obj)  # add_object_to_scene(scene, obj) would do some unnecessary checks
+
+        evt2 = sevts.s.SceneObjectChanged(obj)
+        evt2.change_type = Event.Type.ADD
+        asyncio.ensure_future(notif.broadcast_event(evt2))
+        return None

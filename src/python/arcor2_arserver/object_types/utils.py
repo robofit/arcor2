@@ -106,6 +106,7 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
             break
 
     obj.settings = get_dataclass_params(get_settings_def(type_def))
+
     return obj
 
 

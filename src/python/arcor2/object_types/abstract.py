@@ -10,7 +10,7 @@ from arcor2 import CancelDict, DynamicParamDict
 from arcor2.clients import scene_service
 from arcor2.data.camera import CameraParameters
 from arcor2.data.common import ActionMetadata, Joint, Pose, SceneObject
-from arcor2.data.object_type import Models
+from arcor2.data.object_type import Models, PrimitiveModels
 from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
 from arcor2.exceptions import Arcor2Exception, Arcor2NotImplemented
@@ -180,6 +180,25 @@ class CollisionObject(GenericWithPose):
         self.enabled = state
 
     set_enabled.__action__ = ActionMetadata()  # type: ignore
+
+
+class VirtualCollisionObject(CollisionObject):
+    """Should be used to represent obstacles or another 'dumb' objects at the
+    workplace."""
+
+    def __init__(
+        self,
+        obj_id: str,
+        name: str,
+        pose: Pose,
+        collision_model: PrimitiveModels,
+        settings: Optional[Settings] = None,
+    ) -> None:
+
+        if settings:
+            raise Arcor2Exception(f"Settings are not supported for {VirtualCollisionObject.__name__}.")  # noqa:PB10
+
+        super().__init__(obj_id, name, pose, collision_model)
 
 
 class RobotException(Arcor2Exception):
