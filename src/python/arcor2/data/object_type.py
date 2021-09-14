@@ -92,6 +92,7 @@ class Mesh(Model):
 
 MeshList = List[Mesh]
 
+PrimitiveModels = Union[Box, Sphere, Cylinder]
 Models = Union[Box, Sphere, Cylinder, Mesh]
 
 MODEL_MAPPING: Dict[Model3dType, Union[Type[Box], Type[Sphere], Type[Cylinder], Type[Mesh]]] = {

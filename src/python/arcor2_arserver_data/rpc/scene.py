@@ -4,6 +4,7 @@ from typing import List, Optional, Set
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdDesc, Parameter, Pose
+from arcor2.data.object_type import ObjectModel
 from arcor2.data.rpc.common import RPC, IdArgs
 
 
@@ -303,6 +304,26 @@ class StartScene(RPC):
 class StopScene(RPC):
     @dataclass
     class Request(RPC.Request):
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class AddVirtualCollisionObjectToScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            name: str
+            pose: Pose
+            model: ObjectModel
+
+        args: Args
         dry_run: bool = False
 
     @dataclass
