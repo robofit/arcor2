@@ -315,10 +315,6 @@ class Pose(JsonSchemaMixin):
         return Pose((self.position * -1).rotated(inv), inv)
 
 
-class RelativePose(Pose):
-    pass
-
-
 @dataclass
 class ActionMetadata(JsonSchemaMixin):
 
