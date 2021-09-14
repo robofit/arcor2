@@ -44,6 +44,6 @@ class RandomActions(Generic):
         """
         return random.choice((False, True))
 
-    random_integer.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    random_double.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    random_bool.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    random_integer.__action__ = ActionMetadata()  # type: ignore
+    random_double.__action__ = ActionMetadata()  # type: ignore
+    random_bool.__action__ = ActionMetadata()  # type: ignore

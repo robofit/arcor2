@@ -64,5 +64,5 @@ class KinectAzure(FitCommonMixin, Camera):
         super(KinectAzure, self).cleanup()
         self._stop()
 
-    color_image.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    # depth_image.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    color_image.__action__ = ActionMetadata()  # type: ignore
+    # depth_image.__action__ = ActionMetadata()  # type: ignore

@@ -1317,7 +1317,7 @@ class YuMi(MultiArmRobot):
 
         self.move_to_pose("", pose, speed, False, linear, arm)
 
-    move_arm.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    move_arm.__action__ = ActionMetadata()  # type: ignore
 
     def close_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 0.0, *, an: Optional[str] = None) -> None:
         """Closes the gripper as close to as possible with maximum force.
@@ -1333,7 +1333,7 @@ class YuMi(MultiArmRobot):
 
         self._arm_by_name(arm).close_gripper(force * MAX_GRIPPER_FORCE, width * MAX_GRIPPER_WIDTH)
 
-    close_gripper.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    close_gripper.__action__ = ActionMetadata()  # type: ignore
 
     def open_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 1.0, *, an: Optional[str] = None) -> None:
         """Opens the gripper to the target width.
@@ -1349,7 +1349,7 @@ class YuMi(MultiArmRobot):
 
         self._arm_by_name(arm).open_gripper(force * MAX_GRIPPER_FORCE, width * MAX_GRIPPER_WIDTH)
 
-    open_gripper.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    open_gripper.__action__ = ActionMetadata()  # type: ignore
 
     def move_both_arms(
         self, left_pose: Pose, right_pose: Pose, speed: float = 0.5, *, an: Optional[str] = None
@@ -1392,7 +1392,7 @@ class YuMi(MultiArmRobot):
             else:
                 evt.set()  # this terminates block_while_running
 
-    move_both_arms.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    move_both_arms.__action__ = ActionMetadata()  # type: ignore
 
     # ------------------------------------------------------------------------------------------------------------------
 

@@ -189,3 +189,12 @@ def test_robot_meta(start_processes: None, ars: ARServer) -> None:
     assert aubo.features.forward_kinematics
     assert aubo.features.stop
     assert not aubo.features.hand_teaching
+
+    actions = ars.call_rpc(rpc.o.GetActions.Request(get_id(), TypeArgs(Aubo.__name__)), rpc.o.GetActions.Response)
+    assert actions.result
+    assert actions.data is not None
+
+    for hidden_method_name in (Aubo.move_relative.__name__, Aubo.move_relative_joints.__name__):
+        assert not any(
+            act.name == hidden_method_name for act in actions.data
+        ), f"{hidden_method_name} should be hidden."

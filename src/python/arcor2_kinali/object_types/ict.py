@@ -33,5 +33,5 @@ class Ict(AbstractWithPose):
 
         return rest.call(rest.Method.GET, f"{self.settings.url}/tester/ready", return_type=bool)
 
-    test.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    ready.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    test.__action__ = ActionMetadata()  # type: ignore
+    ready.__action__ = ActionMetadata()  # type: ignore

@@ -17,6 +17,6 @@ class ParamToReturn(Generic):
     def double_param(self, param: float, *, an: Optional[str] = None) -> float:
         return param
 
-    bool_param.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    int_param.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    double_param.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    bool_param.__action__ = ActionMetadata()  # type: ignore
+    int_param.__action__ = ActionMetadata()  # type: ignore
+    double_param.__action__ = ActionMetadata()  # type: ignore

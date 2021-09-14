@@ -19,4 +19,4 @@ class Barcode(AbstractWithPose):
 
         return rest.call(rest.Method.GET, f"{self.settings.url}/scanner/scan", return_type=str)
 
-    scan.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    scan.__action__ = ActionMetadata()  # type: ignore

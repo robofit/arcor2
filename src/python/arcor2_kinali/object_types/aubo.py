@@ -248,12 +248,12 @@ class Aubo(AbstractRobot):
     def is_item_attached(self, suction_id: str, *, an: Optional[str] = None) -> bool:
         return rest.call(rest.Method.GET, f"{self.settings.url}/suctions/{suction_id}/attached", return_type=bool)
 
-    move.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    move_relative.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    move_relative_joints.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    release.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    is_item_attached.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    move.__action__ = ActionMetadata()  # type: ignore
+    move_relative.__action__ = ActionMetadata(hidden=True)  # type: ignore
+    move_relative_joints.__action__ = ActionMetadata(hidden=True)  # type: ignore
+    suck.__action__ = ActionMetadata()  # type: ignore
+    release.__action__ = ActionMetadata()  # type: ignore
+    is_item_attached.__action__ = ActionMetadata()  # type: ignore
 
 
 Aubo.DYNAMIC_PARAMS = {

@@ -38,7 +38,7 @@ class TestObject(GenericWithPose):
     def action_3(self, *, an: Optional[str] = None) -> None:
         pass
 
-    action_1.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    action_1.__action__ = ActionMetadata()  # type: ignore
     action_2.__action__ = ActionMetadata()  # type: ignore
     # action_3 is missing its metadata
 
@@ -73,7 +73,7 @@ def test_object_actions() -> None:
 
         if act.name == TestObject.action_1.__name__:
 
-            expected_meta = ActionMetadata(blocking=True)
+            expected_meta = ActionMetadata()
             expected_meta.cancellable = True
             assert act.meta == expected_meta
             assert not act.returns

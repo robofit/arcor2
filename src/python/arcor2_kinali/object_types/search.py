@@ -252,17 +252,17 @@ class Search(AbstractWithPose):
 
         return rest.get_image(f"{self.settings.url}/search/visualization")
 
-    grab_image.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_image.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_pose.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    grab_image.__action__ = ActionMetadata()  # type: ignore
+    get_image.__action__ = ActionMetadata()  # type: ignore
+    get_pose.__action__ = ActionMetadata()  # type: ignore
 
-    upsert_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    compute_pick_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    upsert_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    compute_gripper_args.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    upsert_pick_args.__action__ = ActionMetadata()  # type: ignore
+    get_pick_args.__action__ = ActionMetadata()  # type: ignore
+    compute_pick_args.__action__ = ActionMetadata()  # type: ignore
+    upsert_gripper_args.__action__ = ActionMetadata()  # type: ignore
+    get_gripper_args.__action__ = ActionMetadata()  # type: ignore
+    compute_gripper_args.__action__ = ActionMetadata()  # type: ignore
 
-    search.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    set_search_parameters.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    visualization.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    search.__action__ = ActionMetadata()  # type: ignore
+    set_search_parameters.__action__ = ActionMetadata()  # type: ignore
+    visualization.__action__ = ActionMetadata()  # type: ignore
