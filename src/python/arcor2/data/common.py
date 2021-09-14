@@ -322,10 +322,11 @@ class RelativePose(Pose):
 @dataclass
 class ActionMetadata(JsonSchemaMixin):
 
-    blocking: bool = False
-    composite: bool = False
-    blackbox: bool = False
-    cancellable: bool = field(init=False, default=False)
+    composite: bool = field(metadata=dict(description="Should be set for nested actions."), default=False)
+    hidden: bool = field(metadata=dict(description="When set, action will be hidden in UIs."), default=False)
+    cancellable: bool = field(
+        init=False, default=False, metadata=dict(description="Defines whether action execution can be cancelled.")
+    )
 
 
 @dataclass

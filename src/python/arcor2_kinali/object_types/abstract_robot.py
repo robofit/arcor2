@@ -165,14 +165,14 @@ class AbstractRobot(Robot):
     def stop(self) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/stop")
 
-    set_joints.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_input.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    set_output.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_output.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    grip.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    set_opening.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_gripper_opening.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    is_item_gripped.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    set_joints.__action__ = ActionMetadata()  # type: ignore
+    get_input.__action__ = ActionMetadata()  # type: ignore
+    set_output.__action__ = ActionMetadata()  # type: ignore
+    get_output.__action__ = ActionMetadata()  # type: ignore
+    grip.__action__ = ActionMetadata()  # type: ignore
+    set_opening.__action__ = ActionMetadata()  # type: ignore
+    get_gripper_opening.__action__ = ActionMetadata()  # type: ignore
+    is_item_gripped.__action__ = ActionMetadata()  # type: ignore
 
 
 AbstractRobot.CANCEL_MAPPING = {

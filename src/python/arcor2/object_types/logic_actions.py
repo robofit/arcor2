@@ -36,6 +36,6 @@ class LogicActions(Generic):
         """
         return val1 > val2
 
-    equals.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    less_than.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    greater_than.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    equals.__action__ = ActionMetadata()  # type: ignore
+    less_than.__action__ = ActionMetadata()  # type: ignore
+    greater_than.__action__ = ActionMetadata()  # type: ignore

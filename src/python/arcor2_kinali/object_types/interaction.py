@@ -109,9 +109,9 @@ class Interaction(AbstractSimple):
             params={"sinceTimestamp": since_timestamp},
         )
 
-    add_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    resolve_dialog.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    add_notification.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    delete_notifications.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_notifications.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    add_dialog.__action__ = ActionMetadata()  # type: ignore
+    get_dialog.__action__ = ActionMetadata()  # type: ignore
+    resolve_dialog.__action__ = ActionMetadata()  # type: ignore
+    add_notification.__action__ = ActionMetadata()  # type: ignore
+    delete_notifications.__action__ = ActionMetadata()  # type: ignore
+    get_notifications.__action__ = ActionMetadata()  # type: ignore

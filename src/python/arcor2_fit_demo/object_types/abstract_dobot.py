@@ -155,12 +155,12 @@ class AbstractDobot(FitCommonMixin, Robot):
     def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
 
-    home.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    move.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    suck.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    release.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    pick.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
-    place.__action__ = ActionMetadata(blocking=True, composite=True)  # type: ignore
+    home.__action__ = ActionMetadata()  # type: ignore
+    move.__action__ = ActionMetadata()  # type: ignore
+    suck.__action__ = ActionMetadata()  # type: ignore
+    release.__action__ = ActionMetadata()  # type: ignore
+    pick.__action__ = ActionMetadata(composite=True)  # type: ignore
+    place.__action__ = ActionMetadata(composite=True)  # type: ignore
 
 
 AbstractDobot.DYNAMIC_PARAMS = {

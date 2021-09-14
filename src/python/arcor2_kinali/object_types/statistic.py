@@ -81,7 +81,7 @@ class Statistic(AbstractSimple):
 
         rest.call(rest.Method.DELETE, f"{self.settings.url}/values/{group_id}")
 
-    add_value.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_groups.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    get_values.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    delete_group.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    add_value.__action__ = ActionMetadata()  # type: ignore
+    get_groups.__action__ = ActionMetadata()  # type: ignore
+    get_values.__action__ = ActionMetadata()  # type: ignore
+    delete_group.__action__ = ActionMetadata()  # type: ignore

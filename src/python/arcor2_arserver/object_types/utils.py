@@ -141,6 +141,10 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
         meta: ActionMetadata = method_def.__action__  # type: ignore
 
+        if meta.hidden:
+            logger.debug(f"Action {method_name} of {type_def.__name__} is hidden.")
+            continue
+
         data = ObjectAction(name=method_name, meta=meta)
 
         if method_name in type_def.CANCEL_MAPPING:
