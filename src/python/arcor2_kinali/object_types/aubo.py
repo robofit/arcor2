@@ -5,7 +5,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
-from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, ProjectRobotJoints, RelativePose
+from arcor2.data.common import ActionMetadata, Joint, Orientation, Pose, Position, ProjectRobotJoints
 
 from .abstract_robot import AbstractRobot, MoveTypeEnum, lru_cache
 
@@ -89,7 +89,7 @@ class Aubo(AbstractRobot):
         self,
         end_effector_id: str,
         pose: Pose,
-        rel_pose: RelativePose,
+        rel_pose: Pose,
         move_type: MoveTypeEnum,
         speed: float = 0.5,
         acceleration: float = 0.5,
@@ -124,7 +124,7 @@ class Aubo(AbstractRobot):
         self,
         end_effector_id: str,
         joints: ProjectRobotJoints,
-        rel_pose: RelativePose,
+        rel_pose: Pose,
         move_type: MoveTypeEnum,
         speed: float = 0.5,
         acceleration: float = 0.5,
