@@ -333,6 +333,12 @@ async def action_param_values_cb(
 async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient) -> None:
     async def _delete_if_not_used(meta: ObjectTypeMeta) -> None:
 
+        assert meta.base == VirtualCollisionObject.__name__
+        assert meta.object_model
+        assert (
+            meta.type == meta.object_model.model().id
+        ), f"meta.type={meta.type}, model.id={meta.object_model.model().id}"
+
         if glob.LOCK.scene and any(glob.LOCK.scene.objects_of_type(meta.type)):
             return
 
@@ -351,6 +357,8 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
                 logger.warn(str(e))
 
             del glob.OBJECT_TYPES[obj.type]
+
+            logger.debug(f"Auto-removing {meta.type}... {meta}")
 
             evtr = sevts.o.ChangedObjectTypes([meta])
             evtr.change_type = Event.Type.REMOVE
@@ -708,12 +716,14 @@ async def add_virtual_collision_object_to_scene_cb(
 
         hlp.is_valid_identifier(req.args.name)
 
-        if req.dry_run:
-            return None
-
+        # post_init of ObjectTypeMeta check if ObjectType.id == model.id
         meta = ObjectTypeMeta(
             req.args.name, base=VirtualCollisionObject.__name__, object_model=req.args.model, has_pose=True
         )
+
+        if req.dry_run:
+            return None
+
         ast = new_object_type(glob.OBJECT_TYPES[VirtualCollisionObject.__name__].meta, meta)
         source = tree_to_str(ast)
 

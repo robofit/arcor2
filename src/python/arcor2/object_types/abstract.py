@@ -1,4 +1,5 @@
 import abc
+import copy
 import inspect
 from dataclasses import dataclass
 from typing import List, Optional, Set
@@ -132,7 +133,7 @@ class CollisionObject(GenericWithPose):
 
         super().__init__(obj_id, name, pose, settings)
 
-        self.collision_model = collision_model
+        self.collision_model = copy.deepcopy(collision_model)
         self._enabled = True
 
         # originally, each model has id == object type (e.g. BigBox) but here we need to set it to something unique
@@ -195,7 +196,8 @@ class VirtualCollisionObject(CollisionObject):
         settings: Optional[Settings] = None,
     ) -> None:
 
-        if settings:
+        if settings and not isinstance(settings, Settings):
+            # TODO rather remove settings from __init__ (requires non-trivial changes in ARServer/Resources)
             raise Arcor2Exception(f"Settings are not supported for {VirtualCollisionObject.__name__}.")  # noqa:PB10
 
         super().__init__(obj_id, name, pose, collision_model)

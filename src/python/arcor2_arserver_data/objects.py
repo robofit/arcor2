@@ -40,8 +40,8 @@ class ObjectTypeMeta(JsonSchemaMixin):
 
     def __post_init__(self) -> None:
 
-        if self.object_model and self.object_model.model().id != self.type:
-            raise Arcor2Exception("Object model id must be equal to the ObjectType id.")
+        if self.object_model and (model := self.object_model.model()).id != self.type:
+            raise Arcor2Exception(f"Object model id ({model.id}) must be equal to the ObjectType id ({self.type}).")
 
 
 @dataclass
