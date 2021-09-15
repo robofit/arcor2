@@ -26,9 +26,9 @@ class ObjectTypeMeta(JsonSchemaMixin):
     settings: List[ParameterMeta] = field(default_factory=list)
     modified: Optional[datetime] = None
 
-    def to_object_type(self) -> ObjectType:
+    def to_object_type(self, source: str = "") -> ObjectType:
 
-        ot = ObjectType(self.type, "", self.description)
+        ot = ObjectType(self.type, source, self.description)
 
         if self.object_model:
             ot.model = self.object_model.model().metamodel()

@@ -731,7 +731,7 @@ async def add_virtual_collision_object_to_scene_cb(
         assert issubclass(type_def, VirtualCollisionObject)
         actions = object_actions(type_def, ast)
 
-        meta.modified = await storage.update_object_type(meta.to_object_type())
+        meta.modified = await storage.update_object_type(meta.to_object_type(source))
 
         glob.OBJECT_TYPES[meta.type] = ObjectTypeData(meta, type_def, actions, ast)
         add_ancestor_actions(meta.type, glob.OBJECT_TYPES)

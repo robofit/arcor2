@@ -156,6 +156,9 @@ def test_virtual_collision_object(start_processes: None, ars: ARServer) -> None:
         rpc.s.AddVirtualCollisionObjectToScene.Response,
     )
 
+    ot = project_service.get_object_type(name)
+    assert ot.source
+
     assert add_vco.result
 
     ot_evt = event(ars, events.o.ChangedObjectTypes)
@@ -184,3 +187,5 @@ def test_virtual_collision_object(start_processes: None, ars: ARServer) -> None:
     assert len(ot_evt2.data) == 1
     assert ot_evt2.data[0].object_model == om
     assert ot_evt2.data[0].type == name
+
+    assert name not in {ot.id for ot in project_service.get_object_type_ids()}
