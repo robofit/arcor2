@@ -22,6 +22,7 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.checks import check_object_parameters
 from arcor2_arserver.clients import project_service as storage
+from arcor2_arserver.common import associated_projects, projects_using_object, remove_object_references_from_projects
 from arcor2_arserver.helpers import (
     ctx_read_lock,
     ctx_write_lock,
@@ -32,18 +33,14 @@ from arcor2_arserver.helpers import (
 from arcor2_arserver.lock.exceptions import LockingException
 from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import new_object_type
-from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions, remove_object_type
+from arcor2_arserver.object_types.utils import add_ancestor_actions, object_actions
 from arcor2_arserver.objects_actions import get_object_types, update_object_model
-from arcor2_arserver.project import (
-    associated_projects,
-    invalidate_joints_using_object_as_parent,
-    projects_using_object,
-    remove_object_references_from_projects,
-)
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose
 from arcor2_arserver.scene import (
     add_object_to_scene,
     can_modify_scene,
+    clear_auto_remove_schedule,
+    delete_if_not_used,
     ensure_scene_started,
     get_instance,
     get_robot_instance,
@@ -52,11 +49,14 @@ from arcor2_arserver.scene import (
     notify_scene_closed,
     notify_scene_opened,
     open_scene,
+    save_scene,
     scene_names,
     scene_started,
     scenes,
+    schedule_auto_remove,
     start_scene,
     stop_scene,
+    unschedule_auto_remove,
     update_scene_object_pose,
 )
 from arcor2_arserver_data import events as sevts
@@ -149,6 +149,7 @@ async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
         scene_id = scene.id
         glob.LOCK.scene = None
         glob.OBJECTS_WITH_UPDATED_POSE.clear()
+        await clear_auto_remove_schedule()
         asyncio.ensure_future(notify_scene_closed(scene_id))
 
 
@@ -164,11 +165,7 @@ async def save_scene_cb(req: srpc.s.SaveScene.Request, ui: WsClient) -> None:
         if req.dry_run:
             return None
 
-        scene.modified = await storage.update_scene(scene)
-        asyncio.ensure_future(notif.broadcast_event(sevts.s.SceneSaved()))
-        for obj_id in glob.OBJECTS_WITH_UPDATED_POSE:
-            asyncio.ensure_future(invalidate_joints_using_object_as_parent(scene.object(obj_id)))
-        glob.OBJECTS_WITH_UPDATED_POSE.clear()
+        await save_scene(scene)
         return None
 
 
@@ -227,6 +224,8 @@ async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsCli
             return None
 
         scene.update_modified()
+
+        asyncio.create_task(unschedule_auto_remove(obj.type))  # TODO could this even be case?
 
         evt = sevts.s.SceneObjectChanged(obj)
         evt.change_type = Event.Type.ADD
@@ -331,38 +330,6 @@ async def action_param_values_cb(
 
 
 async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient) -> None:
-    async def _delete_if_not_used(meta: ObjectTypeMeta) -> None:
-
-        assert meta.base == VirtualCollisionObject.__name__
-        assert meta.object_model
-        assert (
-            meta.type == meta.object_model.model().id
-        ), f"meta.type={meta.type}, model.id={meta.object_model.model().id}"
-
-        if glob.LOCK.scene and any(glob.LOCK.scene.objects_of_type(meta.type)):
-            return
-
-        async for scn in scenes():
-            if scn.objects_of_type(meta.type):
-                break
-        else:  # object not used anywhere, let's remove it
-
-            try:
-                await asyncio.gather(
-                    storage.delete_object_type(meta.type),
-                    storage.delete_model(meta.type),
-                    remove_object_type(meta.type),
-                )
-            except Arcor2Exception as e:
-                logger.warn(str(e))
-
-            del glob.OBJECT_TYPES[obj.type]
-
-            logger.debug(f"Auto-removing {meta.type}... {meta}")
-
-            evtr = sevts.o.ChangedObjectTypes([meta])
-            evtr.change_type = Event.Type.REMOVE
-            await notif.broadcast_event(evtr)
 
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
     user_name = glob.USERS.user_name(ui)
@@ -396,10 +363,8 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
         # TODO this should be done after scene is saved
         asyncio.ensure_future(remove_object_references_from_projects(req.args.id))
 
-        meta = glob.OBJECT_TYPES[obj.type].meta
-
-        if meta.base == VirtualCollisionObject.__name__:  # those are auto-removed when the last instance is removed
-            asyncio.create_task(_delete_if_not_used(meta))
+        if (meta := glob.OBJECT_TYPES[obj.type].meta).base == VirtualCollisionObject.__name__:
+            await schedule_auto_remove(meta.type)
 
 
 async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRobot.Request, ui: WsClient) -> None:
@@ -575,6 +540,12 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Opti
         scene = UpdateableCachedScene(await storage.get_scene(req.args.id))
         await glob.LOCK.write_unlock(req.args.id, user_name)
         await storage.delete_scene(req.args.id)
+
+        for obj_type in scene.object_types:
+            if (meta := glob.OBJECT_TYPES[obj_type].meta).base == VirtualCollisionObject.__name__:
+                logger.debug(f"VCO {meta.type} will be (probably) auto-removed.")
+                asyncio.create_task(delete_if_not_used(meta))
+
         evt = sevts.s.SceneChanged(scene.bare)
         evt.change_type = Event.Type.REMOVE
         asyncio.ensure_future(notif.broadcast_event(evt))
@@ -756,4 +727,8 @@ async def add_virtual_collision_object_to_scene_cb(
         evt2 = sevts.s.SceneObjectChanged(obj)
         evt2.change_type = Event.Type.ADD
         asyncio.ensure_future(notif.broadcast_event(evt2))
+
+        # for a case when user created VCO of the type which already existed before (and was deleted)
+        asyncio.create_task(unschedule_auto_remove(obj.type))
+
         return None
