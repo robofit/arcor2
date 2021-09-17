@@ -39,6 +39,7 @@ def test_project_const(start_processes: None, ars: ARServer) -> None:
         rpc.p.NewProject.Response,
     ).result
 
+    event(ars, events.s.SceneSaved)
     open_project = event(ars, events.p.OpenProject).data
     assert open_project
 

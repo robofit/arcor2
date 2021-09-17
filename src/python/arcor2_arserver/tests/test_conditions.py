@@ -31,6 +31,7 @@ def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -
         rpc.p.NewProject.Response,
     ).result
 
+    event(ars, events.s.SceneSaved)
     event(ars, events.p.OpenProject)
     event(ars, events.s.SceneState)
 

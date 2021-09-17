@@ -29,6 +29,7 @@ from arcor2_arserver.checks import (
     find_object_action,
 )
 from arcor2_arserver.clients import project_service as storage
+from arcor2_arserver.common import project_names
 from arcor2_arserver.helpers import (
     ctx_read_lock,
     ctx_write_lock,
@@ -38,15 +39,16 @@ from arcor2_arserver.helpers import (
     unique_name,
 )
 from arcor2_arserver.objects_actions import get_types_dict
-from arcor2_arserver.project import (
-    close_project,
-    get_project_problems,
-    notify_project_opened,
-    open_project,
-    project_names,
-)
+from arcor2_arserver.project import close_project, get_project_problems, notify_project_opened, open_project
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose, get_pose_and_joints, get_robot_joints
-from arcor2_arserver.scene import can_modify_scene, ensure_scene_started, get_instance, get_robot_instance, open_scene
+from arcor2_arserver.scene import (
+    can_modify_scene,
+    ensure_scene_started,
+    get_instance,
+    get_robot_instance,
+    open_scene,
+    save_scene,
+)
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 
@@ -818,7 +820,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
                 raise Arcor2Exception("Another scene is opened.")
 
             if glob.LOCK.scene.has_changes:
-                glob.LOCK.scene.modified = await storage.update_scene(glob.LOCK.scene)
+                await save_scene()
         else:
 
             if req.args.scene_id not in (await storage.get_scene_ids()):

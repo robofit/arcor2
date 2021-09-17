@@ -10,18 +10,22 @@ from arcor2.data.common import Parameter, Pose, SceneObject
 from arcor2.data.events import Event
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot
+from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot, VirtualCollisionObject
 from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver.checks import check_object, scene_problems
 from arcor2_arserver.clients import project_service as storage
+from arcor2_arserver.common import invalidate_joints_using_object_as_parent
 from arcor2_arserver.helpers import ctx_write_lock
 from arcor2_arserver.lock.exceptions import CannotLock
+from arcor2_arserver.object_types.utils import remove_object_type
 from arcor2_arserver.objects_actions import get_object_types
+from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.scene import OpenScene, SceneClosed, SceneObjectChanged, SceneState
+from arcor2_arserver_data.objects import ObjectTypeMeta
 
 # TODO maybe this could be property of ARServerScene(CachedScene)?
 _scene_state: SceneState = SceneState(SceneState.Data(SceneState.Data.StateEnum.Stopped))
@@ -35,6 +39,88 @@ class SceneProblems:
 
 
 _scene_problems: Dict[str, SceneProblems] = {}
+_objects_to_auto_remove: Set[str] = set()
+
+
+async def schedule_auto_remove(obj_type: str) -> None:
+    logger.debug(f"OT {obj_type} scheduled to be autoremoved.")
+    _objects_to_auto_remove.add(obj_type)
+
+
+async def clear_auto_remove_schedule() -> None:
+    logger.debug(f"Auto-remove schedule will be cleared. It contained: {_objects_to_auto_remove}")
+    _objects_to_auto_remove.clear()
+
+
+async def scheduled_to_be_auto_removed() -> Set[str]:
+    return _objects_to_auto_remove
+
+
+async def unschedule_auto_remove(obj_type: str) -> None:
+
+    try:
+        _objects_to_auto_remove.remove(obj_type)
+    except KeyError:
+        pass
+    else:
+        logger.debug(f"OT {obj_type} unscheduled to be auto-removed.")
+
+
+async def remove_scheduled() -> None:
+
+    logger.debug(f"Going to auto-remove following types: {_objects_to_auto_remove}")
+    for ot_id in _objects_to_auto_remove:
+        if ot_id in glob.OBJECT_TYPES:
+            asyncio.create_task(delete_if_not_used(glob.OBJECT_TYPES[ot_id].meta))
+    _objects_to_auto_remove.clear()
+
+
+async def delete_if_not_used(meta: ObjectTypeMeta) -> None:
+
+    if meta.base != VirtualCollisionObject.__name__:
+        logger.debug(f"{meta.type} is not a VCO!")
+        return
+
+    assert meta.object_model
+    assert meta.type == meta.object_model.model().id, f"meta.type={meta.type}, model.id={meta.object_model.model().id}"
+
+    async for scn in scenes():
+        if any(scn.objects_of_type(meta.type)):
+            logger.debug(f"Not auto-removing VCO {meta.type} as it is used in scene {scn.name}.")
+            return
+
+    logger.debug(f"Auto-removing VCO {meta.type} as it is not used in any scene.")
+
+    try:
+        await asyncio.gather(
+            storage.delete_object_type(meta.type),
+            storage.delete_model(meta.type),
+            remove_object_type(meta.type),
+        )
+    except Arcor2Exception as e:
+        logger.warn(str(e))
+
+    del glob.OBJECT_TYPES[meta.type]
+
+    logger.debug(f"Auto-removing {meta.type} done... {meta}")
+
+    evtr = sevts.o.ChangedObjectTypes([meta])
+    evtr.change_type = Event.Type.REMOVE
+    await notif.broadcast_event(evtr)
+
+
+async def save_scene(scene: Optional[UpdateableCachedScene] = None) -> None:
+
+    if not scene:
+        scene = glob.LOCK.scene_or_exception()
+
+    scene.modified = await storage.update_scene(scene)
+    asyncio.ensure_future(notif.broadcast_event(sevts.s.SceneSaved()))
+    asyncio.create_task(remove_scheduled())
+
+    for obj_id in glob.OBJECTS_WITH_UPDATED_POSE:
+        asyncio.ensure_future(invalidate_joints_using_object_as_parent(scene.object(obj_id)))
+    glob.OBJECTS_WITH_UPDATED_POSE.clear()
 
 
 def get_ot_modified(ots: Set[str]) -> Dict[str, datetime]:
