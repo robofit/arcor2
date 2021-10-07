@@ -1,1 +1,0 @@
-# arcor2_kinali
