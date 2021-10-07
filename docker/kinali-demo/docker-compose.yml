@@ -231,7 +231,7 @@ services:
         - testitoff-scene-network
 
   project:
-      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.11.2
+      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.13.0
       container_name: "project"
       ports:
         - "10000-10001:10000-10001"
