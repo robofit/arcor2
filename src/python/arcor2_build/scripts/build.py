@@ -142,6 +142,9 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 scene = ps.get_scene(project.scene_id)
                 cached_scene = CachedScene(scene)
 
+                if not package_name:
+                    package_name = project.name
+
                 data_path = "data"
                 ot_path = "object_types"
 
@@ -235,7 +238,8 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
     logger.info(f"Done with {package_name} (scene {scene.name}, project {project.name}).")
     mem_zip.seek(0)
-    return send_file(mem_zip, as_attachment=True, max_age=0, attachment_filename="arcor2_project.zip")
+
+    return send_file(mem_zip, as_attachment=True, max_age=0, attachment_filename=f"{package_name}_package.zip")
 
 
 @app.route("/project/<string:project_id>/publish", methods=["GET"])
@@ -258,7 +262,6 @@ def project_publish(project_id: str) -> RespT:
           name: packageName
           schema:
             type: string
-            default: N/A
           required: false
           description: Package name
       responses:
@@ -283,7 +286,7 @@ def project_publish(project_id: str) -> RespT:
                   type: string
     """
 
-    return _publish(project_id, request.args.get("packageName", default="N/A"))
+    return _publish(project_id, request.args.get("packageName", default=""))
 
 
 T = TypeVar("T", bound=JsonSchemaMixin)
