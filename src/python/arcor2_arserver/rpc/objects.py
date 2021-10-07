@@ -557,3 +557,15 @@ async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -
     evt.change_type = events.Event.Type.REMOVE
     evt.parent_id = req.args.id
     asyncio.ensure_future(notif.broadcast_event(evt))
+
+
+async def object_type_usage_cb(req: srpc.o.ObjectTypeUsage.Request, ui: WsClient) -> srpc.o.ObjectTypeUsage.Response:
+
+    resp = srpc.o.ObjectTypeUsage.Response()
+    resp.data = set()  # mypy does not recognize it correctly with Response(data=set())
+
+    async for scene in scenes():
+        if req.args.id in scene.object_types:
+            resp.data.add(scene.id)
+
+    return resp
