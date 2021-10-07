@@ -11,7 +11,8 @@ from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Typ
 
 import numpy as np
 import quaternion
-from dataclasses_jsonschema import JsonDict, JsonSchemaMixin
+from dataclasses_jsonschema import DEFAULT_SCHEMA_TYPE, JsonSchemaMixin
+from dataclasses_jsonschema.type_defs import JsonDict, SchemaType
 
 from arcor2 import json
 from arcor2.exceptions import Arcor2Exception
@@ -148,7 +149,13 @@ class Position(IterableIndexable):
 
         return self
 
-    def to_dict(self, omit_none: bool = True, validate: bool = False, validate_enums: bool = True) -> JsonDict:
+    def to_dict(
+        self,
+        omit_none: bool = True,
+        validate: bool = False,
+        validate_enums: bool = True,
+        schema_type: SchemaType = DEFAULT_SCHEMA_TYPE,
+    ) -> JsonDict:
 
         # orjson does not like numpy.float64
         return {"x": float(self.x), "y": float(self.y), "z": float(self.z)}
@@ -240,7 +247,13 @@ class Orientation(IterableIndexable):
         self.z = nq.z
         self.w = nq.w
 
-    def to_dict(self, omit_none: bool = True, validate: bool = False, validate_enums: bool = True) -> JsonDict:
+    def to_dict(
+        self,
+        omit_none: bool = True,
+        validate: bool = False,
+        validate_enums: bool = True,
+        schema_type: SchemaType = DEFAULT_SCHEMA_TYPE,
+    ) -> JsonDict:
 
         # orjson does not like numpy.float64
         return {"x": float(self.x), "y": float(self.y), "z": float(self.z), "w": float(self.w)}

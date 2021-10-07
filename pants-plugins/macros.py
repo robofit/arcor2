@@ -61,8 +61,10 @@ def arcor2_python_distribution(name: str, description: str, binaries=None, **kwa
     kwargs["provides"] = arcor2_setup_py(
         name=name,
         description=description
-    ).with_binaries(binaries)
+    )
 
+    if binaries:
+        kwargs["entry_points"] = {"console_scripts": binaries}
 
     return python_distribution(**kwargs)
 
