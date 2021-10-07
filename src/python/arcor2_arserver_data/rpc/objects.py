@@ -266,3 +266,18 @@ class DeleteOverride(RPC):
     @dataclass
     class Response(RPC.Response):
         pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class ObjectTypeUsage(RPC):
+    """Returns list of scenes (IDs), where the OT is used."""
+
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs
+
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None
