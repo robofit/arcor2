@@ -286,7 +286,7 @@ def get_image_both() -> RespT:
 
     mem_zip.seek(0)
     return send_file(
-        mem_zip, mimetype="application/zip", max_age=0, as_attachment=True, attachment_filename="synchronized.zip"
+        mem_zip, mimetype="application/zip", max_age=0, as_attachment=True, download_name="synchronized.zip"
     )
 
 

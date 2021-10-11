@@ -101,7 +101,7 @@ def get_file(fileId: str) -> RespT:
 
     file, filename = FILES[fileId]
     file.seek(0)
-    return send_file(file, as_attachment=True, max_age=0, attachment_filename=filename)
+    return send_file(file, as_attachment=True, max_age=0, download_name=filename)
 
 
 @app.route("/files", methods=["GET"])
