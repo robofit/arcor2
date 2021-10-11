@@ -2,13 +2,13 @@ from typing import Optional
 
 import pytest
 
-from arcor2.action import patch_object_actions
 from arcor2.data.common import ActionMetadata, StrEnum
 from arcor2.object_types.abstract import GenericWithPose
 from arcor2.object_types.tests.test_utils import TestObjectWithSettings
 from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import parse_def
 from arcor2_arserver.object_types.utils import meta_from_def, object_actions
+from arcor2_execution_data.action import patch_object_actions
 
 
 class TestObject(GenericWithPose):

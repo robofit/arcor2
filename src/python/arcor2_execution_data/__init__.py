@@ -18,6 +18,7 @@ EXPOSED_RPCS: Tuple[Type[RPC], ...] = (
     rpc.ListPackages,
     rpc.DeletePackage,
     rpc.RenamePackage,
+    rpc.StepAction,
 )
 
 RPCS: Tuple[Type[RPC], ...] = EXPOSED_RPCS + (Version,)

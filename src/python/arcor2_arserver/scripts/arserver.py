@@ -19,7 +19,6 @@ import arcor2.helpers as hlp
 import arcor2_arserver
 import arcor2_arserver_data
 import arcor2_execution_data
-from arcor2 import action as action_mod
 from arcor2 import env, json, ws_server
 from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import compile_json_schemas, events, rpc
@@ -41,9 +40,6 @@ from arcor2_arserver_data.rpc import objects as obj_rpc
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 from arcor2_execution_data import EXPOSED_RPCS
 from arcor2_execution_data import RPCS as EXE_RPCS
-
-# disables before/after messages, etc.
-action_mod.HANDLE_ACTIONS = False
 
 
 async def handle_manager_incoming_messages(manager_client) -> None:

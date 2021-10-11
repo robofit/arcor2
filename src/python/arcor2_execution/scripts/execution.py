@@ -190,10 +190,18 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     # set PYTHONPATH to match this scripts sys.path
     myenv["PYTHONPATH"] = pypath
 
+    args = [script_path]
+
+    if req.args.start_paused:
+        args.append("-p")
+
+    if req.args.breakpoints:
+        args.append(f"-b \"{','.join(req.args.breakpoints)}\"")
+
     logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(
         "python3.8",
-        script_path,
+        *args,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
@@ -253,6 +261,24 @@ async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
     asyncio.create_task(_pause())
 
 
+async def step_action_cb(req: rpc.StepAction.Request, ui: WsClient) -> None:
+    async def _step() -> None:
+
+        assert PROCESS is not None
+        assert PROCESS.stdin is not None
+
+        PROCESS.stdin.write("s\n".encode())
+        await PROCESS.stdin.drain()
+        logger.info("Stepping to a next action.")
+
+    if PACKAGE_STATE_EVENT.data.state != PackageState.Data.StateEnum.PAUSED:
+        raise Arcor2Exception("Can't step, execution is not paused.")
+
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.RESUMING, RUNNING_PACKAGE_ID)))
+    assert process_running()
+    asyncio.create_task(_step())
+
+
 async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> None:
     async def _resume() -> None:
 
@@ -266,8 +292,9 @@ async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> Non
     assert process_running()
 
     if PACKAGE_STATE_EVENT.data.state != PackageState.Data.StateEnum.PAUSED:
-        raise Arcor2Exception("Cannot resume.")
+        raise Arcor2Exception("Can't resume, execution is not paused.")
 
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.RESUMING, RUNNING_PACKAGE_ID)))
     asyncio.create_task(_resume())
 
 
@@ -432,6 +459,7 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
     rpc.StopPackage.__name__: (rpc.StopPackage, stop_package_cb),
     rpc.PausePackage.__name__: (rpc.PausePackage, pause_package_cb),
     rpc.ResumePackage.__name__: (rpc.ResumePackage, resume_package_cb),
+    rpc.StepAction.__name__: (rpc.StepAction, step_action_cb),
     rpc.UploadPackage.__name__: (rpc.UploadPackage, _upload_package_cb),
     rpc.ListPackages.__name__: (rpc.ListPackages, list_packages_cb),
     rpc.DeletePackage.__name__: (rpc.DeletePackage, delete_package_cb),

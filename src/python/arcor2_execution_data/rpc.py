@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List
+from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -81,7 +81,8 @@ class RunPackage(RPC):
     class Request(RPC.Request):
         @dataclass
         class Args(IdArgs):
-            pass
+            start_paused: bool = False
+            breakpoints: Optional[Set[str]] = None
 
         args: Args
 
@@ -120,6 +121,19 @@ class PausePackage(RPC):
 
 
 class ResumePackage(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        pass
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class StepAction(RPC):
     @dataclass
     class Request(RPC.Request):
         pass

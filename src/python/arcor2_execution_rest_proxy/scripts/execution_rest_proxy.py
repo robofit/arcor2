@@ -583,7 +583,75 @@ def package_start(packageId: str) -> RespT:  # noqa
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 400
+
+
+@app.route("/packages/<string:packageId>/debug", methods=["PUT"])
+def package_debug(packageId: str) -> RespT:  # noqa
+    """Run project
+    ---
+    put:
+      summary: Start debugging of the execution package.
+      operationId: DebugPackage
+      tags:
+        - Packages
+      parameters:
+        - in: path
+          name: packageId
+          schema:
+            type: string
+          required: true
+          description: Unique package Id
+        - in: query
+          name: breakOnFirstAction
+          schema:
+            type: boolean
+            default: false
+          description: Unique package Id
+        - in: query
+          name: breakpoints
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        200:
+          description: Ok
+        404:
+          description: Package not found
+          content:
+            application/json:
+              schema:
+                type: string
+        501:
+            description: Contains array of errors.
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    type: string
+    """
+
+    if not package_exists(packageId):
+        return jsonify("Not found"), 404
+
+    breakpoints = set(request.args.getlist("breakpoints"))
+    resp = call_rpc(
+        rpc.RunPackage.Request(
+            id=get_id(),
+            args=rpc.RunPackage.Request.Args(
+                packageId,
+                request.args.get("breakOnFirstAction", default="false") == "true",
+                breakpoints if breakpoints else None,
+            ),
+        )
+    )
+
+    if resp.result:
+        return Response(status=200)
+    else:
+        return jsonify(resp.messages), 400
 
 
 @app.route("/packages/stop", methods=["PUT"])
@@ -614,6 +682,36 @@ def packages_stop() -> RespT:
         return Response(status=200)
     else:
         return jsonify(resp.messages), 501
+
+
+@app.route("/packages/step", methods=["PUT"])
+def packages_step() -> RespT:
+    """Step to the next action.
+    ---
+    put:
+      summary: Step to the next action.
+      operationId: StepPackage
+      tags:
+        - Packages
+      responses:
+        200:
+          description: Ok
+        501:
+            description: Contains array of errors.
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    type: string
+    """
+
+    resp = call_rpc(rpc.StepAction.Request(id=get_id()))
+
+    if resp.result:
+        return Response(status=200)
+    else:
+        return jsonify(resp.messages), 400
 
 
 @app.route("/packages/pause", methods=["PUT"])
