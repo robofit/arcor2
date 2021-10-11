@@ -74,12 +74,14 @@ class IterableIndexable(JsonSchemaMixin):
     def __getitem__(self, item: int) -> float:
 
         attr = getattr(self, tuple(self.__dict__.keys())[item])
-        assert isinstance(attr, float)
+        assert isinstance(attr, (float, int))
         return attr
 
     def __iter__(self) -> Iterator[float]:
 
-        yield from self.__dict__.values()
+        # filtering items starting with _ is necessary to allow runtime monkey-patching
+        # ...otherwise those patched attributes will appear in e.g. list(Position(1,2,3))
+        yield from [v for k, v in self.__dict__.items() if not k.startswith("_")]
 
 
 @dataclass

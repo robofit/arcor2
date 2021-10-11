@@ -3,11 +3,11 @@ from typing import Optional
 
 import pytest
 
-from arcor2.action import patch_object_actions
 from arcor2.data.common import ActionMetadata
 from arcor2.data.events import ActionStateAfter, ActionStateBefore
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
+from arcor2_execution_data.action import ACTION_NAME_ID_MAPPING_ATTR, patch_object_actions
 
 
 def test_patch_object_actions(monkeypatch, capsys) -> None:
@@ -30,7 +30,8 @@ def test_patch_object_actions(monkeypatch, capsys) -> None:
     out_before, _ = capsys.readouterr()
     assert not out_before
 
-    patch_object_actions(MyObject, {"name": "id"})
+    patch_object_actions(MyObject)
+    setattr(MyObject, ACTION_NAME_ID_MAPPING_ATTR, {"name": "id"})  # this simulates what patch_with_action_mapping does
 
     my_obj.action(an="name")
     out_after, _ = capsys.readouterr()
@@ -119,7 +120,8 @@ def test_composite_action(monkeypatch, capsys) -> None:
     out_before, _ = capsys.readouterr()
     assert not out_before
 
-    patch_object_actions(MyObject, {"name": "id"})
+    patch_object_actions(MyObject)
+    setattr(MyObject, ACTION_NAME_ID_MAPPING_ATTR, {"name": "id"})  # this simulates what patch_with_action_mapping does
 
     my_obj.action(an="name")
     out_after, _ = capsys.readouterr()

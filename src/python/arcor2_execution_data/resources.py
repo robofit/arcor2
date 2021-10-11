@@ -9,7 +9,6 @@ from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
 from arcor2 import json
 from arcor2 import transformations as tr
-from arcor2.action import get_action_name_to_id, patch_object_actions, print_event
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import scene_service
 from arcor2.data.common import Project, Scene
@@ -19,7 +18,9 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
-from arcor2_execution_data import package
+from arcor2_execution_data import action, package
+from arcor2_execution_data.action import AP_ID_ATTR, patch_object_actions, patch_with_action_mapping, print_event
+from arcor2_execution_data.arguments import parse_args
 from arcor2_execution_data.exceptions import print_exception
 
 
@@ -33,7 +34,7 @@ R = TypeVar("R", bound="IntResources")
 
 class IntResources:
 
-    __slots__ = ("project", "scene", "objects")
+    __slots__ = ("project", "scene", "objects", "args")
 
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
@@ -42,6 +43,22 @@ class IntResources:
 
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
+
+        action.start_paused, action.breakpoints = parse_args()
+
+        if action.breakpoints:
+            ap_ids = self.project.action_points_ids
+            for bp in action.breakpoints:
+                if bp not in ap_ids:
+                    raise ResourcesException(f"Breakpoint ID unknown: {bp}.")
+
+        # orientations / joints have to be monkey-patched with AP's ID in order to make breakpoints work in @action
+        for ap in self.project.action_points:
+
+            setattr(ap.position, AP_ID_ATTR, ap.id)
+
+            for joints in self.project.ap_joints(ap.id):
+                setattr(joints, AP_ID_ATTR, ap.id)
 
         self.objects: Dict[str, Generic] = {}
 
@@ -62,7 +79,8 @@ class IntResources:
             module = importlib.import_module(CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type))
 
             cls = getattr(module, scene_obj_type)
-            patch_object_actions(cls, get_action_name_to_id(self.scene, self.project, cls.__name__))
+            patch_object_actions(cls)
+            patch_with_action_mapping(cls, self.scene, self.project)
             type_defs[cls.__name__] = cls
 
         futures: List[concurrent.futures.Future] = []

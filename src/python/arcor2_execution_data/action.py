@@ -1,23 +1,25 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Callable, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
 from arcor2.cached import CachedProject, CachedScene
+from arcor2.data.common import Pose, ProjectRobotJoints
 from arcor2.data.events import ActionStateAfter, ActionStateBefore, Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import iterate_over_actions
 from arcor2.parameter_plugins.utils import plugin_from_instance
 
-HANDLE_ACTIONS = True  # setting this to False disables checking for commands and printing out events
+ACTION_NAME_ID_MAPPING_ATTR = "_action_name_id_mapping"
+AP_ID_ATTR = "_ap_id"
+
+_pause_on_next_action = False
+start_paused = False
+breakpoints: Optional[Set[str]] = None
 
 
-def get_action_name_to_id(scene: CachedScene, project: CachedProject, object_type: str) -> Dict[str, str]:
-    return {act.name: act.id for act in project.actions if scene.object(act.parse_type().obj_id).type == object_type}
-
-
-def patch_object_actions(type_def: Type[Generic], action_name_to_id: Optional[Dict[str, str]] = None) -> None:
+def patch_object_actions(type_def: Type[Generic]) -> None:
     """Dynamically adds @action decorator to the methods with assigned
     ActionMetadata.
 
@@ -26,13 +28,22 @@ def patch_object_actions(type_def: Type[Generic], action_name_to_id: Optional[Di
     :return:
     """
 
-    # we somehow need to make action name->id accessible within the @action decorator
-    if action_name_to_id is not None:
-        type_def.action_name_to_id = action_name_to_id  # type: ignore
-
     for method_name, method in iterate_over_actions(type_def):
         # TODO avoid accidental double patching
         setattr(type_def, method_name, action(method))
+
+
+def patch_with_action_mapping(type_def: Type[Generic], scene: CachedScene, project: CachedProject) -> None:
+
+    setattr(
+        type_def,
+        ACTION_NAME_ID_MAPPING_ATTR,
+        {
+            act.name: act.id
+            for act in project.actions
+            if scene.object(act.parse_type().obj_id).type == type_def.__name__
+        },
+    )
 
 
 try:
@@ -65,7 +76,7 @@ except ImportError:
         return None
 
 
-def handle_stdin_commands() -> None:
+def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
     """Reads stdin and checks for commands from parent script (e.g. Execution
     unit). Prints events to stdout.
 
@@ -75,12 +86,21 @@ def handle_stdin_commands() -> None:
     :return:
     """
 
-    if read_stdin() != "p":
-        return
+    global _pause_on_next_action
+    global start_paused
 
-    print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
-    while True:
-        if read_stdin(0.1) == "r":
+    if read_stdin() == "p" or (before and _pause_on_next_action) or start_paused or breakpoint:
+        start_paused = False
+        print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
+        while True:
+
+            cmd = read_stdin(0.1)
+
+            if cmd not in ("s", "r"):
+                continue
+
+            _pause_on_next_action = cmd == "s"
+
             print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
             break
 
@@ -130,15 +150,16 @@ def action(f: F) -> F:
 
         action_args = args[1:]
         action_id: Optional[str] = None
+        handle_actions = hasattr(args[0], ACTION_NAME_ID_MAPPING_ATTR)
 
-        if HANDLE_ACTIONS:  # if not set, ignore everything
+        if handle_actions:  # if not set, ignore everything
 
             if _executed_action and an:
                 raise Arcor2Exception("Inner actions should not have name specified.")
 
             if not _executed_action:  # do not attempt to get id for inner actions
                 try:
-                    action_id = args[0].action_name_to_id[an]  # type: ignore
+                    action_id = getattr(args[0], ACTION_NAME_ID_MAPPING_ATTR)[an]
                 except AttributeError:
                     # mapping from action name to id not provided, ActionState won't be sent
                     pass
@@ -166,7 +187,19 @@ def action(f: F) -> F:
                 if _executed_action is None:
                     _executed_action = action_id, f
 
-        handle_stdin_commands()
+        make_a_break = False
+        if breakpoints:
+            for aa in action_args:
+                try:
+                    if (isinstance(aa, Pose) and getattr(aa.position, AP_ID_ATTR) in breakpoints) or (
+                        isinstance(aa, ProjectRobotJoints) and getattr(aa, AP_ID_ATTR) in breakpoints
+                    ):
+                        make_a_break = True
+                        break
+                except AttributeError:
+                    raise Arcor2Exception("Orientations/Joints not patched. Breakpoints won't work!")
+
+        handle_stdin_commands(before=True, breakpoint=make_a_break)
 
         try:
             res = f(*args, an=an, **kwargs)
@@ -177,14 +210,14 @@ def action(f: F) -> F:
             # ...could provide action_id from here
             raise
 
-        if HANDLE_ACTIONS:
+        if handle_actions:
             if action_id:
                 # we are getting out of (composite) action
                 if _executed_action and _executed_action[0] == action_id:
                     _executed_action = None
                     print_event(ActionStateAfter(ActionStateAfter.Data(action_id, results_to_json(res))))
 
-        handle_stdin_commands()
+        handle_stdin_commands(before=False)
 
         return res
 

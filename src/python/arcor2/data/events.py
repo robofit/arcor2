@@ -77,12 +77,18 @@ class PackageState(Event):
             STOPPED: str = "stopped"
             PAUSING: str = "pausing"  # it may take some time to pause the package
             PAUSED: str = "paused"
+            RESUMING: str = "resuming"
             UNDEFINED: str = "undefined"
 
         state: StateEnum = StateEnum.UNDEFINED
         package_id: Optional[str] = None
 
-    RUN_STATES = (Data.StateEnum.PAUSED, Data.StateEnum.RUNNING)  # package (process) is up and running
+    RUN_STATES = (
+        Data.StateEnum.PAUSED,
+        Data.StateEnum.RUNNING,
+        Data.StateEnum.RESUMING,
+        Data.StateEnum.PAUSING,
+    )  # package (process) is up and running
     RUNNABLE_STATES = (Data.StateEnum.STOPPED, Data.StateEnum.UNDEFINED)  # package can be started
 
     data: Data
