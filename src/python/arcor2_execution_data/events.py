@@ -1,9 +1,5 @@
-from dataclasses import dataclass, field
-from typing import List, Optional
+from dataclasses import dataclass
 
-from dataclasses_jsonschema import JsonSchemaMixin
-
-from arcor2.data.common import Joint, Pose
 from arcor2.data.events import Event
 from arcor2_execution_data.common import PackageSummary
 
@@ -12,29 +8,3 @@ from arcor2_execution_data.common import PackageSummary
 class PackageChanged(Event):
 
     data: PackageSummary
-
-
-@dataclass
-class RobotJoints(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        robot_id: str
-        joints: List[Joint]
-
-    data: Data
-
-
-@dataclass
-class RobotEef(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        @dataclass
-        class EefPose(JsonSchemaMixin):
-            end_effector_id: str
-            pose: Pose
-            arm_id: Optional[str] = None
-
-        robot_id: str
-        end_effectors: List[EefPose] = field(default_factory=list)
-
-    data: Data

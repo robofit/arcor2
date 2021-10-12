@@ -6,6 +6,7 @@ from typing import Awaitable, Callable, Dict, List, Optional, Set
 import numpy as np
 from arcor2_calibration_data import client as calib_client
 from arcor2_calibration_data.client import CalibrateRobotArgs
+from arcor2_runtime.events import RobotEef, RobotJoints
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import env
@@ -31,7 +32,6 @@ from arcor2_arserver.scene import (
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.events.common import ProcessState
 from arcor2_arserver_data.events.robot import HandTeachingMode
-from arcor2_execution_data.events import RobotEef, RobotJoints
 
 RBT_CALIB = "RobotCalibration"
 

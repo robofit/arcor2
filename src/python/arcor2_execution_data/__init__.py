@@ -1,6 +1,8 @@
 import os
 from typing import Tuple, Type
 
+from arcor2_runtime.events import RobotEef, RobotJoints
+
 from arcor2 import package_version
 from arcor2.data import events as arcor2_events
 from arcor2.data.rpc.common import RPC, Version
@@ -30,8 +32,8 @@ EVENTS: Tuple[Type[arcor2_events.Event], ...] = (
     arcor2_events.ProjectException,
     arcor2_events.ActionStateBefore,
     arcor2_events.ActionStateAfter,
-    events.RobotJoints,
-    events.RobotEef,
+    RobotJoints,
+    RobotEef,
 )
 
 

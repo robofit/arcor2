@@ -40,7 +40,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, tree_to_str
 
-RES_MODULE = "arcor2_execution_data.resources"
+RES_MODULE = "arcor2_runtime.resources"
 RES_CLS = "Resources"
 
 
@@ -150,7 +150,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
         type_ignores=[],
     )
 
-    add_import(tree, "arcor2_execution_data.exceptions", "print_exception", try_to_import=False)
+    add_import(tree, "arcor2_runtime.exceptions", "print_exception", try_to_import=False)
     add_import(tree, RES_MODULE, RES_CLS, try_to_import=False)
     add_import(tree, "action_points", "ActionPoints", try_to_import=False)
 
