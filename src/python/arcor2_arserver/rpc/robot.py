@@ -8,6 +8,7 @@ from arcor2_calibration_data import client as calib_client
 from arcor2_calibration_data.client import CalibrateRobotArgs
 from websockets.server import WebSocketServerProtocol as WsClient
 
+from arcor2 import env
 from arcor2 import transformations as tr
 from arcor2 import ws_server
 from arcor2.clients.project_service import URL as ps_url
@@ -27,10 +28,10 @@ from arcor2_arserver.scene import (
     scene_started,
     update_scene_object_pose,
 )
-from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.events.common import ProcessState
 from arcor2_arserver_data.events.robot import HandTeachingMode
+from arcor2_execution_data.events import RobotEef, RobotJoints
 
 RBT_CALIB = "RobotCalibration"
 
@@ -39,7 +40,7 @@ TaskDict = Dict[str, asyncio.Task]
 ROBOT_JOINTS_TASKS: TaskDict = {}
 EEF_POSE_TASKS: TaskDict = {}
 
-EVENT_PERIOD = 0.1
+EVENT_PERIOD = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
 
 
 async def robot_joints_event(robot_inst: Robot) -> None:
@@ -50,9 +51,7 @@ async def robot_joints_event(robot_inst: Robot) -> None:
         start = time.monotonic()
 
         try:
-            evt = sevts.r.RobotJoints(
-                sevts.r.RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None, True)))
-            )
+            evt = RobotJoints(RobotJoints.Data(robot_inst.id, (await robot.get_robot_joints(robot_inst, None, True))))
         except Arcor2Exception as e:
             logger.error(f"Failed to get joints for {robot_inst.name}. {str(e)}")
             await asyncio.sleep(1)
@@ -74,11 +73,9 @@ async def robot_joints_event(robot_inst: Robot) -> None:
     logger.info(f"Sending joints for {robot_inst.name} stopped.")
 
 
-async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None) -> sevts.r.RobotEef.Data.EefPose:
+async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None) -> RobotEef.Data.EefPose:
 
-    return sevts.r.RobotEef.Data.EefPose(
-        eef_id, (await robot.get_end_effector_pose(robot_inst, eef_id, arm_id)), arm_id
-    )
+    return RobotEef.Data.EefPose(eef_id, (await robot.get_end_effector_pose(robot_inst, eef_id, arm_id)), arm_id)
 
 
 async def robot_eef_pose_event(robot_inst: Robot) -> None:
@@ -101,7 +98,7 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
 
             start = time.monotonic()
 
-            evt = sevts.r.RobotEef(sevts.r.RobotEef.Data(robot_inst.id))
+            evt = RobotEef(RobotEef.Data(robot_inst.id))
 
             try:
                 evt.data.end_effectors = await asyncio.gather(
