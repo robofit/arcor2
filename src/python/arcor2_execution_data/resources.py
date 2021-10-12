@@ -1,13 +1,15 @@
 import concurrent.futures
 import importlib
 import os
+import time
+from threading import Event
 from types import TracebackType
-from typing import Dict, List, Optional, Type, TypeVar
+from typing import Dict, List, Optional, Set, Type, TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-from arcor2 import json
+from arcor2 import env, json
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import scene_service
@@ -15,12 +17,13 @@ from arcor2.data.common import Project, Scene
 from arcor2.data.events import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot
+from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, MultiArmRobot, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2_execution_data import action, package
 from arcor2_execution_data.action import AP_ID_ATTR, patch_object_actions, patch_with_action_mapping, print_event
 from arcor2_execution_data.arguments import parse_args
+from arcor2_execution_data.events import RobotEef, RobotJoints
 from arcor2_execution_data.exceptions import print_exception
 
 
@@ -31,10 +34,58 @@ class ResourcesException(Arcor2Exception):
 CUSTOM_OBJECT_TYPES_MODULE = "object_types"
 R = TypeVar("R", bound="IntResources")
 
+_shutting_down = Event()
+_streaming_period = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
+
+
+def stream_pose(robot_inst: Robot) -> None:
+
+    arm_eef: Dict[Optional[str], Set[str]] = {}
+
+    try:
+        if isinstance(robot_inst, MultiArmRobot):
+            arms = robot_inst.get_arm_ids()
+            arm_eef.update({arm: robot_inst.get_end_effectors_ids(arm) for arm in arms})
+        else:
+            arm_eef.update({None: robot_inst.get_end_effectors_ids()})
+
+        while not _shutting_down.is_set():
+            start = time.monotonic()
+            print_event(
+                RobotEef(
+                    data=RobotEef.Data(
+                        robot_inst.id,
+                        [
+                            RobotEef.Data.EefPose(eef, robot_inst.get_end_effector_pose(eef))
+                            for arm, eefs in arm_eef.items()
+                            for eef in eefs
+                        ],
+                    )
+                )
+            )
+            time.sleep(_streaming_period - (time.monotonic() - start))
+    except Arcor2Exception:
+        # TODO save traceback to file?
+        pass
+
+
+def stream_joints(robot_inst: Robot) -> None:
+
+    try:
+        while not _shutting_down.is_set():
+            start = time.monotonic()
+            print_event(
+                RobotJoints(data=RobotJoints.Data(robot_inst.id, robot_inst.robot_joints(include_gripper=True)))
+            )
+            time.sleep(_streaming_period - (time.monotonic() - start))
+    except Arcor2Exception:
+        # TODO save traceback to file?
+        pass
+
 
 class IntResources:
 
-    __slots__ = ("project", "scene", "objects", "args")
+    __slots__ = ("project", "scene", "objects", "args", "executor", "_stream_futures")
 
     def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
 
@@ -83,44 +134,42 @@ class IntResources:
             patch_with_action_mapping(cls, self.scene, self.project)
             type_defs[cls.__name__] = cls
 
+        self.executor = concurrent.futures.ThreadPoolExecutor()
         futures: List[concurrent.futures.Future] = []
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for scene_obj in self.scene.objects:
+        for scene_obj in self.scene.objects:
 
-                cls = type_defs[scene_obj.type]
+            cls = type_defs[scene_obj.type]
 
-                assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
+            assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
 
-                settings = settings_from_params(
-                    cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None)
-                )
+            settings = settings_from_params(cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None))
 
-                if issubclass(cls, Robot):
-                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
-                elif issubclass(cls, CollisionObject):
-                    futures.append(
-                        executor.submit(
-                            cls, scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
-                        )
+            if issubclass(cls, Robot):
+                futures.append(self.executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
+            elif issubclass(cls, CollisionObject):
+                futures.append(
+                    self.executor.submit(
+                        cls, scene_obj.id, scene_obj.name, scene_obj.pose, models[scene_obj.type], settings
                     )
-                elif issubclass(cls, GenericWithPose):
-                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
-                elif issubclass(cls, Generic):
-                    futures.append(executor.submit(cls, scene_obj.id, scene_obj.name, settings))
-                else:
-                    raise Arcor2Exception("Unknown base class.")
+                )
+            elif issubclass(cls, GenericWithPose):
+                futures.append(self.executor.submit(cls, scene_obj.id, scene_obj.name, scene_obj.pose, settings))
+            elif issubclass(cls, Generic):
+                futures.append(self.executor.submit(cls, scene_obj.id, scene_obj.name, settings))
+            else:
+                raise Arcor2Exception("Unknown base class.")
 
-            exception_cnt: int = 0
+        exception_cnt: int = 0
 
-            for f in concurrent.futures.as_completed(futures):
-                try:
-                    inst = f.result()  # if an object creation resulted in exception, it will be raised here
-                except Arcor2Exception as e:
-                    print_exception(e)
-                    exception_cnt += 1  # count of objects that failed to initialize
-                else:
-                    self.objects[inst.id] = inst  # successfully initialized objects
+        for f in concurrent.futures.as_completed(futures):
+            try:
+                inst = f.result()  # if an object creation resulted in exception, it will be raised here
+            except Arcor2Exception as e:
+                print_exception(e)
+                exception_cnt += 1  # count of objects that failed to initialize
+            else:
+                self.objects[inst.id] = inst  # successfully initialized objects
 
         if exception_cnt:  # if something failed, tear down those that succeeded and stop
             self.cleanup_all_objects()
@@ -149,6 +198,8 @@ class IntResources:
             # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
             tr.make_relative_ap_global(self.scene, self.project, aps)
 
+        self._stream_futures: List[concurrent.futures.Future] = []
+
     def cleanup_all_objects(self) -> None:
         """Calls cleanup method of all objects in parallel.
 
@@ -166,6 +217,16 @@ class IntResources:
                     print_exception(e)
 
     def __enter__(self: R) -> R:
+
+        if _streaming_period > 0:  # TODO could be also controlled by script argument (RunPackage flag)
+            for inst in self.objects.values():
+
+                if not isinstance(inst, Robot):
+                    continue
+
+                self._stream_futures.append(self.executor.submit(stream_pose, inst))
+                self._stream_futures.append(self.executor.submit(stream_joints, inst))
+
         return self
 
     def __exit__(
@@ -174,6 +235,13 @@ class IntResources:
         ex_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> bool:
+
+        _shutting_down.set()
+
+        try:
+            concurrent.futures.wait(self._stream_futures, 1.0)
+        except concurrent.futures.TimeoutError:
+            pass
 
         if isinstance(ex_value, Exception):
             # this intentionally ignores KeyboardInterrupt (derived from BaseException)

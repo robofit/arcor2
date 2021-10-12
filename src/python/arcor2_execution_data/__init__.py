@@ -30,6 +30,8 @@ EVENTS: Tuple[Type[arcor2_events.Event], ...] = (
     arcor2_events.ProjectException,
     arcor2_events.ActionStateBefore,
     arcor2_events.ActionStateAfter,
+    events.RobotJoints,
+    events.RobotEef,
 )
 
 

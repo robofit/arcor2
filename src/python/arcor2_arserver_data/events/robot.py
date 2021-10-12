@@ -1,37 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common
 from arcor2.data.events import Event
-
-
-@dataclass
-class RobotJoints(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        robot_id: str
-        joints: List[common.Joint]
-
-    data: Data
-
-
-@dataclass
-class RobotEef(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        @dataclass
-        class EefPose(JsonSchemaMixin):
-            end_effector_id: str
-            pose: common.Pose
-            arm_id: Optional[str] = None
-
-        robot_id: str
-        end_effectors: List[EefPose] = field(default_factory=list)
-
-    data: Data
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 

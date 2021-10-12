@@ -3,6 +3,7 @@
 ## Environment variables
 
 - `ARCOR2_ARSERVER_PORT=6789` - by default, the service will listen on port 6789.
+- `ARCOR2_STREAMING_PERIOD=0.1` - controls the period of streaming a robot's EEF poses and joints. 
 
 ### Caching
 
