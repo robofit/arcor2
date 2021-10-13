@@ -1,15 +1,15 @@
 version: '3'
 
 services:
-  arserver:
+  testitoff-arserver:
     image: arcor2/arcor2_arserver:0.21.0
-    container_name: arserver
+    container_name: testitoff-arserver
     depends_on:
-      - project
-      - build
-      - execution
+      - testitoff-project
+      - testitoff-build
+      - testitoff-execution
       - testitoff-scene-webapi
-      - calibration
+      - testitoff-calibration
     ports:
       - "6789:6789"
     networks:
@@ -24,26 +24,26 @@ services:
       - testitoff-interaction-network
       - testitoff-calibration-network
     environment:
-      - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
+      - ARCOR2_PROJECT_SERVICE_URL=http://testitoff-project:10000
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
-      - ARCOR2_EXECUTION_URL=ws://execution:6790
-      - ARCOR2_BUILD_URL=http://build:5008
-      - ARCOR2_CALIBRATION_URL=http://calibration:5014
+      - ARCOR2_EXECUTION_URL=ws://testitoff-execution:6790
+      - ARCOR2_BUILD_URL=http://testitoff-build:5008
+      - ARCOR2_CALIBRATION_URL=http://testitoff-calibration:5014
 
-  build:
+  testitoff-build:
     image: arcor2/arcor2_build:0.20.0
-    container_name: build
+    container_name: testitoff-build
     depends_on:
-      - project
+      - testitoff-project
     environment:
       - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
     ports:
       - "5008:5008"
     networks:
       - testitoff-project-network
-  execution:
+  testitoff-execution:
     image: arcor2/arcor2_execution:0.18.0
-    container_name: execution
+    container_name: testitoff-execution
     networks:
         - testitoff-execution-network
         - testitoff-scene-network
@@ -57,33 +57,33 @@ services:
       - ARCOR2_SCENE_SERVICE_URL=http://testitoff-scene-webapi:15000
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
-        - execution:/root/project
+        - testitoff-execution:/root/project
 
-  execution-proxy:
+  testitoff-execution-proxy:
     image: arcor2/arcor2_execution_proxy:0.13.1
-    container_name: execution-proxy
+    container_name: testitoff-execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
-      - ARCOR2_EXECUTION_URL=ws://execution:6790
+      - ARCOR2_EXECUTION_URL=ws://testitoff-execution:6790
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
-      - execution-proxy:/root/tokens
-      - execution:/root/project
+      - testitoff-execution-proxy:/root/tokens
+      - testitoff-execution:/root/project
     ports:
       - "5009:5009"
     networks:
       - testitoff-execution-network
     depends_on:
-      - execution
+      - testitoff-execution
 
-  calibration:
+  testitoff-calibration:
     image: arcor2/arcor2_calibration:0.6.1
     networks:
       - testitoff-calibration-network
     ports:
       - "5014:5014"
     environment:
-      - ARCOR2_CALIBRATION_URL=http://calibration:5014
+      - ARCOR2_CALIBRATION_URL=http://testitoff-calibration:5014
       - ARCOR2_CALIBRATION_MOCK=false
     volumes:
       - ./calibration.yaml:/root/calibration.yaml
@@ -163,7 +163,7 @@ services:
     depends_on:
       - testitoff-robotsystem-webapi
       - testitoff-robotsystem-mongodb
-      - project
+      - testitoff-project
 
   testitoff-search-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/search:0.12.0
@@ -208,7 +208,7 @@ services:
     depends_on:
       - testitoff-search-webapi
       - testitoff-search-mongodb
-      - project
+      - testitoff-project
 
   testitoff-scene-webapi:
       image: registry.gitlab.com/kinalisoft/test-it-off/scene:0.5.0
@@ -230,28 +230,30 @@ services:
         - testitoff-statistic-network
         - testitoff-scene-network
 
-  project:
+  testitoff-project:
       image: registry.gitlab.com/kinalisoft/test-it-off/project:0.13.0
-      container_name: "project"
+      container_name: "testitoff-project"
       ports:
         - "10000-10001:10000-10001"
       environment:
-        MONGODB_URL: mongodb:27017
+        MONGODB_URL: testitoff-project-mongodb:27017
       links:
-          - mongodb
+          - testitoff-project-mongodb
       depends_on:
-          - mongodb
+          - testitoff-project-mongodb
       networks:
         - testitoff-project-network
+      volumes:
+        - testitoff-project-resources:/data/resources
 
-  mongodb:
+  testitoff-project-mongodb:
       image: mongo:4.2.15-bionic
-      container_name: "mongodb"
+      container_name: "testitoff-project-mongodb"
       environment:
         - MONGO_DATA_DIR=/data/db
         - MONGO_LOG_DIR=/dev/null
       volumes:
-        - mongodb:/data/db
+        - testitoff-project-mongodb:/data/db
       expose:
         - "27017"
       networks:
@@ -305,9 +307,9 @@ services:
       - testitoff-barcode-webapi
       - testitoff-barcode-mongodb
 
-  nginx:
+  testitoff-nginx:
     image: nginx:1.21.1
-    container_name: "nginx"
+    container_name: "testitoff-nginx"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
@@ -315,15 +317,16 @@ services:
     networks:
       - testitoff-project-network
     depends_on:
-      - project
+      - testitoff-project
 
 volumes:
-  mongodb:
+  testitoff-project-resources:
+  testitoff-project-mongodb:
   testitoff-search-mongodb:
   testitoff-barcode-mongodb:
   testitoff-robotsystem-mongodb:
-  execution-proxy:
-  execution:
+  testitoff-execution-proxy:
+  testitoff-execution:
 
 networks:
   testitoff-execution-network:
