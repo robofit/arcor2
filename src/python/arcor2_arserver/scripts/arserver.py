@@ -162,6 +162,9 @@ async def _initialize_server() -> None:
         verbose=glob.VERBOSE,
     )
 
+    if __debug__:
+        logger.warn("Development mode. The service will shutdown on any unhandled exception.")
+
     logger.info(f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized.")
     await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
     asyncio.create_task(run_lock_notification_worker())
@@ -325,10 +328,11 @@ def main() -> None:
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
+    loop.set_exception_handler(ws_server.custom_exception_handler)
 
     compile_json_schemas()
 
-    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
+    run(aio_main(), loop=loop)
 
     shutil.rmtree(settings.OBJECT_TYPE_PATH)
 
