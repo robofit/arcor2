@@ -1054,10 +1054,15 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
                 if param.type != PosePlugin.type_name():  # TODO also handle joints!
                     continue
 
-                old_ori_id = PosePlugin.orientation_id(proj, new_act.id, param.name)
+                old_ori = proj.bare_ap_and_orientation(PosePlugin.orientation_id(proj, new_act.id, param.name))[1]
+                ap_childs = {ori.id for ap_id in proj.childs(req.args.id) for ori in proj.ap_orientations(ap_id)}
 
-                if proj.bare_ap_and_orientation(old_ori_id)[1].id not in proj.childs(req.args.id):
-                    # orientation belongs to another AP tree, no need to update anything
+                if old_ori.id not in ap_childs:
+                    logger.debug(
+                        f"Orientation {old_ori.name} ({old_ori.id}) "
+                        f"belongs to another AP tree, no need to update anything."
+                    )
+                    logger.debug(f"The original AP {original_ap.name} has following childs: {ap_childs}.")
                     continue
 
                 # orientation belongs to the tree being copied so it has to be updated
@@ -1066,9 +1071,12 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
                 from arcor2 import json
 
                 try:
-                    param.value = json.dumps(old_ori_to_new_ori[old_ori_id])
+                    new_ori_id = old_ori_to_new_ori[old_ori.id]
                 except KeyError:
-                    logger.error(f"Failed to find a new orientation ID for {old_ori_id}.")
+                    logger.error(f"Failed to find a new orientation ID for {old_ori.id}.")
+                else:
+                    logger.debug(f"Updating orientation from {old_ori.id} to {new_ori_id}.")
+                    param.value = json.dumps(new_ori_id)
 
             action_added_evt = sevts.p.ActionChanged(new_act)
             action_added_evt.change_type = Event.Type.ADD
