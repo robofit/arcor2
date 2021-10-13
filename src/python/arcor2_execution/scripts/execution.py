@@ -470,6 +470,9 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
 
 async def aio_main() -> None:
 
+    if __debug__:
+        logger.warn("Development mode. The service will shutdown on any unhandled exception.")
+
     logger.info(
         f"Execution service {arcor2_execution.version()} " f"(API version {arcor2_execution_data.version()}) started."
     )
@@ -514,9 +517,11 @@ def main() -> None:
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
 
+    loop.set_exception_handler(ws_server.custom_exception_handler)
+
     compile_json_schemas()
 
-    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
+    run(aio_main(), loop=loop)
 
 
 if __name__ == "__main__":

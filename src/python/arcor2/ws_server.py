@@ -26,6 +26,15 @@ EventT = TypeVar("EventT", bound=Event)
 EVENT_DICT_TYPE = Dict[str, Tuple[Type[EventT], Callable[[EventT, WsClient], Coroutine[Any, Any, None]]]]
 
 
+def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: Dict[str, Any]) -> None:
+
+    # it is also possible to use aiorun.run with stop_on_unhandled_errors=True but this prints much more useful info
+    loop.default_exception_handler(context)
+
+    if __debug__:  # stop loop while debugging, try to continue in production
+        loop.stop()
+
+
 async def send_json_to_client(client: WsClient, data: str) -> None:
 
     try:
