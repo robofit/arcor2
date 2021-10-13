@@ -420,11 +420,12 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
 
     proj.update_modified()
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_point_id, user_name, True))
+    await glob.LOCK.write_unlock(req.args.action_point_id, user_name, True)
 
     evt = sevts.p.ActionPointChanged(ap)
     evt.change_type = Event.Type.UPDATE_BASE
     asyncio.ensure_future(notif.broadcast_event(evt))
+
     return None
 
 
@@ -512,7 +513,7 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         evt.change_type = Event.Type.UPDATE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(ap.id, user_name, True))
+    await glob.LOCK.write_unlock(ap.id, user_name, True)
 
     return None
 
@@ -1218,10 +1219,8 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
         evt.change_type = Event.Type.ADD
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(
-        glob.LOCK.write_unlock(
-            [item for item in (req.args.start, req.args.end) if item not in to_lock], user_name, True
-        )
+    await glob.LOCK.write_unlock(
+        [item for item in (req.args.start, req.args.end) if item not in to_lock], user_name, True
     )
     return None
 
@@ -1270,10 +1269,8 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
         evt.change_type = Event.Type.REMOVE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(
-        glob.LOCK.write_unlock(
-            [item for item in (logic_item.start, logic_item.end) if item not in to_lock], user_name, True
-        )
+    await glob.LOCK.write_unlock(
+        [item for item in (logic_item.start, logic_item.end) if item not in to_lock], user_name, True
     )
     return None
 
@@ -1324,7 +1321,7 @@ async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request
     evt.change_type = Event.Type.UPDATE
     asyncio.create_task(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(param.id, user_name, True))
+    await glob.LOCK.write_unlock(param.id, user_name, True)
 
 
 async def remove_project_parameter_cb(req: srpc.p.RemoveProjectParameter.Request, ui: WsClient) -> None:
@@ -1394,7 +1391,7 @@ async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> 
         evt.change_type = Event.Type.UPDATE_BASE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.project_id, user_name))
+    await glob.LOCK.write_unlock(req.args.project_id, user_name)
     return None
 
 
@@ -1517,7 +1514,7 @@ async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> No
 
     proj.update_modified()
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.action_id, user_name, True))
+    await glob.LOCK.write_unlock(req.args.action_id, user_name, True)
 
     evt = sevts.p.ActionChanged(act)
     evt.change_type = Event.Type.UPDATE_BASE
