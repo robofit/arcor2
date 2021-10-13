@@ -493,7 +493,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
     evt.change_type = Event.Type.UPDATE
     asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name, True))
+    await glob.LOCK.write_unlock(req.args.id, user_name, True)
     return None
 
 
@@ -514,7 +514,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
         evt.change_type = Event.Type.UPDATE_BASE
         asyncio.ensure_future(notif.broadcast_event(evt))
 
-    asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name, True))
+    await glob.LOCK.write_unlock(req.args.id, user_name, True)
     return None
 
 
@@ -531,7 +531,7 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Opti
             resp = srpc.s.DeleteScene.Response(result=False)
             resp.messages = ["Scene has associated projects."]
             resp.data = assoc_projects
-            asyncio.create_task(glob.LOCK.write_unlock(req.args.id, user_name))
+            await glob.LOCK.write_unlock(req.args.id, user_name)
             return resp
 
         if req.dry_run:
