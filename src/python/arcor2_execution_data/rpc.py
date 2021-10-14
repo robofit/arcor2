@@ -14,7 +14,7 @@ class UploadPackage(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             id: str = field(metadata=dict(description="Id of the execution package."))
-            data: str = field(metadata=dict(description="Base64 encoded content of the zip file."))
+            data: str = field(metadata=dict(description="Base64 encoded content of the zip file."), repr=False)
 
         args: Args
 
