@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import os
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Set
 
 import aiofiles
 import websockets
@@ -35,7 +35,7 @@ MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
 MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 
-async def run_temp_package(package_id: str) -> None:
+async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: Optional[Set[str]] = None) -> None:
 
     # TODO lock scene and project?
 
@@ -51,7 +51,7 @@ async def run_temp_package(package_id: str) -> None:
 
     await project.close_project()
     req = erpc.RunPackage.Request
-    exe_req = req(get_id(), args=req.Args(package_id))
+    exe_req = req(get_id(), args=req.Args(package_id, start_paused, breakpoints))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -34,7 +34,12 @@ class BuildProject(RPC):
 class TemporaryPackage(RPC):
     @dataclass
     class Request(RPC.Request):
-        pass
+        @dataclass
+        class Args(JsonSchemaMixin):
+            start_paused: bool = False
+            breakpoints: Optional[Set[str]] = None
+
+        args: Args
 
     @dataclass
     class Response(RPC.Response):
