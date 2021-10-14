@@ -473,7 +473,7 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         check_ap_parent(scene, proj, req.args.new_parent_id)
         detect_ap_loop(proj, ap, req.args.new_parent_id)
 
-        await ensure_write_locked(ap.id, user_name)
+        await ensure_write_locked(ap.id, user_name)  # TODO should require locked tree?
 
         if req.dry_run:
             return
@@ -484,24 +484,26 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
 
         if not ap.parent and req.args.new_parent_id:
             # AP position and all orientations will become relative to the parent
-            tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
+            updated_aps = tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
 
         elif ap.parent and not req.args.new_parent_id:
             # AP position and all orientations will become absolute
-            tr.make_relative_ap_global(scene, proj, ap)
+            updated_aps = tr.make_relative_ap_global(scene, proj, ap)
         else:
 
             assert ap.parent
             # AP position and all orientations will become relative to another parent
-            tr.make_relative_ap_global(scene, proj, ap)
-            tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
+            _updated_aps = tr.make_relative_ap_global(scene, proj, ap)
+            updated_aps = tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
+
+            updated_aps = set.union(updated_aps, _updated_aps)
 
         proj.update_child(ap.id, old_parent, req.args.new_parent_id)
         await glob.LOCK.update_write_lock(ap.id, current_root, user_name)
 
         assert (req.args.new_parent_id and ap.parent == req.args.new_parent_id) or (
             req.args.new_parent_id == "" and ap.parent is None
-        )
+        ), f"Requested parent id: {req.args.new_parent_id}, current parent id: {ap.parent}"
         proj.update_modified()
 
         """
@@ -512,6 +514,11 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         evt = sevts.p.ActionPointChanged(proj.action_point(req.args.action_point_id))
         evt.change_type = Event.Type.UPDATE
         asyncio.ensure_future(notif.broadcast_event(evt))
+
+        for cap in updated_aps:
+            evt = sevts.p.ActionPointChanged(proj.action_point(cap))
+            evt.change_type = Event.Type.UPDATE
+            asyncio.ensure_future(notif.broadcast_event(evt))
 
     await glob.LOCK.write_unlock(ap.id, user_name, True)
 

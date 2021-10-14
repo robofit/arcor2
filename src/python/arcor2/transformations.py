@@ -1,6 +1,7 @@
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Set
 
 from arcor2.cached import CachedProject as CProject
+from arcor2.cached import CachedProjectException
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import BareActionPoint, Orientation, Pose, Position
 from arcor2.exceptions import Arcor2Exception
@@ -60,7 +61,7 @@ def get_parent_pose(scene: CScene, project: CProject, parent_id: str) -> Parent:
         raise Arcor2Exception("Unknown parent_id.")
 
 
-def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> None:
+def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> Set[str]:
     """Transforms (in place) relative AP into a global one.
 
     :param scene:
@@ -70,19 +71,51 @@ def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoin
     """
 
     if not ap.parent:
-        return
+        raise Arcor2Exception("Action point does not have a parent.")
 
-    parent = get_parent_pose(scene, project, ap.parent)
+    updated_aps: Set[str] = set()
 
-    ap.position = make_pose_abs(parent.pose, Pose(ap.position, Orientation())).position
-    for ori in project.ap_orientations(ap.id):
-        ori.orientation = make_pose_abs(parent.pose, Pose(Position(), ori.orientation)).orientation
+    def _update_childs(parent: Parent, ap_id: str) -> None:
 
-    ap.parent = parent.parent_id
-    make_relative_ap_global(scene, project, ap)
+        for child_id in project.childs(ap_id):
+
+            try:
+                child_ap = project.bare_action_point(child_id)
+            except CachedProjectException:
+                continue
+
+            child_ap.position = child_ap.position.rotated(parent.pose.orientation)
+
+            for ori in project.ap_orientations(child_ap.id):
+                ori.orientation = Orientation.from_quaternion(
+                    parent.pose.orientation.as_quaternion() * ori.orientation.as_quaternion()
+                )
+
+            updated_aps.add(child_ap.id)
+            _update_childs(parent, child_ap.id)
+
+    def _make_relative_ap_global(_ap: BareActionPoint) -> None:
+
+        if not _ap.parent:
+            return
+
+        parent = get_parent_pose(scene, project, _ap.parent)
+
+        if parent.pose.orientation != Orientation():
+            _update_childs(parent, _ap.id)
+
+        _ap.position = make_pose_abs(parent.pose, Pose(_ap.position, Orientation())).position
+        for ori in project.ap_orientations(_ap.id):
+            ori.orientation = make_pose_abs(parent.pose, Pose(Position(), ori.orientation)).orientation
+
+        _ap.parent = parent.parent_id
+        _make_relative_ap_global(_ap)
+
+    _make_relative_ap_global(ap)
+    return updated_aps
 
 
-def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoint, parent_id: str) -> None:
+def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoint, parent_id: str) -> Set[str]:
     """Transforms (in place) global AP into a relative one with given parent
     (can be object or another AP).
 
@@ -98,6 +131,30 @@ def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoin
     if ap.parent:
         raise Arcor2Exception("Action point already has a parent.")
 
+    updated_aps: Set[str] = set()
+    updated_orientations: Set[str] = set()
+
+    def _update_childs(parent: Parent, ap_id: str) -> None:
+
+        for child_id in project.childs(ap_id):
+
+            try:
+                child_ap = project.bare_action_point(child_id)
+            except CachedProjectException:
+                continue
+
+            child_ap.position = child_ap.position.rotated(parent.pose.orientation, inverse=True)
+
+            for ori in project.ap_orientations(child_ap.id):
+                ori.orientation = Orientation.from_quaternion(
+                    parent.pose.orientation.as_quaternion().inverse() * ori.orientation.as_quaternion()
+                )
+
+                updated_orientations.add(ori.id)
+
+            updated_aps.add(child_ap.id)
+            _update_childs(parent, child_ap.id)
+
     def _make_global_ap_relative(parent_id: str) -> None:
 
         parent = get_parent_pose(scene, project, parent_id)
@@ -109,8 +166,12 @@ def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoin
         for ori in project.ap_orientations(ap.id):
             ori.orientation = make_pose_rel(parent.pose, Pose(Position(), ori.orientation)).orientation
 
+        if parent.pose.orientation != Orientation():
+            _update_childs(parent, ap.id)
+
     _make_global_ap_relative(parent_id)
     ap.parent = parent_id
+    return updated_aps
 
 
 def make_pose_rel_to_parent(scene: CScene, project: CProject, pose: Pose, parent_id: str) -> Pose:
