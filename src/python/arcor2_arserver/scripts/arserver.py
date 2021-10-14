@@ -12,6 +12,7 @@ from typing import Dict, List, Type, get_type_hints
 import websockets
 from aiologger.levels import LogLevel
 from aiorun import run
+from arcor2_runtime import events as runtime_events
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -269,7 +270,7 @@ async def aio_main() -> None:
 
 def print_openapi_models() -> None:
 
-    modules = [arcor2_execution_data.events, events]
+    modules = [arcor2_execution_data.events, events, runtime_events]
 
     for _, mod in inspect.getmembers(evts, inspect.ismodule):
         modules.append(mod)
