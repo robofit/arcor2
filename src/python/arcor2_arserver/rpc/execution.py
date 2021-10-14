@@ -36,5 +36,5 @@ async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: WsClient
 
         package_id = await build_and_upload_package(project.id, f"Temporary package for project '{project.name}'.")
 
-        asyncio.ensure_future(run_temp_package(package_id))
+        asyncio.ensure_future(run_temp_package(package_id, req.args.start_paused, req.args.breakpoints))
         return None
