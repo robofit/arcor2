@@ -568,11 +568,17 @@ class CachedProject(CachedBase):
                 self._childs[parent] = set()
             self._childs[parent].add(child)
 
-    def childs(self, obj_id: str) -> Set[str]:
+    def childs(self, obj_id: str, recursive: bool = False) -> Set[str]:
+
         try:
-            return self._childs[obj_id]
+            ret = self._childs[obj_id]
         except KeyError:
-            return set()
+            return set()  # TODO distinguish between no childs and unknown object
+
+        if not recursive:
+            return ret
+
+        return ret | {c for s in [self.childs(ch, True) for ch in ret] for c in s}
 
     def _remove_child(self, parent: Optional[str], child: str) -> None:
 
