@@ -1301,6 +1301,70 @@ class YuMi(MultiArmRobot):
 
     # ------------------------------------------------------------------------------------------------------------------
 
+    def pick(
+        self,
+        arm: YumiArms,
+        pose: Pose,
+        approach_speed: float = 0.5,
+        pick_speed: float = 0.25,
+        vertical_offset: float = 0.05,
+        *,
+        an: Optional[str] = None,
+    ) -> None:
+        """Picks an object from a horizontal surface.
+
+        :param arm: Selected arm.
+        :param pose: Gripping pose.
+        :param approach_speed: How fast will the robot approach to pre-pick pose.
+        :param pick_speed: How fast will the robot pick the object up.
+        :param vertical_offset: Vertical offset of the pre-pick pose.
+        :param an:
+        :return:
+        """
+
+        pre_pick_pose = copy.deepcopy(pose)
+        pre_pick_pose.position.z += vertical_offset
+
+        self.move_arm(arm, pre_pick_pose, approach_speed)
+        self.open_gripper(arm)
+        self.move_arm(arm, pose, pick_speed)
+        self.close_gripper(arm)
+        self.move_arm(arm, pre_pick_pose, pick_speed)
+
+    pick.__action__ = ActionMetadata(composite=True)  # type: ignore
+
+    def place(
+        self,
+        arm: YumiArms,
+        pose: Pose,
+        approach_speed: float = 0.5,
+        place_speed: float = 0.25,
+        vertical_offset: float = 0.05,
+        *,
+        an: Optional[str] = None,
+    ) -> None:
+        """Places an object on a horizontal surface.
+
+        :param arm: Selected arm.
+        :param pose: Placing pose.
+        :param approach_speed: How fast will the robot approach to pre-place pose.
+        :param place_speed: How fast will the robot place the object.
+        :param vertical_offset: Vertical offset of the pre-place pose.
+        :param an:
+        :return:
+        """
+
+        pre_place_pose = copy.deepcopy(pose)
+        pre_place_pose.position.z += vertical_offset
+
+        self.move_arm(arm, pre_place_pose, approach_speed)
+        self.move_arm(arm, pose, place_speed)
+        self.open_gripper(arm)
+        self.move_arm(arm, pre_place_pose, place_speed)
+        self.close_gripper(arm)
+
+    place.__action__ = ActionMetadata(composite=True)  # type: ignore
+
     def move_arm(
         self, arm: YumiArms, pose: Pose, speed: float = 0.5, linear: bool = True, *, an: Optional[str] = None
     ) -> None:
