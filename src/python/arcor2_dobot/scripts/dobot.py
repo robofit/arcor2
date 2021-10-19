@@ -3,15 +3,15 @@
 import argparse
 import os
 from functools import wraps
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Tuple, Type
 
 from arcor2_dobot import version
-from arcor2_dobot.dobot import Dobot, MoveType
+from arcor2_dobot.dobot import Dobot, DobotApiException, MoveType
 from arcor2_dobot.m1 import DobotM1
 from arcor2_dobot.magician import DobotMagician
-from flask import jsonify, request
+from flask import Response, jsonify, request
 
-from arcor2 import env
+from arcor2 import env, json
 from arcor2.data.common import Joint, Pose
 from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
@@ -73,7 +73,7 @@ def put_start() -> RespT:
                   schema:
                     $ref: Pose
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Already started
@@ -96,7 +96,7 @@ def put_start() -> RespT:
 
     _dobot = mapping[model](pose, port, _mock)
 
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/state/stop", methods=["PUT"])
@@ -109,7 +109,7 @@ def put_stop() -> RespT:
         tags:
            - State
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -119,7 +119,7 @@ def put_stop() -> RespT:
     assert _dobot is not None
     _dobot.cleanup()
     _dobot = None
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/state/started", methods=["GET"])
@@ -210,10 +210,6 @@ def put_eef_pose() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                    schema:
-                        $ref: Pose
             403:
               description: Not started
     """
@@ -229,7 +225,7 @@ def put_eef_pose() -> RespT:
     acceleration = float(request.args.get("acceleration", default=50.0))
 
     _dobot.move(pose, MoveType(move_type), velocity, acceleration)
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/home", methods=["PUT"])
@@ -242,7 +238,7 @@ def put_home() -> RespT:
         tags:
            - Robot
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -250,7 +246,7 @@ def put_home() -> RespT:
 
     assert _dobot is not None
     _dobot.home()
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/hand_teaching", methods=["GET"])
@@ -292,7 +288,7 @@ def put_hand_teaching() -> RespT:
               schema:
                 type: boolean
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -300,7 +296,7 @@ def put_hand_teaching() -> RespT:
 
     assert _dobot
     _dobot.hand_teaching_mode = request.args.get("enabled") == "true"
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/suck", methods=["PUT"])
@@ -313,7 +309,7 @@ def put_suck() -> RespT:
         tags:
            - Robot
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -321,7 +317,7 @@ def put_suck() -> RespT:
 
     assert _dobot is not None
     _dobot.suck()
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/release", methods=["PUT"])
@@ -334,7 +330,7 @@ def put_release() -> RespT:
         tags:
            - Robot
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -342,7 +338,7 @@ def put_release() -> RespT:
 
     assert _dobot is not None
     _dobot.release()
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/joints", methods=["GET"])
@@ -441,6 +437,11 @@ def put_fk() -> RespT:
 
     joints = [Joint.from_dict(j) for j in request.json]
     return jsonify(_dobot.forward_kinematics(joints))
+
+
+@app.errorhandler(DobotApiException)  # type: ignore  # TODO what's wrong?
+def handle_dobot_exception(e: DobotApiException) -> Tuple[str, int]:
+    return json.dumps(str(e)), 400
 
 
 def main() -> None:
