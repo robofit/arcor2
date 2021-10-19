@@ -11,9 +11,6 @@
       <geometry>
         <mesh filename="package://dobot/model/meshes/dae/magicianBase.dae"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -40,9 +37,6 @@
       <geometry>
         <mesh filename="package://dobot/model/meshes/dae/magicianLink1.dae"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -79,9 +73,6 @@
       <geometry>
         <mesh filename="package://dobot/model/meshes/dae/magicianLink2.dae"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
     </visual>
     <collision>
       <origin rpy="0 -0.349065850399 0" xyz="0 0 0"/>
@@ -118,9 +109,6 @@
       <geometry>
         <mesh filename="package://dobot/model/meshes/dae/magicianLink3.dae"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
     </visual>
     <collision>
       <origin rpy="0 -0.471238898038 0" xyz="0.0164523613597 0 -0.133993730472"/>
@@ -157,9 +145,6 @@
       <geometry>
         <mesh filename="package://dobot/model/meshes/dae/magicianLink4.dae"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.177150678405 0 -0.0585951072678"/>
@@ -196,9 +181,6 @@
       <geometry>
         <mesh filename="package://dobot/model/meshes/dae/magicianSuctionCup.dae"/>
       </geometry>
-      <material name="white">
-        <color rgba="1 1 1 1"/>
-      </material>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="-0.237150678405 0 -0.0585951072678"/>
