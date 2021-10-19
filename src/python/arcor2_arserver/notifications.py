@@ -1,20 +1,20 @@
 import asyncio
-from typing import Optional
 
 from websockets.server import WebSocketServerProtocol
 
 from arcor2 import ws_server
 from arcor2.data import events
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 
 
-async def broadcast_event(event: events.Event, exclude_ui: Optional[WebSocketServerProtocol] = None) -> None:
+async def broadcast_event(event: events.Event) -> None:
 
-    if (exclude_ui is None and glob.USERS.interfaces) or (exclude_ui and len(glob.USERS.interfaces) > 1):
+    logger.debug(event)
+
+    if glob.USERS.interfaces:
         message = event.to_json()
-        await asyncio.gather(
-            *[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces if intf != exclude_ui]
-        )
+        await asyncio.gather(*[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces])
 
 
 async def event(interface: WebSocketServerProtocol, event: events.Event) -> None:

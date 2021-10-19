@@ -2,6 +2,7 @@ import json
 import logging
 from typing import List, Optional, Tuple, Type, Union
 
+import pkg_resources  # noqa  # https://github.com/marshmallow-code/apispec-webframeworks/issues/99
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -13,7 +14,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 
-RespT = Union[Response, Tuple[str, int]]
+RespT = Union[Response, Tuple[str, int], Tuple[Response, int]]
 
 
 class FlaskException(Arcor2Exception):
@@ -60,14 +61,14 @@ def run_app(
         return
 
     @app.route("/swagger/api/swagger.json", methods=["GET"])
-    def get_swagger() -> str:
+    def get_swagger() -> RespT:
         return jsonify(spec.to_dict())
 
-    @app.errorhandler(Arcor2Exception)
+    @app.errorhandler(Arcor2Exception)  # type: ignore  # TODO what's wrong?
     def handle_bad_request_general(e: Arcor2Exception) -> Tuple[str, int]:
         return json.dumps(str(e)), 400
 
-    @app.errorhandler(FlaskException)
+    @app.errorhandler(FlaskException)  # type: ignore  # TODO what's wrong?
     def handle_bad_request_intentional(e: FlaskException) -> Tuple[str, int]:
         return json.dumps(str(e)), e.error_code
 

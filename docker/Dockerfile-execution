@@ -16,3 +16,5 @@ RUN apt-get update \
         && apt-get install -y -q libgl1-mesa-glx libglib2.0-0
 
 COPY docker/start-execution.sh ./start.sh
+
+EXPOSE 6790

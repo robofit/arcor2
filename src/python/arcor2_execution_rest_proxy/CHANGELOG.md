@@ -2,6 +2,33 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.2] - 2021-09-02
+
+### Changed
+- Added EXPOSE to dockerfile
+
+## [0.13.1] - 2021-08-04
+
+### Fixed
+- API version was not updated.
+
+## [0.13.0] - 2021-07-29
+
+### Changed
+- Property `description` added to `SummaryProject`.
+- If more exceptions happen, they are combined into `exceptionMessage`.
+
+
+## [0.12.0] - 2021-06-11
+
+### Changed
+- OpenAPI definition updated.
+
+## [0.11.0] - 2021-05-21
+
+### Changed
+- Update of dependencies.
+
 ## [0.10.0] - 2021-03-30
 
 ### Changed

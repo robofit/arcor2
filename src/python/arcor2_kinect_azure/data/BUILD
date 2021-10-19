@@ -1,3 +1,3 @@
 resources(
-    sources = ["*.jpg"]
+    sources = ["*.jpg", "*.png"]
 )

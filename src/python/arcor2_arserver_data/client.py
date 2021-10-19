@@ -1,13 +1,13 @@
-import json
 import time
-import uuid
 from queue import Empty, Queue
 from typing import Dict, Optional, Type, TypeVar
 
 import websocket
 from dataclasses_jsonschema import ValidationError
 
+from arcor2 import json
 from arcor2.data import events, rpc
+from arcor2.data.rpc import get_id
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 from arcor2_arserver_data import rpc as srpc
@@ -18,10 +18,6 @@ class ARServerClientException(Arcor2Exception):
 
 
 RR = TypeVar("RR", bound=rpc.common.RPC.Response)
-
-
-def uid() -> int:
-    return uuid.uuid4().int
 
 
 class ARServer:
@@ -60,7 +56,7 @@ class ARServer:
 
         self._ws.settimeout(timeout)
 
-        system_info = self._call_rpc(srpc.c.SystemInfo.Request(uid()), srpc.c.SystemInfo.Response).data
+        system_info = self._call_rpc(srpc.c.SystemInfo.Request(get_id()), srpc.c.SystemInfo.Response).data
 
         if system_info is None:
             raise ARServerClientException("Failed to get SystemInfo.")
@@ -86,6 +82,10 @@ class ARServer:
                 recv_dict = json.loads(self._ws.recv())
             except websocket.WebSocketTimeoutException:
                 raise ARServerClientException("RPC timeouted.")
+
+            if not isinstance(recv_dict, dict):
+                self._logger.debug(f"Invalid data received: {recv_dict}")
+                continue
 
             if "response" in recv_dict:
                 break
@@ -116,6 +116,9 @@ class ARServer:
                 recv_dict = json.loads(self._ws.recv())
             except websocket.WebSocketTimeoutException:
                 raise ARServerClientException("Timeouted.")
+
+            if not isinstance(recv_dict, dict):
+                raise ARServerClientException(f"Invalid data received: {recv_dict}")
 
             if "event" not in recv_dict:
                 raise ARServerClientException(f"Expected event, got: {recv_dict}")

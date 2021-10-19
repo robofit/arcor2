@@ -2,7 +2,51 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.14.0] - WIP
+## [0.19.0] - WIP
+
+### Changed
+
+- Make RPCs less blocking.
+- New environment variables `ARCOR2_EXECUTION_DEBUG` and `ARCOR2_EXECUTION_ASYNCIO_DEBUG` (see README for details).
+- Added dependency on `3rdparty:websocket-client` to make `LoggingMixin` work.
+
+## [0.18.1] - 2021-09-02
+
+### Changed
+- Added EXPOSE to dockerfile
+
+
+## [0.18.0] - 2021-08-05
+
+### Changed
+
+- Dependency on `arcor2==0.20.0` where `Robot` API changed.
+
+
+## [0.17.0] - 2021-07-29
+
+### Changed
+
+- More stuff is now done asynchronously.
+- Listing packages is now done in parallel.
+- Improved logging (more events are logged).
+
+### Fixed
+
+- Exceptions were sometimes not reported.
+
+## [0.16.0] - 2021-06-14
+
+### Changed
+- Dependency on `arcor2` 0.18.0.
+- Dependency on `arcor2_execution_data` 0.11.0.
+
+## [0.15.0] - 2021-06-14
+
+### Changed
+- Dependency on `arcor2` 0.17.0 (`constants` renamed to `parameters` in the `Project` model).
+
+## [0.14.0] - 2021-05-21
 
 ### Changed
 - Dependency on arcor2 0.16.0 (updated `Resources` class).

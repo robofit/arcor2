@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.data.common import ActionPoint, Orientation, Pose, Position, Project, Scene, SceneObject
+from arcor2.data.common import ActionPoint, NamedOrientation, Orientation, Pose, Position, Project, Scene, SceneObject
 from arcor2.exceptions import Arcor2Exception
 from arcor2.transformations import (
     get_parent_pose,
@@ -116,6 +116,17 @@ def test_make_pose_rel_and_abs_again_random() -> None:
     assert cc == c
 
 
+def check_ap(ap: ActionPoint) -> None:
+    """Make sure that the poses can be serialized a deserialized."""
+
+    for val in ap.position:
+        assert isinstance(val, float)
+    for no in ap.orientations:
+        for val in no.orientation:
+            assert isinstance(val, float)
+    assert ap == ActionPoint.from_json(ap.to_json())
+
+
 def test_make_relative_ap_global_and_relative_again() -> None:
 
     scene = Scene("s1")
@@ -128,7 +139,9 @@ def test_make_relative_ap_global_and_relative_again() -> None:
     project.action_points.append(ap1)
     ap2 = ActionPoint("ap2", Position(-1, 0, 0), parent=ap1.id)
     project.action_points.append(ap2)
-    ap3 = ActionPoint("ap3", Position(-1, 0, 0), parent=ap2.id)
+    ap3 = ActionPoint(
+        "ap3", Position(-1, 0, 0), parent=ap2.id, orientations=[NamedOrientation("bla", random_orientation())]
+    )
     project.action_points.append(ap3)
 
     cached_project = CachedProject(project)
@@ -141,10 +154,14 @@ def test_make_relative_ap_global_and_relative_again() -> None:
 
     make_relative_ap_global(cached_scene, cached_project, ap3)
 
+    check_ap(ap3)
+
     assert ap3.parent is None
     assert ap3.position.x == 0.0  # type: ignore
 
     make_global_ap_relative(cached_scene, cached_project, ap3, ap2.id)
+
+    check_ap(ap3)
 
     assert ap3.parent == ap2.id
     assert ap3.position.x == -1
@@ -153,3 +170,35 @@ def test_make_relative_ap_global_and_relative_again() -> None:
 
     with pytest.raises(Arcor2Exception):
         make_relative_ap_global(cached_scene, cached_project, ap3)
+
+
+def test_obj_relative_ap_global() -> None:
+
+    scene = Scene("s1")
+    # object rotated 90° clock-wise
+    so1 = SceneObject("so1", "WhatEver", Pose(Position(1, 0, 0), Orientation(0, 0, -0.707, 0.707)))
+    scene.objects.append(so1)
+    cached_scene = CachedScene(scene)
+
+    project = Project("p1", scene.id)
+    ap1 = ActionPoint("ap1", Position(1, 0, 0), parent=so1.id)
+    project.action_points.append(ap1)
+    ap2 = ActionPoint("ap2", Position(1, 0, 0), parent=ap1.id)
+    no1 = NamedOrientation("o1", Orientation())
+    ap2.orientations.append(no1)
+    project.action_points.append(ap2)
+
+    cached_project = CachedProject(project)
+
+    make_relative_ap_global(cached_scene, cached_project, ap2)
+    check_ap(ap2)
+
+    assert ap2.position == Position(1, -2, 0)
+    assert so1.pose
+    assert no1.orientation == so1.pose.orientation
+
+    make_global_ap_relative(cached_scene, cached_project, ap2, ap1.id)
+
+    assert ap2.position == Position(1, 0, 0)
+    assert no1.orientation == Orientation()
+    check_ap(ap2)

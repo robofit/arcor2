@@ -2,7 +2,112 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.17.0] - WIP
+## [0.22.0] - WIP
+
+### Changed
+
+- When getting pose/joints from a robot fails, continue trying instead of giving up.
+- Handle `KinematicsException` to deliver a more precise error message.
+- Updating object models.
+  - New RPC `UpdateObjectModel`.
+  - Ability to lock individual ObjectTypes.
+  - Various improvements regarding locking.
+- Proper handling of scene/project problems.
+  - Any problem makes scene/project invalid, and then it can't be opened.  
+  - Scene/project problems are now checked when:
+    - Scene/project is listed.
+    - Opening a scene/project is requested.
+  - Found problems are cached for better performance.
+  - ObjectTypes are checked for changes during each listing of scenes/projects.
+- Deleting ObjectTypes reworked.
+  - `DeleteObjectType` replaced with `DeleteObjectTypes`.
+  - The new RPC takes list of ObjectType IDs.
+  - Empty list means all ObjectTypes.
+  - It returns list of id/error for types that could not be removed.
+  - This is especially useful for usage with `dry_run`.
+
+### Fixed
+
+- Ban HT mode changes while moving.
+- Arguments for getting robot joints (only affected multi-arm robots).
+- Handle locking exceptions on scene start/stop.
+- Copying of action points.
+  - Fixed locking within `CopyActionPoint`.
+  - Fixed update of orientation IDs.
+- Added locking to Project client to make the cache caching properly.
+
+
+## [0.21.0] - 2021-08-05
+
+### Changed
+
+- Locks are not automatically released when aiming is done or cancelled.
+- Linear movements are used by default for stepping and table alignment.
+- Joints stream (`RobotJoints` event) now contains also gripper joints when available (depends on the particular ObjectType).
+
+### Fixed
+
+- Getting action results (the result was always `False`).
+- `ctx_read_lock` made some RPCs impossible to success.
+- Object parameters checking.
+  - Values and types of object parameters were not checked at all.
+  - For now, only basic types are supported.
+
+## [0.20.0] - 2021-07-29
+
+### Changed
+
+- Support for multi arm robots.
+  - Dealing with `arm_id` parameter in RPCs.
+  - Streaming EEF poses for all arms.
+- Allow to reposition scene objects while online.
+  - It was allowed to reposition objects using robot,
+  - ...but disallowed to do it manually.
+  - This was inconsistent and unnecessarily restrictive.
+  - Now objects (except robots) can be repositioned anytime.
+- When creating a new project, common parameters are added automatically.
+  - At the moment those are `scene_id` and `project_id`.
+  - A user could use or remove them.
+- Collisions are not removed after stopping the scene.
+- ObjectType change detection is now based on `modified` instead of comparing source codes.
+- ARServer Project service client now stores cached scenes/projects.
+- Object aiming reworked.
+  - RPCs were renamed and all of them now have `dry_run`.
+  - There is a new method to cancel the process.
+  - One user can be aiming one object at the moment.
+  - Both the object and the selected robot have to be write-locked.
+  - Improved logging.
+  - Test was added.
+- Server no longer downloads URDF packages.
+  - `ARCOR2_DATA_PATH` environment variable is no longer used.
+  - Clients will get URDFs through reverse proxy from Project service.
+- `NewObjectType` no longer assumes that mesh already exists.
+  - A file associated to mesh must exist in advance.
+  
+  
+### Fixed
+- All calls to the Scene service are guarded against exceptions.
+- Renaming of project parameters fixed.
+  - It was possible to use already taken name.
+
+## [0.19.0] - 2021-06-22
+
+- Update to API version 0.15.0.
+
+## [0.18.0] - 2021-06-11
+
+### Changed
+
+- Updated to work with Project service 0.8.0.
+- Allow fast re-login after connection was broken.
+- Added locking to const-related RPCs.
+- Log calibration-related errors.
+
+### Fixed
+
+- Handle invalid ObjectType settings annotation.
+
+## [0.17.0] - 2021-05-21
 
 ### Changed
 
@@ -13,21 +118,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Initialization happens in parallel (for objects of the same priority).
 - `SetEefPerpendicularToWorld` now calls IK in parallel.
   - This provides almost 100% speed-up even when the robot service proceeds requests one by one.
-- Created a lock module that allows to read/write lock existing or special objects. The module contains:
-  - lock object with all necessary methods;
-  - structures for keeping data about locked objects;
-  - locking-related exceptions;
-  - queue and task for notifying UI about lock data;
-  - methods for auto-unlocking after timeout when user logouts.
-- Base tests of locking structure.
-- RPCs for (un)locking object, registering user name.
-- Events for (un)locking object.
-- Created a class for maintaining connected UIs.
-- Project methods to get object by ID, object parent and object children.
+- Added locking of internal resources.
+  - Created a lock module that allows to read/write lock existing or special objects. The module contains:
+    - lock object with all necessary methods;
+    - structures for keeping data about locked objects;
+    - locking-related exceptions;
+    - queue and task for notifying UI about lock data;
+    - methods for auto-unlocking after timeout when user logouts.
+  - Base tests of locking structure.
+  - RPCs for (un)locking object, registering user name.
+  - Events for (un)locking object.
+  - Created a class for maintaining connected UIs.
+  - Project methods to get object by ID, object parent and object children.
+  
+  - All RPCs that requires some kind of locking are now lock-guarded.
+  - Updated existing tests to work with newly implemented locking.
+  - Global variables `SCENE`, `PROJECT` and `INTERFACES` moved to new classes.
+- Rewritten cache for the Project service.
+  - The cache is now always on (provides a significant speed-up).
+  - External updates to the Project service are recognized properly.
+- New RPC `AddApUsingRobot`.
+- Support for multiple inheritance.
+    - ObjectTypes can now use mixins.
+    - It should be used like `class NewObjectType(MixinA, MixinB, Generic)`.
+    - E.g. the last ancestor should be something derived from `Generic`.
+- `SetEefPerpendicularToWorld` faster as it calls IK in parallel. 
 
-- All RPCs that requires some kind of locking are now lock-guarded.
-- Updated existing tests to work with newly implemented locking.
-- Global variables `SCENE`, `PROJECT` and `INTERFACES` moved to new classes.
+### Fixed
+
+- `SceneState` event was not sent to a newly connected UIs.
+- Results of actions are now forgotten when going offline.
+- Fixed support for `link` parameter type.
 
 ## [0.16.0] - 2021-04-20
 

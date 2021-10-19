@@ -2,10 +2,34 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.7.0] - WIP
+
+### Changed
+
+- Changes regarding updated signatures of `Robot` methods (`__init__`, `move_to_pose`, `robot_joints`).
+
+## [0.6.1] - 2021-07-29
+
+### Changed
+
+- Default values for url fields of object parameters.
+- Added docstrings to some actions.
+- Added mesh for KinectAzure.
+
+## [0.6.0] - 2021-05-21
+
+### Changed
+
+- Object types now use a mixin to share the common code.
+
+### Fixed
+
+- State controller paths are now consistent.
+
 ## [0.5.2] - 2021-03-30
 
-## Fixed
- - Dobot M1 does not have IK/FK so far
+### Fixed
+- Dobot M1 does not have IK/FK so far
 
 ## [0.5.1] - 2021-03-15
 

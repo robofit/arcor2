@@ -2,6 +2,33 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - WIP
+
+### Changed
+
+- Dependency on `arcor2==0.21.0`.
+
+### Fixed
+
+- Handling of `created` property.
+
+## [0.16.0] - 2021-07-29
+
+### Changed
+
+- Compatibility with Project service 0.10.0.
+- Compatibility with Scene service 0.5.0.
+
+## [0.15.0] - 2021-06-11
+
+### Changed
+- Updated to match API of Project service 0.8.0.
+
+## [0.14.0] - 2021-05-21
+
+### Changed
+- Updated to match API of Project service 0.7.0.
+
 ## [0.13.0] - 2021-04-20
 
 ### Fixed

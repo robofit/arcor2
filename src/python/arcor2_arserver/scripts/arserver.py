@@ -5,16 +5,14 @@ import argparse
 import asyncio
 import functools
 import inspect
-import json
-import os
 import shutil
 import sys
-import uuid
 from typing import Dict, List, Type, get_type_hints
 
 import websockets
 from aiologger.levels import LogLevel
 from aiorun import run
+from arcor2_runtime import events as runtime_events
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -22,20 +20,20 @@ import arcor2.helpers as hlp
 import arcor2_arserver
 import arcor2_arserver_data
 import arcor2_execution_data
-from arcor2 import action as action_mod
-from arcor2 import ws_server
+from arcor2 import env, json, ws_server
+from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import compile_json_schemas, events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins.utils import known_parameter_types
 from arcor2_arserver import events as server_events
 from arcor2_arserver import execution as exe
 from arcor2_arserver import globals as glob
-from arcor2_arserver import models
+from arcor2_arserver import logger, models
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import objects_actions as osa
 from arcor2_arserver import rpc as srpc_callbacks
-from arcor2_arserver import settings
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver import scene, settings
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.lock.notifications import run_lock_notification_worker
 from arcor2_arserver_data import events as evts
 from arcor2_arserver_data import rpc as srpc
@@ -43,9 +41,6 @@ from arcor2_arserver_data.rpc import objects as obj_rpc
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 from arcor2_execution_data import EXPOSED_RPCS
 from arcor2_execution_data import RPCS as EXE_RPCS
-
-# disables before/after messages, etc.
-action_mod.HANDLE_ACTIONS = False
 
 
 async def handle_manager_incoming_messages(manager_client) -> None:
@@ -59,6 +54,9 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
             msg = json.loads(message)
 
+            if not isinstance(msg, dict):
+                continue
+
             if "event" in msg:
 
                 if glob.USERS.interfaces:
@@ -69,7 +67,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 try:
                     evt = event_mapping[msg["event"]].from_dict(msg)
                 except ValidationError as e:
-                    glob.logger.error("Invalid event: {}, error: {}".format(msg, e))
+                    logger.error("Invalid event: {}, error: {}".format(msg, e))
                     continue
 
                 if isinstance(evt, events.PackageInfo):
@@ -114,12 +112,12 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 exe.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
     except websockets.exceptions.ConnectionClosed:
-        glob.logger.error("Connection to manager closed.")
+        logger.error("Connection to manager closed.")
 
 
 async def _initialize_server() -> None:
 
-    exe_version = await exe.manager_request(rpc.common.Version.Request(uuid.uuid4().int))
+    exe_version = await exe.manager_request(rpc.common.Version.Request(exe.get_id()))
     assert isinstance(exe_version, rpc.common.Version.Response)
     if not exe_version.result:
         raise Arcor2Exception("Failed to get Execution version.")
@@ -140,14 +138,24 @@ async def _initialize_server() -> None:
             await storage.initialize_module()
             break
         except storage.ProjectServiceException as e:
-            print(str(e))
+            logger.error(f"Failed to communicate with Project service. {str(e)}")
+            await asyncio.sleep(1)
+
+    while True:
+        try:
+            if await scene_srv.started():
+                logger.warn("Scene already started, attempting to stop it...")
+            await scene_srv.stop()  # if not started, call it anyway, it should be instant
+            break
+        except scene_srv.SceneServiceException as e:
+            logger.error(f"Failed to communicate with the Scene service. {str(e)}")
             await asyncio.sleep(1)
 
     await osa.get_object_types()
 
     bound_handler = functools.partial(
         ws_server.server,
-        logger=glob.logger,
+        logger=logger,
         register=register,
         unregister=unregister,
         rpc_dict=RPC_DICT,
@@ -155,9 +163,11 @@ async def _initialize_server() -> None:
         verbose=glob.VERBOSE,
     )
 
-    glob.logger.info("Server initialized.")
-    await asyncio.wait([websockets.serve(bound_handler, "0.0.0.0", glob.PORT)])
+    if __debug__:
+        logger.warn("Development mode. The service will shutdown on any unhandled exception.")
 
+    logger.info(f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized.")
+    await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
     asyncio.create_task(run_lock_notification_worker())
 
 
@@ -167,7 +177,7 @@ async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_r
 
 async def register(websocket: WsClient) -> None:
 
-    glob.logger.info("Registering new ui")
+    logger.info("Registering new ui")
     glob.USERS.add_interface(websocket)
 
     if glob.LOCK.project:
@@ -189,20 +199,23 @@ async def register(websocket: WsClient) -> None:
         assert glob.MAIN_SCREEN
         await notif.event(websocket, evts.c.ShowMainScreen(glob.MAIN_SCREEN))
 
+    if glob.LOCK.project or glob.LOCK.scene:
+        await notif.event(websocket, scene.get_scene_state())
+
 
 async def unregister(websocket: WsClient) -> None:
 
     try:
         user_name = glob.USERS.user_name(websocket)
     except Arcor2Exception:
-        glob.logger.info("Unregistering ui")
+        logger.info("Unregistering ui")
     else:
         await glob.LOCK.schedule_auto_release(user_name)
-        glob.logger.info(f"Unregistering ui {user_name}")
+        logger.info(f"Unregistering ui {user_name}")
 
     glob.USERS.logout(websocket)
 
-    glob.logger.debug(f"Known user names: {glob.USERS.user_names}")
+    logger.debug(f"Known user names: {glob.USERS.user_names}")
 
     for registered_uis in glob.ROBOT_JOINTS_REGISTERED_UIS.values():
         if websocket in registered_uis:
@@ -257,7 +270,7 @@ async def aio_main() -> None:
 
 def print_openapi_models() -> None:
 
-    modules = [arcor2_execution_data.events, events]
+    modules = [arcor2_execution_data.events, events, runtime_events]
 
     for _, mod in inspect.getmembers(evts, inspect.ismodule):
         modules.append(mod)
@@ -278,8 +291,6 @@ def print_openapi_models() -> None:
 
 def main() -> None:
 
-    assert sys.version_info >= (3, 8)
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-v", "--verbose", help="Increase verbosity.", action="store_const", const=True, default=False)
@@ -289,7 +300,7 @@ def main() -> None:
         help="Set logging level to debug.",
         action="store_const",
         const=LogLevel.DEBUG,
-        default=LogLevel.INFO,
+        default=LogLevel.DEBUG if env.get_bool("ARCOR2_ARSERVER_DEBUG") else LogLevel.INFO,
     )
     parser.add_argument(
         "--version", action="version", version=arcor2_arserver.version(), help="Shows version and exits."
@@ -298,7 +309,12 @@ def main() -> None:
         "--api_version", action="version", version=arcor2_arserver_data.version(), help="Shows API version and exits."
     )
     parser.add_argument(
-        "-a", "--asyncio_debug", help="Turn on asyncio debug mode.", action="store_const", const=True, default=False
+        "-a",
+        "--asyncio_debug",
+        help="Turn on asyncio debug mode.",
+        action="store_const",
+        const=True,
+        default=env.get_bool("ARCOR2_ARSERVER_ASYNCIO_DEBUG"),
     )
     parser.add_argument("--openapi", action="store_true", help="Prints OpenAPI models and exits.")
 
@@ -308,19 +324,16 @@ def main() -> None:
         print_openapi_models()
         return
 
-    glob.logger.level = args.debug
+    logger.level = args.debug
     glob.VERBOSE = args.verbose
 
     loop = asyncio.get_event_loop()
     loop.set_debug(enabled=args.asyncio_debug)
+    loop.set_exception_handler(ws_server.custom_exception_handler)
 
     compile_json_schemas()
 
-    if os.path.exists(settings.URDF_PATH):
-        shutil.rmtree(settings.URDF_PATH)
-    os.makedirs(settings.URDF_PATH)
-
-    run(aio_main(), loop=loop, stop_on_unhandled_errors=True)
+    run(aio_main(), loop=loop)
 
     shutil.rmtree(settings.OBJECT_TYPE_PATH)
 

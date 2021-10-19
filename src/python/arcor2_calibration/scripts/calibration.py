@@ -18,12 +18,14 @@ from flask import jsonify, request
 from PIL import Image
 
 import arcor2_calibration
+from arcor2 import env
 from arcor2 import transformations as tr
 from arcor2.data.common import Pose, Position
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2.urdf import urdf_from_url
+from arcor2_calibration import calibration
 from arcor2_calibration.calibration import detect_corners, estimate_camera_pose
 from arcor2_calibration.quaternions import weighted_average_quaternions
 from arcor2_calibration.robot import calibrate_robot
@@ -33,8 +35,12 @@ logger.propagate = False
 
 MARKERS: Dict[int, Pose] = {}
 MARKER_SIZE = 0.1
+
 MIN_DIST = 0.3
 MAX_DIST = 2.0
+
+MIN_THETA = 2.0
+MAX_THETA = math.pi
 
 _mock: bool = False
 
@@ -52,6 +58,14 @@ def camera_matrix_from_request() -> List[List[float]]:
 
 def dist_matrix_from_request() -> List[float]:
     return [float(val) for val in request.args.getlist("distCoefs")]
+
+
+def normalize(val: float, min_val: float, max_val: float) -> float:
+
+    assert max_val > min_val
+    res = (min(max(abs(val), min_val), max_val) - min_val) / (max_val - min_val)
+    assert 0 <= res <= 1
+    return res
 
 
 @app.route("/calibrate/robot", methods=["PUT"])
@@ -88,7 +102,7 @@ def put_calibrate_robot() -> RespT:
     """
 
     image = Image.open(request.files["image"].stream)
-    args = CalibrateRobotArgs.from_json(request.files["args"].read())
+    args = CalibrateRobotArgs.from_json(request.files["args"].stream.read().decode())
 
     if _mock:
         time.sleep(5)
@@ -268,6 +282,12 @@ def get_calibration() -> RespT:
                 application/json:
                   schema:
                     $ref: EstimatedPose
+            404:
+              description: No marker found.
+              content:
+                application/json:
+                  schema:
+                    type: string
 
     """
 
@@ -301,37 +321,51 @@ def get_calibration() -> RespT:
             mpose = poses[marker_id]
             dist = math.sqrt(mpose.position.x ** 2 + mpose.position.y ** 2 + mpose.position.z ** 2)
 
-            # the closer the marker is, the higher quality we get
-            marker_quality = 1.0 - ((min(max(dist, MIN_DIST), MAX_DIST) - MIN_DIST) / (MAX_DIST - MIN_DIST))
-            assert 0 <= marker_quality <= 1
-            quality_dict[marker_id] = marker_quality
+            # the closer the theta is to pi, the higher quality we get
+            theta = quaternion.as_spherical_coords(mpose.orientation.as_quaternion())[0]
+            ori_marker_quality = normalize(abs(theta), MIN_THETA, MAX_THETA)
 
-            weight = 1.0 / dist
-            known_markers.append((tr.make_pose_abs(cpose, mpose), weight))
+            # the closer the marker is, the higher quality we get
+            dist_marker_quality = 1.0 - normalize(dist, MIN_DIST, MAX_DIST)
+
+            marker_quality = (ori_marker_quality + dist_marker_quality) / 2
+
+            quality_dict[marker_id] = marker_quality
+            known_markers.append((tr.make_pose_abs(cpose, mpose), marker_quality))
+
             logger.debug(f"Known marker       : {marker_id}")
             logger.debug(f"...original pose   : {poses[marker_id]}")
             logger.debug(f"...transformed pose: {poses[marker_id]}")
-            logger.debug(f"...weight          : {weight}")
-            logger.debug(f"...quality         : {marker_quality}")
+            logger.debug(f"...dist quality    : {dist_marker_quality:.3f}")
+            logger.debug(f"...ori quality     : {ori_marker_quality:.3f}")
+            logger.debug(f"...overall quality : {marker_quality:.3f}")
 
         if not known_markers:
             return jsonify("No known marker detected."), 404
 
         weights = [marker[1] for marker in known_markers]
+        wsum = sum(weights)
+
+        if wsum <= 0:
+            logger.warning(
+                f"Got invalid weights, probably bad input data.\n"
+                f"Camera matrix: {camera_matrix}\n"
+                f"Dist matrix: {dist_matrix}"
+            )
+            return jsonify("Invalid input data."), 500
 
         # combine all detections
-        # TODO this is just initial (naive) solution with weight equal to distance to the origin
         pose = Pose()
         for mpose, weight in known_markers:
             pose.position += mpose.position * weight
-        pose.position *= 1.0 / sum(weights)
+        pose.position *= 1.0 / wsum
 
         quaternions = np.array([quaternion.as_float_array(km[0].orientation.as_quaternion()) for km in known_markers])
         pose.orientation.set_from_quaternion(
             quaternion.from_float_array(weighted_average_quaternions(quaternions, np.array(weights)))
         )
 
-        quality = np.median(list(quality_dict.values()))
+        quality = np.mean(list(quality_dict.values()))
 
     inverse = request.args.get("inverse", default="false") == "true"
 
@@ -352,27 +386,39 @@ def main() -> None:
         help="Set logging level to debug.",
         action="store_const",
         const=logging.DEBUG,
-        default=logging.INFO,
+        default=logging.DEBUG if env.get_bool("ARCOR2_CALIBRATION_DEBUG") else logging.INFO,
     )
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    run_as_mock = env.get_bool("ARCOR2_CALIBRATION_MOCK")
 
-    group.add_argument(
-        "--config-file",
-        "-c",
-        type=argparse.FileType("r"),
-        help="Config file name containing a valid YAML configuration.",
-    )
+    # argparse has not support for env vars so this is kind of workaround
+    # TODO maybe it could be solved using a custom action like https://gist.github.com/orls/51525c86ee77a56ad396
+    if not run_as_mock:
 
-    sub_group = group.add_mutually_exclusive_group()
-    sub_group.add_argument("-s", "--swagger", action="store_true", default=False)
-    sub_group.add_argument("-m", "--mock", action="store_true", default=False)
+        group = parser.add_mutually_exclusive_group(required=True)
+
+        group.add_argument(
+            "--config-file",
+            "-c",
+            type=argparse.FileType("r"),
+            help="Config file name containing a valid YAML configuration.",
+        )
+
+        sub_group = group.add_mutually_exclusive_group()
+        sub_group.add_argument("-s", "--swagger", action="store_true", default=False)
+        sub_group.add_argument(
+            "-m",
+            "--mock",
+            action="store_true",
+            default=False,
+            help="Run the service in a mock mode. The same can be done by setting ARCOR2_CALIBRATION_MOCK.",
+        )
 
     args = parser.parse_args()
 
     logger.setLevel(args.debug)
 
-    if not (args.swagger or args.mock):
+    if not (run_as_mock or args.swagger or args.mock):
 
         data = args.config_file.read()
 
@@ -387,6 +433,7 @@ def main() -> None:
             MARKER_SIZE = float(config.get("marker_size", MARKER_SIZE))
             MIN_DIST = float(config.get("min_dist", MIN_DIST))
             MAX_DIST = float(config.get("max_dist", MAX_DIST))
+            calibration.BLUR_THRESHOLD = float(config.get("blur_threshold", calibration.BLUR_THRESHOLD))
 
             for marker_id, marker in config["markers"].items():
                 MARKERS[int(marker_id)] = Pose.from_dict(marker["pose"])
@@ -404,7 +451,7 @@ def main() -> None:
         sys.exit(1)
 
     global _mock
-    _mock = args.mock
+    _mock = run_as_mock or args.mock
     if _mock:
         logger.info("Starting as a mock!")
 
@@ -415,7 +462,7 @@ def main() -> None:
         arcor2_calibration.version(),
         port_from_url(CALIBRATION_URL),
         [Pose, CalibrateRobotArgs, MarkerCorners, EstimatedPose],
-        args.swagger,
+        getattr(args, "swagger", False),
     )
 
 

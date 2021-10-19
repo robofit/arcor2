@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import copy
-import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -12,8 +11,10 @@ from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, Typ
 
 import numpy as np
 import quaternion
-from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema import DEFAULT_SCHEMA_TYPE, JsonSchemaMixin
+from dataclasses_jsonschema.type_defs import JsonDict, SchemaType
 
+from arcor2 import json
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -73,12 +74,14 @@ class IterableIndexable(JsonSchemaMixin):
     def __getitem__(self, item: int) -> float:
 
         attr = getattr(self, tuple(self.__dict__.keys())[item])
-        assert isinstance(attr, float)
+        assert isinstance(attr, (float, int))
         return attr
 
     def __iter__(self) -> Iterator[float]:
 
-        yield from self.__dict__.values()
+        # filtering items starting with _ is necessary to allow runtime monkey-patching
+        # ...otherwise those patched attributes will appear in e.g. list(Position(1,2,3))
+        yield from [v for k, v in self.__dict__.items() if not k.startswith("_")]
 
 
 @dataclass
@@ -147,6 +150,17 @@ class Position(IterableIndexable):
         self.z *= other
 
         return self
+
+    def to_dict(
+        self,
+        omit_none: bool = True,
+        validate: bool = False,
+        validate_enums: bool = True,
+        schema_type: SchemaType = DEFAULT_SCHEMA_TYPE,
+    ) -> JsonDict:
+
+        # orjson does not like numpy.float64
+        return {"x": float(self.x), "y": float(self.y), "z": float(self.z)}
 
 
 @dataclass
@@ -235,6 +249,17 @@ class Orientation(IterableIndexable):
         self.z = nq.z
         self.w = nq.w
 
+    def to_dict(
+        self,
+        omit_none: bool = True,
+        validate: bool = False,
+        validate_enums: bool = True,
+        schema_type: SchemaType = DEFAULT_SCHEMA_TYPE,
+    ) -> JsonDict:
+
+        # orjson does not like numpy.float64
+        return {"x": float(self.x), "y": float(self.y), "z": float(self.z), "w": float(self.w)}
+
 
 class ModelMixin(abc.ABC):
     """Mixin for objects with 'id' property that is uuid."""
@@ -305,17 +330,14 @@ class Pose(JsonSchemaMixin):
         return Pose((self.position * -1).rotated(inv), inv)
 
 
-class RelativePose(Pose):
-    pass
-
-
 @dataclass
 class ActionMetadata(JsonSchemaMixin):
 
-    blocking: bool = False
-    composite: bool = False
-    blackbox: bool = False
-    cancellable: bool = field(init=False, default=False)
+    composite: bool = field(metadata=dict(description="Should be set for nested actions."), default=False)
+    hidden: bool = field(metadata=dict(description="When set, action will be hidden in UIs."), default=False)
+    cancellable: bool = field(
+        init=False, default=False, metadata=dict(description="Defines whether action execution can be cancelled.")
+    )
 
 
 @dataclass
@@ -332,6 +354,7 @@ class ProjectRobotJoints(JsonSchemaMixin, ModelMixin):
     robot_id: str
     joints: List[Joint]
     is_valid: bool = False
+    arm_id: Optional[str] = None
     id: str = ""
 
     @classmethod
@@ -376,7 +399,8 @@ class SceneObject(JsonSchemaMixin, ModelMixin):
 class BareScene(JsonSchemaMixin, ModelMixin):
 
     name: str
-    desc: str = field(default_factory=str)
+    description: str = field(default_factory=str)
+    created: Optional[datetime] = None
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
     id: str = ""
@@ -400,7 +424,7 @@ class Scene(BareScene):
 
     @staticmethod
     def from_bare(bare: BareScene) -> Scene:
-        return Scene(bare.name, bare.desc, bare.modified, bare.int_modified, id=bare.id)
+        return Scene(bare.name, bare.description, bare.created, bare.modified, bare.int_modified, id=bare.id)
 
 
 @dataclass
@@ -418,15 +442,12 @@ class ActionParameterException(Arcor2Exception):
 class ActionParameter(Parameter):
     class TypeEnum(StrEnum):
 
-        CONSTANT: str = "constant"
+        PROJECT_PARAMETER: str = "project_parameter"
         LINK: str = "link"
 
     def str_from_value(self) -> str:
 
-        try:
-            val = json.loads(self.value)
-        except ValueError as e:
-            raise Arcor2Exception("Value should be JSON.") from e
+        val = json.loads(self.value)
 
         if not isinstance(val, str):
             raise Arcor2Exception("Value should be string.")
@@ -589,11 +610,19 @@ class LogicItem(JsonSchemaMixin, ModelMixin):
 
 
 @dataclass
-class ProjectConstant(JsonSchemaMixin, ModelMixin):
+class Range(JsonSchemaMixin):
+    # TODO when nested in ProjectParameter, ProjectParameter.from_dict({}) raises NameError: name 'Range' is not defined
 
-    name: str
-    type: str
-    value: str
+    min: float
+    max: float
+
+
+@dataclass
+class ProjectParameter(Parameter, ModelMixin):
+
+    range: Optional[Range] = None  # TODO use it in parameter plugins?
+    display_name: Optional[str] = None
+    description: Optional[str] = None
     id: str = ""
 
     @classmethod
@@ -651,8 +680,9 @@ class BareProject(JsonSchemaMixin, ModelMixin):
 
     name: str
     scene_id: str
-    desc: str = field(default_factory=str)
+    description: str = field(default_factory=str)
     has_logic: bool = True
+    created: Optional[datetime] = None
     modified: Optional[datetime] = None
     int_modified: Optional[datetime] = None
     id: str = ""
@@ -673,15 +703,23 @@ class BareProject(JsonSchemaMixin, ModelMixin):
 class Project(BareProject):
 
     action_points: List[ActionPoint] = field(default_factory=list)
-    constants: List[ProjectConstant] = field(default_factory=list)
+    parameters: List[ProjectParameter] = field(default_factory=list)
     functions: List[ProjectFunction] = field(default_factory=list)
     logic: List[LogicItem] = field(default_factory=list)
     object_overrides: List[SceneObjectOverride] = field(default_factory=list)
+    project_objects_ids: Optional[List[str]] = None  # not used at the moment
 
     @staticmethod
     def from_bare(bare: BareProject) -> Project:
         return Project(
-            bare.name, bare.scene_id, bare.desc, bare.has_logic, bare.modified, bare.int_modified, id=bare.id
+            bare.name,
+            bare.scene_id,
+            bare.description,
+            bare.has_logic,
+            bare.created,
+            bare.modified,
+            bare.int_modified,
+            id=bare.id,
         )
 
 
@@ -696,13 +734,9 @@ class ProjectSources(JsonSchemaMixin):
 class IdDesc(JsonSchemaMixin):
     id: str
     name: str
-    desc: Optional[str]
-
-
-@dataclass
-class IdDescList(JsonSchemaMixin):
-
-    items: List[IdDesc] = field(default_factory=list)
+    created: datetime
+    modified: datetime
+    description: Optional[str] = None
 
 
 @dataclass
@@ -710,3 +744,32 @@ class BroadcastInfo(JsonSchemaMixin):
 
     host: str
     port: int
+
+
+@dataclass
+class Asset(JsonSchemaMixin):
+    """Untyped object (JSON)."""
+
+    id: str
+    name: str
+    description: Optional[str] = None
+    uri: Optional[str] = None
+    type: Optional[str] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[str] = None  # json
+
+
+@dataclass
+class Error(JsonSchemaMixin):
+    code: int
+    detail: str
+    type: Optional[str] = None
+    data: Optional[str] = None
+
+
+@dataclass
+class WebApiError(JsonSchemaMixin):
+
+    message: str
+    service: str
+    errors: Optional[List[Error]] = None

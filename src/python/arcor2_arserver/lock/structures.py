@@ -1,36 +1,21 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2_arserver.lock.exceptions import CannotUnlock
+from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
+from arcor2_arserver.lock.exceptions import CannotUnlock, LockingException
 
 
 class LockEventData:
     __slots__ = "obj_ids", "owner", "lock", "client"
 
-    def __init__(
-        self, obj_ids: Union[List[str], str], owner: str, lock: bool = False, client: Optional[WsClient] = None
-    ):
-        self.obj_ids = obj_ids
+    def __init__(self, obj_ids: ObjIds, owner: str, lock: bool = False, client: Optional[WsClient] = None):
+        self.obj_ids = obj_ids_to_list(obj_ids)
         self.owner = owner
         self.lock = lock
         self.client = client
-
-
-class Data:
-    __slots__ = "owners", "count"
-
-    def __init__(self, owner: str) -> None:
-        self.owners: List[str] = [owner]
-        self.count: int = 1
-
-    def inc_count(self) -> None:
-        self.count += 1
-
-    def dec_count(self) -> None:
-        self.count -= 1
 
 
 class LockedObject:
@@ -38,72 +23,99 @@ class LockedObject:
 
     def __init__(self) -> None:
 
-        # object id: data
-        self.read: Dict[str, Data] = {}
-        self.write: Dict[str, Data] = {}
+        # object id: owners
+        self.read: Dict[str, List[str]] = {}
+        self.write: Dict[str, str] = {}
 
         self.tree: bool = False
 
+    def __repr__(self) -> str:
+        return f"LockedObject(read={self.read}, write={self.write}, tree={self.tree})"
+
     def read_lock(self, obj_id: str, owner: str) -> bool:
+        """Perform all necessary check if object can be locked and locks it."""
 
-        if self.tree:
+        if self.tree or obj_id in self.write:
             return False
 
-        if obj_id in self.write:
-            return False
-
-        already_locked = obj_id in self.read
-        if already_locked:
-            self.read[obj_id].owners.append(owner)
-            self.read[obj_id].inc_count()
+        if obj_id in self.read:  # already locked
+            self.read[obj_id].append(owner)
         else:
-            self.read[obj_id] = Data(owner)
+            self.read[obj_id] = [owner]
         return True
 
     def read_unlock(self, obj_id: str, owner: str) -> None:
+        """Perform all necessary check if object can be unlocked and unlocks
+        it."""
 
         if obj_id not in self.read:
-            raise CannotUnlock(f"Object is not read locked by '{owner}'")
+            raise CannotUnlock(f"{obj_id} is not read locked by {owner}.")
 
-        if owner not in self.read[obj_id].owners:
-            raise CannotUnlock(f"Object lock is not owned by '{owner}'")
+        if owner not in self.read[obj_id]:
+            raise CannotUnlock(f"{obj_id} lock is not owned by {owner}.")
 
-        if self.read[obj_id].count > 1:
-            lock_data = self.read[obj_id]
-            try:
-                lock_data.owners.remove(owner)
-            except ValueError:
-                raise CannotUnlock(f"'{owner}' does not own read lock for object '{obj_id}'")
-
-            lock_data.dec_count()
+        if len(self.read[obj_id]) > 1:
+            self.read[obj_id].remove(owner)
         else:
             del self.read[obj_id]
 
     def write_lock(self, obj_id: str, owner: str, lock_tree: bool) -> bool:
+        """Perform all necessary check if object can be locked and locks it."""
 
-        # TODO maybe exception would be better?
         if self.tree or obj_id in self.write or obj_id in self.read:
             return False
 
         if lock_tree and (self.read or self.write):
             return False
 
-        self.write[obj_id] = Data(owner)
+        self.write[obj_id] = owner
         self.tree = lock_tree
         return True
 
     def write_unlock(self, obj_id: str, owner: str) -> None:
+        """Perform all necessary check if object can be unlocked and unlocks
+        it."""
 
         if obj_id not in self.write:
-            raise CannotUnlock(f"Object is not write locked by '{owner}'")
+            raise CannotUnlock(f"{obj_id} is not write locked by {owner}.")
 
-        if owner not in self.write[obj_id].owners:
-            raise CannotUnlock(f"Object lock is not owned by '{owner}'")
+        if owner != self.write[obj_id]:
+            raise CannotUnlock(f"{obj_id} lock is not owned by {owner}.")
 
         if self.tree:
             self.tree = False
         del self.write[obj_id]
 
     def is_empty(self) -> bool:
+        """Check if there are any locked objects in current tree."""
 
         return not self.read and not self.write
+
+    def check_upgrade(self, obj_id: str, owner: str) -> None:
+        """Check if lock can be upgraded to whole locked tree."""
+
+        raise_msg = f"{obj_id} lock is not owned by {owner}."
+        if obj_id not in self.write:
+            raise LockingException(raise_msg)
+
+        if len(self.write) > 1:
+            raise LockingException(raise_msg)
+
+        if owner != self.write[obj_id]:
+            raise LockingException(raise_msg)
+
+        if self.tree:
+            raise LockingException(f"Nothing to upgrade for {obj_id} and owner {owner}.")
+
+    def check_downgrade(self, obj_id: str, owner: str) -> None:
+        """Check if lock can be downgraded to single object lock."""
+
+        raise_msg = f"{obj_id} lock is not owned by {owner}."
+        if obj_id not in self.write:
+            raise LockingException(raise_msg)
+
+        if owner != self.write[obj_id]:
+            raise LockingException(raise_msg)
+
+        if not self.tree:
+            raise LockingException(f"Nothing to downgrade for {obj_id} and owner {owner}.")

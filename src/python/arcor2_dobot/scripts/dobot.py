@@ -3,16 +3,17 @@
 import argparse
 import os
 from functools import wraps
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Tuple, Type
 
 from arcor2_dobot import version
-from arcor2_dobot.dobot import Dobot, MoveType
+from arcor2_dobot.dobot import Dobot, DobotApiException, MoveType
 from arcor2_dobot.m1 import DobotM1
 from arcor2_dobot.magician import DobotMagician
-from flask import jsonify, request
+from flask import Response, jsonify, request
 
+from arcor2 import env, json
 from arcor2.data.common import Joint, Pose
-from arcor2.flask import RespT, create_app, run_app
+from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 
@@ -42,7 +43,7 @@ def requires_started(f):
     return wrapped
 
 
-@app.route("/start", methods=["PUT"])
+@app.route("/state/start", methods=["PUT"])
 def put_start() -> RespT:
     """Start the robot.
     ---
@@ -72,7 +73,7 @@ def put_start() -> RespT:
                   schema:
                     $ref: Pose
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Already started
@@ -83,6 +84,10 @@ def put_start() -> RespT:
 
     model: str = request.args.get("model", default="magician")
     port: str = request.args.get("port", default="/dev/dobot")
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
 
     mapping: Dict[str, Type[Dobot]] = {"magician": DobotMagician, "m1": DobotM1}
@@ -91,10 +96,10 @@ def put_start() -> RespT:
 
     _dobot = mapping[model](pose, port, _mock)
 
-    return jsonify("ok")
+    return Response(status=204)
 
 
-@app.route("/stop", methods=["PUT"])
+@app.route("/state/stop", methods=["PUT"])
 @requires_started
 def put_stop() -> RespT:
     """Stop the robot.
@@ -104,7 +109,7 @@ def put_stop() -> RespT:
         tags:
            - State
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -114,10 +119,10 @@ def put_stop() -> RespT:
     assert _dobot is not None
     _dobot.cleanup()
     _dobot = None
-    return jsonify("ok")
+    return Response(status=204)
 
 
-@app.route("/started", methods=["GET"])
+@app.route("/state/started", methods=["GET"])
 def get_started() -> RespT:
     """Get the current state.
     ---
@@ -205,22 +210,22 @@ def put_eef_pose() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                application/json:
-                    schema:
-                        $ref: Pose
             403:
               description: Not started
     """
 
     assert _dobot is not None
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
     move_type: str = request.args.get("moveType", "jump")
     velocity = float(request.args.get("velocity", default=50.0))
     acceleration = float(request.args.get("acceleration", default=50.0))
 
     _dobot.move(pose, MoveType(move_type), velocity, acceleration)
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/home", methods=["PUT"])
@@ -233,7 +238,7 @@ def put_home() -> RespT:
         tags:
            - Robot
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -241,7 +246,7 @@ def put_home() -> RespT:
 
     assert _dobot is not None
     _dobot.home()
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/hand_teaching", methods=["GET"])
@@ -283,7 +288,7 @@ def put_hand_teaching() -> RespT:
               schema:
                 type: boolean
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -291,7 +296,7 @@ def put_hand_teaching() -> RespT:
 
     assert _dobot
     _dobot.hand_teaching_mode = request.args.get("enabled") == "true"
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/suck", methods=["PUT"])
@@ -304,7 +309,7 @@ def put_suck() -> RespT:
         tags:
            - Robot
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -312,7 +317,7 @@ def put_suck() -> RespT:
 
     assert _dobot is not None
     _dobot.suck()
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/release", methods=["PUT"])
@@ -325,7 +330,7 @@ def put_release() -> RespT:
         tags:
            - Robot
         responses:
-            200:
+            204:
               description: Ok
             403:
               description: Not started
@@ -333,7 +338,7 @@ def put_release() -> RespT:
 
     assert _dobot is not None
     _dobot.release()
-    return jsonify("ok")
+    return Response(status=204)
 
 
 @app.route("/joints", methods=["GET"])
@@ -391,6 +396,9 @@ def put_ik() -> RespT:
 
     assert _dobot is not None
 
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+
     pose = Pose.from_dict(request.json)
     return jsonify(_dobot.inverse_kinematics(pose))
 
@@ -424,15 +432,23 @@ def put_fk() -> RespT:
 
     assert _dobot is not None
 
+    if not isinstance(request.json, list):
+        raise FlaskException("Body should be a JSON array containing joints.", error_code=400)
+
     joints = [Joint.from_dict(j) for j in request.json]
     return jsonify(_dobot.forward_kinematics(joints))
+
+
+@app.errorhandler(DobotApiException)  # type: ignore  # TODO what's wrong?
+def handle_dobot_exception(e: DobotApiException) -> Tuple[str, int]:
+    return json.dumps(str(e)), 400
 
 
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
-    parser.add_argument("-m", "--mock", action="store_true", default=False)
+    parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_DOBOT_MOCK"))
     args = parser.parse_args()
 
     global _mock

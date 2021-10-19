@@ -10,7 +10,7 @@ from flask import jsonify, request
 
 from arcor2 import env
 from arcor2.data import common, object_type, scene
-from arcor2.flask import RespT, create_app, run_app
+from arcor2.flask import Response, RespT, create_app, run_app
 from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 
 app = create_app(__name__)
@@ -67,6 +67,10 @@ def put_box() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     # TODO workarounded because of bug in pyhumps
@@ -106,6 +110,10 @@ def put_sphere() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     args = humps.decamelize(request.args.to_dict())
@@ -145,6 +153,10 @@ def put_cylinder() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     args = humps.decamelize(request.args.to_dict())
@@ -166,7 +178,7 @@ def put_mesh() -> RespT:
               in: query
               schema:
                 type: string
-            - name: uri
+            - name: meshFileId
               in: query
               schema:
                 type: string
@@ -196,10 +208,14 @@ def put_mesh() -> RespT:
         responses:
             200:
               description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(args["mesh_id"], args["uri"])
+    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"], args.get("focus_points", None))
     collision_objects[mesh.id] = mesh
     return jsonify("ok"), 200
 
@@ -222,6 +238,12 @@ def delete_collision(collisionId: str) -> RespT:
         responses:
             200:
               description: Ok
+            404:
+              description: Model not found.
+              content:
+                application/json:
+                  schema:
+                    type: string
     """
 
     try:
@@ -229,7 +251,7 @@ def delete_collision(collisionId: str) -> RespT:
     except KeyError:
         return jsonify("Not found"), 404
 
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/collisions", methods=["GET"])
@@ -276,7 +298,7 @@ def put_focus() -> RespT:
                         $ref: Pose
     """
 
-    return jsonify(common.Pose().to_json())
+    return jsonify(common.Pose().to_dict())
 
 
 @app.route("/system/start", methods=["PUT"])
@@ -290,16 +312,12 @@ def put_start() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                  application/json:
-                      schema:
-                        type: string
     """
 
     global started
     delay()
     started = True
-    return jsonify("ok"), 200
+    return Response(status=200)
 
 
 @app.route("/system/stop", methods=["PUT"])
@@ -313,16 +331,14 @@ def put_stop() -> RespT:
         responses:
             200:
               description: Ok
-              content:
-                  application/json:
-                      schema:
-                        type: string
     """
 
     global started
-    delay()
+    if started:
+        delay()
     started = False
-    return jsonify("ok"), 200
+    collision_objects.clear()
+    return Response(status=200)
 
 
 @app.route("/system/running", methods=["GET"])
@@ -355,7 +371,7 @@ def main() -> None:
         app,
         SCENE_SERVICE_NAME,
         version(),
-        "0.3.0",
+        "0.5.0",
         SCENE_PORT,
         [
             common.Pose,

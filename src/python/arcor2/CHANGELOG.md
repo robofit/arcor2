@@ -2,14 +2,100 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.16.0] - WIP
+## [0.21.0] - 2021-09-07
+
+### Changed
+
+- Added `Robot` specific exception `KinematicsException`.
+  - So far used to give more precise error messages.
+- `ProjectParameter` now derives from `Parameter`.
+- `CachedScene` now caches ObjectTypes used in a scene.
+- Logs are now colored.
+- `Project` now has optional `project_objects_ids` property (not used at the moment).
+
+### Fixed
+
+- Make sure that `Pose` contain only floats.
+  - When any value is e.g. np.float64, `orjson` complains.
+  - Because of this, `to_dict` methods of `Position` and `Orientation` are overridden.
+- Typo in URL within `get_models` of `project_service` client.
+- Missing sleep in `wait_for` of `scene_service` client.
+
+## [0.20.0] - 2021-08-05
+
+### Changed
+
+- Object hierarchy modified.
+  - `GenericWithPose` now can't have a collision model.
+  - A new `CollisionObject` must have collision model.
+- `Robot` base class API changed.
+  - Parameter `linear` was added to `move_to_pose`.
+    - A robot not supporting linear movements should raise exception when `linear==True`.  
+  - Parameter `include_gripper` was added to `robot_joints`.
+    - By default, the method should return only arm's joints.
+    - With the parameter set, the list should contain also gripper joints.
+    - This is needed for visualization of grippers.
+    - Makes only sense (so far) when gripper is part of URDF.
+- Scene/Project clients now log underlying error messages.
+
+### Fixed
+
+- `rest` module now encodes body data as utf-8. 
+
+
+## [0.19.0] - 2021-07-29
+
+### Changed
+
+- Support for multi arm robots.
+  - New base class `MultiArmRobot`.
+  - Its methods have an additional `arm_id` parameter.
+  - There is a method to get arm IDs.
+  - Relevant ARServer RPCs were extended with `arm_id`.
+  - `ProjectRobotJoints` model now also contains `arm_id`.
+  - There is `DummyMultiArmRobot` ObjectType for testing purposes.
+- `CachedProject`: `constants` renamed to `parameters`.
+- `Generic`: `INIT_PRIORITY` removed as useless.
+- `GenericWithPose`: do not delete collision models in `cleanup`.
+  - Collision models are removed by the Scene service on `stop`.
+- Usage of `orjson` in `arcor2/json` and for dataclasses.
+  - 40% speedup for serialization.
+  - 80% speedup for deserialization.
+  - Tested on `Project` dataclass.
+- Compatibility with Project service 0.10.0.
+- Compatibility with Scene service 0.5.0.  
+- Uploading of meshes associated to ObjectTypes.
+  - Parameter `file_to_upload` was added to `upload_def`.
+
+### Fixed
+
+- Correct default port for Project service (10000).
+
+## [0.18.0] - 2021-06-14
+
+### Changed
+- Modules `package` and `resources` moved to `arcor2_execution_data`.
+
+## [0.17.0] - 2021-06-11
+
+### Changed
+- Project service client updated to API version 0.8.0.
+- `ARCOR2_PERSISTENT_STORAGE_URL` renamed to `ARCOR2_PROJECT_SERVICE_URL`.  
+- Dependencies updated.
+
+## [0.16.0] - 2021-05-21
 
 ### Changed
 - Objects initialization order (`Resources`):
   - Object initialization order can be set using class-level `INIT_PRIORITY` variable.
   - The higher priority, the sooner are objects of that type initialized.
   - Objects are initialized serially.
-- `CachedProject` has new methods to deal with hierarchy (`get_by_id`, `get_parent_id`, `childs`).  
+- `CachedProject` has new methods to deal with hierarchy (`get_by_id`, `get_parent_id`, `childs`).
+- Project service client updated to be compatible with version 0.7.0.
+- Added a custom `json` module.
+  - Wraps the standard json module, so it might be easier to replace it in the future.
+  - Provides type annotations.
+  - Raises a custom exception based on `Arcor2Exception`.
 
 ### Fixed
 - Handling of context manager arguments in `Resources`.

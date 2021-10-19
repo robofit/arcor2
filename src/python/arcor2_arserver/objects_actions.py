@@ -1,22 +1,21 @@
 import asyncio
-import os
-from typing import List, Optional, Set, Type, Union
+from typing import List, NamedTuple, Set, Union
 
 from arcor2 import helpers as hlp
-from arcor2.clients import aio_persistent_storage as ps
+from arcor2.cached import CachedScene
 from arcor2.data.events import Event
-from arcor2.data.object_type import ObjectModel
+from arcor2.data.object_type import Mesh, ObjectModel
 from arcor2.exceptions import Arcor2Exception
-from arcor2.helpers import convert_line_endings_to_unix
 from arcor2.object_types import utils as otu
 from arcor2.object_types.abstract import Generic, Robot
-from arcor2.object_types.utils import built_in_types_names, get_containing_module_sources, prepare_object_types_dir
+from arcor2.object_types.utils import built_in_types_names, prepare_object_types_dir
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
-from arcor2_arserver.clients import persistent_storage as storage
+from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.object_types.utils import (
     ObjectTypeData,
     ObjectTypeDict,
@@ -37,22 +36,8 @@ def get_types_dict() -> TypesDict:
     return {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None}
 
 
-def get_obj_type_name(object_id: str) -> str:
-
-    assert glob.LOCK.scene
-
-    try:
-        return glob.LOCK.scene.object(object_id).type
-    except KeyError:
-        raise Arcor2Exception("Unknown object id.")
-
-
-def get_obj_type_data(object_id: str) -> ObjectTypeData:
-
-    try:
-        return glob.OBJECT_TYPES[get_obj_type_name(object_id)]
-    except KeyError:
-        raise Arcor2Exception("Unknown object type.")
+def get_obj_type_data(scene: CachedScene, object_id: str) -> ObjectTypeData:
+    return glob.OBJECT_TYPES[scene.object(object_id).type]
 
 
 def valid_object_types() -> ObjectTypeDict:
@@ -64,53 +49,60 @@ def valid_object_types() -> ObjectTypeDict:
     return {obj_type: obj for obj_type, obj in glob.OBJECT_TYPES.items() if not obj.meta.disabled}
 
 
-async def handle_robot_urdf(robot: Type[Robot]) -> None:
-
-    if not robot.urdf_package_name:
-        return
-
-    file_path = os.path.join(settings.URDF_PATH, robot.urdf_package_name)
-
-    try:
-        await ps.save_mesh_file(robot.urdf_package_name, file_path)
-    except Arcor2Exception:
-        glob.logger.exception(f"Failed to download URDF for {robot.__name__}.")
-
-
 async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
-    glob.logger.debug(f"Processing {obj_id}.")
+    logger.debug(f"Processing {obj_id}.")
 
     if obj_id in object_types:
-        glob.logger.debug(f"{obj_id} already processed, skipping...")
+        logger.debug(f"{obj_id} already processed, skipping...")
         return
+
+    obj_iddesc = await storage.get_object_type_iddesc(obj_id)
+
+    if obj_id in glob.OBJECT_TYPES:
+
+        assert obj_iddesc.modified
+        assert glob.OBJECT_TYPES[obj_id].meta.modified, f"Object {obj_id} does not have 'modified' in its meta."
+
+        if obj_iddesc.modified == glob.OBJECT_TYPES[obj_id].meta.modified:
+            logger.debug(f"No need to update {obj_id}.")
+            return
 
     obj = await storage.get_object_type(obj_id)
 
-    if obj_id in glob.OBJECT_TYPES and glob.OBJECT_TYPES[obj_id].type_def is not None:
+    try:
+        bases = otu.base_from_source(obj.source, obj_id)
 
-        stored_type_def = glob.OBJECT_TYPES[obj_id].type_def
-        assert stored_type_def
-
-        # the code we get from type_def has Unix line endings, while the code from Project service might have Windows...
-        obj.source = convert_line_endings_to_unix(obj.source)
-
-        if get_containing_module_sources(stored_type_def) == obj.source:
-            glob.logger.debug(f"No need to update {obj_id}.")
+        if not bases:
+            logger.debug(f"{obj_id} is definitely not an ObjectType (subclass of {object.__name__}), maybe mixin?")
             return
 
-    try:
-        base = otu.base_from_source(obj.source, obj_id)
-        if base and base not in object_types.keys() | built_in_types_names():
-            glob.logger.debug(f"Getting base class {base} for {obj_id}.")
-            await get_object_data(object_types, base)
-    except Arcor2Exception:
+        if bases[0] not in object_types.keys() | built_in_types_names():
+            logger.debug(f"Getting base class {bases[0]} for {obj_id}.")
+            await get_object_data(object_types, bases[0])
+
+        for mixin in bases[1:]:
+            mixin_obj = await storage.get_object_type(mixin)
+
+            await hlp.run_in_executor(
+                hlp.save_and_import_type_def,
+                mixin_obj.source,
+                mixin_obj.id,
+                object,
+                settings.OBJECT_TYPE_PATH,
+                settings.OBJECT_TYPE_MODULE,
+            )
+
+    except Arcor2Exception as e:
+        logger.error(f"Disabling ObjectType {obj.id}: can't get a base. {str(e)}")
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem="Can't get base.")
+            ObjectTypeMeta(
+                obj_id, "ObjectType disabled.", disabled=True, problem="Can't get base.", modified=obj.modified
+            )
         )
         return
 
-    glob.logger.debug(f"Updating {obj_id}.")
+    logger.debug(f"Updating {obj_id}.")
 
     try:
         type_def = await hlp.run_in_executor(
@@ -121,24 +113,38 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             settings.OBJECT_TYPE_PATH,
             settings.OBJECT_TYPE_MODULE,
         )
-        assert issubclass(type_def, Generic)
-        meta = meta_from_def(type_def)
-        otu.get_settings_def(type_def)  # just to check if settings are ok
     except Arcor2Exception as e:
-        glob.logger.warning(f"Disabling object type {obj.id}.")
-        glob.logger.debug(e, exc_info=True)
+        logger.debug(f"{obj.id} is probably not an ObjectType. {str(e)}")
+        return
+
+    assert issubclass(type_def, Generic)
+
+    try:
+        meta = meta_from_def(type_def)
+    except Arcor2Exception as e:
+        logger.error(f"Disabling ObjectType {obj.id}.")
+        logger.debug(e, exc_info=True)
         object_types[obj_id] = ObjectTypeData(
-            ObjectTypeMeta(obj_id, "Object type disabled.", disabled=True, problem=str(e))
+            ObjectTypeMeta(obj_id, "ObjectType disabled.", disabled=True, problem=str(e), modified=obj.modified)
         )
         return
+
+    meta.modified = obj.modified
 
     if obj.model:
         try:
             model = await storage.get_model(obj.model.id, obj.model.type)
-        except Arcor2Exception:
-            glob.logger.error(f"{obj.model.id}: failed to get collision model of type {obj.model.type}.")
+        except Arcor2Exception as e:
+            logger.error(f"{obj.model.id}: failed to get collision model of type {obj.model.type}. {str(e)}")
             meta.disabled = True
             meta.problem = "Can't get collision model."
+            object_types[obj_id] = ObjectTypeData(meta)
+            return
+
+        if isinstance(model, Mesh) and model.data_id not in await storage.files_ids():
+            logger.error(f"Disabling {meta.type} as its mesh file {model.data_id} does not exist.")
+            meta.disabled = True
+            meta.problem = "Mesh file does not exist."
             object_types[obj_id] = ObjectTypeData(meta)
             return
 
@@ -151,26 +157,35 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
     object_types[obj_id] = otd
 
 
-async def get_object_types() -> None:
+class UpdatedObjectTypes(NamedTuple):
+
+    new: Set[str]
+    updated: Set[str]
+    removed: Set[str]
+
+    @property
+    def all(self) -> Set[str]:
+        return self.new | self.updated | self.removed
+
+
+async def get_object_types() -> UpdatedObjectTypes:
     """Serves to initialize or update knowledge about awailable ObjectTypes.
 
     :return:
     """
 
-    assert glob.LOCK.scene is None
-
     initialization = False
 
     # initialize with built-in types, this has to be done just once
     if not glob.OBJECT_TYPES:
-        glob.logger.debug("Initialization of object types.")
+        logger.debug("Initialization of ObjectTypes.")
         initialization = True
         await hlp.run_in_executor(prepare_object_types_dir, settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE)
         glob.OBJECT_TYPES.update(built_in_types_data())
 
     updated_object_types: ObjectTypeDict = {}
 
-    object_type_ids: Union[Set[str], List[str]] = {it.id for it in (await storage.get_object_type_ids()).items}
+    object_type_ids: Union[Set[str], List[str]] = await storage.get_object_type_ids()
 
     if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
         import random
@@ -187,9 +202,9 @@ async def get_object_types() -> None:
     updated_object_ids = {k for k in updated_object_types.keys() if k in glob.OBJECT_TYPES}
     new_object_ids = {k for k in updated_object_types.keys() if k not in glob.OBJECT_TYPES}
 
-    glob.logger.debug(f"Removed ids: {removed_object_ids}")
-    glob.logger.debug(f"Updated ids: {updated_object_ids}")
-    glob.logger.debug(f"New ids: {new_object_ids}")
+    logger.debug(f"Removed ids: {removed_object_ids}")
+    logger.debug(f"Updated ids: {updated_object_ids}")
+    logger.debug(f"New ids: {new_object_ids}")
 
     if not initialization and removed_object_ids:
 
@@ -206,7 +221,7 @@ async def get_object_types() -> None:
 
     glob.OBJECT_TYPES.update(updated_object_types)
 
-    glob.logger.debug(f"All known ids: {glob.OBJECT_TYPES.keys()}")
+    logger.debug(f"All known ids: {glob.OBJECT_TYPES.keys()}")
 
     for obj_type in updated_object_types.values():
 
@@ -216,7 +231,7 @@ async def get_object_types() -> None:
             try:
                 obj_type.meta.description = obj_description_from_base(glob.OBJECT_TYPES, obj_type.meta)
             except otu.DataError as e:
-                glob.logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
+                logger.error(f"Failed to get info from base for {obj_type}, error: '{e}'.")
 
         if not obj_type.meta.disabled and not obj_type.meta.built_in:
             add_ancestor_actions(obj_type.meta.type, glob.OBJECT_TYPES)
@@ -237,7 +252,6 @@ async def get_object_types() -> None:
 
         if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
             await get_robot_meta(obj_type)
-            asyncio.ensure_future(handle_robot_urdf(obj_type.type_def))
 
     # if object does not change but its base has changed, it has to be reloaded
     for obj_id, obj in glob.OBJECT_TYPES.items():
@@ -247,7 +261,7 @@ async def get_object_types() -> None:
 
         if obj.type_def and obj.meta.base in updated_object_ids:
 
-            glob.logger.debug(f"Re-importing {obj.meta.type} because its base {obj.meta.base} type has changed.")
+            logger.debug(f"Re-importing {obj.meta.type} because its base {obj.meta.base} type has changed.")
             obj.type_def = await hlp.run_in_executor(
                 hlp.import_type_def,
                 obj.meta.type,
@@ -256,15 +270,26 @@ async def get_object_types() -> None:
                 settings.OBJECT_TYPE_MODULE,
             )
 
+    return UpdatedObjectTypes(new_object_ids, updated_object_ids, removed_object_ids)
 
-async def get_robot_instance(robot_id: str, end_effector_id: Optional[str] = None) -> Robot:
 
-    if robot_id not in glob.SCENE_OBJECT_INSTANCES:
-        raise Arcor2Exception("Robot not found.")
+async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
 
-    robot_inst = glob.SCENE_OBJECT_INSTANCES[robot_id]
-    if not isinstance(robot_inst, Robot):
-        raise Arcor2Exception("Not a robot.")
-    if end_effector_id and end_effector_id not in await hlp.run_in_executor(robot_inst.get_end_effectors_ids):
-        raise Arcor2Exception("Unknown end effector ID.")
-    return robot_inst
+    if not meta.object_model:
+        return
+
+    model = om.model()
+
+    if model.id != meta.type:
+        raise Arcor2Exception("Model id must be equal to ObjectType id.")
+
+    if isinstance(model, Mesh):
+
+        if model.data_id not in await storage.files_ids():
+            raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
+
+    # when updating model of an already existing object, the type might be different
+    if meta.object_model.type != om.type:
+        await storage.delete_model(model.id)  # ...otherwise it is going to be an orphan
+
+    await storage.put_model(model)

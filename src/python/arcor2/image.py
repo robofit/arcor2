@@ -1,11 +1,12 @@
 import io
-import json
 from typing import Optional
 
 import cv2
 import numpy as np
 import PIL.Image
 from PIL.Image import Image
+
+from arcor2 import json
 
 ENCODING = "latin-1"
 
@@ -46,4 +47,4 @@ def image_from_bytes_io(value: io.BytesIO) -> Image:
 
 
 def image_from_json(value: str) -> Image:
-    return image_from_str(json.loads(value))
+    return image_from_str(json.loads_type(value, str))

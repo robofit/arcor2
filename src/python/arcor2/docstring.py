@@ -17,25 +17,39 @@
 
 import re
 import sys
-from typing import Dict
+from dataclasses import dataclass
+from typing import Dict, Optional
 
 PARAM_OR_RETURNS_REGEX = re.compile(":(?:param|returns)")
 RETURNS_REGEX = re.compile(":returns: (?P<doc>.*)", re.S)
 PARAM_REGEX = re.compile(r":param (?P<name>[\*\w]+): (?P<doc>.*?)" r"(?:(?=:param)|(?=:return)|(?=:raises)|\Z)", re.S)
 
 
+@dataclass
+class Docstring:
+    short_description: Optional[str] = None
+    long_description: Optional[str] = None
+    params: Optional[Dict[str, str]] = None
+    returns: Optional[str] = None
+
+    def param(self, name: str) -> Optional[str]:
+
+        if not self.params:
+            return None
+
+        return self.params.get(name, None)
+
+
 def trim(docstring: str) -> str:
     """trim function from PEP-257."""
-    if not docstring:
-        return ""
+
     # Convert tabs to spaces (following the normal Python rules)
     # and split into a list of lines:
     lines = docstring.expandtabs().splitlines()
     # Determine minimum indentation (first line doesn't count):
     indent = sys.maxsize
     for line in lines[1:]:
-        stripped = line.lstrip()
-        if stripped:
+        if stripped := line.lstrip():
             indent = min(indent, len(line) - len(stripped))
     # Remove indentation (first line is special):
     trimmed = [lines[0].strip()]
@@ -62,47 +76,33 @@ def reindent(string: str) -> str:
     return "\n".join(line.strip() for line in string.strip().split("\n"))
 
 
-def parse_docstring(docstring: str) -> Dict:
-    """Parse the docstring into its components.
-    :returns: a dictionary of form
-              {
-                  "short_description": ...,
-                  "long_description": ...,
-                  "params": [{"name": ..., "doc": ...}, ...],
-                  "returns": ...
-              }
-    """
+def parse_docstring(docstring: Optional[str]) -> Docstring:
+    """Parse the docstring into its components."""
 
-    short_description = long_description = returns = ""
-    params = {}
+    doc = Docstring()
 
-    if docstring:
-        docstring = trim(docstring.lstrip("\n"))
+    if not docstring:
+        return doc
 
-        lines = docstring.split("\n", 1)
-        short_description = lines[0]
+    docstring = trim(docstring.lstrip("\n"))
 
-        if len(lines) > 1:
-            long_description = lines[1].strip()
+    lines = docstring.split("\n", 1)
+    doc.short_description = lines[0]
 
-            params_returns_desc = None
+    if len(lines) > 1:
+        doc.long_description = lines[1].strip()
 
-            match = PARAM_OR_RETURNS_REGEX.search(long_description)
-            if match:
-                long_desc_end = match.start()
-                params_returns_desc = long_description[long_desc_end:].strip()
-                long_description = long_description[:long_desc_end].rstrip()
+        params_returns_desc = None
 
-            if params_returns_desc:
-                params = {name: trim(doc) for name, doc in PARAM_REGEX.findall(params_returns_desc)}
+        if match := PARAM_OR_RETURNS_REGEX.search(doc.long_description):
+            long_desc_end = match.start()
+            params_returns_desc = doc.long_description[long_desc_end:].strip()
+            doc.long_description = doc.long_description[:long_desc_end].rstrip()
 
-                match = RETURNS_REGEX.search(params_returns_desc)
-                if match:
-                    returns = reindent(match.group("doc"))
+        if params_returns_desc:
+            doc.params = {name: trim(doc).strip() for name, doc in PARAM_REGEX.findall(params_returns_desc)}
 
-    return {  # TODO return rather dataclass?
-        "short_description": short_description,
-        "long_description": long_description,
-        "params": params,
-        "returns": returns,
-    }
+            if match := RETURNS_REGEX.search(params_returns_desc):
+                doc.returns = reindent(match.group("doc"))
+
+    return doc

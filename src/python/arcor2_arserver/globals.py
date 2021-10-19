@@ -1,25 +1,23 @@
 import os
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, List, Optional, Set
+from typing import Any, DefaultDict, Dict, List, Optional, Set, Tuple, Union
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import events
-from arcor2.logging import get_aiologger
 from arcor2.object_types.abstract import Generic
 from arcor2_arserver.lock import Lock
-from arcor2_arserver.object_types.data import ObjectTypeDict
+from arcor2_arserver.object_types.data import ObjectTypeDict, ObjTypeDict
 from arcor2_arserver.user import Users
 from arcor2_arserver_data.events.common import ShowMainScreen
 
-logger = get_aiologger("ARServer")
 VERBOSE: bool = False
 
-PORT: int = int(os.getenv("ARCOR2_SERVER_PORT", 6789))
+PORT: int = int(os.getenv("ARCOR2_ARSERVER_PORT", 6789))
 
 MAIN_SCREEN: Optional[ShowMainScreen.Data] = ShowMainScreen.Data(ShowMainScreen.Data.WhatEnum.ScenesList)
 
-OBJECT_TYPES: ObjectTypeDict = {}
+OBJECT_TYPES: ObjectTypeDict = ObjTypeDict()
 
 SCENE_OBJECT_INSTANCES: Dict[str, Generic] = {}
 
@@ -41,6 +39,16 @@ ROBOT_EEF_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot
 
 OBJECTS_WITH_UPDATED_POSE: Set[str] = set()
 
-LOCK: Lock = Lock()
+LOCK: Lock = Lock(OBJECT_TYPES)
 
 USERS: Users = Users()
+
+PREV_RESULTS: Dict[str, Union[Tuple[Any], Any]] = {}
+
+
+def remove_prev_result(action_id: str) -> None:
+
+    try:
+        del PREV_RESULTS[action_id]
+    except KeyError:
+        pass

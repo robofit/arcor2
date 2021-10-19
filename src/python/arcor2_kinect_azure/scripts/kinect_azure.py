@@ -5,13 +5,13 @@ import io
 import os
 import zipfile
 from functools import wraps
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from arcor2_kinect_azure import get_data, version
-from arcor2_kinect_azure.kinect_azure import KinectAzure
 from flask import jsonify, request, send_file
 from PIL import Image
 
+from arcor2 import env
 from arcor2.data.camera import CameraParameters
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
@@ -25,7 +25,10 @@ SERVICE_NAME = "Kinect Azure Service"
 
 app = create_app(__name__)
 
-_kinect: Optional[KinectAzure] = None
+if TYPE_CHECKING:
+    from arcor2_kinect_azure.kinect_azure import KinectAzure
+
+_kinect: Optional["KinectAzure"] = None
 _mock: bool = False
 _mock_started: bool = False
 
@@ -80,6 +83,10 @@ def put_start() -> RespT:
         global _mock_started
         _mock_started = True
     else:
+
+        # lazy import so mock mode can work without pyk4a installed
+        from arcor2_kinect_azure.kinect_azure import KinectAzure
+
         global _kinect
         assert _kinect is None
         _kinect = KinectAzure()
@@ -165,7 +172,7 @@ def get_image_color() -> RespT:
     return send_file(
         image_to_bytes_io(img, target_format="JPEG", target_mode="RGB"),
         mimetype="image/jpeg",
-        cache_timeout=0,
+        max_age=0,
     )
 
 
@@ -238,7 +245,7 @@ def get_image_depth() -> RespT:
         assert _kinect is not None
         img = _kinect.depth_image(averaged_frames=int(request.args.get("averagedFrames", default=1)))
 
-    return send_file(image_to_bytes_io(img, target_format="PNG"), mimetype="image/png", cache_timeout=0)
+    return send_file(image_to_bytes_io(img, target_format="PNG"), mimetype="image/png", max_age=0)
 
 
 @app.route("/synchronized/image", methods=["GET"])
@@ -279,7 +286,7 @@ def get_image_both() -> RespT:
 
     mem_zip.seek(0)
     return send_file(
-        mem_zip, mimetype="application/zip", cache_timeout=0, as_attachment=True, attachment_filename="synchronized.zip"
+        mem_zip, mimetype="application/zip", max_age=0, as_attachment=True, download_name="synchronized.zip"
     )
 
 
@@ -287,7 +294,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
-    parser.add_argument("-m", "--mock", action="store_true", default=False)
+    parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_KINECT_AZURE_MOCK"))
     args = parser.parse_args()
 
     global _mock

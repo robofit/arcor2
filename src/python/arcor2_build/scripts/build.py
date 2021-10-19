@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import json
+import ast
 import logging
 import os
 import sys
@@ -9,7 +9,6 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from io import BytesIO
-from json.decoder import JSONDecodeError
 from typing import Dict, Set, Type, TypeVar
 
 import humps
@@ -17,8 +16,9 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from flask import request, send_file
 
 import arcor2_build
+from arcor2 import env, json
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.clients import persistent_storage as ps
+from arcor2.clients import project_service as ps
 from arcor2.data.common import Project, ProjectSources, Scene
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import Models, ObjectModel, ObjectType
@@ -45,34 +45,76 @@ logger = get_logger("Build")
 app = create_app(__name__)
 
 
-def get_base(
+def get_base_from_project_service(
     types_dict: TypesDict,
     tmp_dir: str,
     scene_object_types: Set[str],
     obj_type: ObjectType,
     zf: zipfile.ZipFile,
     ot_path: str,
+    ast: ast.AST,
 ) -> None:
 
-    base = base_from_source(obj_type.source, obj_type.id)
+    for idx, base in enumerate(base_from_source(ast, obj_type.id)):
 
-    if base is None:
-        raise Arcor2Exception(f"Could not determine base class for {obj_type.id}.")
+        if base in types_dict.keys() | built_in_types_names() | scene_object_types:
+            continue
 
-    if base in types_dict.keys() | built_in_types_names() | scene_object_types:
-        return
+        logger.debug(f"Getting {base} as base of {obj_type.id}.")
+        base_obj_type = ps.get_object_type(base)
 
-    logger.debug(f"Getting {base} as base of {obj_type.id}.")
-    base_obj_type = ps.get_object_type(base)
+        # first try if the code is valid
+        try:
+            base_ast = parse(base_obj_type.source)
+        except Arcor2Exception:
+            raise FlaskException(f"Invalid code of the {base_obj_type.id} (base of {obj_type.id}).", error_code=401)
 
-    zf.writestr(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", base_obj_type.source)
+        # try to get base of the base
+        get_base_from_project_service(types_dict, tmp_dir, scene_object_types, base_obj_type, zf, ot_path, base_ast)
 
-    types_dict[base_obj_type.id] = save_and_import_type_def(
-        base_obj_type.source, base_obj_type.id, Generic, tmp_dir, OBJECT_TYPE_MODULE
-    )
+        if idx == 0:  # this is the base ObjectType
+            types_dict[base_obj_type.id] = save_and_import_type_def(
+                base_obj_type.source, base_obj_type.id, Generic, tmp_dir, OBJECT_TYPE_MODULE
+            )
+        else:  # these are potential mixins (just try to import them, no need to store them)
+            save_and_import_type_def(base_obj_type.source, base_obj_type.id, object, tmp_dir, OBJECT_TYPE_MODULE)
+            scene_object_types.add(base_obj_type.id)
 
-    # try to get base of the base
-    get_base(types_dict, tmp_dir, scene_object_types, base_obj_type, zf, ot_path)
+        zf.writestr(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", base_obj_type.source)
+
+
+def get_base_from_imported_package(
+    obj_type: ObjectType, types_dict: Dict[str, ObjectType], zip_file: zipfile.ZipFile, tmp_dir: str, ast: ast.AST
+) -> None:
+
+    for idx, base in enumerate(base_from_source(ast, obj_type.id)):
+
+        if base in types_dict.keys() | built_in_types_names():
+            continue
+
+        logger.debug(f"Getting {base} as base of {obj_type.id}.")
+
+        try:
+            base_obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(base)}.py")
+        except KeyError:
+            raise FlaskException(f"Could not find {base} object type (base of {obj_type.id}).", error_code=401)
+
+        # first try if the code is valid
+        try:
+            base_ast = parse(base_obj_type_src)
+        except Arcor2Exception:
+            raise FlaskException(f"Invalid code of the {base} (base of {obj_type.id}).", error_code=401)
+
+        types_dict[base] = ObjectType(base, base_obj_type_src)
+
+        # try to get base of the base
+        get_base_from_imported_package(types_dict[base], types_dict, zip_file, tmp_dir, base_ast)
+
+        # then, try to import it (no need to store the result)
+        if idx == 0:  # this is the base ObjectType
+            save_and_import_type_def(base_obj_type_src, base, Generic, tmp_dir, OBJECT_TYPE_MODULE)
+        else:  # these are potential mixins
+            save_and_import_type_def(base_obj_type_src, base, object, tmp_dir, OBJECT_TYPE_MODULE)
 
 
 def _publish(project_id: str, package_name: str) -> RespT:
@@ -99,6 +141,9 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 cached_project = CachedProject(project)
                 scene = ps.get_scene(project.scene_id)
                 cached_scene = CachedScene(scene)
+
+                if not package_name:
+                    package_name = project.name
 
                 data_path = "data"
                 ot_path = "object_types"
@@ -139,7 +184,9 @@ def _publish(project_id: str, package_name: str) -> RespT:
                     zf.writestr(os.path.join(ot_path, humps.depascalize(obj_type.id)) + ".py", obj_type.source)
 
                     # handle inheritance
-                    get_base(types_dict, tmp_dir, obj_types, obj_type, zf, ot_path)
+                    get_base_from_project_service(
+                        types_dict, tmp_dir, obj_types, obj_type, zf, ot_path, parse(obj_type.source)
+                    )
 
                     types_dict[scene_obj.type] = save_and_import_type_def(
                         obj_type.source, scene_obj.type, Generic, tmp_dir, OBJECT_TYPE_MODULE
@@ -191,7 +238,8 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
     logger.info(f"Done with {package_name} (scene {scene.name}, project {project.name}).")
     mem_zip.seek(0)
-    return send_file(mem_zip, as_attachment=True, cache_timeout=0, attachment_filename="arcor2_project.zip")
+
+    return send_file(mem_zip, as_attachment=True, max_age=0, download_name=f"{package_name}_package.zip")
 
 
 @app.route("/project/<string:project_id>/publish", methods=["GET"])
@@ -199,7 +247,10 @@ def project_publish(project_id: str) -> RespT:
     """Publish project
     ---
     get:
-      description: Get zip file with execution package. To be used by the Execution service.
+      tags:
+        - Build
+      summary: Get zip file with execution package. To be used by the Execution service.
+      operationId: ProjectPublish
       parameters:
         - in: path
           name: project_id
@@ -211,25 +262,31 @@ def project_publish(project_id: str) -> RespT:
           name: packageName
           schema:
             type: string
-            default: N/A
           required: false
           description: Package name
       responses:
         200:
-          description: Ok
+          description: Returns archive of the execution package (.zip).
           content:
             application/zip:
                 schema:
                   type: string
                   format: binary
-                  example: The archive of execution package (.zip)
         404:
             description: Project ID or some of the required items was not found.
+            content:
+              application/json:
+                schema:
+                  type: string
         501:
             description: Project invalid.
+            content:
+              application/json:
+                schema:
+                  type: string
     """
 
-    return _publish(project_id, request.args.get("packageName", default="N/A"))
+    return _publish(project_id, request.args.get("packageName", default=""))
 
 
 T = TypeVar("T", bound=JsonSchemaMixin)
@@ -250,33 +307,41 @@ def project_import() -> RespT:
     """Imports a project from execution package.
     ---
     put:
-      description: Imports a project from execution package.
+      tags:
+        - Build
+      summary: Imports a project from execution package.
+      operationId: ProjectImport
       parameters:
             - in: query
               name: overwriteScene
               schema:
                 type: boolean
                 default: false
+              description: overwrite Scene
             - in: query
               name: overwriteProject
               schema:
                 type: boolean
                 default: false
+              description: overwrite Project
             - in: query
               name: overwriteObjectTypes
               schema:
                 type: boolean
                 default: false
+              description: overwrite ObjectTypes
             - in: query
               name: overwriteProjectSources
               schema:
                 type: boolean
                 default: false
+              description: overwrite ProjectSources
             - in: query
               name: overwriteCollisionModels
               schema:
                 type: boolean
                 default: false
+              description: overwrite collision models
       requestBody:
               content:
                 multipart/form-data:
@@ -344,69 +409,60 @@ def project_import() -> RespT:
             project = read_dc_from_zip(zip_file, "data/project.json", Project)
         except KeyError:
             raise FlaskException("Could not find project.json.", error_code=404)
-        except (JSONDecodeError, ValidationError) as e:
+        except (json.JsonException, ValidationError) as e:
             raise FlaskException(f"Failed to process project.json. {str(e)}", error_code=401)
 
         try:
             scene = read_dc_from_zip(zip_file, "data/scene.json", Scene)
         except KeyError:
             raise FlaskException("Could not find scene.json.", error_code=404)
-        except (JSONDecodeError, ValidationError) as e:
+        except (json.JsonException, ValidationError) as e:
             return json.dumps(f"Failed to process scene.json. {str(e)}"), 401
 
         if project.scene_id != scene.id:
             raise FlaskException("Project assigned to different scene id.", error_code=401)
 
-        for scene_obj in scene.objects:
+        with tempfile.TemporaryDirectory() as tmp_dir:
 
-            obj_type_name = scene_obj.type
+            # restore original environment
+            sys.path = list(original_sys_path)
+            sys.modules = dict(original_sys_modules)
 
-            if obj_type_name in objects:
-                continue
+            prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
 
-            try:
-                obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(obj_type_name)}.py")
-            except KeyError:
-                raise FlaskException(f"Object type {obj_type_name} is missing in the package.", error_code=404)
+            for scene_obj in scene.objects:
 
-            try:
-                parse(obj_type_src)
-            except Arcor2Exception:
-                raise FlaskException(f"Invalid code of the {obj_type_name} object type.", error_code=401)
+                obj_type_name = scene_obj.type
 
-            # TODO description (is it used somewhere?)
-            objects[obj_type_name] = ObjectType(obj_type_name, obj_type_src)
+                if obj_type_name in objects:  # there might be more instances of the same type
+                    continue
 
-            logger.debug(f"Just imported {obj_type_name}.")
-
-            while True:
-                base = base_from_source(obj_type_src, obj_type_name)
-
-                if not base:
-                    return json.dumps(f"Could not determine base class for {scene_obj.type}."), 401
-
-                if base in objects.keys() | built_in_types_names():
-                    break
-
-                logger.debug(f"Importing {base} as a base of {obj_type_name}.")
+                logger.debug(f"Importing {obj_type_name}.")
 
                 try:
-                    base_obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(base)}.py")
+                    obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(obj_type_name)}.py")
                 except KeyError:
-                    return json.dumps(f"Could not find {base} object type (base of {obj_type_name})."), 404
+                    raise FlaskException(f"Object type {obj_type_name} is missing in the package.", error_code=404)
 
                 try:
-                    parse(base_obj_type_src)
+                    ast = parse(obj_type_src)
                 except Arcor2Exception:
-                    return json.dumps(f"Invalid code of the {base} object type (base of {obj_type_name})."), 401
+                    raise FlaskException(f"Invalid code of the {obj_type_name} object type.", error_code=401)
 
-                objects[base] = ObjectType(base, base_obj_type_src)
+                # TODO fill in OT description (is it used somewhere?)
+                objects[obj_type_name] = ObjectType(obj_type_name, obj_type_src)
+                get_base_from_imported_package(objects[obj_type_name], objects, zip_file, tmp_dir, ast)
 
-                obj_type_name = base
-                obj_type_src = base_obj_type_src
+                type_def = save_and_import_type_def(obj_type_src, obj_type_name, Generic, tmp_dir, OBJECT_TYPE_MODULE)
+
+                assert obj_type_name == type_def.__name__
+
+                if type_def.abstract():
+                    raise FlaskException(f"Scene contains abstract object type: {obj_type_name}.", error_code=401)
 
         for obj_type in objects.values():  # handle models
 
+            # TODO rather iterate on content of data/models?
             try:
                 model = read_dc_from_zip(
                     zip_file, f"data/models/{humps.depascalize(obj_type.id)}.json", ObjectModel
@@ -448,7 +504,9 @@ def project_import() -> RespT:
             pass
         else:
 
-            ps_scene.modified = scene.modified  # modified is updated with each PUT
+            # do not take created / modified into account
+            ps_scene.created = scene.created = None
+            ps_scene.modified = scene.modified = None
 
             if ps_scene != scene:
                 raise FlaskException("Scene difference detected. Overwrite needed.", error_code=402)
@@ -461,7 +519,9 @@ def project_import() -> RespT:
             pass
         else:
 
-            ps_project.modified = project.modified
+            # do not take created / modified into account
+            ps_project.created = project.created = None
+            ps_project.modified = project.modified = None
 
             if ps_project != project:
                 raise FlaskException("Project difference detected. Overwrite needed.", error_code=402)
@@ -471,7 +531,11 @@ def project_import() -> RespT:
         for obj_type in objects.values():
 
             try:
-                if ps.get_object_type(obj_type.id) != obj_type:
+
+                ot = ps.get_object_type(obj_type.id)
+
+                # ignore changes in description (no one cares)
+                if ot.source != obj_type.source or ot.model != obj_type.model:
                     raise FlaskException(
                         f"Difference detected for {obj_type.id} object type. Overwrite needed.", error_code=402
                     )
@@ -524,7 +588,7 @@ def main() -> None:
         help="Set logging level to debug.",
         action="store_const",
         const=logging.DEBUG,
-        default=logging.INFO,
+        default=logging.DEBUG if env.get_bool("ARCOR2_BUILD_DEBUG") else logging.INFO,
     )
 
     args = parser.parse_args()

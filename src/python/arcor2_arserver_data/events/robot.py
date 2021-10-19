@@ -1,36 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data import common
 from arcor2.data.events import Event
-
-
-@dataclass
-class RobotJoints(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        robot_id: str
-        joints: List[common.Joint]
-
-    data: Data
-
-
-@dataclass
-class RobotEef(Event):
-    @dataclass
-    class Data(JsonSchemaMixin):
-        @dataclass
-        class EefPose(JsonSchemaMixin):
-            end_effector_id: str
-            pose: common.Pose
-
-        robot_id: str
-        end_effectors: List[EefPose] = field(default_factory=list)
-
-    data: Data
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -53,7 +27,9 @@ class RobotMoveToPose(Event):
         end_effector_id: str
         target_pose: common.Pose
         safe: bool
+        linear: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -68,6 +44,7 @@ class RobotMoveToJoints(Event):
         target_joints: List[common.Joint]
         safe: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -82,7 +59,9 @@ class RobotMoveToActionPointOrientation(Event):
         end_effector_id: str
         orientation_id: str
         safe: bool
+        linear: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -97,6 +76,7 @@ class RobotMoveToActionPointJoints(Event):
         joints_id: str
         safe: bool
         message: Optional[str] = None
+        arm_id: Optional[str] = None
 
     data: Data
 
@@ -110,5 +90,6 @@ class HandTeachingMode(Event):
     class Data(JsonSchemaMixin):
         robot_id: str
         enabled: bool
+        arm_id: Optional[str] = None
 
     data: Data

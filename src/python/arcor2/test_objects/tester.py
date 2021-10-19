@@ -2,10 +2,10 @@ import time
 from typing import List, Optional
 
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import GenericWithPose
+from arcor2.object_types.abstract import CollisionObject
 
 
-class Tester(GenericWithPose):
+class Tester(CollisionObject):
     """A generic tester."""
 
     _ABSTRACT = False
@@ -58,9 +58,9 @@ class Tester(GenericWithPose):
         assert param1 == self._param1
         self._cancel = True
 
-    run_test.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    long_running_action.__action__ = ActionMetadata(blocking=True)  # type: ignore
-    long_running_action_with_params.__action__ = ActionMetadata(blocking=True)  # type: ignore
+    run_test.__action__ = ActionMetadata()  # type: ignore
+    long_running_action.__action__ = ActionMetadata()  # type: ignore
+    long_running_action_with_params.__action__ = ActionMetadata()  # type: ignore
 
 
 Tester.CANCEL_MAPPING[Tester.long_running_action.__name__] = Tester.simple_cancel.__name__

@@ -180,7 +180,7 @@ class DobotMagician(Dobot):
 
         return tr.make_pose_abs(self.pose, pose)
 
-    def robot_joints(self) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
 
         if self.simulator:
             return self._joint_values

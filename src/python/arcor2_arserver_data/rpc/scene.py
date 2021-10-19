@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import List, Optional, Set
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdDesc, Parameter, Pose
+from arcor2.data.object_type import ObjectModel
 from arcor2.data.rpc.common import RPC, IdArgs
 
 
@@ -126,7 +126,7 @@ class ListScenes(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(IdDesc):
-            modified: Optional[datetime] = None
+            problems: Optional[List[str]] = None
 
         data: Optional[List[Data]] = None
 
@@ -140,7 +140,7 @@ class NewScene(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             name: str
-            desc: str = field(default_factory=str)
+            description: str = field(default_factory=str)
 
         args: Args
         dry_run: bool = False
@@ -304,6 +304,26 @@ class StartScene(RPC):
 class StopScene(RPC):
     @dataclass
     class Request(RPC.Request):
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class AddVirtualCollisionObjectToScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            name: str
+            pose: Pose
+            model: ObjectModel
+
+        args: Args
         dry_run: bool = False
 
     @dataclass

@@ -1,7 +1,7 @@
 import abc
-import json
 from typing import Any, List, Type
 
+from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import ActionParameter

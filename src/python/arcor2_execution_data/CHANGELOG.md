@@ -2,6 +2,28 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.13.0] - 2021-08-05
+
+### Changed
+
+- `Resources` can now handle `CollisionObject`.
+
+
+## [0.12.0] - 2021-07-29
+
+### Changed
+
+- Property `description` added to `ProjectMeta`.
+
+## [0.11.0] - 2021-06-14
+
+### Changed
+- Modules `package` and `resources` moved here from `arcor2` package.
+- `Resources` class now do not have any parameters (it used to have `project_id`).
+
+### Fixed
+- In `Resources/__exit__`, collision models were deleted before calling `cleanup` for each object.
+
 ## [0.10.0] - 2021-02-08
 
 ### Changed

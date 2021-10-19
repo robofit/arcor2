@@ -8,7 +8,7 @@ import sys
 from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Callable, Optional, Type, TypeVar
+from typing import Any, Callable, List, Optional, Type, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -22,14 +22,6 @@ class ImportClsException(Arcor2Exception):
 
 class TypeDefException(Arcor2Exception):
     pass
-
-
-WINDOWS_LINE_ENDING = "\r\n"
-UNIX_LINE_ENDING = "\n"
-
-
-def convert_line_endings_to_unix(content: str) -> str:
-    return content.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING)
 
 
 def is_valid_identifier(value: str) -> None:
@@ -65,8 +57,38 @@ def is_valid_type(value: str) -> None:
 S = TypeVar("S")
 
 
-async def run_in_executor(func: Callable[..., S], *args, executor: Optional[futures.Executor] = None) -> S:
-    return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
+async def run_in_executor(
+    func: Callable[..., S],
+    *args: Any,
+    executor: Optional[futures.Executor] = None,
+    propagate: Optional[List[Type[Exception]]] = None,
+) -> S:
+    """Executes synchronous function in an executor. Catches all exceptions are
+    re-raises them as Arcor2Exception.
+
+    :param func:
+    :param args:
+    :param executor:
+    :param propagate: Exceptions to propagate.
+    :return:
+    """
+
+    # TODO user typing.ParamSpec instead of *args: Any (Python 3.10 or typing-extensions)
+    # ...not supported by mypy at the moment, see https://github.com/python/mypy/issues/8645
+
+    try:
+        return await asyncio.get_event_loop().run_in_executor(executor, func, *args)
+    except Arcor2Exception:
+        raise
+    except Exception as e:
+
+        if propagate:
+            for etp in propagate:
+                if isinstance(e, etp):
+                    raise
+
+        # all code should raise exceptions based on Arcor2Exception so this is just a guard against a buggy code
+        raise Arcor2Exception(f"Unhandled exception in {func.__name__}.") from e
 
 
 T = TypeVar("T")
@@ -83,9 +105,9 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
     """
 
     type_file = humps.depascalize(type_name)
-    full_path = os.path.join(path, module_name, type_file)
+    full_path = f"{os.path.join(path, module_name, type_file)}.py"
 
-    with open(f"{full_path}.py", "w") as file:
+    with open(full_path, "w") as file:
         file.write(source)
 
     try:
@@ -113,16 +135,20 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
     importlib.invalidate_caches()  # otherwise import might fail randomly (not sure why exactly)
 
     try:
-
         module = importlib.import_module(f"{module_name}.{type_file}")
 
         # reload is necessary for cases when the module is already loaded
-        path_to_file = os.path.abspath(module.__file__)
-        assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
         module = importlib.reload(module)  # TODO does this really solve anything?
 
     except ImportError as e:
         raise ImportClsException(f"Failed to import '{module_name}.{type_file}'. {str(e).capitalize()}.") from e
+    except Exception as e:
+        raise ImportClsException(
+            f"Error occurred when importing '{module_name}.{type_file}'. {str(e).capitalize()}."
+        ) from e
+
+    path_to_file = os.path.abspath(module.__file__)
+    assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
 
     try:
         cls = getattr(module, type_name)
@@ -130,7 +156,7 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
         raise ImportClsException(f"Class {type_name} not found in module '{module_name}'.")
 
     if not issubclass(cls, output_type):
-        raise ImportClsException("Not a required type.")
+        raise ImportClsException(f"{cls.__name__} is not subclass of {output_type.__name__}.")
 
     return cls
 
@@ -162,6 +188,8 @@ def check_compatibility(my_version: str, their_version: str) -> None:
 
 class NonBlockingLock:
     """This lock can only be used as a context manager."""
+
+    __slots__ = ("_lock",)
 
     def __init__(self) -> None:
         self._lock = Lock()

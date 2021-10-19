@@ -1,5 +1,4 @@
 import asyncio
-import json
 import time
 from collections import deque
 from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
@@ -7,8 +6,9 @@ from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tup
 import websockets
 from aiologger.levels import LogLevel
 from dataclasses_jsonschema import ValidationError
+from websockets.server import WebSocketServerProtocol as WsClient
 
-from arcor2 import env
+from arcor2 import env, json
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import RPC
 from arcor2.exceptions import Arcor2Exception
@@ -19,16 +19,23 @@ RPCT = TypeVar("RPCT", bound=RPC)
 ReqT = TypeVar("ReqT", bound=RPC.Request)
 RespT = TypeVar("RespT", bound=RPC.Response)
 
-RPC_CB = Callable[[ReqT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, Optional[RespT]]]
+RPC_CB = Callable[[ReqT, WsClient], Coroutine[Any, Any, Optional[RespT]]]
 RPC_DICT_TYPE = Dict[str, Tuple[Type[RPC], RPC_CB]]
 
 EventT = TypeVar("EventT", bound=Event)
-EVENT_DICT_TYPE = Dict[
-    str, Tuple[Type[EventT], Callable[[EventT, websockets.WebSocketServerProtocol], Coroutine[Any, Any, None]]]
-]
+EVENT_DICT_TYPE = Dict[str, Tuple[Type[EventT], Callable[[EventT, WsClient], Coroutine[Any, Any, None]]]]
 
 
-async def send_json_to_client(client: websockets.WebSocketServerProtocol, data: str) -> None:
+def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: Dict[str, Any]) -> None:
+
+    # it is also possible to use aiorun.run with stop_on_unhandled_errors=True but this prints much more useful info
+    loop.default_exception_handler(context)
+
+    if __debug__:  # stop loop while debugging, try to continue in production
+        loop.stop()
+
+
+async def send_json_to_client(client: WsClient, data: str) -> None:
 
     try:
         await client.send(data)
@@ -50,7 +57,7 @@ async def server(
 
         try:
             data = json.loads(msg)
-        except json.decoder.JSONDecodeError as e:
+        except json.JsonException as e:
             logger.error(f"Invalid data: '{msg}'.")
             logger.debug(e)
             return
@@ -81,7 +88,7 @@ async def server(
                 try:
                     await client.send(rpc_cls.Response(data["id"], False, messages=[str(e)]).to_json())
                     logger.debug(e, exc_info=True)
-                except KeyError:
+                except (KeyError, websockets.exceptions.ConnectionClosed):
                     pass
                 return
 
@@ -104,7 +111,10 @@ async def server(
                         assert isinstance(resp, rpc_cls.Response)
                         resp.id = req.id
 
-            await client.send(resp.to_json())
+            try:
+                await client.send(resp.to_json())
+            except websockets.exceptions.ConnectionClosed:
+                return
 
             if logger.level == LogLevel.DEBUG:
 
@@ -133,7 +143,6 @@ async def server(
                         ignored_reqs.remove(req.request)
 
                 if req.request not in ignored_reqs:
-                    # TODO do not print out too big messages (ideally omit its data part)
                     logger.debug(f"RPC request: {req}, result: {resp}")
 
         elif "event" in data:  # ...event from UI

@@ -1,19 +1,21 @@
 import asyncio
 import base64
 import os
-import tempfile
-import uuid
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict, Optional, Set
 
+import aiofiles
 import websockets
+from aiofiles import tempfile  # type: ignore
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2 import rest
 from arcor2.data import common, rpc
+from arcor2.data.rpc import get_id
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import events as server_events
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
 from arcor2_arserver import project
 from arcor2_arserver.scene import scene_started, start_scene, stop_scene
@@ -33,8 +35,11 @@ MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
 MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
 
 
-async def run_temp_package(package_id: str) -> None:
+async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: Optional[Set[str]] = None) -> None:
 
+    # TODO lock scene and project?
+
+    assert glob.LOCK.scene
     assert glob.LOCK.project
     project_id = glob.LOCK.project.id
     glob.TEMPORARY_PACKAGE = True
@@ -42,23 +47,23 @@ async def run_temp_package(package_id: str) -> None:
     scene_online = scene_started()
 
     if scene_online:
-        await stop_scene()  # the package will start it on its own
+        await stop_scene(glob.LOCK.scene)  # the package will start it on its own
 
     await project.close_project()
     req = erpc.RunPackage.Request
-    exe_req = req(uuid.uuid4().int, args=req.Args(package_id, cleanup_after_run=False))
+    exe_req = req(get_id(), args=req.Args(package_id, start_paused, breakpoints))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
-        glob.logger.warning(f"Execution of temporary package failed with: {exe_resp.messages}.")
+        logger.warning(f"Execution of temporary package failed with: {exe_resp.messages}.")
     else:
         await server_events.package_started.wait()
         await server_events.package_stopped.wait()
-        glob.logger.info("Temporary package stopped, let's remove it and reopen project.")
+        logger.info("Temporary package stopped, let's remove it and reopen project.")
 
     glob.TEMPORARY_PACKAGE = False
 
-    await manager_request(erpc.DeletePackage.Request(uuid.uuid4().int, args=rpc.common.IdArgs(package_id)))
+    await manager_request(erpc.DeletePackage.Request(get_id(), args=rpc.common.IdArgs(package_id)))
 
     await project.open_project(project_id)
 
@@ -70,7 +75,7 @@ async def run_temp_package(package_id: str) -> None:
     )
 
     if scene_online:
-        await start_scene()
+        await start_scene(glob.LOCK.scene)
 
 
 async def build_and_upload_package(project_id: str, package_name: str) -> str:
@@ -85,7 +90,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
 
     # call build service
     # TODO store data in memory
-    with tempfile.TemporaryDirectory() as tmpdirname:
+    async with tempfile.TemporaryDirectory() as tmpdirname:
         path = os.path.join(tmpdirname, "publish.zip")
 
         await hlp.run_in_executor(
@@ -95,12 +100,12 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
             {"packageName": package_name},
         )
 
-        with open(path, "rb") as zip_file:
-            b64_bytes = base64.b64encode(zip_file.read())
+        async with aiofiles.open(path, "rb") as zip_file:
+            b64_bytes = base64.b64encode(await zip_file.read())
             b64_str = b64_bytes.decode()
 
     # send data to execution service
-    exe_req = erpc.UploadPackage.Request(uuid.uuid4().int, args=erpc.UploadPackage.Request.Args(package_id, b64_str))
+    exe_req = erpc.UploadPackage.Request(get_id(), args=erpc.UploadPackage.Request.Args(package_id, b64_str))
     exe_resp = await manager_request(exe_req)
 
     if not exe_resp.result:
@@ -126,13 +131,13 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
 
     while True:
 
-        glob.logger.info("Attempting connection to manager...")
+        logger.info("Attempting connection to manager...")
 
         try:
 
-            async with websockets.connect(EXE_URL) as manager_client:
+            async with websockets.connect(EXE_URL) as manager_client:  # type: ignore  # TODO not sure what is wrong
 
-                glob.logger.info("Connected to manager.")
+                logger.info("Connected to manager.")
 
                 future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
 
@@ -152,5 +157,5 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
                         await MANAGER_RPC_REQUEST_QUEUE.put(msg)
                         break
         except ConnectionRefusedError as e:
-            glob.logger.error(e)
+            logger.error(e)
             await asyncio.sleep(delay=1.0)

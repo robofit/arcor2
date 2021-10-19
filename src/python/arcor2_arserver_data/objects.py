@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from datetime import datetime
+from typing import Dict, List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import ActionMetadata
-from arcor2.data.object_type import MetaModel3d, Model3dType, ObjectModel, ObjectType, ParameterMeta
+from arcor2.data.object_type import ObjectModel, ObjectType, ParameterMeta
 from arcor2.exceptions import Arcor2Exception
 
 
@@ -16,29 +17,31 @@ class ObjectTypeMeta(JsonSchemaMixin):
     description: str = field(default_factory=str)
     built_in: bool = False
     base: str = field(default_factory=str)
-    object_model: Optional[ObjectModel] = None
+    object_model: Optional[ObjectModel] = None  # can't use Models (Union) because of C# generator
     needs_parent_type: Optional[str] = None
     has_pose: bool = False
     abstract: bool = False
     disabled: bool = False
     problem: Optional[str] = None
     settings: List[ParameterMeta] = field(default_factory=list)
+    modified: Optional[datetime] = None
 
-    def to_object_type(self) -> ObjectType:
+    def to_object_type(self, source: str = "") -> ObjectType:
 
-        ot = ObjectType(self.type, "", self.description)
+        ot = ObjectType(self.type, source, self.description)
 
         if self.object_model:
-
-            if self.object_model.type == Model3dType.MESH:
-                assert self.object_model.mesh
-                m_id = self.object_model.mesh.id
-            else:
-                m_id = self.type
-
-            ot.model = MetaModel3d(m_id, self.object_model.type)
+            ot.model = self.object_model.model().metamodel()
 
         return ot
+
+    def parameters_dict(self) -> Dict[str, ParameterMeta]:
+        return {param.name: param for param in self.settings}
+
+    def __post_init__(self) -> None:
+
+        if self.object_model and (model := self.object_model.model()).id != self.type:
+            raise Arcor2Exception(f"Object model id ({model.id}) must be equal to the ObjectType id ({self.type}).")
 
 
 @dataclass

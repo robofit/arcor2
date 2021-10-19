@@ -1,4 +1,3 @@
-import json
 import logging
 from enum import Enum
 from functools import partial
@@ -10,7 +9,8 @@ import requests
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from PIL import Image, UnidentifiedImageError
 
-from arcor2 import env
+from arcor2 import env, json
+from arcor2.data.common import WebApiError
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 
@@ -37,6 +37,14 @@ class RestHttpException(RestException):
     def __init__(self, *args, error_code: int):
         super().__init__(*args)
         self.error_code = error_code
+
+
+class WebApiException(RestHttpException):
+    """Exception with associated WebApiError."""
+
+    def __init__(self, *args, error_code: int, web_api_error: WebApiError):
+        super().__init__(*args, error_code=error_code)
+        self.web_api_error = web_api_error
 
 
 class Method(Enum):
@@ -74,7 +82,7 @@ OptTimeout = Optional[Timeout]
 
 # module-level variables
 debug = env.get_bool("ARCOR2_REST_DEBUG", False)
-headers = {"accept": "application/json", "content-type": "application/json"}
+headers = {"accept": "application/json", "content-type": "application/json; charset=utf-8"}
 session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
 
@@ -265,7 +273,9 @@ def call(
         if files:
             resp = method.value(url, files=files, timeout=timeout, params=params)
         else:
-            resp = method.value(url, data=json.dumps(d), timeout=timeout, headers=headers, params=params)
+            resp = method.value(
+                url, data=json.dumps(d).encode("utf-8"), timeout=timeout, headers=headers, params=params
+            )
     except requests.exceptions.RequestException as e:
         logger.debug("Request failed.", exc_info=True)
         # TODO would be good to provide more meaningful message but the original one could be very very long
@@ -336,20 +346,28 @@ def _handle_response(resp: requests.Response) -> None:
     :return:
     """
 
-    if resp.status_code >= 400:
+    if resp.status_code < 400:
+        return
 
-        # here we try to handle different cases
-        try:
-            resp_body = json.loads(resp.content)
-        except json.JSONDecodeError:
-            # response contains invalid JSON
-            raise RestHttpException(resp.content.decode("utf-8"), error_code=resp.status_code)
+    decoded_content = resp.content.decode()
+
+    # here we try to handle different cases
+    try:
+        cont = json.loads(decoded_content)
+    except json.JsonException:
+        # response contains invalid JSON
+        raise RestHttpException(decoded_content, error_code=resp.status_code)
+
+    if isinstance(cont, str):  # just plain text
+        raise RestHttpException(cont, error_code=resp.status_code)
+    elif isinstance(cont, dict):  # this could be WebApiError
 
         try:
-            # this is the case for Project service (StorageError model)
-            raise RestHttpException(resp_body["message"], error_code=resp.status_code)
-        except (KeyError, TypeError):  # TypeError is for case when resp_body is just string
-            raise RestHttpException(str(resp_body), error_code=resp.status_code)
+            err = WebApiError.from_dict(cont)
+        except ValidationError:
+            raise RestHttpException(str(cont), error_code=resp.status_code)
+
+        raise WebApiException(err.message, error_code=resp.status_code, web_api_error=err)
 
 
 def get_image(url: str) -> Image.Image:

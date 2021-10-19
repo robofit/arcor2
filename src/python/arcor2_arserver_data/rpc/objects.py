@@ -4,7 +4,7 @@ from typing import List, Optional, Set
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.common import IdValue, Parameter, StrEnum
-from arcor2.data.object_type import MeshList
+from arcor2.data.object_type import MeshList, ObjectModel
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg, TypeArgs
 from arcor2_arserver_data.objects import ObjectActions, ObjectTypeMeta
 
@@ -42,16 +42,21 @@ class GetObjectTypes(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class DeleteObjectType(RPC):
+class DeleteObjectTypes(RPC):
     @dataclass
     class Request(RPC.Request):
 
-        args: IdArgs
+        args: Optional[Set[str]] = None  # None means all of them
         dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
-        pass
+        @dataclass
+        class Data(JsonSchemaMixin):
+            id: str
+            error: str
+
+        data: Optional[List[Data]] = None  # list of types that can't be deleted
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -87,15 +92,16 @@ class NewObjectType(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class FocusObjectStart(RPC):
+class UpdateObjectModel(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
-            object_id: str
-            robot: RobotArg
+            object_type_id: str = field(metadata=dict(description="Object or service id."))
+            object_model: ObjectModel  # can't use Models (Union) because of C# generator
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
@@ -105,15 +111,47 @@ class FocusObjectStart(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class FocusObject(RPC):
+class ObjectAimingStart(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
             object_id: str
+            robot: RobotArg
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class ObjectAimingCancel(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class ObjectAimingAddPoint(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
             point_idx: int
 
         args: Args
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
@@ -127,14 +165,14 @@ class FocusObject(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class FocusObjectDone(RPC):
+class ObjectAimingDone(RPC):
     @dataclass
     class Request(RPC.Request):
-        args: IdArgs
+        dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[FocusObject.Response.Data] = None
+        data: Optional[ObjectAimingAddPoint.Response.Data] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -228,3 +266,18 @@ class DeleteOverride(RPC):
     @dataclass
     class Response(RPC.Response):
         pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class ObjectTypeUsage(RPC):
+    """Returns list of scenes (IDs), where the OT is used."""
+
+    @dataclass
+    class Request(RPC.Request):
+        args: IdArgs
+
+    @dataclass
+    class Response(RPC.Response):
+        data: Optional[Set[str]] = None

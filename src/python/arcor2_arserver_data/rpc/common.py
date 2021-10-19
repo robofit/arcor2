@@ -36,7 +36,7 @@ class GetCameraPose(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             camera_parameters: CameraParameters
-            image: str = field(metadata=dict(description="Base64 encoded image."))
+            image: str = field(metadata=dict(description="Base64 encoded image."), repr=False)
             inverse: bool = False
 
         args: Args
@@ -56,7 +56,7 @@ class MarkersCorners(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             camera_parameters: CameraParameters
-            image: str = field(metadata=dict(description="Base64 encoded image."))
+            image: str = field(metadata=dict(description="Base64 encoded image."), repr=False)
 
         args: Args
 

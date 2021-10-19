@@ -8,6 +8,7 @@ import humps
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin
 
+from arcor2 import helpers as hlp
 from arcor2.data.common import ActionMetadata
 from arcor2.data.object_type import ParameterMeta
 from arcor2.docstring import parse_docstring
@@ -17,8 +18,7 @@ from arcor2.object_types.utils import built_in_types, get_settings_def, iterate_
 from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import SourceException, find_function, parse_def
-from arcor2_arserver import globals as glob
-from arcor2_arserver import settings
+from arcor2_arserver import logger, settings
 from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeDict
 from arcor2_arserver_data.objects import ObjectAction, ObjectTypeMeta
 
@@ -27,13 +27,13 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-def remove_object_type(obj_type_id: str) -> None:
+async def remove_object_type(obj_type_id: str) -> None:
 
     path = os.path.join(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE, f"{humps.depascalize(obj_type_id)}.py")
-    glob.logger.debug(f"Deleting {path}.")
+    logger.debug(f"Deleting {path}.")
 
     try:
-        os.remove(path)
+        await hlp.run_in_executor(os.remove, path, propagate=[FileNotFoundError])
     except FileNotFoundError as e:
         raise Arcor2Exception(f"File for {obj_type_id} was not found.") from e
 
@@ -105,10 +105,7 @@ def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectType
             obj.base = base.__name__
             break
 
-    try:
-        obj.settings = get_dataclass_params(get_settings_def(type_def))
-    except Arcor2Exception:
-        pass
+    obj.settings = get_dataclass_params(get_settings_def(type_def))
 
     return obj
 
@@ -144,6 +141,10 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
         meta: ActionMetadata = method_def.__action__  # type: ignore
 
+        if meta.hidden:
+            logger.debug(f"Action {method_name} of {type_def.__name__} is hidden.")
+            continue
+
         data = ObjectAction(name=method_name, meta=meta)
 
         if method_name in type_def.CANCEL_MAPPING:
@@ -151,13 +152,8 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
 
         try:
 
-            if not method_def.__doc__:
-                doc = {}
-            else:
-                doc = parse_docstring(method_def.__doc__)
-                doc_short = doc["short_description"]
-                if doc_short:
-                    data.description = doc_short
+            docstring = parse_docstring(method_def.__doc__)
+            data.description = docstring.short_description
 
             signature = inspect.signature(method_def)  # sig.parameters is OrderedDict
 
@@ -229,17 +225,13 @@ def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction
                 if def_val is not inspect.Parameter.empty:
                     args.default_value = param_type.value_to_json(def_val)
 
-                try:
-                    args.description = doc["params"][name].strip()
-                except KeyError:
-                    pass
-
+                args.description = docstring.param(name)
                 data.parameters.append(args)
 
         except Arcor2Exception as e:
             data.disabled = True
             data.problem = str(e)
-            glob.logger.warn(f"Disabling action {method_name} of  {type_def.__name__}. {str(e)}")
+            logger.warn(f"Disabling action {method_name} of {type_def.__name__}. {str(e)}")
 
         ret[data.name] = data
 

@@ -1,10 +1,9 @@
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import List, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionParameter, Flow, IdDesc, Joint, Orientation, Position, ProjectLogicIf
+from arcor2.data.common import ActionParameter, BareProject, Flow, Joint, Orientation, Position, ProjectLogicIf
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg
 
 
@@ -15,7 +14,7 @@ class NewProject(RPC):
         class Args(JsonSchemaMixin):
             scene_id: str
             name: str
-            desc: str = field(default_factory=str)
+            description: str = field(default_factory=str)
             has_logic: bool = True
 
         args: Args
@@ -82,12 +81,8 @@ class ListProjects(RPC):
     @dataclass
     class Response(RPC.Response):
         @dataclass
-        class Data(IdDesc):
-            scene_id: str
-            valid: bool = field(default=False, metadata=dict(description="Objects and their actions exists."))
-            executable: bool = field(default=False, metadata=dict(description="Logic is defined and valid."))
-            problems: List[str] = field(default_factory=list)
-            modified: Optional[datetime] = None
+        class Data(BareProject):
+            problems: Optional[List[str]] = None
 
         data: Optional[List[Data]] = None
 
@@ -180,6 +175,27 @@ class CopyActionPoint(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
+class AddApUsingRobot(RPC):
+    @dataclass
+    class Request(RPC.Request):
+        @dataclass
+        class Args(JsonSchemaMixin):
+            robot_id: str
+            end_effector_id: str
+            name: str
+            arm_id: Optional[str] = None
+
+        args: Args
+        dry_run: bool = False
+
+    @dataclass
+    class Response(RPC.Response):
+        pass
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 class AddActionPointJointsUsingRobot(RPC):
     @dataclass
     class Request(RPC.Request):
@@ -188,6 +204,7 @@ class AddActionPointJointsUsingRobot(RPC):
             action_point_id: str
             robot_id: str
             name: str = "default"
+            arm_id: Optional[str] = None
 
         args: Args
         dry_run: bool = False
@@ -680,7 +697,7 @@ class RenameAction(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class AddConstant(RPC):
+class AddProjectParameter(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
@@ -700,12 +717,12 @@ class AddConstant(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class UpdateConstant(RPC):
+class UpdateProjectParameter(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
-            constant_id: str
+            id: str
             name: Optional[str] = None
             value: Optional[str] = None
 
@@ -720,12 +737,12 @@ class UpdateConstant(RPC):
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-class RemoveConstant(RPC):
+class RemoveProjectParameter(RPC):
     @dataclass
     class Request(RPC.Request):
         @dataclass
         class Args(JsonSchemaMixin):
-            constant_id: str
+            id: str
 
         args: Args
         dry_run: bool = False

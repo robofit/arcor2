@@ -2,54 +2,10 @@ import functools
 from asyncio import sleep
 from typing import Any, Callable, Coroutine, Type, TypeVar, cast
 
-from arcor2.exceptions import Arcor2Exception
-from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver.lock.exceptions import LockingException
 
 F = TypeVar("F", bound=Callable[..., Coroutine[Any, Any, Any]])
-
-
-def no_scene(coro: F) -> F:
-    @functools.wraps(coro)
-    async def async_wrapper(*args, **kwargs) -> Any:
-
-        if glob.LOCK.scene:
-            raise Arcor2Exception("Scene has to be closed first.")
-        return await coro(*args, **kwargs)
-
-    return cast(F, async_wrapper)
-
-
-def scene_needed(coro: F) -> F:
-    @functools.wraps(coro)
-    async def async_wrapper(*args, **kwargs) -> Any:
-
-        if glob.LOCK.scene is None or not glob.LOCK.scene.id:
-            raise Arcor2Exception("Scene not opened or has invalid id.")
-        return await coro(*args, **kwargs)
-
-    return cast(F, async_wrapper)
-
-
-def no_project(coro: F) -> F:
-    @functools.wraps(coro)
-    async def async_wrapper(*args, **kwargs) -> Any:
-        if glob.LOCK.project:
-            raise Arcor2Exception("Not available during project editing.")
-        return await coro(*args, **kwargs)
-
-    return cast(F, async_wrapper)
-
-
-def project_needed(coro: F) -> F:
-    @functools.wraps(coro)
-    async def async_wrapper(*args, **kwargs) -> Any:
-
-        if glob.LOCK.project is None or not glob.LOCK.project.id:
-            raise Arcor2Exception("Project not opened or has invalid id.")
-        return await coro(*args, **kwargs)
-
-    return cast(F, async_wrapper)
 
 
 def retry(exc: Type[Exception] = LockingException, tries: int = 1, delay: float = 0) -> Callable:
@@ -67,10 +23,14 @@ def retry(exc: Type[Exception] = LockingException, tries: int = 1, delay: float 
         """
         while _tries:
             try:
-                return await coro(*args, **kwargs)
+                ret = await coro(*args, **kwargs)
+                if _tries < tries * 0.75:
+                    logger.warn(f"Retry timeout took {(tries - _tries) * delay}")
+                return ret
             except exc:
                 _tries -= 1
                 if _tries == 0:
+                    logger.warn("Retry raised")
                     raise
 
                 if delay > 0:

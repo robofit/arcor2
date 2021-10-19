@@ -34,10 +34,11 @@ def test_global_aps_cls() -> None:
     proj.action_points.append(ap1)
 
     os.environ["ARCOR2_PROJECT_PATH"] = "/tmp"
-    import arcor2.resources  # noqa
+    import arcor2_runtime.resources  # noqa
 
     my_name = "my_module"
     my_spec = importlib.util.spec_from_loader(my_name, loader=None)
+    assert my_spec
     my_module = importlib.util.module_from_spec(my_spec)
 
     cproj = CachedProject(proj)

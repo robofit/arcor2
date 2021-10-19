@@ -2,12 +2,46 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.14.0] - WIP
+## [0.18.0] - WIP
+
+### Changed
+
+- New RPC `UpdateObjectModel`.
+- `ListScenes` and `ListProjects` updated.
+- `DeleteObjectType` replaced with `DeleteObjectTypes`.
+
+## [0.17.0] - 2021-08-05
+
+### Changed
+
+- Flag for linear movement for added to some RPCs.
+
+
+## [0.16.0] - 2021-07-29
+
+### Changed
+
+- Support for multi arm robots.
+  - `arm_id` parameter added into relevant RPCs. 
+- Change constants to project parameters.
+- Object aiming RPCs updated.
+  - RPCs were renamed and all of them now have `dry_run`.
+  - There is a new method to cancel the process.
+
+## [0.15.0] - 2021-06-11
+
+### Changed
+
+- Updated to work with Project service 0.8.0.
+  - `ProjectConstant` renamed to `ProjectParameter`.
+
+## [0.14.0] - 2021-05-21
 
 ### Changed
 
 - Return value of `GetCameraPose` RPC updated.
 - Locking-related RPCs and events.
+- New RPC `AddApUsingRobot`.
 
 ### Fixed
 - ObjectType which source code contained Windows line endings was always evaluated as modified.

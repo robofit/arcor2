@@ -8,7 +8,7 @@ from arcor2.clients import scene_service
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box
 from arcor2.helpers import find_free_port
-from arcor2.object_types.abstract import GenericWithPose
+from arcor2.object_types.abstract import CollisionObject
 
 
 def finish_processes(processes) -> None:
@@ -45,7 +45,7 @@ def start_processes() -> Iterator[None]:
 
 def test_generic_with_pose(start_processes: None) -> None:
 
-    obj = GenericWithPose("id", "name", Pose(), Box("boxId", 0.1, 0.1, 0.1))
+    obj = CollisionObject("id", "name", Pose(), Box("boxId", 0.1, 0.1, 0.1))
     assert obj.id in scene_service.collision_ids()
 
     obj.pose = Pose()
@@ -55,5 +55,7 @@ def test_generic_with_pose(start_processes: None) -> None:
     obj.enabled = True
     assert obj.id in scene_service.collision_ids()
 
-    obj.cleanup()
+    scene_service.start()
+    assert obj.id in scene_service.collision_ids()
+    scene_service.stop()  # after stop, all collisions are removed by the Scene service
     assert not scene_service.collision_ids()

@@ -34,15 +34,13 @@ from typing import List, Union
 import humps
 
 import arcor2.data.common
-import arcor2.exceptions.runtime
 from arcor2.cached import CachedProject
 from arcor2.data.common import ActionPoint, Pose, Position, ProjectRobotJoints
 from arcor2.exceptions import Arcor2Exception
 from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, tree_to_str
 
-# can't use `import arcor2.resources` as it brings in dependency on ARCOR2_PROJECT_PATH env. var
-RES_MODULE = "arcor2.resources"
+RES_MODULE = "arcor2_runtime.resources"
 RES_CLS = "Resources"
 
 
@@ -109,7 +107,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                                     withitem(
                                         context_expr=Call(
                                             func=Name(id=RES_CLS, ctx=Load()),
-                                            args=[Str(s=project_id, kind="")],
+                                            args=[],
                                             keywords=[],
                                         ),
                                         optional_vars=Name(id="res", ctx=Store()),
@@ -134,9 +132,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                                 body=[
                                     Expr(
                                         value=Call(
-                                            func=Name(
-                                                id=arcor2.exceptions.runtime.print_exception.__name__, ctx=Load()
-                                            ),
+                                            func=Name(id="print_exception", ctx=Load()),
                                             args=[Name(id="e", ctx=Load())],
                                             keywords=[],
                                         )
@@ -154,7 +150,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
         type_ignores=[],
     )
 
-    add_import(tree, arcor2.exceptions.runtime.__name__, arcor2.exceptions.runtime.print_exception.__name__)
+    add_import(tree, "arcor2_runtime.exceptions", "print_exception", try_to_import=False)
     add_import(tree, RES_MODULE, RES_CLS, try_to_import=False)
     add_import(tree, "action_points", "ActionPoints", try_to_import=False)
 

@@ -7,12 +7,12 @@ from typing import Dict, Iterator, Tuple, Type
 
 import pytest
 
-from arcor2.clients import persistent_storage
+from arcor2.clients import project_service, scene_service
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import TypeArgs
 from arcor2.helpers import find_free_port
 from arcor2_arserver_data import events, rpc
-from arcor2_arserver_data.client import ARServer, uid
+from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_arserver_data.robot import RobotMeta
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
@@ -51,23 +51,31 @@ def start_processes() -> Iterator[None]:
 
         project_port = find_free_port()
         project_url = f"http://0.0.0.0:{project_port}"
-        my_env["ARCOR2_PERSISTENT_STORAGE_URL"] = project_url
+        my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
-        persistent_storage.URL = project_url
+        project_service.URL = project_url
+
+        scene_port = find_free_port()
+        scene_url = f"http://0.0.0.0:{scene_port}"
+        my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
+        my_env["ARCOR2_SCENE_SERVICE_MOCK_PORT"] = str(scene_port)
+        scene_service.URL = scene_url
 
         my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
         my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
 
-        my_env["ARCOR2_SERVER_PORT"] = str(_arserver_port)
-        my_env["ARCOR2_DATA_PATH"] = os.path.join(tmp_dir, "data")
+        my_env["ARCOR2_ARSERVER_PORT"] = str(_arserver_port)
 
         processes = []
 
         for cmd in (
             "./src.python.arcor2_mocks.scripts/mock_project.pex",
+            "./src.python.arcor2_mocks.scripts/mock_scene.pex",
             "./src.python.arcor2_execution.scripts/execution.pex",
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
+
+        scene_service.wait_for(60)
 
         # it may take some time for project service to come up so give it some time
         for _ in range(3):
@@ -92,7 +100,8 @@ def start_processes() -> Iterator[None]:
 
         while True:
             line = arserver_proc.stdout.readline().decode().strip()
-            if not line or "Server initialized." in line:  # TODO this is not ideal
+            LOGGER.info(line)
+            if not line or ") initialized." in line:  # TODO this is not ideal
                 break
 
         if arserver_proc.poll():
@@ -133,14 +142,14 @@ def test_objects(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
-    res = ars.call_rpc(rpc.o.GetObjectTypes.Request(uid()), rpc.o.GetObjectTypes.Response)
+    res = ars.call_rpc(rpc.o.GetObjectTypes.Request(get_id()), rpc.o.GetObjectTypes.Response)
     assert res.result
     assert res.data is not None
 
     for obj in res.data:
         assert not obj.disabled, f"ObjectType {obj.type} disabled. {obj.problem}"
 
-        actions = ars.call_rpc(rpc.o.GetActions.Request(uid(), TypeArgs(obj.type)), rpc.o.GetActions.Response)
+        actions = ars.call_rpc(rpc.o.GetActions.Request(get_id(), TypeArgs(obj.type)), rpc.o.GetActions.Response)
         assert actions.result
         assert actions.data is not None
 
@@ -153,7 +162,7 @@ def test_robot_meta(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
-    res = ars.call_rpc(rpc.r.GetRobotMeta.Request(uid()), rpc.r.GetRobotMeta.Response)
+    res = ars.call_rpc(rpc.r.GetRobotMeta.Request(get_id()), rpc.r.GetRobotMeta.Response)
     assert res.result
     assert res.data is not None
 
