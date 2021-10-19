@@ -546,14 +546,7 @@ class Lock:
         :param obj_id: parent of all found children
         """
 
-        ret: List[str] = []
-        if self.project:
-            childs = self.project.childs(obj_id)
-            ret.extend(childs)
-            for child in childs:
-                ret.extend(self.get_all_children(child))
-
-        return set(ret)
+        return self.project.childs(obj_id, recursive=True) if self.project else set()
 
     def get_all_parents(self, obj_id: str) -> Set[str]:
         """Recursively find all parents in tree.

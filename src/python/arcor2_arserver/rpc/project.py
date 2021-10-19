@@ -1030,18 +1030,24 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             new_action_ids.add(new_act.id)
 
         # find direct child-APs and copy them too
-        # TODO find a more efficient way?
+        # this can't be done in parallel for all child APs (whole hierarchy), because UI would be confused
         await asyncio.gather(
             *[
-                copy_action_point(child_ap, ap.id)
-                for child_ap in proj.action_points_with_parent
-                if child_ap.parent == orig_ap.id
+                copy_action_point(proj.action_point(child_id), ap.id)
+                for child_id in proj.childs(orig_ap.id)
+                if child_id in proj.action_points_ids
             ]
         )
 
     user_name = glob.USERS.user_name(ui)
+    childs_of_original_ap = glob.LOCK.get_all_children(req.args.id)
 
-    async with ctx_read_lock(glob.LOCK.get_all_children(req.args.id) | {req.args.id}, user_name):
+    async with ctx_read_lock(childs_of_original_ap | {req.args.id}, user_name):
+
+        # filter out only APs
+        child_aps = {ch for ch in childs_of_original_ap if ch in proj.action_points_ids} | {req.args.id}
+        logger.debug(f"Child action points of the original AP: {child_aps}")
+
         original_ap = proj.bare_action_point(req.args.id)
 
         if req.dry_run:
@@ -1062,14 +1068,14 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
                     continue
 
                 old_ori = proj.bare_ap_and_orientation(PosePlugin.orientation_id(proj, new_act.id, param.name))[1]
-                ap_childs = {ori.id for ap_id in proj.childs(req.args.id) for ori in proj.ap_orientations(ap_id)}
+                child_orientations = {ori.id for ap_id in child_aps for ori in proj.ap_orientations(ap_id)}
+                logger.debug(f"Child orientations of the original AP: {child_orientations}")
 
-                if old_ori.id not in ap_childs:
+                if old_ori.id not in child_orientations:
                     logger.debug(
                         f"Orientation {old_ori.name} ({old_ori.id}) "
-                        f"belongs to another AP tree, no need to update anything."
+                        f"belongs to another AP (sub)tree, no need to update anything."
                     )
-                    logger.debug(f"The original AP {original_ap.name} has following childs: {ap_childs}.")
                     continue
 
                 # orientation belongs to the tree being copied so it has to be updated
