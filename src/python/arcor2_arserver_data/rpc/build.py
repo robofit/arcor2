@@ -39,7 +39,7 @@ class TemporaryPackage(RPC):
             start_paused: bool = False
             breakpoints: Optional[Set[str]] = None
 
-        args: Args
+        args: Optional[Args] = None
 
     @dataclass
     class Response(RPC.Response):
