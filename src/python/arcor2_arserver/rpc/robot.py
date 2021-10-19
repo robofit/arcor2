@@ -529,7 +529,16 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     if robot_inst.move_in_progress:
         raise Arcor2Exception("Not possible while robot moves.")
 
-    hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode, req.args.arm_id)
+    params = []
+    if isinstance(robot_inst, MultiArmRobot):
+        params.append(req.args.arm_id)
+    elif req.args.arm_id:
+        raise Arcor2Exception(
+            f"The '{req.args.arm_id}' arm_id was set for single arm robot '{robot_inst.name}' "
+            f"of type '{robot_inst.__class__.__name__}'!"
+        )
+
+    hand_teaching_mode = await run_in_executor(robot_inst.get_hand_teaching_mode, *params)
 
     if req.args.enable == hand_teaching_mode:
         raise Arcor2Exception("That's the current state.")
@@ -539,7 +548,7 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     if req.dry_run:
         return
 
-    await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable, req.args.arm_id)
+    await run_in_executor(robot_inst.set_hand_teaching_mode, req.args.enable, *params)
     evt = HandTeachingMode(HandTeachingMode.Data(req.args.robot_id, req.args.enable, req.args.arm_id))
     asyncio.ensure_future(notif.broadcast_event(evt))
 
