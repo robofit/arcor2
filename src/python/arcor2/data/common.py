@@ -539,6 +539,8 @@ class BareActionPoint(JsonSchemaMixin, ModelMixin):
     name: str
     position: Position
     parent: Optional[str] = None
+    display_name: Optional[str] = None
+    description: Optional[str] = None
     id: str = ""
 
     @classmethod
@@ -562,7 +564,7 @@ class ActionPoint(BareActionPoint):
 
     @staticmethod
     def from_bare(bare: BareActionPoint) -> ActionPoint:
-        return ActionPoint(bare.name, bare.position, bare.parent, id=bare.id)
+        return ActionPoint(bare.name, bare.position, bare.parent, bare.display_name, bare.description, id=bare.id)
 
 
 @dataclass
