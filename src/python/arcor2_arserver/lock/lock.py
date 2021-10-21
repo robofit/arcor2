@@ -4,6 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Dict, Iterable, List, Optional, Set, Tuple, Union
 
+from arcor2 import env
 from arcor2.cached import CachedProjectException, UpdateableCachedProject, UpdateableCachedScene
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
@@ -64,9 +65,9 @@ class Lock:
         self.notifications_q: asyncio.Queue[LockEventData] = asyncio.Queue()
         self._ui_user_locks: Dict[str, Set[str]] = {}
 
-        self._lock_timeout: int = 300  # 5 minutes
-        self._lock_retries: int = 13
-        self._retry_wait: float = 0.15
+        self._lock_timeout: float = env.get_float("ARCOR2_ARSERVER_LOCK_TIMEOUT", 300)
+        self._lock_retries: int = env.get_int("ARCOR2_ARSERVER_LOCK_RETRIES", 13)
+        self._retry_wait: float = env.get_float("ARCOR2_ARSERVER_LOCK_RETRY_WAIT", 0.15)
 
     @property
     def scene(self) -> Optional[UpdateableCachedScene]:
