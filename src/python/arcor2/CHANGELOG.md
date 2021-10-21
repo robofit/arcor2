@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - This is needed for instance in case of obsolete ObjectTypes.
   - ...when e.g. parameters of `ActionMetadata` were changed.
   - Otherwise outdated OT might raise `TypeError` or similar exceptions.
+- New (optional) properties added to `BareActionPoint` (compatibility with Project service 0.14.0 or newer).
 
 ### Fixed
 
