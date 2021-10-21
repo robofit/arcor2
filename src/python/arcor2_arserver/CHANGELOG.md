@@ -25,6 +25,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Empty list means all ObjectTypes.
   - It returns list of id/error for types that could not be removed.
   - This is especially useful for usage with `dry_run`.
+- Updated environment variables, please see README.
+- Improved logging to debug 'Locking failed'.
+- Support for virtual collision objects.
+  - `AddVirtualCollisionObjectToScene` RPC creates a new OT and adds its instance to a scene.
+  - In the simplest case, each collision object will have its own ObjectType.
+  - But it is also possible to add more instances as with other types.
+  - When the last instance of VCO is removed, ARServer also removes the ObjectType automatically.
+- Ignoring `hidden` actions (a new flag in `ActionMetadata`).
+- New RPC `ObjectTypeUsage` returning scene ids where the ObjectType is used.
+- Support for debugging - relaying related RPCs to the Execution Service.
+- Better handling of exceptions in asyncio tasks.
+  - More useful traceback is printed out.
+  - In development mode, an unhandled exception leads to shutdown of a service.
+  - In production mode, traceback is printed out and the service tries to continue.
 
 ### Fixed
 
@@ -35,6 +49,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Fixed locking within `CopyActionPoint`.
   - Fixed update of orientation IDs.
 - Added locking to Project client to make the cache caching properly.
+- `modified`  was missing for disabled object.
+  - This happened when it was not possible to get object's base.
+- Copy AP - update of orientation ID in actions.
+- Removed 'delayed' unlocking of resources which caused race conditions in some cases and made the crashes hard to debug.
+- HT mode for single arm robots was broken.
 
 
 ## [0.21.0] - 2021-08-05

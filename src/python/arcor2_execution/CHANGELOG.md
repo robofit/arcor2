@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Make RPCs less blocking.
 - New environment variables `ARCOR2_EXECUTION_DEBUG` and `ARCOR2_EXECUTION_ASYNCIO_DEBUG` (see README for details).
 - Added dependency on `3rdparty:websocket-client` to make `LoggingMixin` work.
+- Support for debugging.
+  - The script can now be started in paused state.
+  - Breakpoints can be set on action points.
+  - The paused script can be stepped to the following action.
+- Better handling of exceptions in asyncio tasks.
+  - More useful traceback is printed out.
+  - In development mode, an unhandled exception leads to shutdown of a service.
+  - In production mode, traceback is printed out and the service tries to continue.
+- Relaying events with EEF poses/joints from the main script to the clients.
+  - The script streams those by default for all robots. For mode details, please see README of `arcor2_runtime`. 
 
 ## [0.18.1] - 2021-09-02
 

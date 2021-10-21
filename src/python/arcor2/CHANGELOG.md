@@ -2,6 +2,27 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.22.0] - WIP
+
+### Changed
+
+- New abstract base class `VirtualCollisionObject`.
+  - Meant as a base for 'dumb' collision objects, with primitive models, without any functionality, e.g. for safety 'walls' around the cell.
+- `ActionMetadata` updated.
+  - Removed useless properties (`blocking`, `blackbox`).
+  - Added a new property `hidden` (UIs shall silently ignore those actions).
+- Dropped support for `RelativePose` action parameter type.
+- Handle all errors when importing stuff (`import_type_def`).
+  - This is needed for instance in case of obsolete ObjectTypes.
+  - ...when e.g. parameters of `ActionMetadata` were changed.
+  - Otherwise outdated OT might raise `TypeError` or similar exceptions.
+
+### Fixed
+
+- Action point transformations (reparenting).
+  - When AP1 from `object -> AP1 -> AP2` was made global, AP2 was not updated properly.
+  - When AP1 was made relative again, AP2 was again not updated.
+
 ## [0.21.0] - 2021-09-07
 
 ### Changed

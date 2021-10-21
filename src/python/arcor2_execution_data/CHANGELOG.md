@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - WIP
+
+### Changed
+
+- Stuff needed by the main script moved to `arcor2_runtime`.
+- New RPC `StepAction`, debugging-related arguments added to `RunPackage`.
+
 ## [0.13.0] - 2021-08-05
 
 ### Changed
