@@ -12,6 +12,13 @@
 - `ARCOR2_ARSERVER_CACHE_PROJECTS=64` - by default, ARServer keeps 64 last used projects in its cache.
 - `ARCOR2_ARSERVER_CACHE_OBJECT_TYPES=32` - by default, ARServer keeps 64 last used ObjectTypes in its cache.
 
+### Resources locking
+
+- `ARCOR2_ARSERVER_LOCK_TIMEOUT=300` - if a user do not log again within this timeout (in seconds), their locks are discarded.
+  - Can be used to workaround 'Locking failed' issues - if set to some low value, it is sufficient to log out and after the locks got discarded, log in again.
+- `ARCOR2_ARSERVER_LOCK_RETRIES=13` - number of retries when trying to acquire the global lock.
+- `ARCOR2_ARSERVER_LOCK_RETRY_WAIT=0.15` - controls how long to wait between attempts to get the global lock. 
+
 ### Debugging
 
 - `ARCOR2_MAX_RPC_DURATION=0.1` - by default, a warning is emitted when any RPC call takes longer than 0.1 second.
