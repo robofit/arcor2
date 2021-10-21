@@ -38,7 +38,7 @@ version = "black==21.9b0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
-version = "flake8==3.9.2"
+version = "flake8==4.0.1"
 extra_requirements.add = [
   "flake8-tidy-imports",
   "flake8-annotations-coverage",
