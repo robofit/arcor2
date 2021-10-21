@@ -112,7 +112,7 @@ services:
       - "5013:5013"
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.13.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.15.0
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
