@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.21.0] - WIP
+
+### Changed
+
+- Published archive name.
+  - The resulting zip name is `pkg_name_package.zip`.
+  - Or `project_name_package.zip` when no package name is given.
+
 ## [0.20.0] - 2021-09-07
 
 ### Changed

@@ -6,9 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-- New RPC `UpdateObjectModel`.
+- New RPCs `UpdateObjectModel` and `ObjectTypeUsage`. 
 - `ListScenes` and `ListProjects` updated.
 - `DeleteObjectType` replaced with `DeleteObjectTypes`.
+- `TemporaryPackage` now has (optional) debugging-related args.
 
 ## [0.17.0] - 2021-08-05
 

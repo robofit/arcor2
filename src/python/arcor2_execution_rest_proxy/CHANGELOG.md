@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.14.0] - WIP
+
+### Changed
+
+- Support for debugging.
+  - New methods `PUT /packages/{packageId}/debug` and `PUT /packages/step`.
+  - The script can now be started in paused state.
+  - Breakpoints can be set on action points.
+  - The paused script can be stepped to the following action.
+
 ## [0.13.2] - 2021-09-02
 
 ### Changed
