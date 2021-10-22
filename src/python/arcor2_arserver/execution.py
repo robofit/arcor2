@@ -49,7 +49,7 @@ async def run_temp_package(package_id: str, start_paused: bool = False, breakpoi
     if scene_online:
         await stop_scene(glob.LOCK.scene)  # the package will start it on its own
 
-    await project.close_project()
+    await project.close_project(show_mainscreen_after_that=False)
     req = erpc.RunPackage.Request
     exe_req = req(get_id(), args=req.Args(package_id, start_paused, breakpoints))
     exe_resp = await manager_request(exe_req)
