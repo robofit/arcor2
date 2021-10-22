@@ -96,6 +96,20 @@ class IntResources:
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
 
+        type_defs: TypesDict = {}
+
+        for scene_obj_type in self.scene.object_types:  # get all type-defs
+
+            assert scene_obj_type not in type_defs
+            assert scene_obj_type not in built_in_types_names()
+
+            module = importlib.import_module(CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type))
+
+            cls = getattr(module, scene_obj_type)
+            patch_object_actions(cls)
+            patch_with_action_mapping(cls, self.scene, self.project)
+            type_defs[cls.__name__] = cls
+
         action.start_paused, action.breakpoints = parse_args()
 
         if action.breakpoints:
@@ -112,28 +126,29 @@ class IntResources:
             for joints in self.project.ap_joints(ap.id):
                 setattr(joints, AP_ID_ATTR, ap.id)
 
-        self.objects: Dict[str, Generic] = {}
-
-        type_defs: TypesDict = {}
-
-        # in order to prepare a clean environment (clears all configurations and all collisions)
-        scene_service.stop()
-
         package_id = os.path.basename(os.getcwd())
         package_meta = package.read_package_meta(package_id)
         package_info_event = PackageInfo(PackageInfo.Data(package_id, package_meta.name, scene, project))
 
-        for scene_obj_type in self.scene.object_types:  # get all type-defs
+        for model in models.values():
 
-            assert scene_obj_type not in type_defs
-            assert scene_obj_type not in built_in_types_names()
+            if not model:
+                continue
 
-            module = importlib.import_module(CUSTOM_OBJECT_TYPES_MODULE + "." + humps.depascalize(scene_obj_type))
+            if isinstance(model, Box):
+                package_info_event.data.collision_models.boxes.append(model)
+            elif isinstance(model, Sphere):
+                package_info_event.data.collision_models.spheres.append(model)
+            elif isinstance(model, Cylinder):
+                package_info_event.data.collision_models.cylinders.append(model)
+            elif isinstance(model, Mesh):
+                package_info_event.data.collision_models.meshes.append(model)
 
-            cls = getattr(module, scene_obj_type)
-            patch_object_actions(cls)
-            patch_with_action_mapping(cls, self.scene, self.project)
-            type_defs[cls.__name__] = cls
+        # following steps might take some time, so let UIs know about the package as a first thing
+        print_event(package_info_event)
+
+        # in order to prepare a clean environment (clears all configurations and all collisions)
+        scene_service.stop()
 
         self.executor = concurrent.futures.ThreadPoolExecutor()
         futures: List[concurrent.futures.Future] = []
@@ -141,9 +156,6 @@ class IntResources:
         for scene_obj in self.scene.objects:
 
             cls = type_defs[scene_obj.type]
-
-            assert scene_obj.id not in self.objects, "Duplicate object id {}!".format(scene_obj.id)
-
             settings = settings_from_params(cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None))
 
             if issubclass(cls, Robot):
@@ -163,6 +175,8 @@ class IntResources:
 
         exception_cnt: int = 0
 
+        self.objects: Dict[str, Generic] = {}
+
         for f in concurrent.futures.as_completed(futures):
             try:
                 inst = f.result()  # if an object creation resulted in exception, it will be raised here
@@ -176,23 +190,7 @@ class IntResources:
             self.cleanup_all_objects()
             raise Arcor2Exception(f"Failed to initialize {exception_cnt} object(s).")
 
-        for model in models.values():
-
-            if not model:
-                continue
-
-            if isinstance(model, Box):
-                package_info_event.data.collision_models.boxes.append(model)
-            elif isinstance(model, Sphere):
-                package_info_event.data.collision_models.spheres.append(model)
-            elif isinstance(model, Cylinder):
-                package_info_event.data.collision_models.cylinders.append(model)
-            elif isinstance(model, Mesh):
-                package_info_event.data.collision_models.meshes.append(model)
-
         scene_service.start()
-
-        print_event(package_info_event)
 
         # make all poses absolute
         for aps in self.project.action_points_with_parent:
