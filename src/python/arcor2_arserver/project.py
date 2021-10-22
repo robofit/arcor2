@@ -70,16 +70,17 @@ async def notify_project_opened(evt: OpenProject) -> None:
     await notif.broadcast_event(get_scene_state())
 
 
-async def notify_project_closed(project_id: str) -> None:
+async def notify_project_closed(project_id: str, show_mainscreen_after_that: bool = True) -> None:
 
     proj_list = ShowMainScreen.Data.WhatEnum.ProjectsList
 
     await notif.broadcast_event(ProjectClosed())
-    glob.MAIN_SCREEN = ShowMainScreen.Data(proj_list)
-    await notif.broadcast_event(ShowMainScreen(ShowMainScreen.Data(proj_list, project_id)))
+    if show_mainscreen_after_that:  # mainscreen is not shown when running a temporary package
+        glob.MAIN_SCREEN = ShowMainScreen.Data(proj_list)
+        await notif.broadcast_event(ShowMainScreen(ShowMainScreen.Data(proj_list, project_id)))
 
 
-async def close_project() -> None:
+async def close_project(show_mainscreen_after_that: bool = True) -> None:
 
     assert glob.LOCK.project
 
@@ -87,7 +88,7 @@ async def close_project() -> None:
     glob.LOCK.scene = None
     glob.LOCK.project = None
     glob.PREV_RESULTS.clear()
-    asyncio.ensure_future(notify_project_closed(project_id))
+    asyncio.ensure_future(notify_project_closed(project_id, show_mainscreen_after_that))
 
 
 async def execute_action(action_method: Callable, params: List[Any]) -> None:
