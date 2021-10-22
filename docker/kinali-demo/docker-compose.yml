@@ -36,7 +36,7 @@ services:
     depends_on:
       - testitoff-project
     environment:
-      - ARCOR2_PROJECT_SERVICE_URL=http://project:10000
+      - ARCOR2_PROJECT_SERVICE_URL=http://testitoff-project:10000
     ports:
       - "5008:5008"
     networks:
@@ -121,7 +121,7 @@ services:
           - "14000"
       environment:
           - MONGODB_URL=testitoff-robotsystem-mongodb:27017
-          - RESOURCES_SERVICE_URL=http://project:10000
+          - RESOURCES_SERVICE_URL=http://testitoff-project:10000
       ports:
         - "14000:14000"
       networks:
@@ -159,7 +159,7 @@ services:
       - testitoff-project-network
     environment:
       - SERVICE_URL=http://testitoff-robotsystem-webapi:14000
-      - RESOURCES_SERVICE_URL=http://project:10000
+      - RESOURCES_SERVICE_URL=http://testitoff-project:10000
     depends_on:
       - testitoff-robotsystem-webapi
       - testitoff-robotsystem-mongodb
@@ -171,7 +171,7 @@ services:
       privileged: true
       environment:
         - MONGODB_URL=testitoff-search-mongodb:27017
-        - RESOURCES_SERVICE_URL=http://project:10000
+        - RESOURCES_SERVICE_URL=http://testitoff-project:10000
       ports:
         - "12000:12000"
       networks:
@@ -204,7 +204,7 @@ services:
       - testitoff-project-network
     environment:
       - SERVICE_URL=http://testitoff-search-webapi:12000
-      - RESOURCES_SERVICE_URL=http://project:10000
+      - RESOURCES_SERVICE_URL=http://testitoff-project:10000
     depends_on:
       - testitoff-search-webapi
       - testitoff-search-mongodb
