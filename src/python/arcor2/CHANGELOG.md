@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - ...when e.g. parameters of `ActionMetadata` were changed.
   - Otherwise outdated OT might raise `TypeError` or similar exceptions.
 - New (optional) properties added to `BareActionPoint` (compatibility with Project service 0.14.0 or newer).
+- Added `FlowActions` ObjectType, providing `is_first_pass` action which is useful to perform the initialization step.
 
 ### Fixed
 
