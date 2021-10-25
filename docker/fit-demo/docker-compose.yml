@@ -2,7 +2,7 @@ version: '3'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:0.21.0
+    image: arcor2/arcor2_arserver:0.22.0
     container_name: fit-demo-arserver
     depends_on:
       - fit-demo-project
@@ -27,7 +27,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
 
   fit-demo-build:
-    image: arcor2/arcor2_build:0.20.0
+    image: arcor2/arcor2_build:0.21.0
     container_name: fit-demo-build
     depends_on:
       - fit-demo-project
@@ -39,7 +39,7 @@ services:
       - fit-demo-project-network
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:0.18.0
+    image: arcor2/arcor2_execution:0.19.0
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
@@ -52,7 +52,7 @@ services:
         - fit-demo-execution:/root/project
 
   fit-demo-kinect:
-    image: arcor2/arcor2_kinect_azure:0.3.0
+    image: arcor2/arcor2_kinect_azure:0.4.0
     container_name: fit-demo-kinect
     networks:
       - fit-demo-kinect-network
@@ -62,7 +62,7 @@ services:
       - ARCOR2_KINECT_AZURE_MOCK=true
 
   fit-demo-calibration:
-    image: arcor2/arcor2_calibration:0.6.1
+    image: arcor2/arcor2_calibration:0.7.0
     networks:
       - fit-demo-calibration-network
     ports:
@@ -74,7 +74,7 @@ services:
       - ./calibration.yaml:/root/calibration.yaml
 
   fit-demo-dobot:
-    image: arcor2/arcor2_dobot:0.2.3
+    image: arcor2/arcor2_dobot:0.3.0
     container_name: fit-demo-dobot
     networks:
       - fit-demo-dobot-network
@@ -84,7 +84,7 @@ services:
       - ARCOR2_DOBOT_MOCK=true
 
   fit-demo-dobot2:
-    image: arcor2/arcor2_dobot:0.2.3
+    image: arcor2/arcor2_dobot:0.3.0
     container_name: fit-demo-dobot2
     networks:
       - fit-demo-dobot-network
@@ -94,7 +94,7 @@ services:
       - ARCOR2_DOBOT_MOCK=true
 
   fit-demo-dobot3:
-    image: arcor2/arcor2_dobot:0.2.3
+    image: arcor2/arcor2_dobot:0.3.0
     container_name: fit-demo-dobot3
     networks:
       - fit-demo-dobot-network
