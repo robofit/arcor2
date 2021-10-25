@@ -2,7 +2,7 @@ version: '3'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:0.22.0
+    image: arcor2/arcor2_arserver:0.22.1
     container_name: fit-demo-arserver
     depends_on:
       - fit-demo-project
@@ -13,6 +13,7 @@ services:
       - fit-demo-calibration
     ports:
       - "6789:6789"
+      - "6799:6799"
     networks:
           - fit-demo-kinect-network
           - fit-demo-robot-network
