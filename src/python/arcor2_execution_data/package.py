@@ -28,7 +28,7 @@ def read_package_meta(package_id: str) -> PackageMeta:
     try:
         with open(get_package_meta_path(package_id)) as pkg_file:
             return PackageMeta.from_json(pkg_file.read())
-    except (IOError, ValidationError):
+    except (IOError, ValidationError, ValueError):  # TODO rather propagate as Arcor2Exception
         return PackageMeta("N/A", datetime.fromtimestamp(0, tz=timezone.utc))
 
 

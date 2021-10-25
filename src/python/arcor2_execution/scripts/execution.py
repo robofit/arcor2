@@ -362,7 +362,7 @@ async def get_opt_summary(path: str) -> Optional[PackageSummary]:
     try:
         async with aiofiles.open(os.path.join(path, "data", "project.json")) as project_file:
             project = common.Project.from_json(await project_file.read())
-    except (ValidationError, IOError) as e:
+    except (ValidationError, IOError, ValueError) as e:
         logger.error(f"Failed to read/parse project file of {package_dir}: {e}")
 
         return PackageSummary(package_dir, package_meta)
