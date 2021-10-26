@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.22.1] - 2021-10-26
+
+### Changed
+
+- Added HTTP upload server for logs from AREditor
+  - Logs are uploaded to /root/logs (could be changed using ARCOR2_AREDITOR_LOGS_FOLDER env variable)
+
 ## [0.22.0] - 2021-10-25
 
 ### Changed
