@@ -58,7 +58,7 @@ def get_parent_pose(scene: CScene, project: CProject, parent_id: str) -> Parent:
         ap = project.bare_action_point(parent_id)
         return Parent(Pose(ap.position, Orientation()), ap.parent)
     else:
-        raise Arcor2Exception("Unknown parent_id.")
+        raise Arcor2Exception(f"Unknown parent_id {parent_id}.")
 
 
 def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> Set[str]:
