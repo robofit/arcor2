@@ -33,7 +33,7 @@ class ResourcesException(Arcor2Exception):
 
 
 CUSTOM_OBJECT_TYPES_MODULE = "object_types"
-R = TypeVar("R", bound="IntResources")
+R = TypeVar("R", bound="Resources")
 
 _shutting_down = Event()
 _streaming_period = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
@@ -84,17 +84,37 @@ def stream_joints(robot_inst: Robot) -> None:
         pass
 
 
-class IntResources:
+T = TypeVar("T", bound=JsonSchemaMixin)
+
+
+class Resources:
 
     __slots__ = ("project", "scene", "objects", "args", "executor", "_stream_futures")
 
-    def __init__(self, scene: Scene, project: Project, models: Dict[str, Optional[Models]]) -> None:
+    def __init__(self, apply_action_mapping: bool = True) -> None:
 
-        self.project = CachedProject(project)
+        models: Dict[str, Optional[Models]] = {}
+
+        scene = self.read_project_data(Scene.__name__.lower(), Scene)
+        project = self.read_project_data(Project.__name__.lower(), Project)
+
         self.scene = CachedScene(scene)
+        self.project = CachedProject(project)
 
         if self.project.scene_id != self.scene.id:
             raise ResourcesException("Project/scene not consistent!")
+
+        # make all poses absolute
+        for aps in self.project.action_points_with_parent:
+            # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
+            tr.make_relative_ap_global(self.scene, self.project, aps)
+
+        for obj_type in self.scene.object_types:
+
+            try:
+                models[obj_type] = self.read_project_data("models/" + humps.depascalize(obj_type), ObjectModel).model()
+            except IOError:
+                models[obj_type] = None
 
         type_defs: TypesDict = {}
 
@@ -107,8 +127,10 @@ class IntResources:
 
             cls = getattr(module, scene_obj_type)
             patch_object_actions(cls)
-            patch_with_action_mapping(cls, self.scene, self.project)
             type_defs[cls.__name__] = cls
+
+            if apply_action_mapping:
+                patch_with_action_mapping(cls, self.scene, self.project)
 
         action.start_paused, action.breakpoints = parse_args()
 
@@ -192,12 +214,16 @@ class IntResources:
 
         scene_service.start()
 
-        # make all poses absolute
-        for aps in self.project.action_points_with_parent:
-            # Action point pose is relative to its parent object/AP pose in scene but is absolute during runtime.
-            tr.make_relative_ap_global(self.scene, self.project, aps)
-
         self._stream_futures: List[concurrent.futures.Future] = []
+
+    def read_project_data(self, file_name: str, cls: Type[T]) -> T:
+        try:
+
+            with open(os.path.join("data", file_name + ".json")) as scene_file:
+                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))
+
+        except JsonSchemaValidationError as e:
+            raise ResourcesException(f"Invalid project/scene: {e}")
 
     def cleanup_all_objects(self) -> None:
         """Calls cleanup method of all objects in parallel.
@@ -250,37 +276,3 @@ class IntResources:
         self.cleanup_all_objects()
 
         return True
-
-
-T = TypeVar("T", bound=JsonSchemaMixin)
-
-
-class Resources(IntResources):
-    def read_project_data(self, file_name: str, cls: Type[T]) -> T:
-
-        try:
-
-            with open(os.path.join("data", file_name + ".json")) as scene_file:
-                return cls.from_dict(humps.decamelize(json.loads(scene_file.read())))
-
-        except JsonSchemaValidationError as e:
-            raise ResourcesException(f"Invalid project/scene: {e}")
-
-    def __init__(self) -> None:
-
-        scene = self.read_project_data(Scene.__name__.lower(), Scene)
-        project = self.read_project_data(Project.__name__.lower(), Project)
-
-        models: Dict[str, Optional[Models]] = {}
-
-        for obj in scene.objects:
-
-            if obj.type in models:
-                continue
-
-            try:
-                models[obj.type] = self.read_project_data("models/" + humps.depascalize(obj.type), ObjectModel).model()
-            except IOError:
-                models[obj.type] = None
-
-        super().__init__(scene, project, models)
