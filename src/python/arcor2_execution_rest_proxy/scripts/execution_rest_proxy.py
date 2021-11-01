@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import TYPE_CHECKING, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Type
 
 import arcor2_execution_rest_proxy
 import websocket
@@ -104,9 +104,11 @@ else:
 rpc_request_queue: ReqQueue = ReqQueue()
 rpc_responses: Dict[int, RespQueue] = {}
 
-package_state: Optional[PackageState.Data] = None
+package_state: PackageState.Data = PackageState.Data()
 package_info: Optional[PackageInfo.Data] = None
 exception_messages: List[str] = []
+
+breakpoints: Dict[str, Set[str]] = {}
 
 
 @contextmanager
@@ -174,6 +176,24 @@ def allowed_file(filename):
 
 def package_exists(package_id: str) -> bool:
     return os.path.exists(os.path.join(PROJECT_PATH, package_id))
+
+
+def package_run_state() -> bool:
+    """The script is up."""
+    return package_state.state in PackageState.RUN_STATES
+
+
+def package_running() -> bool:
+    return package_state.state == PackageState.Data.StateEnum.RUNNING
+
+
+def package_paused() -> bool:
+    return package_state.state == PackageState.Data.StateEnum.PAUSED
+
+
+def package_stopped() -> bool:
+    """The script is down."""
+    return package_state.state in PackageState.RUNNABLE_STATES
 
 
 @app.route("/tokens/create", methods=["POST"])
@@ -383,8 +403,8 @@ def put_package(packageId: str) -> RespT:  # noqa
         responses:
             200:
               description: Ok
-            501:
-              description: Contains array of errors.
+            500:
+              description: Another error occurred.
               content:
                 application/json:
                   schema:
@@ -410,7 +430,7 @@ def put_package(packageId: str) -> RespT:  # noqa
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/<string:packageId>", methods=["GET"])
@@ -439,14 +459,10 @@ def get_package(packageId: str) -> RespT:  # noqa
                 format: binary
         404:
           description: Package ID was not found.
-          content:
-            application/json:
-              schema:
-                type: string
     """
 
     if not package_exists(packageId):
-        return jsonify("Not found"), 404
+        return Response(status=404)
 
     with tempfile.TemporaryDirectory() as tmpdirname:
 
@@ -515,12 +531,8 @@ def delete_package(packageId: str) -> RespT:  # noqa
           description: Ok
         404:
           description: Package not found
-          content:
-            application/json:
-              schema:
-                type: string
-        501:
-          description: Contains array of errors.
+        500:
+          description: Another error occurred.
           content:
             application/json:
               schema:
@@ -530,14 +542,15 @@ def delete_package(packageId: str) -> RespT:  # noqa
     """
 
     if not package_exists(packageId):
-        return jsonify("Not found"), 404
+        return Response(status=404)
 
     resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
 
     if resp.result:
+        breakpoints.pop(packageId, None)
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/<string:packageId>/start", methods=["PUT"])
@@ -559,36 +572,116 @@ def package_start(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: Ok
+        400:
+            description: Another package is active (running or paused).
         404:
           description: Package not found
+        500:
+          description: Another error occurred.
           content:
             application/json:
               schema:
-                type: string
-        501:
-            description: Contains array of errors.
+                type: array
+                items:
+                  type: string
+    """
+
+    if not package_exists(packageId):
+        return Response(status=404)
+
+    if package_run_state():
+        return Response(status=400)
+
+    resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
+
+    if resp.result:
+        breakpoints.pop(packageId, None)
+        return Response(status=200)
+    else:
+        return jsonify(resp.messages), 500
+
+
+@app.route("/packages/<string:packageId>/breakpoints", methods=["PUT"])
+def put_breakpoints(packageId: str) -> RespT:  # noqa
+    """Add breakpoints for a package
+    ---
+    put:
+      summary: Add breakpoints for a package.
+      operationId: UpdateBreakpoints
+      tags:
+        - Packages
+      parameters:
+        - in: path
+          name: packageId
+          schema:
+            type: string
+          required: true
+          description: The unique identification of the package.
+        - in: query
+          name: breakpoints
+          schema:
+            type: array
+            items:
+              type: string
+          required: true
+          description: List of breakpoints (IDs of action points).
+      responses:
+        200:
+          description: Breakpoints were updated.
+        400:
+          description: Can't put breakpoints when the package is active (running or paused).
+        404:
+          description:  The package cannot be found.
+    """
+
+    if not package_exists(packageId):
+        return Response(status=404)
+
+    if not package_stopped():
+        return Response(status=400)
+
+    breakpoints[packageId] = set(request.args.getlist("breakpoints"))
+    return Response(status=200)
+
+
+@app.route("/packages/<string:packageId>/breakpoints", methods=["GET"])
+def get_breakpoints(packageId: str) -> RespT:  # noqa
+    """Get breakpoints for a package
+    ---
+    get:
+      summary: Get breakpoints for a package.
+      operationId: GetBreakpoints
+      tags:
+        - Packages
+      parameters:
+        - in: path
+          name: packageId
+          schema:
+            type: string
+          required: true
+          description: The unique identification of the package.
+      responses:
+        200:
+            description: List of breakpoints for a package.
             content:
               application/json:
                 schema:
                   type: array
                   items:
                     type: string
+        404:
+          description:  The package cannot be found.
     """
 
     if not package_exists(packageId):
-        return jsonify("Not found"), 404
+        return Response(status=404)
 
-    resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
-
-    if resp.result:
-        return Response(status=200)
-    else:
-        return jsonify(resp.messages), 400
+    return jsonify(list(breakpoints.get(packageId, [])))
 
 
 @app.route("/packages/<string:packageId>/debug", methods=["PUT"])
 def package_debug(packageId: str) -> RespT:  # noqa
-    """Run project
+    """Debug project
     ---
     put:
       summary: Start debugging of the execution package.
@@ -601,49 +694,43 @@ def package_debug(packageId: str) -> RespT:  # noqa
           schema:
             type: string
           required: true
-          description: Unique package Id
+          description: The unique identification of the package.
         - in: query
           name: breakOnFirstAction
           schema:
             type: boolean
             default: false
-          description: Unique package Id
-        - in: query
-          name: breakpoints
-          schema:
-            type: array
-            items:
-              type: string
+          description: The project execution is paused before the first Action (default value is false).
       responses:
         200:
-          description: Ok
+          description: The debugging process successfully started.
+        400:
+            description: Another package is active (running or paused).
         404:
-          description: Package not found
+          description:  The package cannot be found.
+        500:
+          description: Another error occurred.
           content:
             application/json:
               schema:
-                type: string
-        501:
-            description: Contains array of errors.
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    type: string
+                type: array
+                items:
+                  type: string
     """
 
     if not package_exists(packageId):
-        return jsonify("Not found"), 404
+        return Response(status=404)
 
-    breakpoints = set(request.args.getlist("breakpoints"))
+    if package_run_state():
+        return Response(status=400)
+
     resp = call_rpc(
         rpc.RunPackage.Request(
             id=get_id(),
             args=rpc.RunPackage.Request.Args(
                 packageId,
                 request.args.get("breakOnFirstAction", default="false") == "true",
-                breakpoints if breakpoints else None,
+                breakpoints.get(packageId, None),
             ),
         )
     )
@@ -651,12 +738,12 @@ def package_debug(packageId: str) -> RespT:  # noqa
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 400
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/stop", methods=["PUT"])
 def packages_stop() -> RespT:
-    """Stops running project
+    """Stops running package.
     ---
     put:
       summary: Stops execution of the given package.
@@ -666,22 +753,27 @@ def packages_stop() -> RespT:
       responses:
         200:
           description: Ok
-        501:
-            description: Contains array of errors.
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    type: string
+        400:
+          description: Package is not running.
+        500:
+          description: Another error occurred.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
     """
+
+    if not package_run_state():
+        return Response(status=400)
 
     resp = call_rpc(rpc.StopPackage.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/step", methods=["PUT"])
@@ -696,22 +788,27 @@ def packages_step() -> RespT:
       responses:
         200:
           description: Ok
-        501:
-            description: Contains array of errors.
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    type: string
+        400:
+          description: There is no paused package.
+        500:
+          description: Another error occurred.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
     """
+
+    if not package_paused():
+        return Response(status=400)
 
     resp = call_rpc(rpc.StepAction.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 400
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/pause", methods=["PUT"])
@@ -726,22 +823,27 @@ def packages_pause() -> RespT:
       responses:
         200:
           description: Ok
-        501:
-            description: Contains array of errors.
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    type: string
+        400:
+          description: There is no running package.
+        500:
+          description: Another error occurred.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
     """
+
+    if not package_running():
+        return Response(status=400)
 
     resp = call_rpc(rpc.PausePackage.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/resume", methods=["PUT"])
@@ -756,22 +858,27 @@ def packages_resume() -> RespT:
       responses:
         200:
           description: Ok
-        501:
-            description: Contains array of errors.
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    type: string
+        400:
+          description: There is no paused package.
+        500:
+          description: Another error occurred.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
     """
+
+    if not package_paused():
+        return Response(status=400)
 
     resp = call_rpc(rpc.ResumePackage.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
     else:
-        return jsonify(resp.messages), 501
+        return jsonify(resp.messages), 500
 
 
 @app.route("/packages/executioninfo", methods=["GET"])
@@ -779,7 +886,7 @@ def packages_executioninfo() -> RespT:
     """/packages/executioninfo
     ---
     get:
-      summary: /packages/executioninfo
+      summary: Get information about current execution state.
       operationId: GetExecutionInfo
       tags:
         - Packages
@@ -790,21 +897,19 @@ def packages_executioninfo() -> RespT:
             application/json:
               schema:
                 $ref: ExecutionInfo
-        501:
-          description: Internal error
-          content:
-            application/json:
-              schema:
-                type: string
     """
 
-    if package_state is None or package_state.state == PackageState.Data.StateEnum.UNDEFINED:
+    if package_state.state == PackageState.Data.StateEnum.UNDEFINED:
         ret = ExecutionInfo(ExecutionState.Undefined)
     elif package_state.state == PackageState.Data.StateEnum.RUNNING:
         ret = ExecutionInfo(ExecutionState.Running, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.PAUSED:
         ret = ExecutionInfo(ExecutionState.Paused, package_state.package_id)
-    elif package_state.state in (PackageState.Data.StateEnum.PAUSING, PackageState.Data.StateEnum.STOPPING):
+    elif package_state.state in (
+        PackageState.Data.StateEnum.PAUSING,
+        PackageState.Data.StateEnum.STOPPING,
+        PackageState.Data.StateEnum.RESUMING,
+    ):
         ret = ExecutionInfo(ExecutionState.Pending, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.STOPPED:
 
@@ -813,7 +918,7 @@ def packages_executioninfo() -> RespT:
         else:
             ret = ExecutionInfo(ExecutionState.Completed, package_state.package_id)
     else:
-        return jsonify("Unhandled state"), 501
+        ret = ExecutionInfo(ExecutionState.Undefined)  # TODO this is unhandled state - log it
 
     return jsonify(ret.to_dict()), 200
 
@@ -840,7 +945,7 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_execution_rest_proxy.version(),
-        "0.7.0",
+        "0.8.0",
         PORT,
         [SummaryPackage, ExecutionInfo, Token],
         args.swagger,
