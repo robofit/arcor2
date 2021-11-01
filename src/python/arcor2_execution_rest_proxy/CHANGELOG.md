@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.15.0] - WIP
+
+### Changed
+
+- Added API for setting and getting breakpoints.
+  - Breakpoints are cleared when package is normally started or deleted.
+  - Breakpoints can be only set when there is no running package.
+- API version changed to 0.8.0.
+
 ## [0.14.0] - 2021-10-25
 
 ### Changed
