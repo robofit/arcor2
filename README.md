@@ -154,7 +154,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2021-11-01: [0.19.1](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.19.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.19.1), [pypi](https://pypi.org/project/arcor2-execution/0.19.1/)).
+ - 2021-11-08: [0.19.2](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.19.2) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.19.2), [pypi](https://pypi.org/project/arcor2-execution/0.19.2/)).
  
 ### arcor2_execution_data
 
@@ -166,7 +166,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_execution_rest_proxy/README.md) | [CHANGELOG](src/python/arcor2_execution_rest_proxy/CHANGELOG.md)
 
- - 2021-11-02: [0.15.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F0.15.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution_proxy/tags?page=1&ordering=last_updated&name=0.15.0), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/0.15.0/)).
+ - 2021-11-08: [0.15.1](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F0.15.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution_proxy/tags?page=1&ordering=last_updated&name=0.15.1), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/0.15.1/)).
  
 ### arcor2_fit_demo
 
@@ -202,7 +202,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 ### arcor2_runtime
 
- - 2021-11-01: [0.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F0.2.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_runtime/tags?page=1&ordering=last_updated&name=0.2.0)).
+ - 2021-11-08: [0.2.1](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F0.2.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_runtime/tags?page=1&ordering=last_updated&name=0.2.1)).
  
  ## Publications
  
