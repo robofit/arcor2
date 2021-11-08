@@ -7,7 +7,7 @@ from types import TracebackType
 from typing import Dict, List, Optional, Set, Type, TypeVar
 
 import humps
-from arcor2_runtime import action
+from arcor2_runtime import action, package
 from arcor2_runtime.action import AP_ID_ATTR, patch_object_actions, patch_with_action_mapping, print_event
 from arcor2_runtime.arguments import parse_args
 from arcor2_runtime.events import RobotEef, RobotJoints
@@ -25,7 +25,6 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, MultiArmRobot, Robot
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
-from arcor2_execution_data import package
 
 
 class ResourcesException(Arcor2Exception):
