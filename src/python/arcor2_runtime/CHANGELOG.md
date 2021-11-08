@@ -1,3 +1,13 @@
+# Changelog
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+
+## [0.2.1] - 2021-11-08
+
+## Fixed
+
+- Fixed mutual dependency between `arcor2_execution_data` and `arcor2_runtime` (`package.py` moved to `arcor2_runtime`).
+
 ## [0.2.0] - 2021-11-01
 ### Changed
 - There is a new parameter `apply_action_mapping` allowing to disable application of action mapping.
