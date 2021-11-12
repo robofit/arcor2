@@ -28,7 +28,9 @@ from arcor2.parameter_plugins.base import TypesDict
 
 
 class ResourcesException(Arcor2Exception):
-    pass
+    def __init__(self, message: str, exceptions: Optional[List[Arcor2Exception]] = None):
+        super().__init__(message)
+        self.exceptions = exceptions
 
 
 CUSTOM_OBJECT_TYPES_MODULE = "object_types"
@@ -192,9 +194,9 @@ class Resources:
             elif issubclass(cls, Generic):
                 futures.append(self.executor.submit(cls, scene_obj.id, scene_obj.name, settings))
             else:
-                raise Arcor2Exception("Unknown base class.")
+                raise Arcor2Exception(f"{cls.__name__} has unknown base class.")
 
-        exception_cnt: int = 0
+        exceptions: List[Arcor2Exception] = []
 
         self.objects: Dict[str, Generic] = {}
 
@@ -203,13 +205,13 @@ class Resources:
                 inst = f.result()  # if an object creation resulted in exception, it will be raised here
             except Arcor2Exception as e:
                 print_exception(e)
-                exception_cnt += 1  # count of objects that failed to initialize
+                exceptions.append(e)
             else:
                 self.objects[inst.id] = inst  # successfully initialized objects
 
-        if exception_cnt:  # if something failed, tear down those that succeeded and stop
+        if exceptions:  # if something failed, tear down those that succeeded and stop
             self.cleanup_all_objects()
-            raise Arcor2Exception(f"Failed to initialize {exception_cnt} object(s).")
+            raise ResourcesException(" ".join([str(e) for e in exceptions]), exceptions)
 
         scene_service.start()
 
