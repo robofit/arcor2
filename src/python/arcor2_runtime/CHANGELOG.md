@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.2.2] - WIP
+
+## Fixed
+
+- Propagate error messages and related underlying exceptions when the initialization of objects fails.
+
 ## [0.2.1] - 2021-11-08
 
 ## Fixed
