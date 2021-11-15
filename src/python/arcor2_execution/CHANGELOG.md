@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.19.3] - WIP
+
+## Fixed
+
+- Improved handling of script/objects initialization failures (`arcor2_runtime`). 
+
 ## [0.19.2] - 2021-11-08
 
 ## Fixed
