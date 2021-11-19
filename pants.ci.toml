@@ -2,5 +2,5 @@
 pantsd = false
 process_execution_local_parallelism = 2
 
-[python-setup]
+[python]
 resolver_jobs = 1

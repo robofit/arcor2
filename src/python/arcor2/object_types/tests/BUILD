@@ -3,3 +3,7 @@ python_tests(
         "src/python/arcor2_mocks/scripts:mock_scene",
     ]
 )
+
+python_test_utils(
+    name="test_utils",
+)

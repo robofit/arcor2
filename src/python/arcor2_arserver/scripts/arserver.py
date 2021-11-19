@@ -111,8 +111,8 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                 resp = rpc_cls.Response.from_dict(msg)
                 exe.MANAGER_RPC_RESPONSES[resp.id].put_nowait(resp)
 
-    except websockets.exceptions.ConnectionClosed:
-        logger.error("Connection to manager closed.")
+    except websockets.exceptions.ConnectionClosed as e:
+        logger.error(f"Connection to manager closed. {str(e)}")
 
 
 async def _initialize_server() -> None:

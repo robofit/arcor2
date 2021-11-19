@@ -2,7 +2,6 @@ import json
 import logging
 from typing import List, Optional, Tuple, Type, Union
 
-import pkg_resources  # noqa  # https://github.com/marshmallow-code/apispec-webframeworks/issues/99
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
 from dataclasses_jsonschema import JsonSchemaMixin

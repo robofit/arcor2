@@ -6,6 +6,9 @@ python_tests(
         "src/python/arcor2_build/scripts:build",
         "src/python/arcor2_execution/scripts:execution",
         "src/python/arcor2_arserver/scripts:arserver"
-    ],
-    dependencies = ["3rdparty:setuptools"],  # https://github.com/p1c2u/openapi-spec-validator/issues/133
+    ]
+)
+
+python_test_utils(
+    name="test_utils",
 )

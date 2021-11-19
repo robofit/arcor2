@@ -40,6 +40,9 @@ jobs:
     - name: bootstrap
       run: |
         ./pants --version
+    #- name: Check BUILD files
+    #  run: |
+    #    ./pants update-build-files --check
     - name: install system dependencies
       run: |
         ./build-support/install_kinect_prerequisites.sh
@@ -48,7 +51,7 @@ jobs:
         ./pants --changed-since=origin/master lint
     - name: Typecheck
       run: |
-        ./pants typecheck --changed-since=origin/master --changed-dependees=transitive
+        ./pants check --changed-since=origin/master --changed-dependees=transitive
     - name: Test
       run: |
         ./pants --changed-since=origin/master --changed-dependees=transitive test
