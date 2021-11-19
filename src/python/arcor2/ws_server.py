@@ -45,7 +45,6 @@ async def send_json_to_client(client: WsClient, data: str) -> None:
 
 async def server(
     client: Any,
-    path: str,
     logger: Any,
     register: Callable[[Any], Awaitable[None]],
     unregister: Callable[[Any], Awaitable[None]],

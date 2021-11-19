@@ -1,4 +1,4 @@
-python_library()
+python_sources()
 
 arcor2_pex_binary(
     name = "kinect_azure",
