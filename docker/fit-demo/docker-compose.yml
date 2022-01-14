@@ -53,7 +53,7 @@ services:
         - fit-demo-execution:/root/project
 
   fit-demo-kinect:
-    image: arcor2/arcor2_kinect_azure:0.4.0
+    image: arcor2/arcor2_kinect_azure:0.3.0
     container_name: fit-demo-kinect
     networks:
       - fit-demo-kinect-network

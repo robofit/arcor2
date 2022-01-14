@@ -80,8 +80,9 @@ class MODE_PTP(IntEnum):
     JUMP_MOVL_XYZ = 0x09
 
 
-STEP_PER_CIRCLE = 360.0 / 1.8 * 10.0 * 16.0
-MM_PER_CIRCLE = 3.1415926535898 * 36.0
+STEP_PER_CIRCLE = 360.0 / 1.8 * 10.0 * 16.0  # TODO how was this calculated?
+MM_PER_CIRCLE = 3.1415926535898 * 36.0  # pi * diameter of c.b.'s shaft
+HUNGARIAN_CONSTANT = 1.893  # to correct c.b. distance (obtained by measurement)
 
 
 class DobotApiException(Exception):
@@ -706,13 +707,13 @@ class DobotApi:
         self.wait_for_cmd(self._extract_cmd_index(self._set_ptp_coordinate_params(velocity, acceleration)))
 
     def conveyor_belt(self, speed: float, direction: int = 1, interface: int = 0) -> None:
-        if 0.0 <= speed <= 1.0 and (direction == 1 or direction == -1):
-            motor_speed = 70 * speed * STEP_PER_CIRCLE / MM_PER_CIRCLE * direction
-            self._set_stepper_motor(motor_speed, interface)
+        if 0.0 <= speed <= 100.0 and (direction == 1 or direction == -1):
+            motor_speed = speed * STEP_PER_CIRCLE / MM_PER_CIRCLE * direction
+            self._set_stepper_motor(int(motor_speed), interface)
         else:
             raise DobotApiException("Wrong Parameter")
 
-    def _set_stepper_motor(self, speed: float, interface: int = 0, motor_control=True) -> Message:
+    def _set_stepper_motor(self, speed: int, interface: int = 0, motor_control=True) -> Message:
         msg = Message()
         msg.id = 0x87
         msg.ctrl = 0x03
@@ -728,12 +729,13 @@ class DobotApi:
         msg.params.extend(bytearray(struct.pack("i", speed)))
         return self._send_command(msg)
 
-    def conveyor_belt_distance(self, speed: float, distance: int, direction: int = 1, interface: int = 0) -> None:
+    def conveyor_belt_distance(self, speed: float, distance: float, direction: int = 1, interface: int = 0) -> None:
         if 0.0 <= speed <= 100.0 and (direction == 1 or direction == -1):
             motor_speed = speed * STEP_PER_CIRCLE / MM_PER_CIRCLE * direction
-            self._set_stepper_motor_distance(int(motor_speed), distance, interface)
+            steps = (distance * STEP_PER_CIRCLE / MM_PER_CIRCLE) / HUNGARIAN_CONSTANT
+            self._set_stepper_motor_distance(int(motor_speed), int(steps), interface)
         else:
-            raise DobotApiException("Wrong Parameter")
+            raise DobotApiException("Wrong conveyor belt parameters.")
 
     def _set_stepper_motor_distance(
         self, speed: int, distance: int, interface: int = 0, motor_control: bool = True

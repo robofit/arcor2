@@ -144,6 +144,98 @@ def get_started() -> RespT:
     return jsonify(started())
 
 
+@app.route("/conveyor/speed", methods=["PUT"])
+@requires_started
+def put_conveyor_speed() -> RespT:
+    """Set the conveyor belt speed.
+    ---
+    put:
+        description: Set the conveyor belt speed.
+        tags:
+           - Conveyor Belt
+        parameters:
+            - name: velocity
+              in: query
+              schema:
+                type: number
+                default: 50.0
+                format: float
+                minimum: 0
+                maximum: 100
+            - in: query
+              name: direction
+              schema:
+                type: string
+                default: forward
+                enum:
+                    - forward
+                    - backwards
+              description: Direction
+        responses:
+            204:
+              description: Ok
+            403:
+              description: Not started
+    """
+
+    speed = float(request.args.get("velocity", default=50.0))
+    direction = request.args.get("direction", default="forward")
+
+    assert _dobot is not None
+    _dobot.conveyor_speed(speed, 1 if direction == "forward" else -1)
+    return Response(status=204)
+
+
+@app.route("/conveyor/distance", methods=["PUT"])
+@requires_started
+def put_conveyor_distance() -> RespT:
+    """Set the conveyor belt distance.
+    ---
+    put:
+        description: Set the conveyor belt distance.
+        tags:
+           - Conveyor Belt
+        parameters:
+            - name: velocity
+              in: query
+              schema:
+                type: number
+                default: 50.0
+                format: float
+                minimum: 0
+                maximum: 100
+            - name: distance
+              in: query
+              schema:
+                type: number
+                default: 0.1
+                format: float
+                minimum: 0
+            - in: query
+              name: direction
+              schema:
+                type: string
+                default: forward
+                enum:
+                    - forward
+                    - backwards
+              description: Direction
+        responses:
+            204:
+              description: Ok
+            403:
+              description: Not started
+    """
+
+    speed = float(request.args.get("velocity", default=50.0))
+    direction = request.args.get("direction", default="forward")
+    distance = float(request.args.get("distance", default=0.1))
+
+    assert _dobot is not None
+    _dobot.conveyor_distance(speed, distance * 1000, 1 if direction == "forward" else -1)
+    return Response(status=204)
+
+
 @app.route("/eef/pose", methods=["GET"])
 @requires_started
 def get_eef_pose() -> RespT:
