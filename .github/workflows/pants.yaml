@@ -46,6 +46,7 @@ jobs:
     - name: install system dependencies
       run: |
         ./build-support/install_kinect_prerequisites.sh
+        sudo apt install jq
     - name: Lint
       run: |
         ./pants --changed-since=origin/master lint

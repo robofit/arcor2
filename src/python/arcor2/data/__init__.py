@@ -58,7 +58,7 @@ def compile_json_schemas() -> None:
 
     from arcor2 import data
 
-    for _, module_name, _ in pkgutil.iter_modules(data.__path__):  # type: ignore
+    for _, module_name, _ in pkgutil.iter_modules(data.__path__):
 
         module = importlib.import_module(f"{data.__name__}.{module_name}")
 

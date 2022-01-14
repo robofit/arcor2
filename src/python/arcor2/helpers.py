@@ -147,6 +147,9 @@ def import_type_def(type_name: str, output_type: Type[T], path: str, module_name
             f"Error occurred when importing '{module_name}.{type_file}'. {str(e).capitalize()}."
         ) from e
 
+    if not module.__file__:
+        raise ImportClsException(f"Can't get file for '{module_name}.{type_file}'.")
+
     path_to_file = os.path.abspath(module.__file__)
     assert os.path.exists(path_to_file), f"Path {path_to_file} does not exist."
 
