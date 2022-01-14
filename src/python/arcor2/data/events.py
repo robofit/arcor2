@@ -118,8 +118,14 @@ class ActionStateBefore(Event):
     @dataclass
     class Data(JsonSchemaMixin):
 
-        action_id: str
-        parameters: list[str]
+        # required for projects with logic (where actions are defined in the project)
+        # might be also filled for projects without logic
+        action_id: Optional[str] = None
+        parameters: Optional[list[str]] = None
+
+        # required for projects with logic
+        # might or might not be set in other cases
+        action_point_ids: Optional[set[str]] = None
 
     data: Data
 

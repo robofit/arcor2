@@ -26,7 +26,7 @@ from werkzeug.utils import secure_filename
 from arcor2 import json
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
-from arcor2.data.events import PackageInfo, PackageState, ProjectException
+from arcor2.data.events import ActionStateAfter, ActionStateBefore, PackageInfo, PackageState, ProjectException
 from arcor2.data.rpc import get_id
 from arcor2.flask import RespT, create_app, run_app
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
@@ -78,6 +78,7 @@ class ExecutionInfo(JsonSchemaMixin):
     state: ExecutionState
     activePackageId: Optional[str] = None
     exceptionMessage: Optional[str] = None
+    actionPointIds: Optional[set[str]] = None
 
 
 @dataclass
@@ -108,6 +109,11 @@ package_state: PackageState.Data = PackageState.Data()
 package_info: Optional[PackageInfo.Data] = None
 exception_messages: list[str] = []
 
+# hold last action state for AP visualization
+# do not unset ActionStateBefore event, this information might be used even after ActionStateAfter event
+action_state_before: Optional[ActionStateBefore.Data] = None
+action_state_after: Optional[ActionStateAfter.Data] = None
+
 breakpoints: dict[str, set[str]] = {}
 
 
@@ -124,6 +130,8 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
 
     global package_info
     global package_state
+    global action_state_before
+    global action_state_after
     assert ws
 
     event_mapping: dict[str, type[events.Event]] = {evt.__name__: evt for evt in EVENTS}
@@ -150,6 +158,13 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
 
             elif isinstance(evt, ProjectException):
                 exception_messages.append(evt.data.message)
+            elif isinstance(evt, ActionStateBefore):
+                # assume ActionStateBefore event to be fired always before ActionStateAfter
+                # thus ActionStateBefore here belong to previous action - unset it
+                action_state_after = None
+                action_state_before = evt.data
+            elif isinstance(evt, ActionStateAfter):
+                action_state_after = evt.data
 
         elif "response" in data:
             resp = rpc_mapping[data["response"]].Response.from_dict(data)
@@ -919,6 +934,9 @@ def packages_executioninfo() -> RespT:
             ret = ExecutionInfo(ExecutionState.Completed, package_state.package_id)
     else:
         ret = ExecutionInfo(ExecutionState.Undefined)  # TODO this is unhandled state - log it
+
+    if action_state_before is not None:
+        ret.actionPointIds = action_state_before.action_point_ids
 
     return jsonify(ret.to_dict()), 200
 
