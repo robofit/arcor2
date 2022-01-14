@@ -47,7 +47,7 @@ def test_global_aps_cls() -> None:
     exec(src, my_module.__dict__)
     sys.modules["my_module"] = my_module
 
-    aps = my_module.ActionPoints(SimResources(cproj))  # type: ignore
+    aps = my_module.ActionPoints(SimResources(cproj))
 
     assert aps.ap1.position == pos
     assert aps.ap1.position is not pos

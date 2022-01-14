@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.8.0"
+pants_version = "2.9.0"
 colors = true
 process_execution_local_parallelism = 4
 
@@ -31,10 +31,12 @@ root_patterns = [
 [python]
 interpreter_constraints = ["==3.8.*"]  # can't use 3.9 yet because of https://github.com/intel-isl/Open3D/issues/3065
 requirement_constraints = "3rdparty/constraints.txt"
-interpreter_search_paths = ["<PATH>", "/usr/bin/python3.8"]
+
+[python-bootstrap]
+search_path = ["<PATH>", "/usr/bin/python3.8"]
 
 [black]
-version = "black==21.11b1"
+version = "black==21.12b0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
@@ -51,7 +53,7 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.910"
+version = "mypy==0.931"
 extra_requirements.add = [
   "numpy",
   "types-requests",

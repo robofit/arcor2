@@ -489,22 +489,24 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
+    ensure_scene_started()
+
+    if not req.args.camera_id:
+        for obj in glob.SCENE_OBJECT_INSTANCES.values():
+            if isinstance(obj, Camera):
+                req.args.camera_id = obj.id
+                break
+        else:
+            raise Arcor2Exception("No camera found.")
+
     async with ctx_write_lock(req.args.camera_id, user_name, auto_unlock=False):
-        ensure_scene_started()
+
         robot_inst = get_robot_instance(req.args.robot_id)
 
         if not robot_inst.urdf_package_name:
             raise Arcor2Exception("Robot with model required!")
 
-        if req.args.camera_id:
-            camera_inst = get_instance(req.args.camera_id, Camera)
-        else:
-            for obj in glob.SCENE_OBJECT_INSTANCES.values():
-                if isinstance(obj, Camera):
-                    camera_inst = obj
-                    break
-            else:
-                raise Arcor2Exception("No camera found.")
+        camera_inst = get_instance(req.args.camera_id, Camera)
 
         if camera_inst.color_camera_params is None:
             raise Arcor2Exception("Calibrated camera required!")

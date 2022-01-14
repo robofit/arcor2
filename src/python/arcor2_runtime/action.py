@@ -65,7 +65,6 @@ try:
 
             time.sleep(timeout / 100.0)
 
-
 except ImportError:
 
     # Linux solution

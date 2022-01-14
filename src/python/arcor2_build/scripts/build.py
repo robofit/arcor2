@@ -299,7 +299,7 @@ def read_str_from_zip(zip_file: zipfile.ZipFile, file_name: str) -> str:
 
 def read_dc_from_zip(zip_file: zipfile.ZipFile, file_name: str, cls: Type[T]) -> T:
 
-    return cls.from_dict(humps.decamelize(json.loads(read_str_from_zip(zip_file, file_name))))
+    return cls.from_dict(humps.decamelize(json.loads_type(read_str_from_zip(zip_file, file_name), dict)))
 
 
 @app.route("/project/import", methods=["PUT"])

@@ -199,7 +199,7 @@ def main() -> None:
     for lib in (json, orjson):
         start = time.monotonic()
         for _ in range(iterations):
-            lib.loads(data)  # type: ignore
+            lib.loads(data)
         end = time.monotonic()
 
         print(f"{lib.__name__}.loads: {(end-start)*1000:.3f}ms")
@@ -209,7 +209,7 @@ def main() -> None:
     for lib in (json, orjson):
         start = time.monotonic()
         for _ in range(iterations):
-            lib.loads(comp_data)  # type: ignore
+            lib.loads(comp_data)
         end = time.monotonic()
 
         print(f"{lib.__name__}.loads (comp): {(end-start)*1000:.3f}ms")

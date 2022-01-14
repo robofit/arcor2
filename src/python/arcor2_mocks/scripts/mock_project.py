@@ -191,6 +191,9 @@ def put_project() -> RespT:
                     $ref: WebApiError
     """
 
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Project.", error_code=400)
+
     project = common.Project.from_dict(humps.decamelize(request.json))
 
     if project.scene_id not in SCENES:
@@ -341,6 +344,9 @@ def put_scene() -> RespT:
                     $ref: WebApiError
     """
 
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Scene.", error_code=400)
+
     scene = common.Scene.from_dict(humps.decamelize(request.json))
 
     for obj in scene.objects:
@@ -487,6 +493,9 @@ def put_object_type() -> RespT:
                     type: string
                     format: date-time
     """
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing ObjectType.", error_code=400)
 
     obj_type = object_type.ObjectType.from_dict(humps.decamelize(request.json))
     obj_type.modified = datetime.now(tz=timezone.utc)
@@ -657,8 +666,7 @@ def put_box() -> RespT:
     if not isinstance(request.json, dict):
         raise FlaskException("Body should be a JSON dict containing Box.", error_code=400)
 
-    # box = object_type.Box.from_dict(humps.decamelize(request.json))  # TODO disabled because of bug in pyhumps
-    box = object_type.Box(request.json["id"], request.json["sizeX"], request.json["sizeY"], request.json["sizeZ"])
+    box = object_type.Box.from_dict(humps.decamelize(request.json))
     BOXES[box.id] = box
     return Response(status=200)
 
@@ -716,6 +724,9 @@ def put_cylinder() -> RespT:
             200:
               description: Ok
     """
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Cylinder.", error_code=400)
 
     cylinder = object_type.Cylinder.from_dict(humps.decamelize(request.json))
     CYLINDERS[cylinder.id] = cylinder
@@ -776,6 +787,9 @@ def put_sphere() -> RespT:
               description: Ok
     """
 
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Sphere.", error_code=400)
+
     sphere = object_type.Sphere.from_dict(humps.decamelize(request.json))
     SPHERES[sphere.id] = sphere
     return Response(status=200)
@@ -834,6 +848,9 @@ def put_mesh() -> RespT:
             200:
               description: Ok
     """
+
+    if not isinstance(request.json, dict):
+        raise FlaskException("Body should be a JSON dict containing Mesh.", error_code=400)
 
     mesh = object_type.Mesh.from_dict(humps.decamelize(request.json))
     MESHES[mesh.id] = mesh

@@ -239,6 +239,8 @@ def call(
     if return_type is None:
         return_type = list_return_type
 
+    d: Union[List[Any], Dict[str, Any]] = {}
+
     # prepare data into dict
     if isinstance(body, JsonSchemaMixin):
         d = humps.camelize(body.to_dict())
@@ -251,8 +253,6 @@ def call(
                 d.append(dd)
     elif body is not None:
         raise RestException("Unsupported type of data.")
-    else:
-        d = {}
 
     if params:
         params = humps.camelize(params)
@@ -319,15 +319,6 @@ def call(
 
         else:
             assert not isinstance(resp_json, list)
-
-            # TODO temporary workaround for bug in humps (https://github.com/nficano/humps/issues/127)
-            from arcor2.data.object_type import Box
-
-            if return_type is Box:
-                resp_json["size_x"] = resp_json["sizex"]
-                resp_json["size_y"] = resp_json["sizey"]
-                resp_json["size_z"] = resp_json["sizez"]
-
             return dataclass_from_json(resp_json, return_type)
 
     else:  # probably a primitive

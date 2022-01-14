@@ -35,11 +35,13 @@ class CachedBase:
 
 class UpdateableMixin:
 
-    __slots__ = ()
-
     if TYPE_CHECKING:
+        __slots__ = "modified", "int_modified"
+
         modified: Optional[datetime] = None
         int_modified: Optional[datetime] = None
+    else:
+        __slots__ = ()
 
     def update_modified(self) -> None:
         self.int_modified = datetime.now(tz=timezone.utc)
