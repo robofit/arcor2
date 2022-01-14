@@ -152,7 +152,6 @@ def action(f: F) -> F:
         handle_actions = hasattr(args[0], ACTION_NAME_ID_MAPPING_ATTR)
 
         if handle_actions:  # if not set, ignore everything
-
             if _executed_action and an:
                 raise Arcor2Exception("Inner actions should not have name specified.")
 
@@ -172,31 +171,33 @@ def action(f: F) -> F:
                 _executed_action = None
                 raise Arcor2Exception(msg)
 
-            if action_id:  # can't do much without action_id
-                print_event(
-                    ActionStateBefore(
-                        ActionStateBefore.Data(
-                            # TODO deal with kwargs parameters
-                            action_id,
-                            [plugin_from_instance(arg).value_to_json(arg) for arg in action_args],
-                        )
-                    )
-                )
+            if action_id and _executed_action is None:
+                _executed_action = action_id, f
 
-                if _executed_action is None:
-                    _executed_action = action_id, f
-
-        make_a_break = False
-        if breakpoints:
-            for aa in action_args:
-                try:
-                    if (isinstance(aa, Pose) and getattr(aa.position, AP_ID_ATTR) in breakpoints) or (
-                        isinstance(aa, ProjectRobotJoints) and getattr(aa, AP_ID_ATTR) in breakpoints
-                    ):
-                        make_a_break = True
-                        break
-                except AttributeError:
+        # collect action point ids, ignore missing
+        action_point_ids: set[str] = set()
+        for aa in action_args:
+            try:
+                if isinstance(aa, Pose) or isinstance(aa, ProjectRobotJoints):
+                    action_point_ids.add(getattr(aa, AP_ID_ATTR))
+            except AttributeError:
+                if breakpoints:
                     raise Arcor2Exception("Orientations/Joints not patched. Breakpoints won't work!")
+
+        # validate if break is required
+        make_a_break = bool(breakpoints and breakpoints.intersection(action_point_ids))
+
+        # dispatch ActionStateBefore event for every action
+        print_event(
+            ActionStateBefore(
+                ActionStateBefore.Data(
+                    # TODO deal with kwargs parameters
+                    action_id,
+                    [plugin_from_instance(arg).value_to_json(arg) for arg in action_args],
+                    action_point_ids,
+                )
+            )
+        )
 
         handle_stdin_commands(before=True, breakpoint=make_a_break)
 

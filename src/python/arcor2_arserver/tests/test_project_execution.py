@@ -168,6 +168,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     act_state_before = event(ars, arcor2_events.ActionStateBefore).data
     assert act_state_before
     assert act_state_before.action_id == action.id
+    assert act_state_before.parameters
     assert len(act_state_before.parameters) == 2
 
     act_state_after = event(ars, arcor2_events.ActionStateAfter).data
@@ -181,6 +182,7 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     act2_state_before = event(ars, arcor2_events.ActionStateBefore).data
     assert act2_state_before
     assert act2_state_before.action_id == action2.id
+    assert act2_state_before.parameters
     assert len(act2_state_before.parameters) == 1
 
     act2_state_after = event(ars, arcor2_events.ActionStateAfter).data
