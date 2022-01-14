@@ -66,8 +66,17 @@ class Dobot(metaclass=ABCMeta):
 
     def cleanup(self) -> None:
 
+        self.conveyor_speed(0)
+        self.release()
+
         if not self.simulator:
             self._dobot.close()
+
+    def conveyor_speed(self, speed: float, direction: int = 1) -> None:
+        self._dobot.conveyor_belt(speed, direction)
+
+    def conveyor_distance(self, speed: float, distance: float, direction: int = 1) -> None:
+        self._dobot.conveyor_belt_distance(speed, distance, direction)
 
     @property
     def hand_teaching_mode(self) -> bool:

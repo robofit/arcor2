@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.4.0] - WIP
+
+### Added
+
+- Support for conveyor belt.
+
+### Changed
+
+- Suction is switched off during `stop`.
+
 ## [0.3.0] - 2021-10-25
 
 ### Changed

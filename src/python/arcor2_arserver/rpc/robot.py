@@ -42,6 +42,9 @@ EEF_POSE_TASKS: TaskDict = {}
 
 EVENT_PERIOD = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
 
+if EVENT_PERIOD <= 0:
+    EVENT_PERIOD = 0.1
+
 
 async def robot_joints_event(robot_inst: Robot) -> None:
 
