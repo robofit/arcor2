@@ -6,7 +6,7 @@
 # {
 #   "version": 2,
 #   "valid_for_interpreter_constraints": [
-#     "CPython==3.8.*"
+#     "CPython==3.9.*"
 #   ],
 #   "generated_with_requirements": [
 #     "flake8-annotations-coverage",

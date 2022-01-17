@@ -15,12 +15,12 @@ def arcor2_setup_py(**kwargs):
                 "Intended Audience :: Developers",
                 "Topic :: Software Development :: Build Tools",
                 "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-                "Programming Language :: Python :: 3.8",
+                "Programming Language :: Python :: 3.9",
                 "Natural Language :: English",
                 "Topic :: Scientific/Engineering"
             ]
 
-    kwargs["python_requires"] = "==3.8.*"  # we support only Python 3.8
+    kwargs["python_requires"] = "==3.9.*"  # we support only Python 3.9
 
     return setup_py(**kwargs)
 
@@ -62,7 +62,7 @@ def arcor2_python_distribution(name: str, description: str, binaries=None, **kwa
 
     kwargs["sdist"] = True
     kwargs["wheel"] = True
-    kwargs["wheel_config_settings"] = {"--global-option": ["--python-tag", "py38"]}
+    kwargs["wheel_config_settings"] = {"--global-option": ["--python-tag", "py39"]}
 
     if binaries:
         kwargs["entry_points"] = {"console_scripts": binaries}
