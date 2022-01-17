@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, ClassVar, Iterator, List, NamedTuple, Optional, Set, TypeVar, cast
+from typing import Any, Iterator, List, NamedTuple, Optional, Set, TypeVar, cast
 
 import numpy as np
 import quaternion
@@ -584,8 +584,9 @@ class LogicItem(JsonSchemaMixin, ModelMixin):
         start_action_id: str
         start_flow: str
 
-    START: ClassVar[str] = "START"
-    END: ClassVar[str] = "END"
+    # TODO can't be ClassVar because of https://github.com/s-knibbs/dataclasses-jsonschema/issues/176
+    START = "START"
+    END = "END"
 
     start: str
     end: str

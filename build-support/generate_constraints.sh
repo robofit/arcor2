@@ -6,7 +6,7 @@ set -euo pipefail
 # see https://vsupalov.com/developing-with-python3-8-on-ubuntu-18-04/
 # also don't forget to run sudo apt install python3.8-venv python3.8-dev (otherwise ensurepip module won't be available)
 
-PYTHON_BIN=python3.8
+PYTHON_BIN=python3.9
 VIRTUALENV=build-support/.constr_venv
 PIP="${VIRTUALENV}/bin/pip"
 REQUIREMENTS_FILE=3rdparty/requirements.txt

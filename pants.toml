@@ -29,11 +29,11 @@ root_patterns = [
 ]
 
 [python]
-interpreter_constraints = ["==3.8.*"]  # can't use 3.9 yet because of https://github.com/intel-isl/Open3D/issues/3065
+interpreter_constraints = ["==3.9.*"]
 requirement_constraints = "3rdparty/constraints.txt"
 
 [python-bootstrap]
-search_path = ["<PATH>", "/usr/bin/python3.8"]
+search_path = ["<PATH>", "/usr/bin/python3.9"]
 
 [black]
 version = "black==21.12b0"

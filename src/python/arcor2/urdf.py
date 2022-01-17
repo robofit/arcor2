@@ -1,12 +1,19 @@
+import fractions
 import io
+import math
 import os
 import tempfile
 import zipfile
 
-from urdfpy import URDF
-
 from arcor2 import rest
 from arcor2.exceptions import Arcor2Exception
+
+# this is a workaround to make urdfpy/networkx happy under Python 3.9
+# TODO not sure if it really works in runtime, the best would be to solve https://github.com/mmatl/urdfpy/issues/4
+# or to switch to another package as proposed here https://github.com/robofit/arcor2/issues/706
+fractions.gcd = math.gcd  # type: ignore
+
+from urdfpy import URDF  # noqa
 
 
 class Arcor2UrdfException(Arcor2Exception):
