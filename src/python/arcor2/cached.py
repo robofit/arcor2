@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Set, Tuple, Union, ValuesView
+from typing import TYPE_CHECKING, Iterator, Optional, Union, ValuesView
 
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
@@ -76,7 +76,7 @@ class CachedScene(CachedBase):
 
         super().__init__(scene)
 
-        self._objects: Dict[str, cmn.SceneObject] = {}
+        self._objects: dict[str, cmn.SceneObject] = {}
 
         if isinstance(scene, CachedScene):
             self._objects = scene._objects
@@ -108,7 +108,7 @@ class CachedScene(CachedBase):
             yield obj
 
     @property
-    def object_ids(self) -> Set[str]:
+    def object_ids(self) -> set[str]:
         return set(self._objects)
 
     def object(self, object_id: str) -> cmn.SceneObject:
@@ -125,7 +125,7 @@ class CachedScene(CachedBase):
                 yield obj
 
     @property
-    def object_types(self) -> Set[str]:
+    def object_types(self) -> set[str]:
         assert self._object_types == {obj.type for obj in self.objects}
         return self._object_types
 
@@ -226,21 +226,21 @@ class CachedProject(CachedBase):
 
         self.scene_id: str = project.scene_id
         self.has_logic: bool = project.has_logic
-        self.project_objects_ids: Optional[List[str]] = project.project_objects_ids
+        self.project_objects_ids: Optional[list[str]] = project.project_objects_ids
 
-        self._action_points: Dict[str, cmn.BareActionPoint] = {}
+        self._action_points: dict[str, cmn.BareActionPoint] = {}
 
-        self._actions: Dict[str, ApAction] = {}
-        self._joints: Dict[str, ApJoints] = {}
-        self._orientations: Dict[str, ApOrientation] = {}
+        self._actions: dict[str, ApAction] = {}
+        self._joints: dict[str, ApJoints] = {}
+        self._orientations: dict[str, ApOrientation] = {}
 
-        self._parameters: Dict[str, cmn.ProjectParameter] = {}
-        self._logic_items: Dict[str, cmn.LogicItem] = {}
-        self._functions: Dict[str, cmn.ProjectFunction] = {}
+        self._parameters: dict[str, cmn.ProjectParameter] = {}
+        self._logic_items: dict[str, cmn.LogicItem] = {}
+        self._functions: dict[str, cmn.ProjectFunction] = {}
 
-        self.overrides: Dict[str, List[cmn.Parameter]] = {}
+        self.overrides: dict[str, list[cmn.Parameter]] = {}
 
-        self._childs: Dict[str, Set[str]] = {}
+        self._childs: dict[str, set[str]] = {}
 
         if isinstance(project, CachedProject):
             self._action_points = project._action_points
@@ -305,7 +305,7 @@ class CachedProject(CachedBase):
         return self._logic_items.values()
 
     @property
-    def valid_logic_endpoints(self) -> Set[str]:
+    def valid_logic_endpoints(self) -> set[str]:
         return {cmn.LogicItem.START, cmn.LogicItem.END} | self._logic_items.keys()
 
     @property
@@ -313,7 +313,7 @@ class CachedProject(CachedBase):
         return self._parameters.values()
 
     @property
-    def parameters_ids(self) -> Set[str]:
+    def parameters_ids(self) -> set[str]:
         return set(self._parameters)
 
     @property
@@ -358,7 +358,7 @@ class CachedProject(CachedBase):
         return self._action_points.values()
 
     @property
-    def action_points_with_parent(self) -> List[cmn.BareActionPoint]:
+    def action_points_with_parent(self) -> list[cmn.BareActionPoint]:
         """Get action points which are relative to something (parent is set).
 
         :return:
@@ -367,18 +367,18 @@ class CachedProject(CachedBase):
         return [ap for ap in self._action_points.values() if ap.parent]
 
     @property
-    def action_names(self) -> Set[str]:
+    def action_names(self) -> set[str]:
         return {value.action.name for value in self._actions.values()}
 
     @property
-    def action_points_names(self) -> Set[str]:
+    def action_points_names(self) -> set[str]:
         return {ap.name for ap in self._action_points.values()}
 
     @property
-    def action_points_ids(self) -> Set[str]:
+    def action_points_ids(self) -> set[str]:
         return set(self._action_points)
 
-    def ap_and_joints(self, joints_id: str) -> Tuple[cmn.BareActionPoint, cmn.ProjectRobotJoints]:
+    def ap_and_joints(self, joints_id: str) -> tuple[cmn.BareActionPoint, cmn.ProjectRobotJoints]:
 
         try:
             value = self._joints[joints_id]
@@ -394,7 +394,7 @@ class CachedProject(CachedBase):
         except KeyError:
             raise CachedProjectException("Unknown joints.")
 
-    def bare_ap_and_orientation(self, orientation_id: str) -> Tuple[cmn.BareActionPoint, cmn.NamedOrientation]:
+    def bare_ap_and_orientation(self, orientation_id: str) -> tuple[cmn.BareActionPoint, cmn.NamedOrientation]:
 
         try:
             value = self._orientations[orientation_id]
@@ -408,28 +408,28 @@ class CachedProject(CachedBase):
         ap, ori = self.bare_ap_and_orientation(orientation_id)
         return cmn.Pose(ap.position, ori.orientation)
 
-    def ap_orientations(self, ap_id: str) -> List[cmn.NamedOrientation]:
+    def ap_orientations(self, ap_id: str) -> list[cmn.NamedOrientation]:
 
         return [value.orientation for value in self._orientations.values() if ap_id == value.ap.id]
 
-    def ap_joints(self, ap_id: str) -> List[cmn.ProjectRobotJoints]:
+    def ap_joints(self, ap_id: str) -> list[cmn.ProjectRobotJoints]:
 
         return [value.joints for value in self._joints.values() if ap_id == value.ap.id]
 
-    def ap_actions(self, ap_id: str) -> List[cmn.Action]:
+    def ap_actions(self, ap_id: str) -> list[cmn.Action]:
 
         return [value.action for value in self._actions.values() if ap_id == value.ap.id]
 
-    def ap_action_ids(self, ap_id: str) -> Set[str]:
+    def ap_action_ids(self, ap_id: str) -> set[str]:
         return {ac.id for ac in self.ap_actions(ap_id)}
 
-    def ap_orientation_names(self, ap_id: str) -> Set[str]:
+    def ap_orientation_names(self, ap_id: str) -> set[str]:
         return {ori.name for ori in self.ap_orientations(ap_id)}
 
-    def ap_joint_names(self, ap_id: str) -> Set[str]:
+    def ap_joint_names(self, ap_id: str) -> set[str]:
         return {joints.name for joints in self.ap_joints(ap_id)}
 
-    def ap_action_names(self, ap_id: str) -> Set[str]:
+    def ap_action_names(self, ap_id: str) -> set[str]:
         return {action.name for action in self.ap_actions(ap_id)}
 
     def orientation(self, orientation_id: str) -> cmn.NamedOrientation:
@@ -446,7 +446,7 @@ class CachedProject(CachedBase):
         except KeyError:
             raise CachedProjectException("Action not found")
 
-    def action_io(self, action_id: str) -> Tuple[List[cmn.LogicItem], List[cmn.LogicItem]]:
+    def action_io(self, action_id: str) -> tuple[list[cmn.LogicItem], list[cmn.LogicItem]]:
         """Returns list of logical connection ending in the action (its inputs)
         and starting from the action (its outputs)
 
@@ -454,8 +454,8 @@ class CachedProject(CachedBase):
         :return:
         """
 
-        inputs: List[cmn.LogicItem] = []
-        outputs: List[cmn.LogicItem] = []
+        inputs: list[cmn.LogicItem] = []
+        outputs: list[cmn.LogicItem] = []
 
         for item in self._logic_items.values():
             parsed_start = item.parse_start()
@@ -485,7 +485,7 @@ class CachedProject(CachedBase):
 
         return first_action
 
-    def action_point_and_action(self, action_id: str) -> Tuple[cmn.BareActionPoint, cmn.Action]:
+    def action_point_and_action(self, action_id: str) -> tuple[cmn.BareActionPoint, cmn.Action]:
 
         try:
             value = self._actions[action_id]
@@ -495,10 +495,10 @@ class CachedProject(CachedBase):
         return value.ap, value.action
 
     @property
-    def actions(self) -> List[cmn.Action]:
+    def actions(self) -> list[cmn.Action]:
         return [value.action for value in self._actions.values()]
 
-    def action_ids(self) -> Set[str]:
+    def action_ids(self) -> set[str]:
         return set(self._actions)
 
     def bare_action_point(self, action_point_id: str) -> cmn.BareActionPoint:
@@ -570,7 +570,7 @@ class CachedProject(CachedBase):
                 self._childs[parent] = set()
             self._childs[parent].add(child)
 
-    def childs(self, obj_id: str, recursive: bool = False) -> Set[str]:
+    def childs(self, obj_id: str, recursive: bool = False) -> set[str]:
 
         try:
             ret = self._childs[obj_id]

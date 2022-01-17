@@ -1,12 +1,12 @@
 import re
 from argparse import ArgumentParser
-from typing import NamedTuple, Optional, Set
+from typing import NamedTuple, Optional
 
 
 class Arguments(NamedTuple):
 
     start_paused: bool = False
-    breakpoints: Optional[Set[str]] = None
+    breakpoints: Optional[set[str]] = None
 
 
 def parse_args() -> Arguments:

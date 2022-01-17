@@ -1,7 +1,6 @@
 import math
 import time
 from abc import ABCMeta, abstractmethod
-from typing import List
 
 import quaternion
 from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
@@ -52,7 +51,7 @@ class Dobot(metaclass=ABCMeta):
                 raise DobotApiException("Could not connect to the robot.") from e
 
         else:
-            self._joint_values: List[Joint] = []  # has to be set to some initial value in derived classes
+            self._joint_values: list[Joint] = []  # has to be set to some initial value in derived classes
             self._hand_teaching = False
 
     def alarms_to_exception(self) -> None:
@@ -87,13 +86,13 @@ class Dobot(metaclass=ABCMeta):
 
         self._dobot.set_hht_trig_output(value)
 
-    def _inverse_kinematics(self, pose: Pose) -> List[Joint]:
+    def _inverse_kinematics(self, pose: Pose) -> list[Joint]:
         raise Arcor2NotImplemented()
 
-    def inverse_kinematics(self, pose: Pose) -> List[Joint]:
+    def inverse_kinematics(self, pose: Pose) -> list[Joint]:
         raise Arcor2NotImplemented()
 
-    def forward_kinematics(self, joints: List[Joint]) -> Pose:
+    def forward_kinematics(self, joints: list[Joint]) -> Pose:
         raise Arcor2NotImplemented()
 
     def _handle_pose_out(self, pose: Pose) -> None:
@@ -223,5 +222,5 @@ class Dobot(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def robot_joints(self) -> List[Joint]:
+    def robot_joints(self) -> list[Joint]:
         pass

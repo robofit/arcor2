@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -24,8 +24,8 @@ class LockedObject:
     def __init__(self) -> None:
 
         # object id: owners
-        self.read: Dict[str, List[str]] = {}
-        self.write: Dict[str, str] = {}
+        self.read: dict[str, list[str]] = {}
+        self.write: dict[str, str] = {}
 
         self.tree: bool = False
 

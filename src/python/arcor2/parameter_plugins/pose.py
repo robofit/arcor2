@@ -1,6 +1,6 @@
 import copy
 from ast import Attribute, Load, Name
-from typing import Any, List
+from typing import Any
 
 from arcor2 import json
 from arcor2 import transformations as tr
@@ -75,7 +75,7 @@ class PosePlugin(ParameterPlugin):
 class PoseListPlugin(ListParameterPlugin):
     @classmethod
     def type(cls):
-        return List[Pose]
+        return list[Pose]
 
     @classmethod
     def type_name(cls) -> str:
@@ -84,9 +84,9 @@ class PoseListPlugin(ListParameterPlugin):
     @classmethod
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> List[Pose]:
+    ) -> list[Pose]:
 
-        ret: List[Pose] = []
+        ret: list[Pose] = []
 
         ap, action = project.action_point_and_action(action_id)
         parameter = action.parameter(parameter_id)
@@ -99,7 +99,7 @@ class PoseListPlugin(ListParameterPlugin):
     @classmethod
     def parameter_execution_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> List[Pose]:
+    ) -> list[Pose]:
 
         ap, action = project.action_point_and_action(action_id)
 
@@ -107,7 +107,7 @@ class PoseListPlugin(ListParameterPlugin):
             return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 
         parameter = action.parameter(parameter_id)
-        ret: List[Pose] = []
+        ret: list[Pose] = []
 
         for orientation_id in cls._param_value_list(parameter):
             ret.append(copy.deepcopy(tr.abs_pose_from_ap_orientation(scene, project, orientation_id)))
@@ -115,7 +115,7 @@ class PoseListPlugin(ListParameterPlugin):
         return ret
 
     @classmethod
-    def value_to_json(cls, value: List[Pose]) -> str:
+    def value_to_json(cls, value: list[Pose]) -> str:
         return json.dumps([v.to_json() for v in value])
 
     @classmethod

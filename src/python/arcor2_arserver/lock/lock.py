@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import AsyncGenerator, Iterable, Optional, Union
 
 from arcor2 import env
 from arcor2.cached import CachedProjectException, UpdateableCachedProject, UpdateableCachedScene
@@ -59,11 +59,11 @@ class Lock:
         self._object_types = obj_types
 
         self._lock: asyncio.Lock = asyncio.Lock()
-        self._locked_objects: Dict[str, LockedObject] = {}
-        self._release_tasks: Dict[str, asyncio.Task] = {}
+        self._locked_objects: dict[str, LockedObject] = {}
+        self._release_tasks: dict[str, asyncio.Task] = {}
 
         self.notifications_q: asyncio.Queue[LockEventData] = asyncio.Queue()
-        self._ui_user_locks: Dict[str, Set[str]] = {}
+        self._ui_user_locks: dict[str, set[str]] = {}
 
         self._lock_timeout: float = env.get_float("ARCOR2_ARSERVER_LOCK_TIMEOUT", 300)
         self._lock_retries: int = env.get_int("ARCOR2_ARSERVER_LOCK_RETRIES", 13)
@@ -101,7 +101,7 @@ class Lock:
         return self._project
 
     @property
-    def all_ui_locks(self) -> Dict[str, Set[str]]:
+    def all_ui_locks(self) -> dict[str, set[str]]:
         """All lock grayed-out in editor in format user: {obj_ids}"""
 
         return self._ui_user_locks
@@ -166,12 +166,12 @@ class Lock:
         async with self._lock:
             return self._read_lock(roots, obj_ids, owner)
 
-    def _read_lock(self, roots: List[str], obj_ids: Iterable[str], owner: str) -> bool:
+    def _read_lock(self, roots: list[str], obj_ids: Iterable[str], owner: str) -> bool:
         """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
-        locked: List[str] = []
+        locked: list[str] = []
         for i, obj_id in enumerate(obj_ids):
 
             if self._get_lock_record(roots[i]).read_lock(obj_id, owner):
@@ -195,7 +195,7 @@ class Lock:
         async with self._lock:
             self._read_unlock(roots, obj_ids, owner)
 
-    def _read_unlock(self, roots: List[str], obj_ids: List[str], owner: str) -> None:
+    def _read_unlock(self, roots: list[str], obj_ids: list[str], owner: str) -> None:
         """Private method when lock is already acquired."""
 
         assert self._lock.locked()
@@ -238,12 +238,12 @@ class Lock:
             self.notifications_q.put_nowait(LockEventData(ui_locked, owner, True))
         return ret
 
-    def _write_lock(self, roots: List[str], obj_ids: Iterable[str], owner: str, lock_tree: bool = False) -> bool:
+    def _write_lock(self, roots: list[str], obj_ids: Iterable[str], owner: str, lock_tree: bool = False) -> bool:
         """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
-        locked: List[str] = []
+        locked: list[str] = []
         for i, obj_id in enumerate(obj_ids):
 
             if self._get_lock_record(roots[i]).write_lock(obj_id, owner, lock_tree):
@@ -280,12 +280,12 @@ class Lock:
         if notify:
             self.notifications_q.put_nowait(LockEventData(ui_locked, owner))
 
-    def _write_unlock(self, roots: List[str], obj_ids: List[str], owner: str) -> List[bool]:
+    def _write_unlock(self, roots: list[str], obj_ids: list[str], owner: str) -> list[bool]:
         """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
-        ret: List[bool] = []
+        ret: list[bool] = []
         for i, obj_id in enumerate(obj_ids):
             lock_record = self._get_lock_record(roots[i])
             ret.append(lock_record.tree)
@@ -488,7 +488,7 @@ class Lock:
         if to_notify := self._ui_user_locks.pop(owner):
             self.notifications_q.put_nowait(LockEventData(to_notify, owner))
 
-    async def get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:
+    async def get_owner_locks(self, owner: str) -> tuple[dict[str, str], dict[str, str]]:
         """Finds which locks belongs to owner.
 
         :param owner: user name
@@ -498,13 +498,13 @@ class Lock:
         async with self._lock:
             return self._get_owner_locks(owner)
 
-    def _get_owner_locks(self, owner: str) -> Tuple[Dict[str, str], Dict[str, str]]:
+    def _get_owner_locks(self, owner: str) -> tuple[dict[str, str], dict[str, str]]:
         """Private method when lock is already acquired."""
 
         assert self._lock.locked()
 
-        read: Dict[str, str] = {}
-        write: Dict[str, str] = {}
+        read: dict[str, str] = {}
+        write: dict[str, str] = {}
 
         for root, data in self._locked_objects.items():
             for obj_id, owners in data.read.items():
@@ -541,7 +541,7 @@ class Lock:
             if not self._ui_user_locks[owner]:
                 del self._ui_user_locks[owner]
 
-    def get_all_children(self, obj_id: str) -> Set[str]:
+    def get_all_children(self, obj_id: str) -> set[str]:
         """Recursively find all children of object.
 
         :param obj_id: parent of all found children
@@ -549,13 +549,13 @@ class Lock:
 
         return self.project.childs(obj_id, recursive=True) if self.project else set()
 
-    def get_all_parents(self, obj_id: str) -> Set[str]:
+    def get_all_parents(self, obj_id: str) -> set[str]:
         """Recursively find all parents in tree.
 
         :param obj_id: object to search parents for
         """
 
-        parents: Set[str] = set()
+        parents: set[str] = set()
         if self.project:
             parent = self.project.get_parent_id(obj_id)
             while parent:
@@ -574,7 +574,7 @@ class Lock:
         :param owner: user who tries to remove object, returns true if user owns affected lock
         """
 
-        def check_children(_root: str, obj_ids: Set[str], read: bool = False) -> bool:
+        def check_children(_root: str, obj_ids: set[str], read: bool = False) -> bool:
             lock_item = self._locked_objects[_root]
             for _obj_id in obj_ids:
                 if read:

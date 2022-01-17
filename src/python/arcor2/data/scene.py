@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -10,8 +9,8 @@ from arcor2.exceptions import Arcor2Exception
 @dataclass
 class MeshFocusAction(JsonSchemaMixin):
 
-    mesh_focus_points: List[Position]
-    robot_space_points: List[Position]
+    mesh_focus_points: list[Position]
+    robot_space_points: list[Position]
 
     def __post_init__(self) -> None:
 

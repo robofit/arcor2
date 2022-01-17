@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -16,14 +16,14 @@ class ActionParamValues(RPC):
         class Args(JsonSchemaMixin):
             id: str = field(metadata=dict(description="Object or service id."))
             param_id: str
-            parent_params: List[IdValue] = field(default_factory=list)
+            parent_params: list[IdValue] = field(default_factory=list)
 
         args: Args
 
     @dataclass
     class Response(RPC.Response):
 
-        data: Optional[Set[str]] = None  # TODO what about other (possible) types than 'str'?
+        data: Optional[set[str]] = None  # TODO what about other (possible) types than 'str'?
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ class GetObjectTypes(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[List[ObjectTypeMeta]] = None
+        data: Optional[list[ObjectTypeMeta]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class DeleteObjectTypes(RPC):
     @dataclass
     class Request(RPC.Request):
 
-        args: Optional[Set[str]] = None  # None means all of them
+        args: Optional[set[str]] = None  # None means all of them
         dry_run: bool = False
 
     @dataclass
@@ -56,7 +56,7 @@ class DeleteObjectTypes(RPC):
             id: str
             error: str
 
-        data: Optional[List[Data]] = None  # list of types that can't be deleted
+        data: Optional[list[Data]] = None  # list of types that can't be deleted
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ class ObjectAimingAddPoint(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(JsonSchemaMixin):
-            finished_indexes: List[int]
+            finished_indexes: list[int]
 
         data: Optional[Data] = None
 
@@ -280,4 +280,4 @@ class ObjectTypeUsage(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None

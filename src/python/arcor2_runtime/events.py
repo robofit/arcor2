@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -12,7 +12,7 @@ class RobotJoints(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         robot_id: str
-        joints: List[Joint]
+        joints: list[Joint]
 
     data: Data
 
@@ -28,6 +28,6 @@ class RobotEef(Event):
             arm_id: Optional[str] = None
 
         robot_id: str
-        end_effectors: List[EefPose] = field(default_factory=list)
+        end_effectors: list[EefPose] = field(default_factory=list)
 
     data: Data

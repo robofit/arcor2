@@ -1,6 +1,6 @@
 import inspect
 from enum import Enum
-from typing import List, Type, Union
+from typing import Union
 
 from apispec import APISpec
 from apispec.exceptions import DuplicateComponentNameError
@@ -12,7 +12,7 @@ from arcor2.data.events import Event
 from arcor2.data.rpc.common import RPC
 
 
-def _rename_childs(obj: Union[Type[JsonSchemaMixin], Type[Enum]]) -> None:
+def _rename_childs(obj: Union[type[JsonSchemaMixin], type[Enum]]) -> None:
 
     for _, child_obj in inspect.getmembers(obj, inspect.isclass):
 
@@ -36,7 +36,7 @@ def _add_to_spec(spec, obj) -> None:
         pass
 
 
-def generate_openapi(service_name: str, version: str, rpcs: List[Type[RPC]], events: List[Type[Event]]) -> str:
+def generate_openapi(service_name: str, version: str, rpcs: list[type[RPC]], events: list[type[Event]]) -> str:
     """Generate OpenAPI models from RPCs and events.
 
     Be aware: it modifies __name__ attribute!

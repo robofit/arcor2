@@ -1,4 +1,4 @@
-from typing import List, Optional, Set, Union
+from typing import Optional, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene
@@ -140,7 +140,7 @@ def check_parameter(parameter: Parameter) -> None:
         raise Arcor2Exception("Only basic types are supported so far.")
 
 
-def check_object_parameters(obj_type: ObjectTypeData, parameters: List[Parameter]) -> None:
+def check_object_parameters(obj_type: ObjectTypeData, parameters: list[Parameter]) -> None:
 
     if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in parameters}:
         raise Arcor2Exception("Some required parameter is missing.")
@@ -296,7 +296,7 @@ def check_flows(parent: Union[CachedProject, ProjectFunction], action: Action, a
     for output in flow.outputs:
         hlp.is_valid_identifier(output)
 
-    outputs: Set[str] = set()
+    outputs: set[str] = set()
 
     for act in parent.actions:
         for fl in act.flows:
@@ -305,9 +305,9 @@ def check_flows(parent: Union[CachedProject, ProjectFunction], action: Action, a
                     raise Arcor2Exception(f"Output '{output}' is not unique.")
 
 
-def scene_problems(obj_types: ObjectTypeDict, scene: CachedScene) -> List[str]:
+def scene_problems(obj_types: ObjectTypeDict, scene: CachedScene) -> list[str]:
 
-    problems: List[str] = []
+    problems: list[str] = []
 
     for scene_obj in scene.objects:
         try:
@@ -330,12 +330,12 @@ def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: Optional[st
         raise Arcor2Exception("AP has invalid parent ID (not an object or another AP).")
 
 
-def project_problems(obj_types: ObjectTypeDict, scene: CachedScene, project: CachedProject) -> List[str]:
+def project_problems(obj_types: ObjectTypeDict, scene: CachedScene, project: CachedProject) -> list[str]:
 
     if project.scene_id != scene.id:
         return ["Project/scene mismatch."]
 
-    problems: List[str] = scene_problems(obj_types, scene)
+    problems: list[str] = scene_problems(obj_types, scene)
 
     for proj_param in project.parameters:
         try:

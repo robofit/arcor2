@@ -3,7 +3,7 @@ import logging
 import os
 import subprocess as sp
 import tempfile
-from typing import Dict, Iterator, Tuple, Type
+from typing import Iterator
 
 import pytest
 
@@ -24,7 +24,7 @@ LOGGER = logging.getLogger(__name__)
 _arserver_port: int = 0
 
 
-def log_proc_output(out: Tuple[bytes, bytes]) -> None:
+def log_proc_output(out: tuple[bytes, bytes]) -> None:
 
     for line in out[0].decode().splitlines():
         LOGGER.error(line)
@@ -118,7 +118,7 @@ def ars_connection_str() -> str:
 
 
 # TODO refactor this into _data packages
-event_mapping: Dict[str, Type[Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
+event_mapping: dict[str, type[Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
 
 modules = []
 
@@ -166,7 +166,7 @@ def test_robot_meta(start_processes: None, ars: ARServer) -> None:
     assert res.result
     assert res.data is not None
 
-    robots: Dict[str, RobotMeta] = {robot.type: robot for robot in res.data}
+    robots: dict[str, RobotMeta] = {robot.type: robot for robot in res.data}
 
     magician = robots[DobotMagician.__name__]
     assert magician.features.move_to_pose

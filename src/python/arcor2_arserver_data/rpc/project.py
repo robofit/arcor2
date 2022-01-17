@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -82,9 +82,9 @@ class ListProjects(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(BareProject):
-            problems: Optional[List[str]] = None
+            problems: Optional[list[str]] = None
 
-        data: Optional[List[Data]] = None
+        data: Optional[list[Data]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -394,8 +394,8 @@ class AddAction(RPC):
             action_point_id: str
             name: str
             type: str
-            parameters: List[ActionParameter] = field(default_factory=list)
-            flows: List[Flow] = field(default_factory=list)
+            parameters: list[ActionParameter] = field(default_factory=list)
+            flows: list[Flow] = field(default_factory=list)
 
         args: Args
         dry_run: bool = False
@@ -414,8 +414,8 @@ class UpdateAction(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             action_id: str
-            parameters: Optional[List[ActionParameter]] = None
-            flows: Optional[List[Flow]] = None
+            parameters: Optional[list[ActionParameter]] = None
+            flows: Optional[list[Flow]] = None
 
         args: Args
         dry_run: bool = False
@@ -507,7 +507,7 @@ class UpdateActionPointJoints(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             joints_id: str
-            joints: List[Joint]
+            joints: list[Joint]
 
         args: Args
 

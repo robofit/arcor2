@@ -1,5 +1,4 @@
 import inspect
-from typing import Type
 
 from arcor2.docstring import parse_docstring
 from arcor2.object_types.abstract import Generic
@@ -13,7 +12,7 @@ def sentence_like(s: str) -> None:
     assert len(s.split(" ")) > 1
 
 
-def docstrings(type_def: Type[Generic]) -> None:
+def docstrings(type_def: type[Generic]) -> None:
     """Make sure that all actions are properly documented."""
 
     ignored_parameters = {"self", "an"}

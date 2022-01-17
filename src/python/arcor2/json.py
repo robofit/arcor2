@@ -1,4 +1,4 @@
-from typing import Any, Dict, Sequence, Type, TypeVar, Union
+from typing import Any, Sequence, TypeVar, Union
 
 import orjson
 
@@ -9,7 +9,7 @@ class JsonException(Arcor2Exception):
     pass
 
 
-JsonType = Union[bool, str, int, float, Dict[str, Any], Sequence[Any], None]
+JsonType = Union[bool, str, int, float, dict[str, Any], Sequence[Any], None]
 
 
 T = TypeVar("T")
@@ -23,7 +23,7 @@ def loads(value: str) -> JsonType:
         raise JsonException(f"Not a JSON. {str(e)}") from e
 
 
-def loads_type(value: str, output_type: Type[T]) -> T:
+def loads_type(value: str, output_type: type[T]) -> T:
 
     val = loads(value)
 

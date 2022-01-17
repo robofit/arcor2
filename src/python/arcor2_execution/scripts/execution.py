@@ -9,7 +9,7 @@ import sys
 import time
 import zipfile
 from datetime import datetime, timezone
-from typing import Awaitable, List, Optional, Set, Union
+from typing import Awaitable, Optional, Union
 
 import aiofiles
 import aiofiles.os
@@ -44,7 +44,7 @@ PACKAGE_INFO_EVENT: Optional[PackageInfo] = None
 
 TASK: Optional[asyncio.Task] = None
 
-CLIENTS: Set = set()
+CLIENTS: set[WsClient] = set()
 
 MAIN_SCRIPT_NAME = "script.py"
 
@@ -73,7 +73,7 @@ async def read_proc_stdout() -> None:
     assert PROCESS.stdout is not None
     assert RUNNING_PACKAGE_ID is not None
 
-    printed_out: List[str] = []
+    printed_out: list[str] = []
 
     while process_running():
         try:
@@ -441,7 +441,7 @@ async def register(websocket: WsClient) -> None:
     logger.info("Registering new client")
     CLIENTS.add(websocket)
 
-    tasks: List[Awaitable] = [websocket.send(PACKAGE_STATE_EVENT.to_json())]
+    tasks: list[Awaitable] = [websocket.send(PACKAGE_STATE_EVENT.to_json())]
 
     if PACKAGE_INFO_EVENT:
         tasks.append(websocket.send(PACKAGE_INFO_EVENT.to_json()))

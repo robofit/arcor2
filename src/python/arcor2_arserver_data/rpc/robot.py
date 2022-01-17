@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -16,7 +16,7 @@ class GetRobotMeta(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[List[RobotMeta]] = None
+        data: Optional[list[RobotMeta]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -34,7 +34,7 @@ class GetRobotJoints(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[List[Joint]] = None
+        data: Optional[list[Joint]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ class GetRobotArms(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ class GetEndEffectors(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -106,7 +106,7 @@ class GetGrippers(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -124,7 +124,7 @@ class GetSuctions(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -147,7 +147,7 @@ class RegisterForRobotEvent(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ class MoveToJoints(RPC):
         class Args(JsonSchemaMixin):
             robot_id: str
             speed: float
-            joints: List[Joint]
+            joints: list[Joint]
             safe: bool = True
             arm_id: Optional[str] = None
 
@@ -247,7 +247,7 @@ class InverseKinematics(RPC):
             robot_id: str
             end_effector_id: str
             pose: Pose
-            start_joints: Optional[List[Joint]] = None
+            start_joints: Optional[list[Joint]] = None
             avoid_collisions: bool = True
             arm_id: Optional[str] = None
 
@@ -255,7 +255,7 @@ class InverseKinematics(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[List[Joint]] = None
+        data: Optional[list[Joint]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ class ForwardKinematics(RPC):
         class Args(JsonSchemaMixin):
             robot_id: str
             end_effector_id: str
-            joints: List[Joint]
+            joints: list[Joint]
             arm_id: Optional[str] = None
 
         args: Args

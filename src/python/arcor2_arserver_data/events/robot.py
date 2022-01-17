@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -41,7 +41,7 @@ class RobotMoveToPose(Event):
 class RobotMoveToJoints(Event):
     @dataclass
     class Data(RobotMoveToData):
-        target_joints: List[common.Joint]
+        target_joints: list[common.Joint]
         safe: bool
         message: Optional[str] = None
         arm_id: Optional[str] = None

@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Dict, List, Optional, Set
+from typing import Optional
 
 from arcor2 import rest
 from arcor2.data.common import Asset, IdDesc, Project, ProjectParameter, ProjectSources, Scene, SceneObjectOverride
@@ -31,7 +31,7 @@ class ProjectServiceException(Arcor2Exception):
 
 
 @handle(ProjectServiceException, logger, message="Failed to list assets.")
-def assets_ids() -> Set[str]:
+def assets_ids() -> set[str]:
     """Gets IDs of stored assets."""
 
     ret_list = rest.call(rest.Method.GET, f"{URL}/assets", list_return_type=str)
@@ -70,7 +70,7 @@ def delete_asset(asset_id: str) -> None:
 
 
 @handle(ProjectServiceException, logger, message="Failed to list files.")
-def files_ids() -> Set[str]:
+def files_ids() -> set[str]:
     """Gets IDs of stored files."""
 
     ret_list = rest.call(rest.Method.GET, f"{URL}/files", list_return_type=str)
@@ -109,7 +109,7 @@ def delete_file(file_id: str) -> None:
 
 
 @handle(ProjectServiceException, logger, message="Failed to list models.")
-def get_models() -> List[MetaModel3d]:
+def get_models() -> list[MetaModel3d]:
     return rest.call(rest.Method.GET, f"{URL}/models", list_return_type=MetaModel3d)
 
 
@@ -146,14 +146,14 @@ def delete_model(model_id: str) -> None:
 
 
 @handle(ProjectServiceException, logger, message="Failed to get project parameters.")
-def get_object_parameters(project_id: str) -> List[SceneObjectOverride]:
+def get_object_parameters(project_id: str) -> list[SceneObjectOverride]:
     return rest.call(
         rest.Method.GET, f"{URL}/projects/{project_id}/object_parameters", list_return_type=SceneObjectOverride
     )
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update project parameters.")
-def update_object_parameters(project_id: str, parameters: List[SceneObjectOverride]) -> None:
+def update_object_parameters(project_id: str, parameters: list[SceneObjectOverride]) -> None:
     rest.call(rest.Method.GET, f"{URL}/projects/{project_id}/object_parameters", body=parameters)
 
 
@@ -170,7 +170,7 @@ def get_object_type(object_type_id: str) -> ObjectType:
 
 
 @handle(ProjectServiceException, logger, message="Failed to list object types.")
-def get_object_type_ids() -> List[IdDesc]:
+def get_object_type_ids() -> list[IdDesc]:
     return rest.call(rest.Method.GET, f"{URL}/object_types", list_return_type=IdDesc)
 
 
@@ -192,12 +192,12 @@ def delete_object_type(object_type_id: str) -> None:
 
 
 @handle(ProjectServiceException, logger, message="Failed to get project parameters.")
-def get_project_parameters(project_id: str) -> List[ProjectParameter]:
+def get_project_parameters(project_id: str) -> list[ProjectParameter]:
     return rest.call(rest.Method.GET, f"{URL}/projects/{project_id}/parameters", list_return_type=ProjectParameter)
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update project parameters.")
-def update_project_parameters(project_id: str, parameters: List[ProjectParameter]) -> datetime:
+def update_project_parameters(project_id: str, parameters: list[ProjectParameter]) -> datetime:
     return datetime.fromisoformat(
         rest.call(rest.Method.GET, f"{URL}/projects/{project_id}/parameters", body=parameters, return_type=str)
     )
@@ -209,7 +209,7 @@ def update_project_parameters(project_id: str, parameters: List[ProjectParameter
 
 
 @handle(ProjectServiceException, logger, message="Failed to list projects.")
-def get_projects() -> List[IdDesc]:
+def get_projects() -> list[IdDesc]:
     return rest.call(rest.Method.GET, f"{URL}/projects", list_return_type=IdDesc)
 
 
@@ -250,7 +250,7 @@ def clone_project(
     if not new_project_id:
         new_project_id = Project.uid()
 
-    params: Dict[str, str] = {
+    params: dict[str, str] = {
         "project_id": project_id,
         "new_project_name": new_project_name,
         "new_project_id": new_project_id,
@@ -268,7 +268,7 @@ def clone_project(
 
 
 @handle(ProjectServiceException, logger, message="Failed to list scenes.")
-def get_scenes() -> List[IdDesc]:
+def get_scenes() -> list[IdDesc]:
     return rest.call(rest.Method.GET, f"{URL}/scenes", list_return_type=IdDesc)
 
 

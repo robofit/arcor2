@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -39,7 +39,7 @@ class ListPackages(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: List[PackageSummary] = field(default_factory=list)
+        data: list[PackageSummary] = field(default_factory=list)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -82,7 +82,7 @@ class RunPackage(RPC):
         @dataclass
         class Args(IdArgs):
             start_paused: bool = False
-            breakpoints: Optional[Set[str]] = None
+            breakpoints: Optional[set[str]] = None
 
         args: Args
 

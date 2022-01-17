@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, NamedTuple, Set, Union
+from typing import NamedTuple, Union
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
@@ -159,12 +159,12 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
 class UpdatedObjectTypes(NamedTuple):
 
-    new: Set[str]
-    updated: Set[str]
-    removed: Set[str]
+    new: set[str]
+    updated: set[str]
+    removed: set[str]
 
     @property
-    def all(self) -> Set[str]:
+    def all(self) -> set[str]:
         return self.new | self.updated | self.removed
 
 
@@ -185,7 +185,7 @@ async def get_object_types() -> UpdatedObjectTypes:
 
     updated_object_types: ObjectTypeDict = {}
 
-    object_type_ids: Union[Set[str], List[str]] = await storage.get_object_type_ids()
+    object_type_ids: Union[set[str], list[str]] = await storage.get_object_type_ids()
 
     if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
         import random

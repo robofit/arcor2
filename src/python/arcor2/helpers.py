@@ -8,7 +8,7 @@ import sys
 from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Any, Callable, List, Optional, Type, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -61,7 +61,7 @@ async def run_in_executor(
     func: Callable[..., S],
     *args: Any,
     executor: Optional[futures.Executor] = None,
-    propagate: Optional[List[Type[Exception]]] = None,
+    propagate: Optional[list[type[Exception]]] = None,
 ) -> S:
     """Executes synchronous function in an executor. Catches all exceptions are
     re-raises them as Arcor2Exception.
@@ -94,7 +94,7 @@ async def run_in_executor(
 T = TypeVar("T")
 
 
-def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], path: str, module_name: str) -> Type[T]:
+def save_and_import_type_def(source: str, type_name: str, output_type: type[T], path: str, module_name: str) -> type[T]:
     """Save source to a file in object_type_path directory.
 
     :param source:
@@ -117,7 +117,7 @@ def save_and_import_type_def(source: str, type_name: str, output_type: Type[T], 
         raise
 
 
-def import_type_def(type_name: str, output_type: Type[T], path: str, module_name: str) -> Type[T]:
+def import_type_def(type_name: str, output_type: type[T], path: str, module_name: str) -> type[T]:
     """Save source to a file in object_type_path directory.
 
     :param source:

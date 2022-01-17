@@ -10,7 +10,7 @@ import socket
 import time
 from dataclasses import dataclass
 from threading import Event, Lock
-from typing import Dict, Iterable, List, NamedTuple, Optional, Set, Tuple, cast
+from typing import Iterable, NamedTuple, Optional, cast
 
 import numpy as np
 import quaternion
@@ -107,9 +107,9 @@ class RWS:
         self._base_url = base_url
         self._session = Session()  # creates persistent HTTP communication
         self._session.auth = HTTPDigestAuth(username, password)
-        self._headers: Dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
+        self._headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
 
-    def _post(self, url: str, data: Optional[Dict] = None, params: Optional[Dict] = None) -> requests.Response:
+    def _post(self, url: str, data: Optional[dict] = None, params: Optional[dict] = None) -> requests.Response:
 
         if params is None:
             params = {}
@@ -120,7 +120,7 @@ class RWS:
 
         return self._session.post(f"{self._base_url}/{url}", data=data, params=params, headers=self._headers)
 
-    def _get(self, url: str, params: Optional[Dict] = None) -> requests.Response:
+    def _get(self, url: str, params: Optional[dict] = None) -> requests.Response:
 
         if params is None:
             params = {}
@@ -198,7 +198,7 @@ class RWS:
         resp = self._post("rw/panel/ctrlstate", {"ctrl-state": ControllerState.motoroff}, {"action": "setctrlstate"})
         self._handle_response(resp, 204, "Could not turn off motors.")
 
-    def tasks(self) -> List:  # TODO dataclass
+    def tasks(self) -> list:  # TODO dataclass
         """Returns a list of all rapid tasks."""
 
         resp = self._get("rw/rapid/tasks")
@@ -603,11 +603,11 @@ class YuMiArm:
         for s in self._sockets:
             self._request(self._construct_req(CmdCodes.ping), socket=s)
 
-    def joint_names(self) -> Set[str]:
+    def joint_names(self) -> set[str]:
         assert self.name
         return {f"yumi_joint_{i + 1}_{self.name[0]}" for i in range(self.JOINTS)}
 
-    def _response_to_joints(self, res: RawResponse) -> List[Joint]:
+    def _response_to_joints(self, res: RawResponse) -> list[Joint]:
 
         tokens = res.message.split()
 
@@ -618,10 +618,10 @@ class YuMiArm:
         assert self.name
         return [Joint(f"yumi_joint_{i + 1}_{self.name[0]}", j) for i, j in enumerate(values)]
 
-    def _joints_to_str(self, joints: List[Joint]) -> str:
+    def _joints_to_str(self, joints: list[Joint]) -> str:
         return self._iter_to_str("{:.2f}", [math.degrees(j.value) for j in joints])
 
-    def joints(self, include_gripper: bool = False) -> List[Joint]:
+    def joints(self, include_gripper: bool = False) -> list[Joint]:
         joints = self._response_to_joints(
             self._request(self._construct_req(CmdCodes.get_joints), socket=self._joints_socket)
         )
@@ -664,13 +664,13 @@ class YuMiArm:
         res = self._request(req)
         return bool(int(res.message))
 
-    def ik(self, pose: Pose) -> List[Joint]:
+    def ik(self, pose: Pose) -> list[Joint]:
         try:
             return self._response_to_joints(self._request(self._construct_req(CmdCodes.ik, self._get_pose_body(pose))))
         except YuMiControlException as e:
             raise MultiArmRobot.KinematicsException(str(e))
 
-    def fk(self, joints: List[Joint]) -> Pose:
+    def fk(self, joints: list[Joint]) -> Pose:
 
         self._check_and_sort_joints(joints)
         try:
@@ -678,7 +678,7 @@ class YuMiArm:
         except YuMiControlException as e:
             raise MultiArmRobot.KinematicsException(str(e))
 
-    def _check_and_sort_joints(self, joints: List[Joint]) -> None:
+    def _check_and_sort_joints(self, joints: list[Joint]) -> None:
 
         if len(joints) != self.JOINTS:
             raise YumiException("Invalid number of joints.")
@@ -700,7 +700,7 @@ class YuMiArm:
 
         joints.sort(key=lambda x: int(x.name.split("_")[2]))
 
-    def goto_joints(self, joints: List[Joint]) -> None:
+    def goto_joints(self, joints: list[Joint]) -> None:
         """Commands the YuMi to goto the given state (joint angles)"""
 
         self._check_and_sort_joints(joints)
@@ -708,7 +708,7 @@ class YuMiArm:
             self._construct_req(CmdCodes.goto_joints, self._joints_to_str(joints)), timeout=self._motion_timeout
         )
 
-    def goto_joints_sync(self, joints: List[Joint]) -> None:
+    def goto_joints_sync(self, joints: list[Joint]) -> None:
 
         self._check_and_sort_joints(joints)
         self._request(
@@ -790,7 +790,7 @@ class YuMiArm:
         req = self._construct_req(CmdCodes.set_speed, body)
         self._request(req)
 
-    def set_zone(self, zone_data: Dict) -> None:
+    def set_zone(self, zone_data: dict) -> None:
         """Set zone data for future moves.
 
         Parameters
@@ -845,7 +845,7 @@ class YuMiArm:
         req = self._construct_req(CmdCodes.buffer_add, body)
         self._request(req)
 
-    def buffer_add_all(self, pose_list: List[Pose]) -> None:
+    def buffer_add_all(self, pose_list: list[Pose]) -> None:
         """Add a list of poses to the linear movement buffer in RAPID."""
 
         for pose in pose_list:
@@ -1071,7 +1071,7 @@ class YuMi(MultiArmRobot):
         self._right = YuMiArm(
             YumiArms.RIGHT, settings.ip, 5001, self._buffsize, self._motion_timeout, self._comm_timeout
         )
-        self._mapping: Dict[str, YuMiArm] = {YumiArms.LEFT: self._left, YumiArms.RIGHT: self._right}
+        self._mapping: dict[str, YuMiArm] = {YumiArms.LEFT: self._left, YumiArms.RIGHT: self._right}
 
         self.default_configuration()
         self.calibrate_grippers()  # TODO only if not calibrated
@@ -1136,10 +1136,10 @@ class YuMi(MultiArmRobot):
 
     # ------------------------------------------------------------------------------------------------------------------
 
-    def get_arm_ids(self) -> Set[str]:
+    def get_arm_ids(self) -> set[str]:
         return set(self._mapping)
 
-    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> Set[str]:
+    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> set[str]:
 
         self._arm_by_name(arm_id)
         return {"default"}
@@ -1149,12 +1149,12 @@ class YuMi(MultiArmRobot):
         arm = self._arm_by_name(arm_id)
         return tr.make_pose_abs(self.pose, arm.get_pose())
 
-    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> list[Joint]:
 
         if arm_id is None:
 
-            ret: List[Joint] = []
-            futures: List[cf.Future] = [
+            ret: list[Joint] = []
+            futures: list[cf.Future] = [
                 self._executor.submit(self._left.joints, include_gripper),
                 self._executor.submit(self._right.joints, include_gripper),
             ]
@@ -1171,10 +1171,10 @@ class YuMi(MultiArmRobot):
 
         return self._arm_by_name(arm_id).joints(include_gripper)
 
-    def grippers(self, arm_id: Optional[str] = None) -> Set[str]:
+    def grippers(self, arm_id: Optional[str] = None) -> set[str]:
         return set(self._mapping)
 
-    def suctions(self, arm_id: Optional[str] = None) -> Set[str]:
+    def suctions(self, arm_id: Optional[str] = None) -> set[str]:
         return set()
 
     def move_to_pose(
@@ -1203,7 +1203,7 @@ class YuMi(MultiArmRobot):
 
             evt = Event()
 
-            futures: List[cf.Future] = [
+            futures: list[cf.Future] = [
                 self._executor.submit(self._rws.block_while_running, evt),
                 self._executor.submit(
                     self._arm_by_name(arm_id).goto_pose, tr.make_pose_rel(self.pose, target_pose), linear
@@ -1227,7 +1227,7 @@ class YuMi(MultiArmRobot):
                     evt.set()  # this terminates block_while_running
 
     def move_to_joints(
-        self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
     ) -> None:
         """Sets target joint values.
 
@@ -1256,10 +1256,10 @@ class YuMi(MultiArmRobot):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
+        start_joints: Optional[list[Joint]] = None,
         avoid_collisions: bool = True,
         arm_id: Optional[str] = None,
-    ) -> List[Joint]:
+    ) -> list[Joint]:
         """Computes inverse kinematics.
 
         :param end_effector_id: IK target pose end-effector
@@ -1271,7 +1271,7 @@ class YuMi(MultiArmRobot):
 
         return self._arm_by_name(arm_id).ik(tr.make_pose_rel(self.pose, pose))
 
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint], arm_id: Optional[str] = None) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: Optional[str] = None) -> Pose:
         """Computes forward kinematics.
 
         :param end_effector_id: Target end effector name
@@ -1436,7 +1436,7 @@ class YuMi(MultiArmRobot):
 
             evt = Event()
 
-            futures: List[cf.Future] = [
+            futures: list[cf.Future] = [
                 self._executor.submit(self._rws.block_while_running, evt),
                 self._executor.submit(self._left.goto_pose_sync, tr.make_pose_rel(self.pose, left_pose)),
                 self._executor.submit(self._right.goto_pose_sync, tr.make_pose_rel(self.pose, right_pose)),
@@ -1461,14 +1461,14 @@ class YuMi(MultiArmRobot):
     # ------------------------------------------------------------------------------------------------------------------
 
     @property
-    def arms(self) -> List[YuMiArm]:
+    def arms(self) -> list[YuMiArm]:
         return [self._left, self._right]
 
     def open_grippers(self):
         self._left.open_gripper()
         self._right.open_gripper()
 
-    def wait_for_all(self, futures: List[cf.Future], timeout: float, timeout_error_message: str) -> None:
+    def wait_for_all(self, futures: list[cf.Future], timeout: float, timeout_error_message: str) -> None:
 
         try:
             for f in cf.as_completed(futures, timeout):
@@ -1476,7 +1476,7 @@ class YuMi(MultiArmRobot):
         except cf.TimeoutError:
             raise YuMiCommException(timeout_error_message)
 
-    def goto_joints_sync(self, left: List[Joint], right: List[Joint]) -> None:
+    def goto_joints_sync(self, left: list[Joint], right: list[Joint]) -> None:
         """Commands both arms to go to assigned states in sync. Sync means both
         motions will end at the same time.
 
@@ -1568,7 +1568,7 @@ class YuMi(MultiArmRobot):
         )
 
     @staticmethod
-    def construct_speed_data(tra: float, rot: float) -> Tuple[float, float, float, float]:
+    def construct_speed_data(tra: float, rot: float) -> tuple[float, float, float, float]:
         """Constructs a speed data tuple that's in the same format as ones used
         in RAPID.
 
@@ -1585,7 +1585,7 @@ class YuMi(MultiArmRobot):
         return tra, rot, tra, rot
 
     @classmethod
-    def get_v(cls, n: int) -> Tuple[float, float, float, float]:
+    def get_v(cls, n: int) -> tuple[float, float, float, float]:
         """Gets the corresponding speed data for n as the speed number.
 
         Parameters
@@ -1600,7 +1600,7 @@ class YuMi(MultiArmRobot):
         return cls.construct_speed_data(n, 500)
 
     @classmethod
-    def get_z(cls, name: str) -> Dict:
+    def get_z(cls, name: str) -> dict:
         """Gets the corresponding speed data for n as the speed number.
 
         Parameters
@@ -1617,7 +1617,7 @@ class YuMi(MultiArmRobot):
         return {"point_motion": point_motion, "values": values}
 
     @staticmethod
-    def construct_zone_data(pzone_tcp: float, pzone_ori: float, zone_ori: float) -> Tuple[float, float, float]:
+    def construct_zone_data(pzone_tcp: float, pzone_ori: float, zone_ori: float) -> tuple[float, float, float]:
         """Constructs tuple for zone data.
 
         Parameters
@@ -1634,7 +1634,7 @@ class YuMi(MultiArmRobot):
         """
         return pzone_tcp, pzone_ori, zone_ori
 
-    ZONE_VALUES: Dict[str, Tuple[float, float, float]] = {
+    ZONE_VALUES: dict[str, tuple[float, float, float]] = {
         "fine": (0, 0, 0),  # these values actually don't matter for fine
         "z0": (0.3, 0.3, 0.03),
         "z1": (1, 1, 0.1),

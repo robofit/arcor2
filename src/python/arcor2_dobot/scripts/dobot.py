@@ -3,7 +3,7 @@
 import argparse
 import os
 from functools import wraps
-from typing import Dict, Optional, Tuple, Type
+from typing import Optional
 
 from arcor2_dobot import version
 from arcor2_dobot.dobot import Dobot, DobotApiException, MoveType
@@ -90,7 +90,7 @@ def put_start() -> RespT:
 
     pose = Pose.from_dict(request.json)
 
-    mapping: Dict[str, Type[Dobot]] = {"magician": DobotMagician, "m1": DobotM1}
+    mapping: dict[str, type[Dobot]] = {"magician": DobotMagician, "m1": DobotM1}
 
     global _dobot
 
@@ -440,7 +440,7 @@ def put_fk() -> RespT:
 
 
 @app.errorhandler(DobotApiException)  # type: ignore  # TODO what's wrong?
-def handle_dobot_exception(e: DobotApiException) -> Tuple[str, int]:
+def handle_dobot_exception(e: DobotApiException) -> tuple[str, int]:
     return json.dumps(str(e)), 400
 
 

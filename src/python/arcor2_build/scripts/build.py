@@ -9,7 +9,7 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, Set, Type, TypeVar
+from typing import TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
@@ -48,7 +48,7 @@ app = create_app(__name__)
 def get_base_from_project_service(
     types_dict: TypesDict,
     tmp_dir: str,
-    scene_object_types: Set[str],
+    scene_object_types: set[str],
     obj_type: ObjectType,
     zf: zipfile.ZipFile,
     ot_path: str,
@@ -84,7 +84,7 @@ def get_base_from_project_service(
 
 
 def get_base_from_imported_package(
-    obj_type: ObjectType, types_dict: Dict[str, ObjectType], zip_file: zipfile.ZipFile, tmp_dir: str, ast: ast.AST
+    obj_type: ObjectType, types_dict: dict[str, ObjectType], zip_file: zipfile.ZipFile, tmp_dir: str, ast: ast.AST
 ) -> None:
 
     for idx, base in enumerate(base_from_source(ast, obj_type.id)):
@@ -153,7 +153,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 zf.writestr(os.path.join(data_path, "scene.json"), scene.to_json())
 
                 obj_types = set(cached_scene.object_types)
-                obj_types_with_models: Set[str] = set()
+                obj_types_with_models: set[str] = set()
 
                 if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
                     import random
@@ -297,7 +297,7 @@ def read_str_from_zip(zip_file: zipfile.ZipFile, file_name: str) -> str:
     return zip_file.read(file_name).decode("UTF-8")
 
 
-def read_dc_from_zip(zip_file: zipfile.ZipFile, file_name: str, cls: Type[T]) -> T:
+def read_dc_from_zip(zip_file: zipfile.ZipFile, file_name: str, cls: type[T]) -> T:
 
     return cls.from_dict(humps.decamelize(json.loads_type(read_str_from_zip(zip_file, file_name), dict)))
 
@@ -394,8 +394,8 @@ def project_import() -> RespT:
     overwrite_project_sources = request.args.get("overwriteProjectSources", default="false") == "true"
     overwrite_collision_models = request.args.get("overwriteCollisionModels", default="false") == "true"
 
-    objects: Dict[str, ObjectType] = {}
-    models: Dict[str, Models] = {}
+    objects: dict[str, ObjectType] = {}
+    models: dict[str, Models] = {}
 
     """
     1) get and validate all data from zip

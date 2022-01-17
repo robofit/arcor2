@@ -1,5 +1,4 @@
 import math
-from typing import Dict, List, Tuple
 
 import quaternion
 from arcor2_dobot.dobot import Dobot, DobotException
@@ -53,13 +52,13 @@ class DobotMagician(Dobot):
         pose.position.z -= self.end_effector_length
 
     # TODO joint4/5
-    valid_ranges: Dict[Joints, Tuple[float, float]] = {
+    valid_ranges: dict[Joints, tuple[float, float]] = {
         Joints.J1: (-2, 2),
         Joints.J2: (-0.1, 1.46),
         Joints.J3: (-0.95, 1.15),
     }
 
-    def validate_joints(self, joints: List[Joint]) -> None:
+    def validate_joints(self, joints: list[Joint]) -> None:
 
         for joint in joints:
             if joint.name in self.valid_ranges:
@@ -71,7 +70,7 @@ class DobotMagician(Dobot):
                         )
                     )
 
-    def _inverse_kinematics(self, pose: Pose) -> List[Joint]:
+    def _inverse_kinematics(self, pose: Pose) -> list[Joint]:
         """Computes inverse kinematics.
 
         Works with robot-relative pose.
@@ -124,7 +123,7 @@ class DobotMagician(Dobot):
         self.validate_joints(joints)
         return joints
 
-    def inverse_kinematics(self, pose: Pose) -> List[Joint]:
+    def inverse_kinematics(self, pose: Pose) -> list[Joint]:
         """Computes inverse kinematics.
 
         Works with absolute pose.
@@ -138,7 +137,7 @@ class DobotMagician(Dobot):
 
         return self._inverse_kinematics(tr.make_pose_rel(self.pose, pose))
 
-    def forward_kinematics(self, joints: List[Joint]) -> Pose:
+    def forward_kinematics(self, joints: list[Joint]) -> Pose:
         """Computes forward kinematics.
 
         Outputs absolute pose.
@@ -180,7 +179,7 @@ class DobotMagician(Dobot):
 
         return tr.make_pose_abs(self.pose, pose)
 
-    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
 
         if self.simulator:
             return self._joint_values

@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from typing import List
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -26,7 +25,7 @@ class Corner(JsonSchemaMixin):
 class MarkerCorners(JsonSchemaMixin):
 
     marker_id: int
-    corners: List[Corner]
+    corners: list[Corner]
 
 
 @dataclass

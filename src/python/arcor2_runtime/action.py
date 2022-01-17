@@ -1,7 +1,7 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, List, Optional, Set, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Callable, Optional, TypeVar, Union, cast
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import Pose, ProjectRobotJoints
@@ -16,10 +16,10 @@ AP_ID_ATTR = "_ap_id"
 
 _pause_on_next_action = False
 start_paused = False
-breakpoints: Optional[Set[str]] = None
+breakpoints: Optional[set[str]] = None
 
 
-def patch_object_actions(type_def: Type[Generic]) -> None:
+def patch_object_actions(type_def: type[Generic]) -> None:
     """Dynamically adds @action decorator to the methods with assigned
     ActionMetadata.
 
@@ -33,7 +33,7 @@ def patch_object_actions(type_def: Type[Generic]) -> None:
         setattr(type_def, method_name, action(method))
 
 
-def patch_with_action_mapping(type_def: Type[Generic], scene: CachedScene, project: CachedProject) -> None:
+def patch_with_action_mapping(type_def: type[Generic], scene: CachedScene, project: CachedProject) -> None:
 
     setattr(
         type_def,
@@ -114,7 +114,7 @@ def print_event(event: Event) -> None:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def results_to_json(res: Any) -> Optional[List[str]]:
+def results_to_json(res: Any) -> Optional[list[str]]:
     """Prepares action results into list of JSONs. Return value could be tuple
     or single value.
 
@@ -131,7 +131,7 @@ def results_to_json(res: Any) -> Optional[List[str]]:
         return [plugin_from_instance(res).value_to_json(res)]
 
 
-_executed_action: Optional[Tuple[str, Callable]] = None
+_executed_action: Optional[tuple[str, Callable]] = None
 
 
 def action(f: F) -> F:

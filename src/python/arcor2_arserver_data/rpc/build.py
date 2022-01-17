@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -37,7 +37,7 @@ class TemporaryPackage(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             start_paused: bool = False
-            breakpoints: Optional[Set[str]] = None
+            breakpoints: Optional[set[str]] = None
 
         args: Optional[Args] = None
 

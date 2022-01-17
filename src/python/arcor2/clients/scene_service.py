@@ -1,7 +1,7 @@
 import os
 import time
 from dataclasses import dataclass
-from typing import Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -84,7 +84,7 @@ def delete_collision_id(collision_id: str) -> None:
 
 
 @handle(SceneServiceException, logger, message="Failed to list collisions.")
-def collision_ids() -> Set[str]:
+def collision_ids() -> set[str]:
     return set(rest.call(rest.Method.GET, f"{URL}/collisions", list_return_type=str))
 
 
@@ -121,7 +121,7 @@ def started() -> bool:
 
 
 @handle(SceneServiceException, logger, message="Failed to get transforms.")
-def transforms() -> Set[str]:
+def transforms() -> set[str]:
     """Gets available transformations."""
 
     return set(rest.call(rest.Method.GET, f"{URL}/transforms", list_return_type=str))

@@ -1,6 +1,5 @@
 import asyncio
 from time import sleep
-from typing import List, Set
 
 import pytest
 
@@ -61,7 +60,7 @@ async def test_ctx_read_lock() -> None:
     glob.LOCK.scene = UpdateableCachedScene(cmn.Scene(test, description=test))
     glob.LOCK.project = UpdateableCachedProject(cmn.Project(test, glob.LOCK.scene.id, description=test, has_logic=True))
 
-    async def patch() -> Set[str]:
+    async def patch() -> set[str]:
         return {glob.LOCK.project_or_exception().id, glob.LOCK.scene_or_exception().id}
 
     storage.get_project_ids = storage.get_scene_ids = patch
@@ -410,7 +409,7 @@ async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
     with pytest.raises(Arcor2Exception):
         lock.project_or_exception()
 
-    async def patch() -> Set[str]:
+    async def patch() -> set[str]:
         return {project.id, scene.id}
 
     storage.get_project_ids = storage.get_scene_ids = patch
@@ -511,7 +510,7 @@ async def test_getters(lock: Lock) -> None:
 
 
 async def check_notification_content(
-    lock: Lock, owner: str, objects: List[str], lock_notification: bool = True, count: int = 1
+    lock: Lock, owner: str, objects: list[str], lock_notification: bool = True, count: int = 1
 ) -> None:
     for _ in range(count):
         assert not lock.notifications_q.empty()

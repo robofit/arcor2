@@ -3,7 +3,7 @@
 import argparse
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import humps
 from flask import jsonify, request, send_file
@@ -15,16 +15,16 @@ from arcor2_mocks import PROJECT_PORT, PROJECT_SERVICE_NAME, version
 
 app = create_app(__name__)
 
-SCENES: Dict[str, common.Scene] = {}
-PROJECTS: Dict[str, common.Project] = {}
-OBJECT_TYPES: Dict[str, object_type.ObjectType] = {}
+SCENES: dict[str, common.Scene] = {}
+PROJECTS: dict[str, common.Project] = {}
+OBJECT_TYPES: dict[str, object_type.ObjectType] = {}
 
-BOXES: Dict[str, object_type.Box] = {}
-CYLINDERS: Dict[str, object_type.Cylinder] = {}
-SPHERES: Dict[str, object_type.Sphere] = {}
-MESHES: Dict[str, object_type.Mesh] = {}
+BOXES: dict[str, object_type.Box] = {}
+CYLINDERS: dict[str, object_type.Cylinder] = {}
+SPHERES: dict[str, object_type.Sphere] = {}
+MESHES: dict[str, object_type.Mesh] = {}
 
-FILES: Dict[str, Tuple[BytesIO, Optional[str]]] = {}
+FILES: dict[str, tuple[BytesIO, Optional[str]]] = {}
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -300,7 +300,7 @@ def get_projects() -> RespT:
                       $ref: IdDesc
     """
 
-    ret: List[JsonType] = []
+    ret: list[JsonType] = []
 
     for proj in PROJECTS.values():
         assert proj.created
@@ -454,7 +454,7 @@ def get_scenes() -> RespT:
                       $ref: IdDesc
     """
 
-    ret: List[JsonType] = []
+    ret: list[JsonType] = []
 
     for scene in SCENES.values():
         assert scene.created
@@ -598,7 +598,7 @@ def get_object_types() -> RespT:
                       $ref: IdDesc
     """
 
-    ret: List[JsonType] = []
+    ret: list[JsonType] = []
 
     for obj_type in OBJECT_TYPES.values():
         assert obj_type.created
@@ -634,7 +634,7 @@ def get_models() -> RespT:
                       $ref: MetaModel3d
     """
 
-    models: List[Dict] = []
+    models: list[dict] = []
 
     for mod_type in (BOXES, CYLINDERS, SPHERES, MESHES):
         assert isinstance(mod_type, dict)

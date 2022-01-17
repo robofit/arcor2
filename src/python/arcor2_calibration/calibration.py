@@ -1,5 +1,4 @@
 import math
-from typing import Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -16,8 +15,8 @@ BLUR_THRESHOLD: float = 150.0
 
 
 def detect_corners(
-    camera_matrix: List[List[float]], dist_matrix: List[float], image: Image.Image, refine: bool = False
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    camera_matrix: list[list[float]], dist_matrix: list[float], image: Image.Image, refine: bool = False
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
     camera_matrix_arr = np.array(camera_matrix)
     dist_matrix_arr = np.array(dist_matrix)
@@ -46,14 +45,14 @@ def detect_corners(
 
 
 def estimate_camera_pose(
-    camera_matrix: List[List[float]], dist_matrix: List[float], image: Image.Image, marker_size: float
-) -> Dict[int, Pose]:
+    camera_matrix: list[list[float]], dist_matrix: list[float], image: Image.Image, marker_size: float
+) -> dict[int, Pose]:
 
     camera_matrix_arr, dist_matrix_arr, gray, corners, ids = detect_corners(
         camera_matrix, dist_matrix, image, refine=True
     )
 
-    ret: Dict[int, Pose] = {}
+    ret: dict[int, Pose] = {}
 
     if np.all(ids is None):
         return ret

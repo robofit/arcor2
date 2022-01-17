@@ -1,5 +1,4 @@
 import asyncio
-from typing import Set
 
 from arcor2.clients import scene_service
 from arcor2.clients.scene_service import SceneServiceException
@@ -17,7 +16,7 @@ async def delete_collision_id(collision_id: str) -> None:
     await run_in_executor(scene_service.delete_collision_id, collision_id)
 
 
-async def collision_ids() -> Set[str]:
+async def collision_ids() -> set[str]:
     return await run_in_executor(scene_service.collision_ids)
 
 

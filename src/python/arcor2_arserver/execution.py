@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import os
-from typing import TYPE_CHECKING, Dict, Optional, Set
+from typing import TYPE_CHECKING, Optional
 
 import aiofiles
 import websockets
@@ -32,10 +32,10 @@ else:
     RespQueue = asyncio.Queue
 
 MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
-MANAGER_RPC_RESPONSES: Dict[int, RespQueue] = {}
+MANAGER_RPC_RESPONSES: dict[int, RespQueue] = {}
 
 
-async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: Optional[Set[str]] = None) -> None:
+async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: Optional[set[str]] = None) -> None:
 
     # TODO lock scene and project?
 

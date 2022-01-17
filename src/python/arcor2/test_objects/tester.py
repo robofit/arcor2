@@ -1,5 +1,5 @@
 import time
-from typing import List, Optional
+from typing import Optional
 
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import CollisionObject
@@ -16,8 +16,8 @@ class Tester(CollisionObject):
         self._param1: str = ""
 
     def run_test(
-        self, seq: List[float], seq_id: List[str], eqp_res: List[bool], *, an: Optional[str] = None
-    ) -> List[bool]:
+        self, seq: list[float], seq_id: list[str], eqp_res: list[bool], *, an: Optional[str] = None
+    ) -> list[bool]:
         """Run test with many parameters.
 
         :param seq:

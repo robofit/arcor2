@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from io import BytesIO
-from typing import List
 
 from arcor2_calibration_data import CALIBRATION_URL, EstimatedPose, MarkerCorners
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -20,7 +19,7 @@ class MarkerNotFound(CalibrationException):
     pass
 
 
-def markers_corners(camera: CameraParameters, image: Image) -> List[MarkerCorners]:
+def markers_corners(camera: CameraParameters, image: Image) -> list[MarkerCorners]:
 
     with BytesIO() as buff:
 
@@ -69,7 +68,7 @@ def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool =
 @dataclass
 class CalibrateRobotArgs(JsonSchemaMixin):
 
-    robot_joints: List[Joint]
+    robot_joints: list[Joint]
     robot_pose: Pose
     camera_pose: Pose
     camera_parameters: CameraParameters

@@ -3,7 +3,7 @@ import logging
 import os
 import subprocess as sp
 import tempfile
-from typing import Dict, Iterator, Optional, Tuple, Type, TypeVar
+from typing import Iterator, Optional, TypeVar
 
 import pytest
 
@@ -26,7 +26,7 @@ LOGGER = logging.getLogger(__name__)
 _arserver_port: int = 0
 
 
-def log_proc_output(out: Tuple[bytes, bytes]) -> None:
+def log_proc_output(out: tuple[bytes, bytes]) -> None:
 
     for line in out[0].decode().splitlines():
         LOGGER.error(line)
@@ -130,7 +130,7 @@ def ars_connection_str() -> str:
 
 
 # TODO refactor this into _data packages
-event_mapping: Dict[str, Type[Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
+event_mapping: dict[str, type[Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
 
 modules = []
 
@@ -295,7 +295,7 @@ def project(ars: ARServer, scene: common.Scene) -> common.Project:
 E = TypeVar("E", bound=Event)
 
 
-def event(ars: ARServer, evt_type: Type[E]) -> E:
+def event(ars: ARServer, evt_type: type[E]) -> E:
 
     evt = ars.get_event()
     assert isinstance(evt, evt_type)
@@ -303,7 +303,7 @@ def event(ars: ARServer, evt_type: Type[E]) -> E:
     return evt
 
 
-def wait_for_event(ars: ARServer, evt_type: Type[E]) -> E:
+def wait_for_event(ars: ARServer, evt_type: type[E]) -> E:
 
     evt = ars.get_event(drop_everything_until=evt_type)
     assert isinstance(evt, evt_type)

@@ -1,5 +1,5 @@
 import random
-from typing import Optional, Tuple
+from typing import Optional
 
 from arcor2.data.common import ActionMetadata, IntEnum
 from arcor2.object_types.abstract import Generic, Settings
@@ -29,7 +29,7 @@ class ObjectWithActions(Generic):
     def bool_action(self, *, an: Optional[str] = None) -> bool:
         return self._random_bool()
 
-    def tuple_action(self, *, an: Optional[str] = None) -> Tuple[bool, bool]:
+    def tuple_action(self, *, an: Optional[str] = None) -> tuple[bool, bool]:
         return self._random_bool(), self._random_bool()
 
     def enum_action(self, *, an: Optional[str] = None) -> MyEnum:

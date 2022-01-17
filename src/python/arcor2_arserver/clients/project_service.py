@@ -3,7 +3,7 @@ import time
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Set
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from lru import LRU
 
@@ -31,7 +31,7 @@ class CachedListing:
 
     __slots__ = "listing", "ts"
 
-    listing: Dict[str, IdDesc]
+    listing: dict[str, IdDesc]
     ts: float
 
     def time_to_update(self) -> bool:
@@ -61,9 +61,9 @@ _object_type_lock = asyncio.Lock()
 
 # here we can forget least used items
 if TYPE_CHECKING:
-    _scenes: Dict[str, CachedScene] = {}
-    _projects: Dict[str, CachedProject] = {}
-    _object_types: Dict[str, ObjectType] = {}
+    _scenes: dict[str, CachedScene] = {}
+    _projects: dict[str, CachedProject] = {}
+    _object_types: dict[str, ObjectType] = {}
 else:
     _scenes = LRU(_cache_scenes)
     _projects = LRU(_cache_projects)
@@ -71,7 +71,7 @@ else:
 
 
 async def _update_list(
-    getter: Callable[..., Awaitable[List[IdDesc]]], cached_listing: CachedListing, cache: Dict[str, Any]
+    getter: Callable[..., Awaitable[list[IdDesc]]], cached_listing: CachedListing, cache: dict[str, Any]
 ) -> None:
 
     if not cached_listing.time_to_update():
@@ -97,42 +97,42 @@ async def initialize_module() -> None:
     _object_types.clear()
 
 
-async def get_project_ids() -> Set[str]:
+async def get_project_ids() -> set[str]:
 
     async with _projects_list_lock:
         await _update_list(ps.get_projects, _projects_list, _projects)
     return set(_projects_list.listing)
 
 
-async def get_projects() -> List[IdDesc]:
+async def get_projects() -> list[IdDesc]:
 
     async with _projects_list_lock:
         await _update_list(ps.get_projects, _projects_list, _projects)
     return list(_projects_list.listing.values())
 
 
-async def get_scene_ids() -> Set[str]:
+async def get_scene_ids() -> set[str]:
 
     async with _scenes_list_lock:
         await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return set(_scenes_list.listing)
 
 
-async def get_scenes() -> List[IdDesc]:
+async def get_scenes() -> list[IdDesc]:
 
     async with _scenes_list_lock:
         await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return list(_scenes_list.listing.values())
 
 
-async def get_object_type_ids() -> Set[str]:
+async def get_object_type_ids() -> set[str]:
 
     async with _object_type_lock:
         await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     return set(_object_type_list.listing)
 
 
-async def get_object_types() -> List[IdDesc]:
+async def get_object_types() -> list[IdDesc]:
 
     async with _object_type_lock:
         await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)

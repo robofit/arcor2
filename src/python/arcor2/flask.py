@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List, Optional, Tuple, Type, Union
+from typing import Optional, Union
 
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
@@ -13,7 +13,7 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 
-RespT = Union[Response, Tuple[str, int], Tuple[Response, int]]
+RespT = Union[Response, tuple[str, int], tuple[Response, int]]
 
 
 class FlaskException(Arcor2Exception):
@@ -35,7 +35,7 @@ def run_app(
     version: str,
     api_version: str,
     port: int,
-    dataclasses: Optional[List[Type[JsonSchemaMixin]]] = None,
+    dataclasses: Optional[list[type[JsonSchemaMixin]]] = None,
     print_spec: bool = False,
 ) -> None:
 
@@ -64,11 +64,11 @@ def run_app(
         return jsonify(spec.to_dict())
 
     @app.errorhandler(Arcor2Exception)  # type: ignore  # TODO what's wrong?
-    def handle_bad_request_general(e: Arcor2Exception) -> Tuple[str, int]:
+    def handle_bad_request_general(e: Arcor2Exception) -> tuple[str, int]:
         return json.dumps(str(e)), 400
 
     @app.errorhandler(FlaskException)  # type: ignore  # TODO what's wrong?
-    def handle_bad_request_intentional(e: FlaskException) -> Tuple[str, int]:
+    def handle_bad_request_intentional(e: FlaskException) -> tuple[str, int]:
         return json.dumps(str(e)), e.error_code
 
     SWAGGER_URL = "/swagger"

@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from queue import Queue
 from threading import Thread
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Type
+from typing import TYPE_CHECKING, Optional
 
 import arcor2_execution_rest_proxy
 import websocket
@@ -102,13 +102,13 @@ else:
 
 
 rpc_request_queue: ReqQueue = ReqQueue()
-rpc_responses: Dict[int, RespQueue] = {}
+rpc_responses: dict[int, RespQueue] = {}
 
 package_state: PackageState.Data = PackageState.Data()
 package_info: Optional[PackageInfo.Data] = None
-exception_messages: List[str] = []
+exception_messages: list[str] = []
 
-breakpoints: Dict[str, Set[str]] = {}
+breakpoints: dict[str, set[str]] = {}
 
 
 @contextmanager
@@ -126,8 +126,8 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
     global package_state
     assert ws
 
-    event_mapping: Dict[str, Type[events.Event]] = {evt.__name__: evt for evt in EVENTS}
-    rpc_mapping: Dict[str, Type[arcor2_rpc.common.RPC]] = {rpc.__name__: rpc for rpc in EXPOSED_RPCS}
+    event_mapping: dict[str, type[events.Event]] = {evt.__name__: evt for evt in EVENTS}
+    rpc_mapping: dict[str, type[arcor2_rpc.common.RPC]] = {rpc.__name__: rpc for rpc in EXPOSED_RPCS}
 
     while True:
 
@@ -495,7 +495,7 @@ def get_packages() -> RespT:
     resp = call_rpc(rpc.ListPackages.Request(id=get_id()))
     assert isinstance(resp, rpc.ListPackages.Response)
 
-    ret: List[Dict] = []
+    ret: list[dict] = []
 
     for pck in resp.data:
         sp = SummaryPackage(pck.id)

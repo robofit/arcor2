@@ -1,7 +1,7 @@
 import asyncio
 import copy
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional, Set
+from typing import Any, AsyncGenerator, Optional
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -99,7 +99,7 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
     except AttributeError as e:
         raise Arcor2Exception("Internal error.") from e
 
-    cancel_params: Dict[str, Any] = {}
+    cancel_params: dict[str, Any] = {}
 
     # TODO fix or remove this?
     """
@@ -140,7 +140,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
 
         obj_id, action_name = action.parse_type()
 
-        params: List[Any] = []
+        params: list[Any] = []
 
         for param in action.parameters:
 
@@ -431,7 +431,7 @@ async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsCl
 
 def detect_ap_loop(proj: CachedProject, ap: common.BareActionPoint, new_parent_id: str) -> None:
 
-    visited_ids: Set[str] = set()
+    visited_ids: set[str] = set()
     ap = copy.deepcopy(ap)
     ap.parent = new_parent_id
     while True:
@@ -1053,8 +1053,8 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
         if req.dry_run:
             return
 
-        old_ori_to_new_ori: Dict[str, str] = {}
-        new_action_ids: Set[str] = set()
+        old_ori_to_new_ori: dict[str, str] = {}
+        new_action_ids: set[str] = set()
         # let's do it within the RPC, should not take long time...
         await copy_action_point(original_ap, position=req.args.position)
 

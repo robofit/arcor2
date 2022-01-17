@@ -4,7 +4,7 @@ import struct
 from collections import deque
 from enum import IntEnum
 from threading import RLock
-from typing import Deque, NamedTuple, Optional, Set
+from typing import NamedTuple, Optional
 
 import numpy as np
 import serial
@@ -352,13 +352,13 @@ class DobotApi:
             ),
         )
 
-    def get_alarms(self) -> Set[Alarm]:
+    def get_alarms(self) -> set[Alarm]:
 
         msg = Message()
         msg.id = 20
         response = self._send_command(msg)  # 32 bytes
 
-        ret: Set[Alarm] = set()
+        ret: set[Alarm] = set()
 
         for idx in range(16):
             alarm_byte = struct.unpack_from("B", response.params, idx)[0]
@@ -829,7 +829,7 @@ class DobotApi:
         self._set_queued_cmd_stop_exec()
         stopped = True
 
-        indexes: Deque[int] = deque()
+        indexes: deque[int] = deque()
 
         for row_idx, row in enumerate(image):
 

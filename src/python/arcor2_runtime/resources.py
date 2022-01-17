@@ -4,7 +4,7 @@ import os
 import time
 from threading import Event
 from types import TracebackType
-from typing import Dict, List, Optional, Set, Type, TypeVar
+from typing import Optional, TypeVar
 
 import humps
 from arcor2_runtime import action, package
@@ -28,7 +28,7 @@ from arcor2.parameter_plugins.base import TypesDict
 
 
 class ResourcesException(Arcor2Exception):
-    def __init__(self, message: str, exceptions: Optional[List[Arcor2Exception]] = None):
+    def __init__(self, message: str, exceptions: Optional[list[Arcor2Exception]] = None):
         super().__init__(message)
         self.exceptions = exceptions
 
@@ -42,7 +42,7 @@ _streaming_period = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
 
 def stream_pose(robot_inst: Robot) -> None:
 
-    arm_eef: Dict[Optional[str], Set[str]] = {}
+    arm_eef: dict[Optional[str], set[str]] = {}
 
     try:
         if isinstance(robot_inst, MultiArmRobot):
@@ -94,7 +94,7 @@ class Resources:
 
     def __init__(self, apply_action_mapping: bool = True) -> None:
 
-        models: Dict[str, Optional[Models]] = {}
+        models: dict[str, Optional[Models]] = {}
 
         scene = self.read_project_data(Scene.__name__.lower(), Scene)
         project = self.read_project_data(Project.__name__.lower(), Project)
@@ -174,7 +174,7 @@ class Resources:
         scene_service.stop()
 
         self.executor = concurrent.futures.ThreadPoolExecutor()
-        futures: List[concurrent.futures.Future] = []
+        futures: list[concurrent.futures.Future] = []
 
         for scene_obj in self.scene.objects:
 
@@ -196,9 +196,9 @@ class Resources:
             else:
                 raise Arcor2Exception(f"{cls.__name__} has unknown base class.")
 
-        exceptions: List[Arcor2Exception] = []
+        exceptions: list[Arcor2Exception] = []
 
-        self.objects: Dict[str, Generic] = {}
+        self.objects: dict[str, Generic] = {}
 
         for f in concurrent.futures.as_completed(futures):
             try:
@@ -215,9 +215,9 @@ class Resources:
 
         scene_service.start()
 
-        self._stream_futures: List[concurrent.futures.Future] = []
+        self._stream_futures: list[concurrent.futures.Future] = []
 
-    def read_project_data(self, file_name: str, cls: Type[T]) -> T:
+    def read_project_data(self, file_name: str, cls: type[T]) -> T:
         try:
 
             with open(os.path.join("data", file_name + ".json")) as scene_file:
@@ -232,7 +232,7 @@ class Resources:
         Errors are just logged.
         """
 
-        futures: List[concurrent.futures.Future] = []
+        futures: list[concurrent.futures.Future] = []
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for obj in self.objects.values():
                 futures.append(executor.submit(obj.cleanup))
@@ -257,7 +257,7 @@ class Resources:
 
     def __exit__(
         self,
-        ex_type: Optional[Type[BaseException]],
+        ex_type: Optional[type[BaseException]],
         ex_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> bool:

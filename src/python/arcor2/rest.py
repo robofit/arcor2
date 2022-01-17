@@ -2,7 +2,7 @@ import logging
 from enum import Enum
 from functools import partial
 from io import BytesIO
-from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Type, TypeVar, Union, overload
+from typing import Any, NamedTuple, Optional, Sequence, TypeVar, Union, overload
 
 import humps
 import requests
@@ -18,11 +18,11 @@ from arcor2.logging import get_logger
 DataClass = TypeVar("DataClass", bound=JsonSchemaMixin)
 Primitive = TypeVar("Primitive", str, int, float, bool)
 ReturnValue = Union[None, Primitive, DataClass, BytesIO]
-ReturnType = Union[None, Type[Primitive], Type[DataClass], Type[BytesIO]]
+ReturnType = Union[None, type[Primitive], type[DataClass], type[BytesIO]]
 
 OptBody = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin], Sequence[Primitive]]]
-OptParams = Optional[Dict[str, Primitive]]
-OptFiles = Optional[Dict[str, Union[bytes, str]]]
+OptParams = Optional[dict[str, Primitive]]
+OptFiles = Optional[dict[str, Union[bytes, str]]]
 
 
 class RestException(Arcor2Exception):
@@ -87,7 +87,7 @@ session = requests.session()
 logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
 
 
-def dataclass_from_json(resp_json: Dict[str, Any], return_type: Type[DataClass]) -> DataClass:
+def dataclass_from_json(resp_json: dict[str, Any], return_type: type[DataClass]) -> DataClass:
 
     try:
         return return_type.from_dict(resp_json)
@@ -96,7 +96,7 @@ def dataclass_from_json(resp_json: Dict[str, Any], return_type: Type[DataClass])
         raise RestException("Invalid data.", str(e)) from e
 
 
-def primitive_from_json(resp_json: Primitive, return_type: Type[Primitive]) -> Primitive:
+def primitive_from_json(resp_json: Primitive, return_type: type[Primitive]) -> Primitive:
 
     try:
         return return_type(resp_json)
@@ -125,7 +125,7 @@ def call(
     method: Method,
     url: str,
     *,
-    return_type: Type[Primitive],
+    return_type: type[Primitive],
     body: OptBody = None,
     params: OptParams = None,
     files: OptFiles = None,
@@ -139,7 +139,7 @@ def call(
     method: Method,
     url: str,
     *,
-    return_type: Type[DataClass],
+    return_type: type[DataClass],
     body: OptBody = None,
     params: OptParams = None,
     files: OptFiles = None,
@@ -153,7 +153,7 @@ def call(
     method: Method,
     url: str,
     *,
-    return_type: Type[BytesIO],
+    return_type: type[BytesIO],
     body: OptBody = None,
     params: OptParams = None,
     files: OptFiles = None,
@@ -168,12 +168,12 @@ def call(
     method: Method,
     url: str,
     *,
-    list_return_type: Type[Primitive],
+    list_return_type: type[Primitive],
     body: OptBody = None,
     params: OptParams = None,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> List[Primitive]:
+) -> list[Primitive]:
     ...
 
 
@@ -182,12 +182,12 @@ def call(
     method: Method,
     url: str,
     *,
-    list_return_type: Type[DataClass],
+    list_return_type: type[DataClass],
     body: OptBody = None,
     params: OptParams = None,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> List[DataClass]:
+) -> list[DataClass]:
     ...
 
 
@@ -196,12 +196,12 @@ def call(
     method: Method,
     url: str,
     *,
-    list_return_type: Type[BytesIO],
+    list_return_type: type[BytesIO],
     body: OptBody = None,
     params: OptParams = None,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> List[BytesIO]:
+) -> list[BytesIO]:
     ...
 
 
@@ -239,7 +239,7 @@ def call(
     if return_type is None:
         return_type = list_return_type
 
-    d: Union[List[Any], Dict[str, Any]] = {}
+    d: Union[list[Any], dict[str, Any]] = {}
 
     # prepare data into dict
     if isinstance(body, JsonSchemaMixin):

@@ -3,7 +3,6 @@
 import argparse
 import random
 import time
-from typing import Dict
 
 import humps
 from flask import jsonify, request
@@ -15,7 +14,7 @@ from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
 
 app = create_app(__name__)
 
-collision_objects: Dict[str, object_type.Models] = {}
+collision_objects: dict[str, object_type.Models] = {}
 started: bool = False
 
 delay_mean = env.get_float("ARCOR2_MOCK_SCENE_DELAY_MEAN", 0)

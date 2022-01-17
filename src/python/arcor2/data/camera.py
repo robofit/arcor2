@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 import numpy as np
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -14,7 +13,7 @@ class CameraParameters(JsonSchemaMixin):
     fy: float
     cx: float
     cy: float
-    dist_coefs: List[float]  # (k1,k2,p1,p2[,k3[,k4,k5,k6],[s1,s2,s3,s4]])
+    dist_coefs: list[float]  # (k1,k2,p1,p2[,k3[,k4,k5,k6],[s1,s2,s3,s4]])
 
     def __post_init__(self) -> None:
 

@@ -6,7 +6,6 @@ import math
 import random
 import sys
 import time
-from typing import Dict, List, Tuple
 
 import numpy as np
 import quaternion
@@ -33,7 +32,7 @@ from arcor2_calibration.robot import calibrate_robot
 logger = get_logger(__name__)
 logger.propagate = False
 
-MARKERS: Dict[int, Pose] = {}
+MARKERS: dict[int, Pose] = {}
 MARKER_SIZE = 0.1
 
 MIN_DIST = 0.3
@@ -47,7 +46,7 @@ _mock: bool = False
 app = create_app(__name__)
 
 
-def camera_matrix_from_request() -> List[List[float]]:
+def camera_matrix_from_request() -> list[list[float]]:
 
     return [
         [float(request.args["fx"]), 0.00000, float(request.args["cx"])],
@@ -56,7 +55,7 @@ def camera_matrix_from_request() -> List[List[float]]:
     ]
 
 
-def dist_matrix_from_request() -> List[float]:
+def dist_matrix_from_request() -> list[float]:
     return [float(val) for val in request.args.getlist("distCoefs")]
 
 
@@ -198,7 +197,7 @@ def get_marker_corners() -> RespT:
     image = Image.open(file.stream)
     dist_matrix = dist_matrix_from_request()
 
-    corners: List[MarkerCorners] = []
+    corners: list[MarkerCorners] = []
 
     if _mock:
         time.sleep(0.1)
@@ -307,8 +306,8 @@ def get_calibration() -> RespT:
         if not poses:
             return jsonify("No marker detected."), 404
 
-        quality_dict: Dict[int, float] = {k: 0.0 for k, v in MARKERS.items()}
-        known_markers: List[Tuple[Pose, float]] = []
+        quality_dict: dict[int, float] = {k: 0.0 for k, v in MARKERS.items()}
+        known_markers: list[tuple[Pose, float]] = []
 
         # apply configured marker offset from origin to the detected poses
         for marker_id in poses.keys():

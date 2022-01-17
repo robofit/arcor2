@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncIterator, Dict, List, Optional, Set, Type, TypeVar
+from typing import AsyncIterator, Optional, TypeVar
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -34,12 +34,12 @@ _scene_state: SceneState = SceneState(SceneState.Data(SceneState.Data.StateEnum.
 @dataclass
 class SceneProblems:
     scene_modified: datetime
-    problems: List[str]
-    ot_modified: Dict[str, datetime]
+    problems: list[str]
+    ot_modified: dict[str, datetime]
 
 
-_scene_problems: Dict[str, SceneProblems] = {}
-_objects_to_auto_remove: Set[str] = set()
+_scene_problems: dict[str, SceneProblems] = {}
+_objects_to_auto_remove: set[str] = set()
 
 
 async def schedule_auto_remove(obj_type: str) -> None:
@@ -52,7 +52,7 @@ async def clear_auto_remove_schedule() -> None:
     _objects_to_auto_remove.clear()
 
 
-async def scheduled_to_be_auto_removed() -> Set[str]:
+async def scheduled_to_be_auto_removed() -> set[str]:
     return _objects_to_auto_remove
 
 
@@ -123,11 +123,11 @@ async def save_scene(scene: Optional[UpdateableCachedScene] = None) -> None:
     glob.OBJECTS_WITH_UPDATED_POSE.clear()
 
 
-def get_ot_modified(ots: Set[str]) -> Dict[str, datetime]:
+def get_ot_modified(ots: set[str]) -> dict[str, datetime]:
     return {k: v.meta.modified for k, v in glob.OBJECT_TYPES.items() if k in ots and v.meta.modified is not None}
 
 
-async def get_scene_problems(scene: CachedScene) -> Optional[List[str]]:
+async def get_scene_problems(scene: CachedScene) -> Optional[list[str]]:
     """Handle caching of scene problems."""
 
     assert scene.modified
@@ -248,7 +248,7 @@ async def scenes() -> AsyncIterator[CachedScene]:
         yield await storage.get_scene(scene_id)
 
 
-async def scene_names() -> Set[str]:
+async def scene_names() -> set[str]:
     return {scene.name for scene in (await storage.get_scenes())}
 
 
@@ -280,7 +280,7 @@ async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dr
     logger.debug(f"Object {obj.id} ({obj.type}) added to scene.")
 
 
-async def create_object_instance(obj: SceneObject, overrides: Optional[List[Parameter]] = None) -> None:
+async def create_object_instance(obj: SceneObject, overrides: Optional[list[Parameter]] = None) -> None:
 
     obj_type = glob.OBJECT_TYPES[obj.type]
 
@@ -361,8 +361,8 @@ def get_robot_instance(obj_id: str) -> Robot:  # TODO remove once https://github
 T = TypeVar("T", bound=Generic)
 
 
-# TODO "thanks" to https://github.com/python/mypy/issues/3737, `expected_type: Type[T] = Generic` can't be used
-def get_instance(obj_id: str, expected_type: Type[T]) -> T:
+# TODO "thanks" to https://github.com/python/mypy/issues/3737, `expected_type: type[T] = Generic` can't be used
+def get_instance(obj_id: str, expected_type: type[T]) -> T:
 
     assert scene_started()
 
@@ -463,7 +463,7 @@ async def start_scene(scene: CachedScene) -> None:
             await set_scene_state(SceneState.Data.StateEnum.Stopped, "Failed to prepare for start.")
             return False
 
-        object_overrides: Dict[str, List[Parameter]] = {}
+        object_overrides: dict[str, list[Parameter]] = {}
 
         if glob.LOCK.project:
             object_overrides = glob.LOCK.project.overrides
