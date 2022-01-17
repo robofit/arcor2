@@ -1,6 +1,6 @@
 from ast import AST
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Type
+from typing import Optional
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
@@ -12,8 +12,8 @@ from arcor2_arserver_data.robot import RobotMeta
 class ObjectTypeData:
 
     meta: ObjectTypeMeta
-    type_def: Optional[Type[Generic]] = None
-    actions: Dict[str, ObjectAction] = field(default_factory=dict)
+    type_def: Optional[type[Generic]] = None
+    actions: dict[str, ObjectAction] = field(default_factory=dict)
     ast: Optional[AST] = None
     robot_meta: Optional[RobotMeta] = None
 
@@ -31,4 +31,4 @@ class ObjTypeDict(dict):
             raise Arcor2Exception(f"Unknown ObjectType: {object_type_id}.")
 
 
-ObjectTypeDict = Dict[str, ObjectTypeData]
+ObjectTypeDict = dict[str, ObjectTypeData]

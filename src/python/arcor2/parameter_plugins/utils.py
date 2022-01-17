@@ -1,12 +1,12 @@
 import inspect
-from typing import Any, Dict, Optional, Set, Type
+from typing import Any, Optional
 
 from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.base import ParameterPlugin
 
-TypeToPluginDict = Dict[Type, Type[ParameterPlugin]]
+TypeToPluginDict = dict[type, type[ParameterPlugin]]
 
-_type_name_to_plugin: Dict[str, Type[ParameterPlugin]] = {}
+_type_name_to_plugin: dict[str, type[ParameterPlugin]] = {}
 _type_to_plugin: TypeToPluginDict = {}
 
 
@@ -27,7 +27,7 @@ def load_plugins() -> None:
     from arcor2.parameter_plugins.string import StringPlugin
     from arcor2.parameter_plugins.string_enum import StringEnumPlugin
 
-    plugins: Set[Type[ParameterPlugin]] = {
+    plugins: set[type[ParameterPlugin]] = {
         BooleanPlugin,
         # BooleanListPlugin,
         DoublePlugin,
@@ -57,18 +57,18 @@ def non_exact_types() -> TypeToPluginDict:
     return {k: v for k, v in _type_to_plugin.items() if not v.EXACT_TYPE}
 
 
-def known_parameter_types() -> Set[str]:
+def known_parameter_types() -> set[str]:
 
     return set(_type_name_to_plugin.keys())
 
 
-def plugin_from_instance(inst: Any) -> Type[ParameterPlugin]:
+def plugin_from_instance(inst: Any) -> type[ParameterPlugin]:
 
-    # TODO support for lists (e.g. List[Pose])
+    # TODO support for lists (e.g. list[Pose])
     return plugin_from_type(type(inst))
 
 
-def plugin_from_type_name(param_type_name: str) -> Type[ParameterPlugin]:
+def plugin_from_type_name(param_type_name: str) -> type[ParameterPlugin]:
 
     try:
         return _type_name_to_plugin[param_type_name]
@@ -76,7 +76,7 @@ def plugin_from_type_name(param_type_name: str) -> Type[ParameterPlugin]:
         raise ParameterPluginException(f"Unknown parameter type {param_type_name}.")
 
 
-def plugin_from_type(param_type: Type[Any]) -> Type[ParameterPlugin]:
+def plugin_from_type(param_type: type[Any]) -> type[ParameterPlugin]:
 
     try:
         return _type_to_plugin[param_type]
@@ -87,7 +87,7 @@ def plugin_from_type(param_type: Type[Any]) -> Type[ParameterPlugin]:
         except AttributeError:
             type_name = str(param_type)
 
-        plugin: Optional[Type[ParameterPlugin]] = None
+        plugin: Optional[type[ParameterPlugin]] = None
         for k, v in non_exact_types().items():
             if inspect.isclass(param_type) and issubclass(param_type, k):
                 if plugin is not None:

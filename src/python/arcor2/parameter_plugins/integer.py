@@ -1,7 +1,7 @@
 import ast
 from ast import Num
 from dataclasses import dataclass
-from typing import Any, Callable, List, Tuple, Type
+from typing import Any, Callable
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -24,7 +24,7 @@ class AssertNotFound(ParameterPluginException):
     pass
 
 
-def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tuple[Any, Any]:
+def get_assert_minimum_maximum(asserts: list[ast.Assert], param_name: str) -> tuple[Any, Any]:
 
     # Assert(test=Compare(left=Num(n=0), ops=[LtE(), LtE()], comparators=[Name(id='speed', ctx=Load()), Num(n=100)]))
 
@@ -57,7 +57,7 @@ def get_assert_minimum_maximum(asserts: List[ast.Assert], param_name: str) -> Tu
 
 
 def get_min_max(
-    cls: Type[ParameterPlugin], param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef
+    cls: type[ParameterPlugin], param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef
 ) -> None:
 
     try:
@@ -107,7 +107,7 @@ class IntegerPlugin(ParameterPlugin):
 class IntegerListPlugin(ListParameterPlugin):
     @classmethod
     def type(cls):
-        return List[int]
+        return list[int]
 
     @classmethod
     def type_name(cls) -> str:
@@ -120,5 +120,5 @@ class IntegerListPlugin(ListParameterPlugin):
     @classmethod
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> List[int]:
+    ) -> list[int]:
         return super(IntegerListPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)

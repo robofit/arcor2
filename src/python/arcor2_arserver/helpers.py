@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Set
+from typing import AsyncGenerator
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import globals as glob
@@ -8,7 +8,7 @@ from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 
 
-def unique_name(name: str, existing_names: Set[str]) -> None:
+def unique_name(name: str, existing_names: set[str]) -> None:
 
     if not name:
         raise Arcor2Exception("Name has to be set.")
@@ -17,7 +17,7 @@ def unique_name(name: str, existing_names: Set[str]) -> None:
         raise Arcor2Exception("Name already exists.")
 
 
-def make_name_unique(orig_name: str, names: Set[str]) -> str:
+def make_name_unique(orig_name: str, names: set[str]) -> str:
 
     cnt = 1
     name = orig_name
@@ -106,7 +106,7 @@ async def ensure_read_locked(obj_id: str, owner: str, locked_tree: bool = False)
         raise LockingException("Object is not write locked.")
 
 
-async def get_unlocked_objects(obj_ids: ObjIds, owner: str) -> Set[str]:
+async def get_unlocked_objects(obj_ids: ObjIds, owner: str) -> set[str]:
     """Check if objects are write locked.
 
     :return: list of objects that are not write locked

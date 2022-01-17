@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 from arcor2 import rest
 from arcor2.data.common import Joint, Pose, StrEnum
@@ -40,9 +40,9 @@ class DobotMagician(AbstractDobot):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
+        start_joints: Optional[list[Joint]] = None,
         avoid_collisions: bool = True,
-    ) -> List[Joint]:
+    ) -> list[Joint]:
         """Computes inverse kinematics.
 
         :param end_effector_id: IK target pose end-effector
@@ -54,7 +54,7 @@ class DobotMagician(AbstractDobot):
 
         return rest.call(rest.Method.PUT, f"{self.settings.url}/ik", body=pose, list_return_type=Joint)
 
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint]) -> Pose:
         """Computes forward kinematics.
 
         :param end_effector_id: Target end effector name

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, NamedTuple, Optional
+from typing import NamedTuple, Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -28,7 +28,7 @@ class RPC:
         id: int = 0
         response: str = field(init=False)
         result: bool = True
-        messages: Optional[List[str]] = None
+        messages: Optional[list[str]] = None
         # TODO define data here somehow? And check that if result==True there are some data
 
         def __post_init__(self) -> None:

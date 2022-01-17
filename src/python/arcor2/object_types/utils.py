@@ -3,7 +3,7 @@ import inspect
 import os
 import shutil
 from dataclasses import is_dataclass
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Type, Union, get_type_hints
+from typing import Any, Callable, Iterator, Optional, Union, get_type_hints
 
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
@@ -20,7 +20,7 @@ class ObjectTypeException(Arcor2Exception):
     pass
 
 
-def get_containing_module_sources(type_def: Type[object]) -> str:
+def get_containing_module_sources(type_def: type[object]) -> str:
     """Returns sources of the whole containing module.
 
     ...whereas inspect.getsource(type_def) returns just source of the class itself
@@ -32,7 +32,7 @@ def get_containing_module_sources(type_def: Type[object]) -> str:
         return source_file.read()
 
 
-def check_object_type(type_def: Type[Generic]) -> None:
+def check_object_type(type_def: type[Generic]) -> None:
     """Checks whether the object type source is a valid one.
 
     :param type_def:
@@ -49,17 +49,23 @@ def check_object_type(type_def: Type[Generic]) -> None:
     # TODO some more (simple) checks here?
 
 
-def built_in_types() -> Iterator[Tuple[str, Type[Generic]]]:
+def built_in_types() -> Iterator[tuple[str, type[Generic]]]:
     """Yields class name and class definition tuple."""
 
-    for cls_name, cls_type in inspect.getmembers(arcor2.object_types.abstract, inspect.isclass):
-        if not issubclass(cls_type, Generic):
+    for cls_name, cls_type in inspect.getmembers(arcor2.object_types.abstract, predicate=inspect.isclass):
+
+        try:
+            if not issubclass(cls_type, Generic):
+                continue
+        except TypeError:
+            # TODO detect type-hinted generics (e.g. dict[str, str]) instead?
+            # CancelDict / issubclass() arg 1 must be a class
             continue
 
         yield cls_name, cls_type
 
 
-def get_built_in_type(name: str) -> Type[Generic]:
+def get_built_in_type(name: str) -> type[Generic]:
 
     for bname, cls in built_in_types():
         if name == bname:
@@ -68,7 +74,7 @@ def get_built_in_type(name: str) -> Type[Generic]:
     raise KeyError
 
 
-def built_in_types_names() -> Set[str]:
+def built_in_types_names() -> set[str]:
     return {type_name for type_name, _ in built_in_types()}
 
 
@@ -80,7 +86,7 @@ class DataError(Arcor2Exception):
 
 
 def settings_from_params(
-    type_def: Type[Generic], settings: List[Parameter], overrides: Optional[List[Parameter]] = None
+    type_def: type[Generic], settings: list[Parameter], overrides: Optional[list[Parameter]] = None
 ) -> Settings:
     """Constructs instance of Settings from two arrays of parameters (scene
     settings and project overrides).
@@ -94,7 +100,7 @@ def settings_from_params(
     if overrides is None:
         overrides = []
 
-    final: Dict[str, Parameter] = {s.name: s for s in settings}
+    final: dict[str, Parameter] = {s.name: s for s in settings}
     for over in overrides:
         if over.name not in final:
             raise Arcor2Exception("Invalid override.")
@@ -105,7 +111,7 @@ def settings_from_params(
         final[over.name] = over
 
     settings_def = get_settings_def(type_def)
-    settings_data: Dict[str, Any] = {}
+    settings_data: dict[str, Any] = {}
 
     settings_def_type_hints = get_type_hints(settings_def.__init__)
 
@@ -132,7 +138,7 @@ def settings_from_params(
     return settings_cls
 
 
-def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
+def get_settings_def(type_def: type[Generic]) -> type[Settings]:
     """Get settings definition from object type definition.
 
     :param type_def:
@@ -162,7 +168,7 @@ def get_settings_def(type_def: Type[Generic]) -> Type[Settings]:
     return settings_cls
 
 
-def base_from_source(source: Union[str, ast.AST], cls_name: str) -> List[str]:
+def base_from_source(source: Union[str, ast.AST], cls_name: str) -> list[str]:
     """Returns list, where the first element is name of the base class and
     others are mixins.
 
@@ -179,7 +185,7 @@ def base_from_source(source: Union[str, ast.AST], cls_name: str) -> List[str]:
     if not cls_def.bases:
         return []
 
-    ret: List[str] = []
+    ret: list[str] = []
 
     for base in reversed(cls_def.bases):
 
@@ -190,8 +196,8 @@ def base_from_source(source: Union[str, ast.AST], cls_name: str) -> List[str]:
 
 
 def iterate_over_actions(
-    type_def: Type[Generic],
-) -> Iterator[Tuple[str, Callable[[Any,], Any]]]:
+    type_def: type[Generic],
+) -> Iterator[tuple[str, Callable[[Any,], Any]]]:
 
     for method_name, method in inspect.getmembers(type_def, inspect.isroutine):
 

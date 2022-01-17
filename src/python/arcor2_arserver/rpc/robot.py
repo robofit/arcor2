@@ -1,7 +1,7 @@
 import asyncio
 import math
 import time
-from typing import Awaitable, Callable, Dict, List, Optional, Set
+from typing import Awaitable, Callable, Optional
 
 import numpy as np
 from arcor2_calibration_data import client as calib_client
@@ -35,7 +35,7 @@ from arcor2_arserver_data.events.robot import HandTeachingMode
 
 RBT_CALIB = "RobotCalibration"
 
-TaskDict = Dict[str, asyncio.Task]
+TaskDict = dict[str, asyncio.Task]
 
 ROBOT_JOINTS_TASKS: TaskDict = {}
 EEF_POSE_TASKS: TaskDict = {}
@@ -80,7 +80,7 @@ async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None)
 
 async def robot_eef_pose_event(robot_inst: Robot) -> None:
 
-    eefs: Dict[Optional[str], Set[str]] = {}
+    eefs: dict[Optional[str], set[str]] = {}
 
     try:
         try:
@@ -633,7 +633,7 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
     target_joints_diff: float = 0.0
     winning_idx: int = -1
 
-    poses: List[common.Pose] = [
+    poses: list[common.Pose] = [
         common.Pose(
             tp.position,
             common.Orientation.from_rotation_vector(y=math.pi) * common.Orientation.from_rotation_vector(z=z_rot),

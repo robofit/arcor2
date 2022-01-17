@@ -1,6 +1,6 @@
 import asyncio
 import socket
-from typing import Optional, Text, Tuple, Union
+from typing import Optional, Text, Union
 
 from arcor2.data.common import BroadcastInfo
 from arcor2_arserver.globals import PORT
@@ -30,7 +30,7 @@ def get_broadcast() -> str:
     return ".".join(ip_arr)
 
 
-Address = Tuple[str, int]
+Address = tuple[str, int]
 
 
 class BroadcastProtocol(asyncio.DatagramProtocol):

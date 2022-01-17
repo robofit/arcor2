@@ -1,6 +1,5 @@
 import inspect
 import json
-from typing import Dict, Type
 
 import pytest
 
@@ -29,7 +28,7 @@ class TestObject(Generic):
 
 
 param_name = "joints_param"
-type_defs: Dict[str, Type[Generic]] = {TestObject.__name__: TestObject}
+type_defs: dict[str, type[Generic]] = {TestObject.__name__: TestObject}
 
 
 def test_abstract() -> None:

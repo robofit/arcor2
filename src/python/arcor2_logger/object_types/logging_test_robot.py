@@ -1,4 +1,4 @@
-from typing import List, Optional, Set
+from typing import Optional
 
 from arcor2.data.common import Joint, Pose
 from arcor2.object_types.abstract import Robot, Settings
@@ -12,17 +12,17 @@ class LoggingTestRobot(LoggingMixin, Robot):
         self.logger = self.get_logger()
         self.logger.info("Initialized.")
 
-    def get_end_effectors_ids(self) -> Set[str]:
+    def get_end_effectors_ids(self) -> set[str]:
         return set()
 
     def get_end_effector_pose(self, end_effector: str) -> Pose:
         return Pose()
 
-    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
         return []
 
-    def grippers(self) -> Set[str]:
+    def grippers(self) -> set[str]:
         return set()
 
-    def suctions(self) -> Set[str]:
+    def suctions(self) -> set[str]:
         return set()

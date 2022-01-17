@@ -1,5 +1,4 @@
 import time
-from typing import List
 
 from arcor2_dobot.dobot import Dobot, DobotException
 from arcor2_dobot.dobot_api import DobotApiException
@@ -34,7 +33,7 @@ class DobotM1(Dobot):
         pose.position.y += 0.0
         pose.position.z -= 0.01
 
-    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
 
         if self.simulator:
             return self._joint_values

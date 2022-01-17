@@ -29,7 +29,7 @@ from ast import (
     stmt,
     withitem,
 )
-from typing import List, Union
+from typing import Union
 
 import humps
 
@@ -61,7 +61,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
     -------
     """
 
-    main_body: List[stmt] = [
+    main_body: list[stmt] = [
         Assign(
             targets=[Name(id="aps", ctx=Store())],
             value=Call(func=Name(id="ActionPoints", ctx=Load()), args=[Name(id="res", ctx=Load())], keywords=[]),
@@ -189,11 +189,11 @@ def global_action_points_class(project: CachedProject) -> str:
         )
     )
 
-    aps_init_body: List[Union[Assign, Pass]] = []
+    aps_init_body: list[Union[Assign, Pass]] = []
 
     for ap in project.action_points:
 
-        ap_cls_body: List[Assign] = [
+        ap_cls_body: list[Assign] = [
             Assign(
                 targets=[Attribute(value=Name(id="self", ctx=Load()), attr="_position", ctx=Store())],
                 value=Attribute(
@@ -215,7 +215,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
         ap_type_name = humps.pascalize(ap.name)
 
-        ap_joints_init_body: List[Assign] = []
+        ap_joints_init_body: list[Assign] = []
 
         for joints in project.ap_joints(ap.id):
             ap_joints_init_body.append(
@@ -306,7 +306,7 @@ def global_action_points_class(project: CachedProject) -> str:
                 )
             )
 
-        ap_orientations_init_body: List[Assign] = []
+        ap_orientations_init_body: list[Assign] = []
 
         for ori in project.ap_orientations(ap.id):
             ap_orientations_init_body.append(

@@ -3,7 +3,7 @@ import inspect
 from ast import Attribute, Load, Name
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, List, Optional, Set, get_type_hints
+from typing import Any, Callable, Optional, get_type_hints
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -20,7 +20,7 @@ from arcor2.parameter_plugins.base import ImportTuple, ParameterPlugin, Paramete
 @dataclass
 class IntegerEnumExtra(JsonSchemaMixin):
 
-    allowed_values: Optional[Set[Any]] = None
+    allowed_values: Optional[set[Any]] = None
 
 
 class IntegerEnumPlugin(ParameterPlugin):
@@ -90,7 +90,7 @@ class IntegerEnumPlugin(ParameterPlugin):
     @classmethod
     def need_to_be_imported(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> Optional[List[ImportTuple]]:
+    ) -> Optional[list[ImportTuple]]:
 
         enum_cls = cls.parameter_value(type_defs, scene, project, action_id, parameter_id).__class__
         # TODO does this work as expected in all cases?

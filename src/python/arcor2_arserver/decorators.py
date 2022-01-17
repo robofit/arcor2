@@ -1,6 +1,6 @@
 import functools
 from asyncio import sleep
-from typing import Any, Callable, Coroutine, Type, TypeVar, cast
+from typing import Any, Callable, Coroutine, TypeVar, cast
 
 from arcor2_arserver import logger
 from arcor2_arserver.lock.exceptions import LockingException
@@ -8,7 +8,7 @@ from arcor2_arserver.lock.exceptions import LockingException
 F = TypeVar("F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 
-def retry(exc: Type[Exception] = LockingException, tries: int = 1, delay: float = 0) -> Callable:
+def retry(exc: type[Exception] = LockingException, tries: int = 1, delay: float = 0) -> Callable:
     """Retry decorator.
 
     :param exc: Exception or tuple of exceptions to catch

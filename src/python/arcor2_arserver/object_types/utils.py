@@ -2,7 +2,7 @@ import copy
 import inspect
 import os
 from ast import AST
-from typing import Dict, List, Optional, Type, get_type_hints
+from typing import Optional, get_type_hints
 
 import humps
 import typing_inspect
@@ -54,14 +54,14 @@ def obj_description_from_base(data: ObjectTypeDict, obj_type: ObjectTypeMeta) ->
     return obj_description_from_base(data, data[obj.meta.base].meta)
 
 
-def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]:
+def get_dataclass_params(type_def: type[JsonSchemaMixin]) -> list[ParameterMeta]:
     """Analyzes properties of dataclass and returns their metadata.
 
     :param type_def:
     :return:
     """
 
-    ret: List[ParameterMeta] = []
+    ret: list[ParameterMeta] = []
 
     sig = inspect.signature(type_def.__init__)
 
@@ -90,7 +90,7 @@ def get_dataclass_params(type_def: Type[JsonSchemaMixin]) -> List[ParameterMeta]
     return ret
 
 
-def meta_from_def(type_def: Type[Generic], built_in: bool = False) -> ObjectTypeMeta:
+def meta_from_def(type_def: type[Generic], built_in: bool = False) -> ObjectTypeMeta:
 
     obj = ObjectTypeMeta(
         type_def.__name__,
@@ -132,9 +132,9 @@ class IgnoreActionException(Arcor2Exception):
     pass
 
 
-def object_actions(type_def: Type[Generic], tree: AST) -> Dict[str, ObjectAction]:
+def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction]:
 
-    ret: Dict[str, ObjectAction] = {}
+    ret: dict[str, ObjectAction] = {}
 
     # ...inspect.ismethod does not work on un-initialized classes
     for method_name, method_def in iterate_over_actions(type_def):

@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import Optional
 
 import pytest
 
@@ -39,7 +39,7 @@ class Test(Generic):
         pass
 
 
-def subs_index(spl: List[str], subs: str) -> int:
+def subs_index(spl: list[str], subs: str) -> int:
     """Returns index of the list's first element that contains given substring.
 
     :param spl:

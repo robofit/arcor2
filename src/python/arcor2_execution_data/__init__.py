@@ -1,5 +1,4 @@
 import os
-from typing import Tuple, Type
 
 from arcor2_runtime.events import RobotEef, RobotJoints
 
@@ -11,7 +10,7 @@ from arcor2_execution_data import events, rpc
 URL = os.getenv("ARCOR2_EXECUTION_URL", "ws://0.0.0.0:6790")
 
 # RPCs that should be exposed to end clients (e.g. ARServer exposes those to AREditor).
-EXPOSED_RPCS: Tuple[Type[RPC], ...] = (
+EXPOSED_RPCS: tuple[type[RPC], ...] = (
     rpc.RunPackage,
     rpc.StopPackage,
     rpc.PausePackage,
@@ -23,9 +22,9 @@ EXPOSED_RPCS: Tuple[Type[RPC], ...] = (
     rpc.StepAction,
 )
 
-RPCS: Tuple[Type[RPC], ...] = EXPOSED_RPCS + (Version,)
+RPCS: tuple[type[RPC], ...] = EXPOSED_RPCS + (Version,)
 
-EVENTS: Tuple[Type[arcor2_events.Event], ...] = (
+EVENTS: tuple[type[arcor2_events.Event], ...] = (
     events.PackageChanged,
     arcor2_events.PackageState,
     arcor2_events.PackageInfo,

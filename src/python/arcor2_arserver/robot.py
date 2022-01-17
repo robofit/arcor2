@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from typing import Any, List, Optional, Set, Tuple, Type
+from typing import Any, Optional
 
 import arcor2.helpers as hlp
 from arcor2.cached import CachedScene
@@ -26,7 +26,7 @@ class SingleArmRobotException(Arcor2Exception):
     pass
 
 
-def prepare_args(robot_inst: Robot, args: List[Any], arm_id: Optional[str]) -> List[Any]:
+def prepare_args(robot_inst: Robot, args: list[Any], arm_id: Optional[str]) -> list[Any]:
 
     if isinstance(robot_inst, MultiArmRobot):
         args.append(arm_id)
@@ -36,7 +36,7 @@ def prepare_args(robot_inst: Robot, args: List[Any], arm_id: Optional[str]) -> L
     return args
 
 
-async def get_arms(robot_inst: Robot) -> Set[str]:
+async def get_arms(robot_inst: Robot) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing arms.
@@ -48,7 +48,7 @@ async def get_arms(robot_inst: Robot) -> Set[str]:
     return await hlp.run_in_executor(robot_inst.get_arm_ids)
 
 
-async def get_end_effectors(robot_inst: Robot, arm_id: Optional[str]) -> Set[str]:
+async def get_end_effectors(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing end effectors.
@@ -57,7 +57,7 @@ async def get_end_effectors(robot_inst: Robot, arm_id: Optional[str]) -> Set[str
     return await hlp.run_in_executor(robot_inst.get_end_effectors_ids, *prepare_args(robot_inst, [], arm_id))
 
 
-async def get_grippers(robot_inst: Robot, arm_id: Optional[str]) -> Set[str]:
+async def get_grippers(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing grippers.
@@ -66,7 +66,7 @@ async def get_grippers(robot_inst: Robot, arm_id: Optional[str]) -> Set[str]:
     return await hlp.run_in_executor(robot_inst.grippers, *prepare_args(robot_inst, [], arm_id))
 
 
-async def get_suctions(robot_inst: Robot, arm_id: Optional[str]) -> Set[str]:
+async def get_suctions(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing suctions.
@@ -77,7 +77,7 @@ async def get_suctions(robot_inst: Robot, arm_id: Optional[str]) -> Set[str]:
 
 async def get_pose_and_joints(
     robot_inst: Robot, end_effector: str, arm_id: Optional[str]
-) -> Tuple[common.Pose, List[common.Joint]]:
+) -> tuple[common.Pose, list[common.Joint]]:
 
     return await asyncio.gather(
         hlp.run_in_executor(robot_inst.get_end_effector_pose, *prepare_args(robot_inst, [end_effector], arm_id)),
@@ -99,7 +99,7 @@ async def get_end_effector_pose(robot_inst: Robot, end_effector: str, arm_id: Op
 
 async def get_robot_joints(
     robot_inst: Robot, arm_id: Optional[str], include_gripper: bool = False
-) -> List[common.Joint]:
+) -> list[common.Joint]:
     """
     :param robot_inst:
     :return: List of joints
@@ -108,7 +108,7 @@ async def get_robot_joints(
     return await hlp.run_in_executor(robot_inst.robot_joints, *prepare_args(robot_inst, [include_gripper], arm_id))
 
 
-def _feature(type_def: Type[Robot], method_name: str, base_class: Type[Robot]) -> bool:
+def _feature(type_def: type[Robot], method_name: str, base_class: type[Robot]) -> bool:
 
     assert glob.OBJECT_TYPES
 
@@ -157,7 +157,7 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
     )
 
     # TODO fix mypy issue 'Can only assign concrete classes to a variable of type "Type[Robot]"'
-    base_class: Type[Robot] = MultiArmRobot if obj_type.robot_meta.multi_arm else Robot  # type: ignore
+    base_class: type[Robot] = MultiArmRobot if obj_type.robot_meta.multi_arm else Robot  # type: ignore
 
     # TODO automate this somehow
     obj_type.robot_meta.features.move_to_pose = _feature(obj_type.type_def, Robot.move_to_pose.__name__, base_class)
@@ -197,9 +197,9 @@ async def ik(
     end_effector_id: str,
     arm_id: Optional[str],
     pose: common.Pose,
-    start_joints: Optional[List[common.Joint]] = None,
+    start_joints: Optional[list[common.Joint]] = None,
     avoid_collisions: bool = True,
-) -> List[common.Joint]:
+) -> list[common.Joint]:
 
     return await hlp.run_in_executor(
         robot_inst.inverse_kinematics,
@@ -207,7 +207,7 @@ async def ik(
     )
 
 
-async def fk(robot_inst: Robot, end_effector_id: str, arm_id: Optional[str], joints: List[common.Joint]) -> common.Pose:
+async def fk(robot_inst: Robot, end_effector_id: str, arm_id: Optional[str], joints: list[common.Joint]) -> common.Pose:
 
     return await hlp.run_in_executor(
         robot_inst.forward_kinematics, *prepare_args(robot_inst, [end_effector_id, joints], arm_id)
@@ -356,7 +356,7 @@ async def move_to_ap_orientation(
 
 
 async def _move_to_joints(
-    robot_inst: Robot, joints: List[common.Joint], speed: float, safe: bool, arm_id: Optional[str]
+    robot_inst: Robot, joints: list[common.Joint], speed: float, safe: bool, arm_id: Optional[str]
 ) -> None:
 
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
@@ -370,7 +370,7 @@ async def _move_to_joints(
 
 async def move_to_joints(
     robot_inst: Robot,
-    joints: List[common.Joint],
+    joints: list[common.Joint],
     speed: float,
     safe: bool,
     arm_id: Optional[str],
@@ -408,7 +408,7 @@ async def move_to_joints(
 
 async def move_to_ap_joints(
     robot_inst: Robot,
-    joints: List[common.Joint],
+    joints: list[common.Joint],
     speed: float,
     joints_id: str,
     safe: bool,

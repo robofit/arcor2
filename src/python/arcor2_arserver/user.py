@@ -1,5 +1,4 @@
 import asyncio
-from typing import Dict, Set
 
 from websockets.exceptions import WebSocketException
 from websockets.server import WebSocketServerProtocol as WsClient
@@ -17,9 +16,9 @@ class Users:
 
     def __init__(self) -> None:
 
-        self._interfaces: Set[WsClient] = set()
-        self._users_ui: Dict[str, WsClient] = {}
-        self._ui_users: Dict[WsClient, str] = {}
+        self._interfaces: set[WsClient] = set()
+        self._users_ui: dict[str, WsClient] = {}
+        self._ui_users: dict[WsClient, str] = {}
 
     def _assert_consistency(self) -> None:
 
@@ -28,7 +27,7 @@ class Users:
         assert set(self._ui_users).issubset(self._interfaces)
 
     @property
-    def interfaces(self) -> Set[WsClient]:
+    def interfaces(self) -> set[WsClient]:
         return self._interfaces
 
     def add_interface(self, ui: WsClient) -> None:
@@ -82,7 +81,7 @@ class Users:
         self._assert_consistency()
 
     @property
-    def user_names(self) -> Set[str]:
+    def user_names(self) -> set[str]:
         return set(self._users_ui)
 
     def user_name(self, ui: WsClient) -> str:

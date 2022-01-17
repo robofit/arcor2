@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Set
 
 from arcor2.clients import project_service
 from arcor2.clients.project_service import ProjectServiceException  # noqa
@@ -28,11 +27,11 @@ async def delete_model(model_id: str) -> None:
     await run_in_executor(project_service.delete_model, model_id)
 
 
-async def get_projects() -> List[IdDesc]:
+async def get_projects() -> list[IdDesc]:
     return await run_in_executor(project_service.get_projects)
 
 
-async def get_scenes() -> List[IdDesc]:
+async def get_scenes() -> list[IdDesc]:
     return await run_in_executor(project_service.get_scenes)
 
 
@@ -52,7 +51,7 @@ async def get_object_type(object_type_id: str) -> ObjectType:
     return await run_in_executor(project_service.get_object_type, object_type_id)
 
 
-async def get_object_type_ids() -> List[IdDesc]:
+async def get_object_type_ids() -> list[IdDesc]:
     return await run_in_executor(project_service.get_object_type_ids)
 
 
@@ -90,6 +89,6 @@ async def save_file(file_id: str, path: str) -> None:
     await run_in_executor(project_service.save_file, file_id, path)
 
 
-async def files_ids() -> Set[str]:
+async def files_ids() -> set[str]:
     """Gets IDs of stored files."""
     return await run_in_executor(project_service.files_ids)

@@ -1,7 +1,7 @@
 import os
 import zipfile
 from io import BytesIO
-from typing import List, NamedTuple, Optional, Type
+from typing import NamedTuple, Optional
 
 from arcor2.clients import project_service as ps
 from arcor2.data.object_type import Mesh, Models, ObjectType
@@ -20,7 +20,7 @@ class Urdf(NamedTuple):
     archive_name: str  # resulting archive name
 
 
-def upload_whatever(type_def: Type[object]) -> None:
+def upload_whatever(type_def: type[object]) -> None:
 
     obj_type = ObjectType(id=type_def.__name__, source=get_containing_module_sources(type_def))
     print(f"Storing '{obj_type.id}'...")
@@ -28,7 +28,7 @@ def upload_whatever(type_def: Type[object]) -> None:
 
 
 def upload_def(
-    type_def: Type[Generic],
+    type_def: type[Generic],
     model: Optional[Models] = None,
     urdf: Optional[Urdf] = None,
     file_to_upload: Optional[str] = None,
@@ -94,7 +94,7 @@ def upload_def(
 
         print(f"Storing URDF package for '{obj_type.id}'.")
 
-        paths: List[str] = []
+        paths: list[str] = []
 
         # full path is in form src/python/arcor2_fit_demo/data/dobot-m1/dobot_m1_description/meshes
         # so we need to remove the prefix (e.g. src/python/arcor2_fit_demo/data/dobot-m1)

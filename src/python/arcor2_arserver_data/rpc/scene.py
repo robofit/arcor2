@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -25,7 +25,7 @@ class SceneObjectUsage(RPC):
 
     @dataclass
     class Response(RPC.Response):
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ class AddObjectToScene(RPC):
             name: str
             type: str
             pose: Optional[Pose] = None
-            parameters: List[Parameter] = field(default_factory=list)
+            parameters: list[Parameter] = field(default_factory=list)
 
         args: Args
         dry_run: bool = False
@@ -58,7 +58,7 @@ class UpdateObjectParameters(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             id: str
-            parameters: List[Parameter] = field(default_factory=list)
+            parameters: list[Parameter] = field(default_factory=list)
 
         args: Args
         dry_run: bool = False
@@ -126,9 +126,9 @@ class ListScenes(RPC):
     class Response(RPC.Response):
         @dataclass
         class Data(IdDesc):
-            problems: Optional[List[str]] = None
+            problems: Optional[list[str]] = None
 
-        data: Optional[List[Data]] = None
+        data: Optional[list[Data]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -230,7 +230,7 @@ class DeleteScene(RPC):
     @dataclass
     class Response(RPC.Response):
 
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ class ProjectsWithScene(RPC):
     @dataclass
     class Response(RPC.Response):
 
-        data: Optional[Set[str]] = None
+        data: Optional[set[str]] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------

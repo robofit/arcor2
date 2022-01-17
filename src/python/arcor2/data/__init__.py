@@ -1,7 +1,7 @@
 import importlib
 import inspect
 import pkgutil
-from typing import TYPE_CHECKING, Dict, Type
+from typing import TYPE_CHECKING
 
 import dataclasses_jsonschema
 import orjson
@@ -21,7 +21,7 @@ if not TYPE_CHECKING:
 
     @classmethod
     def from_json(
-        cls: Type[dataclasses_jsonschema.T], data: str, validate: bool = True, **json_kwargs
+        cls: type[dataclasses_jsonschema.T], data: str, validate: bool = True, **json_kwargs
     ) -> dataclasses_jsonschema.T:
         return cls.from_dict(orjson.loads(data), validate)
 
@@ -32,7 +32,7 @@ if not TYPE_CHECKING:
     JsonSchemaMixin.to_json = to_json
 
 
-def resolve_schema_refs(self, data: Dict) -> None:
+def resolve_schema_refs(self, data: dict) -> None:
 
     if "schema" in data:
 

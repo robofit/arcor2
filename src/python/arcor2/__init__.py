@@ -1,19 +1,19 @@
 import pkgutil
 import warnings
-from typing import Dict, NamedTuple, Set
+from typing import NamedTuple
 
 
 class DynamicParamTuple(NamedTuple):
 
     method_name: str
-    parent_parameters: Set[str]
+    parent_parameters: set[str]
 
 
 # key: name of parameter, value: name of method to call (to get set of strings), set of parent parameters
-DynamicParamDict = Dict[str, DynamicParamTuple]
+DynamicParamDict = dict[str, DynamicParamTuple]
 
 # key: action, value: cancel method
-CancelDict = Dict[str, str]
+CancelDict = dict[str, str]
 
 warnings.filterwarnings(action="ignore", category=UserWarning, module="quaternion")
 

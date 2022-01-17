@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from arcor2.data.object_type import Box, Cylinder, Sphere
@@ -10,7 +8,7 @@ from arcor2.exceptions import Arcor2Exception
     "dim",
     [[1, 1, 1], [0, 1, 1], [1, 1, 0]],
 )
-def test_box_valid_dimensions(dim: List[float]) -> None:
+def test_box_valid_dimensions(dim: list[float]) -> None:
     Box("", *dim)
 
 
@@ -18,7 +16,7 @@ def test_box_valid_dimensions(dim: List[float]) -> None:
     "dim",
     [[0, 0, 1], [0, 0, 0], [-1, 1, 1], [-1, -1, -1], [-1, 0, -1]],
 )
-def test_box_invalid_dimensions(dim: List[float]) -> None:
+def test_box_invalid_dimensions(dim: list[float]) -> None:
     with pytest.raises(Arcor2Exception):
         Box("", *dim)
 
@@ -27,7 +25,7 @@ def test_box_invalid_dimensions(dim: List[float]) -> None:
     "dim",
     [[1, 1]],
 )
-def test_cylinder_valid_dimensions(dim: List[float]) -> None:
+def test_cylinder_valid_dimensions(dim: list[float]) -> None:
     Cylinder("", *dim)
 
 
@@ -35,7 +33,7 @@ def test_cylinder_valid_dimensions(dim: List[float]) -> None:
     "dim",
     [[0, 0], [0, 1], [-1, 1], [-1, -1], [-1, 0]],
 )
-def test_cylinder_invalid_dimensions(dim: List[float]) -> None:
+def test_cylinder_invalid_dimensions(dim: list[float]) -> None:
     with pytest.raises(Arcor2Exception):
         Cylinder("", *dim)
 

@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Set
+from typing import AsyncIterator
 
 from arcor2.cached import CachedProject, UpdateableCachedProject
 from arcor2.data import common
@@ -7,11 +7,11 @@ from arcor2_arserver import logger
 from arcor2_arserver.clients import project_service as storage
 
 
-async def project_names() -> Set[str]:
+async def project_names() -> set[str]:
     return {proj.name for proj in (await storage.get_projects())}
 
 
-async def associated_projects(scene_id: str) -> Set[str]:
+async def associated_projects(scene_id: str) -> set[str]:
     return {project.id async for project in projects(scene_id)}
 
 
@@ -19,11 +19,11 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
     assert glob.LOCK.scene
 
-    updated_project_ids: Set[str] = set()
+    updated_project_ids: set[str] = set()
 
     async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj_id):
 
-        # action_ids: Set[str] = set()
+        # action_ids: set[str] = set()
 
         # delete actions using the object
         for action_to_delete in {act.id for act in project.actions if act.parse_type()[0] == obj_id}:
@@ -32,7 +32,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
         # delete actions using obj's action points as parameters
         # TODO fix this!
         """
-        actions_using_invalid_param: Set[str] = \
+        actions_using_invalid_param: set[str] = \
             {act.id for act in ap.actions for param in act.parameters
              if param.type in (ActionParameterTypeEnum.JOINTS, ActionParameterTypeEnum.POSE) and
              param.value.startswith(obj_id)}
@@ -43,7 +43,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
         action_ids.update({act.id for act in ap.actions})
         """
 
-        # valid_ids: Set[str] = action_ids | ActionIOEnum.set()
+        # valid_ids: set[str] = action_ids | ActionIOEnum.set()
 
         # TODO remove invalid logic items
 

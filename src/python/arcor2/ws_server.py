@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import deque
-from typing import Any, Awaitable, Callable, Coroutine, Dict, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar
 
 import websockets
 from aiologger.levels import LogLevel
@@ -20,13 +20,13 @@ ReqT = TypeVar("ReqT", bound=RPC.Request)
 RespT = TypeVar("RespT", bound=RPC.Response)
 
 RPC_CB = Callable[[ReqT, WsClient], Coroutine[Any, Any, Optional[RespT]]]
-RPC_DICT_TYPE = Dict[str, Tuple[Type[RPC], RPC_CB]]
+RPC_DICT_TYPE = dict[str, tuple[type[RPC], RPC_CB]]
 
 EventT = TypeVar("EventT", bound=Event)
-EVENT_DICT_TYPE = Dict[str, Tuple[Type[EventT], Callable[[EventT, WsClient], Coroutine[Any, Any, None]]]]
+EVENT_DICT_TYPE = dict[str, tuple[type[EventT], Callable[[EventT, WsClient], Coroutine[Any, Any, None]]]]
 
 
-def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: Dict[str, Any]) -> None:
+def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
 
     # it is also possible to use aiorun.run with stop_on_unhandled_errors=True but this prints much more useful info
     loop.default_exception_handler(context)
@@ -168,8 +168,8 @@ async def server(
     if event_dict is None:
         event_dict = {}
 
-    req_last_ts: Dict[str, deque] = {}
-    ignored_reqs: Set[str] = set()
+    req_last_ts: dict[str, deque] = {}
+    ignored_reqs: set[str] = set()
 
     try:
 

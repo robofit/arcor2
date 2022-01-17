@@ -19,7 +19,7 @@ from ast import (
     expr,
     keyword,
 )
-from typing import Dict, List, Optional, Set, Union
+from typing import Optional, Union
 
 import humps
 
@@ -89,7 +89,7 @@ Container = Union[FunctionDef, If, While]  # TODO remove While
 
 def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project: CProject) -> None:
 
-    added_actions: Set[str] = set()
+    added_actions: set[str] = set()
 
     def _blocks_to_start(action: Action, depth: int = 0) -> int:
 
@@ -123,7 +123,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
         act = current_action.parse_type()
         ac_obj = scene.object(act.obj_id).name
 
-        args: List[AST] = []
+        args: list[AST] = []
 
         # TODO make sure that the order of parameters is correct / re-order
         for param in current_action.parameters:
@@ -194,7 +194,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
                 logger.debug(f"Action {seq_act.name} going to be added to super_container.")
 
                 # test if this is the correct super_container -> count distance (number of blocks) to the START
-                blocks_to_start: Dict[str, int] = {}
+                blocks_to_start: dict[str, int] = {}
 
                 for inp in seq_act_inputs:
                     parsed_start = inp.parse_start()

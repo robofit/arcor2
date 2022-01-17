@@ -18,7 +18,7 @@
 import re
 import sys
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Optional
 
 PARAM_OR_RETURNS_REGEX = re.compile(":(?:param|returns)")
 RETURNS_REGEX = re.compile(":returns: (?P<doc>.*)", re.S)
@@ -29,7 +29,7 @@ PARAM_REGEX = re.compile(r":param (?P<name>[\*\w]+): (?P<doc>.*?)" r"(?:(?=:para
 class Docstring:
     short_description: Optional[str] = None
     long_description: Optional[str] = None
-    params: Optional[Dict[str, str]] = None
+    params: Optional[dict[str, str]] = None
     returns: Optional[str] = None
 
     def param(self, name: str) -> Optional[str]:

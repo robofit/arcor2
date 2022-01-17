@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Set, cast
+from typing import Optional, cast
 
 from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
@@ -53,13 +53,13 @@ class AbstractDobot(FitCommonMixin, Robot):
     def cleanup(self):
         self._stop()
 
-    def get_end_effectors_ids(self) -> Set[str]:
+    def get_end_effectors_ids(self) -> set[str]:
         return {"default"}
 
-    def grippers(self) -> Set[str]:
+    def grippers(self) -> set[str]:
         return set()
 
-    def suctions(self) -> Set[str]:
+    def suctions(self) -> set[str]:
         return {"default"}
 
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
@@ -72,7 +72,7 @@ class AbstractDobot(FitCommonMixin, Robot):
             raise DobotException("Dobot does not support safe moves.")
         self.move(target_pose, MoveType.LINEAR if linear else MoveType.JOINTS, speed * 100)
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
+    def move_to_joints(self, target_joints: list[Joint], speed: float, safe: bool = True) -> None:
         if safe:
             raise DobotException("Dobot does not support safe moves.")
         self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
@@ -152,7 +152,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         place_pose.position.z += vertical_offset
         self.move(place_pose, MoveType.JOINTS)  # pre-place pose
 
-    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)
 
     home.__action__ = ActionMetadata()  # type: ignore

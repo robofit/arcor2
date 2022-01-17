@@ -1,5 +1,4 @@
 import copy
-from typing import List
 
 import cv2
 import numpy as np
@@ -42,7 +41,7 @@ def draw_registration_result(obj, scene, initial_tr, icp_tr) -> None:
 
 
 def calibrate_robot(
-    robot_joints: List[Joint],
+    robot_joints: list[Joint],
     robot_pose: Pose,
     camera_pose: Pose,
     camera_parameters: CameraParameters,

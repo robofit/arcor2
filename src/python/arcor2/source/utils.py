@@ -23,7 +23,7 @@ from ast import (
     alias,
     fix_missing_locations,
 )
-from typing import List, Optional, Type, Union
+from typing import Optional, Union
 
 import astunparse  # TODO this is not necessary once switched to Python 3.9 (ast.unparse is there)
 import autopep8
@@ -39,17 +39,17 @@ def parse(source: str) -> AST:
         raise SourceException("Failed to parse the code.") from e
 
 
-def parse_def(type_def: Type) -> AST:
+def parse_def(type_def: type) -> AST:
     try:
         return parse(inspect.getsource(type_def))
     except OSError as e:
         raise SourceException("Failed to get the source code.") from e
 
 
-def find_asserts(tree: FunctionDef) -> List[Assert]:
+def find_asserts(tree: FunctionDef) -> list[Assert]:
     class FindAsserts(NodeVisitor):
         def __init__(self) -> None:
-            self.asserts: List[Assert] = []
+            self.asserts: list[Assert] = []
 
         def visit_Assert(self, node: Assert) -> None:
             self.asserts.append(node)
@@ -156,7 +156,7 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
 
 
 def add_method_call(
-    body: List, instance: str, method: str, args: List, kwargs: List, returns: List[str], index: Optional[int] = None
+    body: list, instance: str, method: str, args: list, kwargs: list, returns: list[str], index: Optional[int] = None
 ) -> None:
     """Adds method call to be body of a container. By default, it appends. When
     index is specified, it inserts.
@@ -193,7 +193,7 @@ def get_name(name: str) -> Name:
     return Name(id=name, ctx=Load())
 
 
-def get_name_attr(name: str, attr: str, ctx: Union[Type[Load], Type[Store]] = Load) -> Attribute:
+def get_name_attr(name: str, attr: str, ctx: Union[type[Load], type[Store]] = Load) -> Attribute:
     return Attribute(value=get_name(name), attr=attr, ctx=ctx())
 
 
@@ -207,10 +207,10 @@ def dump(tree: Module) -> str:
     return astunparse.dump(tree)
 
 
-def find_raises(tree: FunctionDef) -> List[Raise]:
+def find_raises(tree: FunctionDef) -> list[Raise]:
     class FindRaises(NodeVisitor):
         def __init__(self) -> None:
-            self.raises: List[Raise] = []
+            self.raises: list[Raise] = []
 
         def visit_Raise(self, node: Raise) -> None:
             self.raises.append(node)

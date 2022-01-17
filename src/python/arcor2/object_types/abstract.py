@@ -2,7 +2,7 @@ import abc
 import copy
 import inspect
 from dataclasses import dataclass
-from typing import List, Optional, Set
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL import Image
@@ -244,7 +244,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         raise Arcor2NotImplemented("No calibration pose specified.")
 
     @abc.abstractmethod
-    def get_end_effectors_ids(self) -> Set[str]:
+    def get_end_effectors_ids(self) -> set[str]:
         pass
 
     @abc.abstractmethod
@@ -252,7 +252,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def robot_joints(self, include_gripper: bool = False) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
         """Get list of robot's joints.
 
         :param include_gripper: Whether gripper joints should be added (e.g. for visualization).
@@ -261,11 +261,11 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def grippers(self) -> Set[str]:
+    def grippers(self) -> set[str]:
         return set()
 
     @abc.abstractmethod
-    def suctions(self) -> Set[str]:
+    def suctions(self) -> set[str]:
         return set()
 
     def move_to_pose(
@@ -283,7 +283,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         assert 0.0 <= speed <= 1.0
         raise Arcor2NotImplemented("Robot does not support moving to pose.")
 
-    def move_to_joints(self, target_joints: List[Joint], speed: float, safe: bool = True) -> None:
+    def move_to_joints(self, target_joints: list[Joint], speed: float, safe: bool = True) -> None:
         """Sets target joint values.
 
         :param target_joints:
@@ -302,9 +302,9 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
+        start_joints: Optional[list[Joint]] = None,
         avoid_collisions: bool = True,
-    ) -> List[Joint]:
+    ) -> list[Joint]:
         """Computes inverse kinematics.
 
         Should raise KinematicsException when unable to compute.
@@ -317,7 +317,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         """
         raise Arcor2NotImplemented()
 
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint]) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint]) -> Pose:
         """Computes forward kinematics.
 
         Should raise KinematicsException when unable to compute.
@@ -343,7 +343,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
     """Abstract class representing robot and its basic capabilities (motion)"""
 
     @abc.abstractmethod
-    def get_arm_ids(self) -> Set[str]:
+    def get_arm_ids(self) -> set[str]:
         """Most robots have just one arm so this method is not abstract and
         returns one arm id.
 
@@ -352,7 +352,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> Set[str]:
+    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> set[str]:
         pass
 
     @abc.abstractmethod
@@ -360,7 +360,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> List[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> list[Joint]:
         """With no arm specified, returns all robot joints. Otherwise, returns
         joints for the given arm.
 
@@ -370,11 +370,11 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def grippers(self, arm_id: Optional[str] = None) -> Set[str]:
+    def grippers(self, arm_id: Optional[str] = None) -> set[str]:
         return set()
 
     @abc.abstractmethod
-    def suctions(self, arm_id: Optional[str] = None) -> Set[str]:
+    def suctions(self, arm_id: Optional[str] = None) -> set[str]:
         return set()
 
     def check_if_ready_to_move(self) -> None:
@@ -418,7 +418,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         raise Arcor2NotImplemented("Robot does not support moving to pose.")
 
     def move_to_joints(
-        self, target_joints: List[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
     ) -> None:
         """Sets target joint values.
 
@@ -435,10 +435,10 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[List[Joint]] = None,
+        start_joints: Optional[list[Joint]] = None,
         avoid_collisions: bool = True,
         arm_id: Optional[str] = None,
-    ) -> List[Joint]:
+    ) -> list[Joint]:
         """Computes inverse kinematics.
 
         :param end_effector_id: IK target pose end-effector
@@ -449,7 +449,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         """
         raise Arcor2NotImplemented()
 
-    def forward_kinematics(self, end_effector_id: str, joints: List[Joint], arm_id: Optional[str] = None) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: Optional[str] = None) -> Pose:
         """Computes forward kinematics.
 
         :param end_effector_id: Target end effector name

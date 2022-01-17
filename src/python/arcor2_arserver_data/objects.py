@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -23,7 +23,7 @@ class ObjectTypeMeta(JsonSchemaMixin):
     abstract: bool = False
     disabled: bool = False
     problem: Optional[str] = None
-    settings: List[ParameterMeta] = field(default_factory=list)
+    settings: list[ParameterMeta] = field(default_factory=list)
     modified: Optional[datetime] = None
 
     def to_object_type(self, source: str = "") -> ObjectType:
@@ -35,7 +35,7 @@ class ObjectTypeMeta(JsonSchemaMixin):
 
         return ot
 
-    def parameters_dict(self) -> Dict[str, ParameterMeta]:
+    def parameters_dict(self) -> dict[str, ParameterMeta]:
         return {param.name: param for param in self.settings}
 
     def __post_init__(self) -> None:
@@ -49,10 +49,10 @@ class ObjectAction(JsonSchemaMixin):
 
     name: str
     description: Optional[str] = None
-    parameters: List[ParameterMeta] = field(default_factory=list)
+    parameters: list[ParameterMeta] = field(default_factory=list)
     meta: ActionMetadata = field(default_factory=ActionMetadata)
     origins: Optional[str] = None
-    returns: List[str] = field(default_factory=list)  # list of returned types
+    returns: list[str] = field(default_factory=list)  # list of returned types
     disabled: bool = False
     problem: Optional[str] = None
 
@@ -64,4 +64,4 @@ class ObjectAction(JsonSchemaMixin):
         raise Arcor2Exception("Parameter not found.")
 
 
-ObjectActions = List[ObjectAction]
+ObjectActions = list[ObjectAction]

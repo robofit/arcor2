@@ -1,4 +1,4 @@
-from typing import Optional, Set
+from typing import Optional
 
 from arcor2.cached import CachedProject, CachedProjectException
 from arcor2.data.common import Action
@@ -18,7 +18,7 @@ def check_for_loops(parent: LogicContainer, first_action_id: Optional[str] = Non
     :return:
     """
 
-    def _check_for_loops(action: Action, visited_actions: Set[str]) -> None:
+    def _check_for_loops(action: Action, visited_actions: set[str]) -> None:
 
         if action.id in visited_actions:
             raise Arcor2Exception("Loop detected!")
@@ -44,5 +44,5 @@ def check_for_loops(parent: LogicContainer, first_action_id: Optional[str] = Non
 
     first_action = parent.action(first_action_id)
 
-    visited_actions: Set[str] = set()
+    visited_actions: set[str] = set()
     _check_for_loops(first_action, visited_actions)

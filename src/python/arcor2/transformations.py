@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional, Set
+from typing import NamedTuple, Optional
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedProjectException
@@ -61,7 +61,7 @@ def get_parent_pose(scene: CScene, project: CProject, parent_id: str) -> Parent:
         raise Arcor2Exception(f"Unknown parent_id {parent_id}.")
 
 
-def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> Set[str]:
+def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoint) -> set[str]:
     """Transforms (in place) relative AP into a global one.
 
     :param scene:
@@ -73,7 +73,7 @@ def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoin
     if not ap.parent:
         raise Arcor2Exception("Action point does not have a parent.")
 
-    updated_aps: Set[str] = set()
+    updated_aps: set[str] = set()
 
     def _update_childs(parent: Parent, ap_id: str) -> None:
 
@@ -115,7 +115,7 @@ def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoin
     return updated_aps
 
 
-def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoint, parent_id: str) -> Set[str]:
+def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoint, parent_id: str) -> set[str]:
     """Transforms (in place) global AP into a relative one with given parent
     (can be object or another AP).
 
@@ -131,8 +131,8 @@ def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoin
     if ap.parent:
         raise Arcor2Exception("Action point already has a parent.")
 
-    updated_aps: Set[str] = set()
-    updated_orientations: Set[str] = set()
+    updated_aps: set[str] = set()
+    updated_orientations: set[str] = set()
 
     def _update_childs(parent: Parent, ap_id: str) -> None:
 

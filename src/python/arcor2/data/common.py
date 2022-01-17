@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, unique
 from json import JSONEncoder
-from typing import Any, Iterator, List, NamedTuple, Optional, Set, TypeVar, cast
+from typing import Any, Iterator, NamedTuple, Optional, TypeVar, cast
 
 import numpy as np
 import quaternion
@@ -29,14 +29,14 @@ def uid(prefix: str) -> str:
 @unique
 class StrEnum(str, Enum):
     @classmethod
-    def set(cls) -> Set[str]:
+    def set(cls) -> set[str]:
         return set(map(lambda c: c.value, cls))  # type: ignore
 
 
 @unique
 class IntEnum(int, Enum):
     @classmethod
-    def set(cls) -> Set[int]:
+    def set(cls) -> set[int]:
         return set(map(lambda c: c.value, cls))  # type: ignore
 
 
@@ -352,7 +352,7 @@ class ProjectRobotJoints(JsonSchemaMixin, ModelMixin):
 
     name: str
     robot_id: str
-    joints: List[Joint]
+    joints: list[Joint]
     is_valid: bool = False
     arm_id: Optional[str] = None
     id: str = ""
@@ -381,8 +381,8 @@ class SceneObject(JsonSchemaMixin, ModelMixin):
     name: str
     type: str
     pose: Optional[Pose] = None
-    parameters: List[Parameter] = field(default_factory=list)
-    children: List[SceneObject] = field(default_factory=list)
+    parameters: list[Parameter] = field(default_factory=list)
+    children: list[SceneObject] = field(default_factory=list)
     id: str = ""
 
     @classmethod
@@ -420,7 +420,7 @@ class BareScene(JsonSchemaMixin, ModelMixin):
 @dataclass
 class Scene(BareScene):
 
-    objects: List[SceneObject] = field(default_factory=list)
+    objects: list[SceneObject] = field(default_factory=list)
 
     @staticmethod
     def from_bare(bare: BareScene) -> Scene:
@@ -468,7 +468,7 @@ class ActionParameter(Parameter):
 class Flow(JsonSchemaMixin):
 
     type: FlowTypes = FlowTypes.DEFAULT
-    outputs: List[str] = field(default_factory=list)  # can't be set as it is unordered
+    outputs: list[str] = field(default_factory=list)  # can't be set as it is unordered
 
     def __post_init__(self) -> None:
 
@@ -502,8 +502,8 @@ class Action(BareAction):
         obj_id: str
         action_type: str
 
-    parameters: List[ActionParameter] = field(default_factory=list)
-    flows: List[Flow] = field(default_factory=list)
+    parameters: list[ActionParameter] = field(default_factory=list)
+    flows: list[Flow] = field(default_factory=list)
 
     def parse_type(self) -> ParsedType:
 
@@ -558,9 +558,9 @@ class BareActionPoint(JsonSchemaMixin, ModelMixin):
 @dataclass
 class ActionPoint(BareActionPoint):
 
-    orientations: List[NamedOrientation] = field(default_factory=list)
-    robot_joints: List[ProjectRobotJoints] = field(default_factory=list)
-    actions: List[Action] = field(default_factory=list)
+    orientations: list[NamedOrientation] = field(default_factory=list)
+    robot_joints: list[ProjectRobotJoints] = field(default_factory=list)
+    actions: list[Action] = field(default_factory=list)
 
     @staticmethod
     def from_bare(bare: BareActionPoint) -> ActionPoint:
@@ -644,13 +644,13 @@ class FunctionReturns(JsonSchemaMixin):
 class ProjectFunction(JsonSchemaMixin, ModelMixin):
 
     name: str
-    actions: List[Action] = field(default_factory=list)
-    logic: List[LogicItem] = field(default_factory=list)
-    parameters: List[ActionParameter] = field(default_factory=list)
-    returns: List[FunctionReturns] = field(default_factory=list)
+    actions: list[Action] = field(default_factory=list)
+    logic: list[LogicItem] = field(default_factory=list)
+    parameters: list[ActionParameter] = field(default_factory=list)
+    returns: list[FunctionReturns] = field(default_factory=list)
     id: str = ""
 
-    def action_ids(self) -> Set[str]:
+    def action_ids(self) -> set[str]:
         return {act.id for act in self.actions}
 
     def action(self, action_id: str) -> Action:
@@ -675,7 +675,7 @@ class ProjectFunction(JsonSchemaMixin, ModelMixin):
 class SceneObjectOverride(JsonSchemaMixin):
 
     id: str  # object id
-    parameters: List[Parameter]
+    parameters: list[Parameter]
 
 
 @dataclass
@@ -705,12 +705,12 @@ class BareProject(JsonSchemaMixin, ModelMixin):
 @dataclass
 class Project(BareProject):
 
-    action_points: List[ActionPoint] = field(default_factory=list)
-    parameters: List[ProjectParameter] = field(default_factory=list)
-    functions: List[ProjectFunction] = field(default_factory=list)
-    logic: List[LogicItem] = field(default_factory=list)
-    object_overrides: List[SceneObjectOverride] = field(default_factory=list)
-    project_objects_ids: Optional[List[str]] = None  # not used at the moment
+    action_points: list[ActionPoint] = field(default_factory=list)
+    parameters: list[ProjectParameter] = field(default_factory=list)
+    functions: list[ProjectFunction] = field(default_factory=list)
+    logic: list[LogicItem] = field(default_factory=list)
+    object_overrides: list[SceneObjectOverride] = field(default_factory=list)
+    project_objects_ids: Optional[list[str]] = None  # not used at the moment
 
     @staticmethod
     def from_bare(bare: BareProject) -> Project:
@@ -758,7 +758,7 @@ class Asset(JsonSchemaMixin):
     description: Optional[str] = None
     uri: Optional[str] = None
     type: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[list[str]] = None
     metadata: Optional[str] = None  # json
 
 
@@ -775,4 +775,4 @@ class WebApiError(JsonSchemaMixin):
 
     message: str
     service: str
-    errors: Optional[List[Error]] = None
+    errors: Optional[list[Error]] = None

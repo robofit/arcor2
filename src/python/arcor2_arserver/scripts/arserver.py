@@ -7,7 +7,7 @@ import functools
 import inspect
 import shutil
 import sys
-from typing import Dict, List, Type, get_type_hints
+from typing import get_type_hints
 
 import websockets
 from aiologger.levels import LogLevel
@@ -45,8 +45,8 @@ from arcor2_execution_data import RPCS as EXE_RPCS
 
 async def handle_manager_incoming_messages(manager_client) -> None:
 
-    event_mapping: Dict[str, Type[events.Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
-    rpc_mapping: Dict[str, Type[rpc.common.RPC]] = {r.__name__: r for r in EXE_RPCS}
+    event_mapping: dict[str, type[events.Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
+    rpc_mapping: dict[str, type[rpc.common.RPC]] = {r.__name__: r for r in EXE_RPCS}
 
     try:
 
@@ -275,7 +275,7 @@ def print_openapi_models() -> None:
     for _, mod in inspect.getmembers(evts, inspect.ismodule):
         modules.append(mod)
 
-    event_types: List[Type[events.Event]] = []
+    event_types: list[type[events.Event]] = []
 
     for mod in modules:
         for _, cls in inspect.getmembers(mod, inspect.isclass):

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -26,7 +26,7 @@ class ActionResult(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         action_id: str
-        results: Optional[List[str]] = field(
+        results: Optional[list[str]] = field(
             default=None, metadata=dict(description="JSON-encoded results of the action.")
         )
         error: Optional[str] = None

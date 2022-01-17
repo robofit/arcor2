@@ -1,5 +1,5 @@
 import ast
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
@@ -43,7 +43,7 @@ class DoublePlugin(ParameterPlugin):
 class DoubleListPlugin(ListParameterPlugin):
     @classmethod
     def type(cls):
-        return List[float]
+        return list[float]
 
     @classmethod
     def type_name(cls) -> str:
@@ -56,5 +56,5 @@ class DoubleListPlugin(ListParameterPlugin):
     @classmethod
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> List[float]:
+    ) -> list[float]:
         return super(DoubleListPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)

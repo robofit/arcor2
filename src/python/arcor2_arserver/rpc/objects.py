@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass, field
-from typing import Dict, List, NamedTuple
+from typing import NamedTuple
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -42,10 +42,10 @@ class AimedObject:
 
     obj_id: str
     robot: rpc.common.RobotArg
-    poses: Dict[int, Pose] = field(default_factory=dict)
+    poses: dict[int, Pose] = field(default_factory=dict)
 
 
-_objects_being_aimed: Dict[str, AimedObject] = {}  # key == user_name
+_objects_being_aimed: dict[str, AimedObject] = {}  # key == user_name
 
 
 async def object_aiming_start_cb(req: srpc.o.ObjectAimingStart.Request, ui: WsClient) -> None:
@@ -113,7 +113,7 @@ async def object_aiming_prune() -> None:
     :return:
     """
 
-    to_delete: List[str] = []
+    to_delete: list[str] = []
 
     # users in db but not holding a lock for the object should be deleted
     for un, fo in _objects_being_aimed.items():
@@ -236,8 +236,8 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     if req.dry_run:
         return
 
-    fp: List[Position] = []
-    rp: List[Position] = []
+    fp: list[Position] = []
+    rp: list[Position] = []
 
     for idx, pose in fo.poses.items():
 
@@ -423,7 +423,7 @@ async def delete_object_type_cb(
 
     user_name = glob.USERS.user_name(ui)
 
-    obj_types_to_delete: List[str] = (
+    obj_types_to_delete: list[str] = (
         list(req.args)
         if req.args is not None
         else [obj.meta.type for obj in glob.OBJECT_TYPES.values() if not obj.meta.built_in]

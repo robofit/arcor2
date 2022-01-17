@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from arcor2_runtime.action import results_to_json
 
@@ -25,10 +25,10 @@ class ProjectProblems(SceneProblems):
     project_modified: datetime
 
 
-_project_problems: Dict[str, ProjectProblems] = {}
+_project_problems: dict[str, ProjectProblems] = {}
 
 
-async def get_project_problems(scene: CachedScene, project: CachedProject) -> Optional[List[str]]:
+async def get_project_problems(scene: CachedScene, project: CachedProject) -> Optional[list[str]]:
     """Handle caching of project problems."""
 
     assert scene.modified
@@ -91,7 +91,7 @@ async def close_project(show_mainscreen_after_that: bool = True) -> None:
     asyncio.ensure_future(notify_project_closed(project_id, show_mainscreen_after_that))
 
 
-async def execute_action(action_method: Callable, params: List[Any]) -> None:
+async def execute_action(action_method: Callable, params: list[Any]) -> None:
 
     assert glob.RUNNING_ACTION
 
