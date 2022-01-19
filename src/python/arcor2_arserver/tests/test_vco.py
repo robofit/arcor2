@@ -1,3 +1,5 @@
+import time
+
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box, ObjectModel
 from arcor2_arserver.tests.conftest import event, project_service
@@ -48,6 +50,11 @@ def test_virtual_collision_object(start_processes: None, ars: ARServer) -> None:
 
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Starting
     assert event(ars, events.s.SceneState).data.state == events.s.SceneState.Data.StateEnum.Started
+
+    # stop can't be called just after start, because of assertion in start_scene coroutine (arserver):
+    # assert ret == await scene_srv.started()
+    # assertions are disabled in release, so this is issue only when running tests, and it happens randomly
+    time.sleep(1)
 
     assert ars.call_rpc(
         rpc.s.StopScene.Request(get_id()),
