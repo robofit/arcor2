@@ -2,6 +2,15 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.23.0] - WIP
+
+### Changed
+
+- **BREAKING**: `ActionStateBefore` event updated.
+  - Properties `action_id` and `parameters` are now optional.
+  - New optional property `action_point_ids`. 
+- Switched to Python 3.9, updated dependencies. 
+
 ## [0.22.0] - 2021-10-25
 
 ### Changed
