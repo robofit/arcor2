@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.3.0] - WIP
+
+## Changed
+
+- `@action` decorator updated to work with updated `ActionStateBefore`, where all properties are now optional.
+  - Moreover, it now sends IDs of action points, that are used as parameters of actions, which is especially useful for projects without actions (actions are hand-coded).
+- Switched to Python 3.9, updated dependencies.
+
 ## [0.2.2] - 2021-11-15
 
 ## Fixed
