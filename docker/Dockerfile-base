@@ -1,5 +1,9 @@
 FROM ubuntu:20.04
 
+RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC \
+  && apt-get update \ 
+  && apt-get -y install tzdata
+
 RUN apt-get update \
   && apt-get install --yes --no-install-recommends \
   curl \
