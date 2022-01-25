@@ -131,33 +131,47 @@ def results_to_json(res: Any) -> Optional[list[str]]:
         return [plugin_from_instance(res).value_to_json(res)]
 
 
-_executed_action: Optional[tuple[str, Callable]] = None
+# action_id*, function
+# *might be unknown for projects without logic
+_executed_action: Optional[tuple[Optional[str], Callable]] = None
 
 
 def action(f: F) -> F:
     """Action decorator that prints events with action id and parameters or
     results.
 
+    It handles two different situations:
+    1) projects with logic, where mapping from 'an' (action name) to action id is provided,
+    2) projects without logic, where actions are written manually.
+
+    For 1), it prints out Before (with action_id set) and After events.
+    For 2), it prints out only Before event.
+
+    For nested actions, events are printed out only for the outermost one, the inner ones are silenced.
+
     :param f: action method
     :return:
     """
 
     @wraps(f)
-    def wrapper(*args: Union[Generic, Any], an: Optional[str] = None, **kwargs: Any) -> Any:
+    def wrapper(obj: Generic, *action_args: Any, an: Optional[str] = None, **kwargs: Any) -> Any:
 
+        # remembers the outermost action
+        # when set, serves as a flag, that we are inside an action
+        # ...then when another action is executed, we know that it is a nested one (and the outer one is composite)
         global _executed_action
 
-        action_args = args[1:]
         action_id: Optional[str] = None
-        handle_actions = hasattr(args[0], ACTION_NAME_ID_MAPPING_ATTR)
+        action_mapping_provided = hasattr(obj, ACTION_NAME_ID_MAPPING_ATTR)
 
-        if handle_actions:  # if not set, ignore everything
+        # if not set (e.g. when writing actions manually), do not attempt to get action IDs from names
+        if action_mapping_provided:
             if _executed_action and an:
                 raise Arcor2Exception("Inner actions should not have name specified.")
 
             if not _executed_action:  # do not attempt to get id for inner actions
                 try:
-                    action_id = getattr(args[0], ACTION_NAME_ID_MAPPING_ATTR)[an]
+                    action_id = getattr(obj, ACTION_NAME_ID_MAPPING_ATTR)[an]
                 except AttributeError:
                     # mapping from action name to id not provided, ActionState won't be sent
                     pass
@@ -171,38 +185,48 @@ def action(f: F) -> F:
                 _executed_action = None
                 raise Arcor2Exception(msg)
 
-            if action_id and _executed_action is None:
-                _executed_action = action_id, f
+        if _executed_action is None:  # the following code should be executed only for outermost action
+            _executed_action = action_id, f
 
-        # collect action point ids, ignore missing
-        action_point_ids: set[str] = set()
-        for aa in action_args:
-            try:
-                if isinstance(aa, Pose) or isinstance(aa, ProjectRobotJoints):
-                    action_point_ids.add(getattr(aa, AP_ID_ATTR))
-            except AttributeError:
-                if breakpoints:
-                    raise Arcor2Exception("Orientations/Joints not patched. Breakpoints won't work!")
+            # collect action point ids, ignore missing
+            action_point_ids: set[str] = set()
+            for aa in action_args:
+                try:
+                    if isinstance(aa, (Pose, ProjectRobotJoints)):
+                        action_point_ids.add(getattr(aa, AP_ID_ATTR))
+                except AttributeError:
+                    if breakpoints:
+                        raise Arcor2Exception("Orientations/Joints not patched. Breakpoints won't work!")
 
-        # validate if break is required
-        make_a_break = bool(breakpoints and breakpoints.intersection(action_point_ids))
+            # validate if break is required
+            make_a_break = bool(breakpoints and breakpoints.intersection(action_point_ids))
 
-        # dispatch ActionStateBefore event for every action
-        print_event(
-            ActionStateBefore(
+            # dispatch ActionStateBefore event for every (outermost) action
+            state_before = ActionStateBefore(
                 ActionStateBefore.Data(
                     # TODO deal with kwargs parameters
                     action_id,
-                    [plugin_from_instance(arg).value_to_json(arg) for arg in action_args],
-                    action_point_ids,
+                    None,
+                    action_point_ids if action_point_ids else None,
                 )
             )
-        )
 
-        handle_stdin_commands(before=True, breakpoint=make_a_break)
+            try:
+                state_before.data.parameters = [plugin_from_instance(arg).value_to_json(arg) for arg in action_args]
+            except Arcor2Exception:
+                if action_id:
+                    # for projects with logic, it should not happen that there is unknown parameter type
+                    # for projects without logic (for which we don't know action_id), it is fine...
+                    _executed_action = None
+                    raise
 
+            print_event(state_before)
+
+            handle_stdin_commands(before=True, breakpoint=make_a_break)
+
+        # the action itself is executed under all circumstances
         try:
-            res = f(*args, an=an, **kwargs)
+            res = f(obj, *action_args, an=an, **kwargs)
         except Arcor2Exception:
             # this is actually not necessary at the moment as when exception is raised, the script ends anyway
             _executed_action = None
@@ -210,12 +234,15 @@ def action(f: F) -> F:
             # ...could provide action_id from here
             raise
 
-        if handle_actions:
-            if action_id:
-                # we are getting out of (composite) action
-                if _executed_action and _executed_action[0] == action_id:
-                    _executed_action = None
-                    print_event(ActionStateAfter(ActionStateAfter.Data(action_id, results_to_json(res))))
+        # manage situation when we are getting out of (composite) action
+        if action_mapping_provided:  # for projects with logic - check based on action_id
+            if action_id and _executed_action[0] == action_id:
+                _executed_action = None
+                print_event(ActionStateAfter(ActionStateAfter.Data(action_id, results_to_json(res))))
+        else:  # for projects without logic - can be only based on checking the method
+            if _executed_action[1] == f:
+                # TODO shouldn't we sent ActionStateAfter even here?
+                _executed_action = None
 
         handle_stdin_commands(before=False)
 
