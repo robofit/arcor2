@@ -598,7 +598,6 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_build.version(),
-        "0.6.0",
         port_from_url(URL),
         [ImportResult],
         print_spec=args.swagger,

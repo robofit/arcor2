@@ -458,7 +458,6 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_calibration.version(),
-        arcor2_calibration.version(),
         port_from_url(CALIBRATION_URL),
         [Pose, CalibrateRobotArgs, MarkerCorners, EstimatedPose],
         getattr(args, "swagger", False),

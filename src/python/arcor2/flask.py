@@ -33,11 +33,15 @@ def run_app(
     app: Flask,
     name: str,
     version: str,
-    api_version: str,
     port: int,
     dataclasses: Optional[list[type[JsonSchemaMixin]]] = None,
     print_spec: bool = False,
+    *,
+    api_version: Optional[str] = None,
 ) -> None:
+
+    if not api_version:
+        api_version = version
 
     spec = APISpec(
         title=f"{name} ({version})",
