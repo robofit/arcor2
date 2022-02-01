@@ -548,7 +548,7 @@ def main() -> None:
     if _mock:
         logger.info("Starting as a mock!")
 
-    run_app(app, SERVICE_NAME, version(), version(), port_from_url(URL), [Pose, Joint], args.swagger)
+    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint], args.swagger)
 
     if _dobot:
         _dobot.cleanup()

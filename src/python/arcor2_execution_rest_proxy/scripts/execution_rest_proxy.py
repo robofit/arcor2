@@ -963,7 +963,6 @@ def main() -> None:
         app,
         SERVICE_NAME,
         arcor2_execution_rest_proxy.version(),
-        "0.8.0",
         PORT,
         [SummaryPackage, ExecutionInfo, Token],
         args.swagger,

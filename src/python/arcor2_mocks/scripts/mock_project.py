@@ -949,7 +949,6 @@ def main() -> None:
         app,
         PROJECT_SERVICE_NAME,
         version(),
-        "0.10.0",
         PROJECT_PORT,
         [
             common.Project,
@@ -963,6 +962,7 @@ def main() -> None:
             common.WebApiError,
         ],
         args.swagger,
+        api_version="0.16.0",
     )
 
 

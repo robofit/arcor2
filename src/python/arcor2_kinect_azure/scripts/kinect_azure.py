@@ -302,7 +302,7 @@ def main() -> None:
     if _mock:
         logger.info("Starting as a mock!")
 
-    run_app(app, SERVICE_NAME, version(), version(), port_from_url(URL), [CameraParameters], args.swagger)
+    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [CameraParameters], args.swagger)
 
     if _kinect:
         _kinect.cleanup()

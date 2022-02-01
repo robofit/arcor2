@@ -370,7 +370,6 @@ def main() -> None:
         app,
         SCENE_SERVICE_NAME,
         version(),
-        "0.5.0",
         SCENE_PORT,
         [
             common.Pose,
@@ -381,6 +380,7 @@ def main() -> None:
             scene.MeshFocusAction,
         ],
         args.swagger,
+        api_version="0.5.0",
     )
 
 
