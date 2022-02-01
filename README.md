@@ -6,7 +6,7 @@ This repository contains the backend solution. It can be easily tested out or de
 
 Development is supported by [Test-it-off: Robotic offline product testing](https://www.fit.vut.cz/research/project/1308/) project (Ministry of Industry and Trade of the Czech Republic).
 
-For more technical and development-related information, please see our [wiki](/robofit/arcor2/wiki).
+For more technical and development-related information, please see our [wiki](https://github.com/robofit/arcor2/wiki).
 
 ## Videos
 
