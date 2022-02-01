@@ -2,7 +2,7 @@ version: '3'
 
 services:
   testitoff-arserver:
-    image: arcor2/arcor2_arserver:0.22.0
+    image: arcor2/arcor2_arserver:0.23.0
     container_name: testitoff-arserver
     depends_on:
       - testitoff-project
@@ -42,7 +42,7 @@ services:
     networks:
       - testitoff-project-network
   testitoff-execution:
-    image: arcor2/arcor2_execution:0.19.0
+    image: arcor2/arcor2_execution:0.20.0
     container_name: testitoff-execution
     networks:
         - testitoff-execution-network
@@ -60,7 +60,7 @@ services:
         - testitoff-execution:/root/project
 
   testitoff-execution-proxy:
-    image: arcor2/arcor2_execution_proxy:0.14.0
+    image: arcor2/arcor2_execution_proxy:0.16.0
     container_name: testitoff-execution-proxy
     environment:
       - ARCOR2_EXECUTION_PROXY_DB_PATH=/root/tokens
@@ -231,7 +231,7 @@ services:
         - testitoff-scene-network
 
   testitoff-project:
-      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.15.0
+      image: registry.gitlab.com/kinalisoft/test-it-off/project:0.16.0
       container_name: "testitoff-project"
       ports:
         - "10000-10001:10000-10001"
