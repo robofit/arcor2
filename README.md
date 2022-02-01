@@ -184,7 +184,7 @@ $ ./pants test src/python/arcor2/data/tests
 
 [README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
 
- - 2021-07-29: [0.16.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.16.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.16.0), [pypi](https://pypi.org/project/arcor2-mocks/0.16.0/)).
+ - 2021-10-25: [0.17.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.17.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.17.0), [pypi](https://pypi.org/project/arcor2-mocks/0.17.0/)).
  
 ### arcor2_dobot
 
