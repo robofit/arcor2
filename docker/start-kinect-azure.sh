@@ -1,4 +1,4 @@
 #!/bin/bash  
 
 cd || exit
-./kinect_azure.pex --mock
+./kinect_azure.pex
