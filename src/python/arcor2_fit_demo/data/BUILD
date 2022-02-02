@@ -4,6 +4,6 @@ resources(
 )
 
 resources(
-    name = "conveyor_belt.dae",
-    sources = ["conveyor_belt.dae"]
+    name = "conveyor_belt.fbx",
+    sources = ["conveyor_belt.fbx"]
 )
