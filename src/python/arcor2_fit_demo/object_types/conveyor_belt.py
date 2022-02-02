@@ -18,7 +18,7 @@ class Direction(StrEnum):
 
 class ConveyorBelt(FitCommonMixin, CollisionObject):
 
-    mesh_filename = "conveyor_belt.dae"
+    mesh_filename = "conveyor_belt.fbx"
     _ABSTRACT = False
 
     def __init__(
