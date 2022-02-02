@@ -6,7 +6,7 @@ apispec[yaml]==5.1.1
 astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unparse is there)
 autopep8==1.6.0
 colorlog==6.6.0
-Cython==0.29.26
+Cython==0.29.27
 dataclasses-jsonschema[fast-validation,apispec]==2.15.0
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
@@ -14,7 +14,7 @@ Flask==2.0.2
 lru-dict==1.1.7
 numpy-quaternion[scipy,numba]==2021.11.4.15.26.3
 numpy==1.22.1
-openapi-spec-validator==0.3.2
+openapi-spec-validator==0.4.0
 opencv-contrib-python==4.5.5.62
 open3d==0.14.1
 orjson==3.6.6
@@ -29,13 +29,13 @@ pytest-repeat==0.9.1
 pytest==6.2.5
 PyYAML==6.0
 requests==2.27.1
-setuptools==60.5.0
+setuptools==60.6.0
 sqlitedict==1.7.0
 types-aiofiles==0.8.3
 types-orjson==3.6.2
-types-setuptools==57.4.7
-types-requests==2.27.7
-types-PyYAML==6.0.3
+types-setuptools==57.4.8
+types-requests==2.27.8
+types-PyYAML==6.0.4
 typing-inspect==0.7.1
 urdfpy==0.0.22
 websocket-client==1.2.3
