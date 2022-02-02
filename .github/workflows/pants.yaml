@@ -9,7 +9,7 @@ jobs:
   build:
     env:
       PANTS_CONFIG_FILES: pants.ci.toml
-    runs-on: ubuntu-18.04  # because libk4a is not supported on 20.04
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         python-version: [3.9]
@@ -45,7 +45,6 @@ jobs:
     #    ./pants update-build-files --check
     - name: install system dependencies
       run: |
-        ./build-support/install_kinect_prerequisites.sh
         sudo apt install jq
     - name: Lint
       run: |

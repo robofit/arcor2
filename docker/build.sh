@@ -2,7 +2,7 @@
 
 export DOCKER_BUILDKIT=1
 export UBUNTU_VERSION="20.04"
-export PYTHON_VERSION="3.9-slim-buster"
+export PYTHON_VERSION="3.9-slim-bullseye"
 build_base_image () {
         docker pull ubuntu:"$UBUNTU_VERSION"
 	docker build ../ -f Dockerfile-base -t arcor2/arcor2_base:"$VERSION" --build-arg version="$UBUNTU_VERSION"
@@ -81,7 +81,7 @@ if [ $# -eq 0 ]; then
     echo "Usage:"
     echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [dobot] [calibration] [upload-fit-demo] [upload-kinali] [upload-builtin]"
     echo "sudo sh build.sh VERSION all"
-    echo "$VERSION specifies version of base image. Optional parametes specifies which images should be build using version from their VERSION file."
+    echo "$VERSION specifies version of base image. Optional parameters specifies which images should be build using version from their VERSION file."
     echo "If no optional parameter is specified, base image is build with version $VERSION."
     echo "If second parameter is 'all', all other parameters are ignored and all images are build."
     exit 1
@@ -93,7 +93,6 @@ if [ $# -eq 1 ]; then
 	build_base_image
 	exit 0
 fi
-
 
 build_dist_base_image
 
