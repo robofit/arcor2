@@ -1,11 +1,16 @@
 #!/bin/bash
 
+export DOCKER_BUILDKIT=1
+export UBUNTU_VERSION="20.04"
+export PYTHON_VERSION="3.9-slim-buster"
 build_base_image () {
-	docker build ../ -f Dockerfile-base -t arcor2/arcor2_base:"$VERSION"
+        docker pull ubuntu:"$UBUNTU_VERSION"
+	docker build ../ -f Dockerfile-base -t arcor2/arcor2_base:"$VERSION" --build-arg version="$UBUNTU_VERSION"
 }
 
 build_dist_base_image () {
-	docker build -f Dockerfile-dist-base -t arcor2/arcor2_dist_base:"$VERSION"  ../ --build-arg version="$VERSION"
+        docker pull python:"$PYTHON_VERSION"
+	docker build -f Dockerfile-dist-base -t arcor2/arcor2_dist_base:"$VERSION"  ../ --build-arg version="$PYTHON_VERSION"
 }
 
 build_arserver_image () {
