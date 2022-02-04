@@ -3,7 +3,4 @@ docker/upload.sh
 docker/Dockerfile*
 docker/*/*
 dist/*
-git/*
-build-support/*
-.pants.d/*
-.cache/*
+.*/
