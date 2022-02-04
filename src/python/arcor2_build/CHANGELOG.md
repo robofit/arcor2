@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.22.0] - 2022-02-04
+
+### Changed
+
+- Python 3.9.
+- API version is now the same as service version.
+
 ## [0.21.0] - 2021-10-25
 
 ### Changed
