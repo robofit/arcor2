@@ -50,7 +50,7 @@ environments on mobile devices,” in Companion of the 2022 ACM/IEEE Internation
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
-- 2021-10-25: [0.21.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.21.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=0.21.0), [pypi](https://pypi.org/project/arcor2-build/0.21.0/)).
+- 2022-02-04: [0.22.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.22.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=0.22.0), [pypi](https://pypi.org/project/arcor2-build/0.22.0/)).
 
 ### arcor2_build_data
 

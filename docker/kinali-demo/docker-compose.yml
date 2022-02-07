@@ -31,7 +31,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://testitoff-calibration:5014
 
   testitoff-build:
-    image: arcor2/arcor2_build:0.21.0
+    image: arcor2/arcor2_build:0.22.0
     container_name: testitoff-build
     depends_on:
       - testitoff-project
