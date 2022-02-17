@@ -9,6 +9,10 @@ RUN cd ~/arcor2 \
 
 FROM arcor2/arcor2_dist_base:$version
 
+# needed because of Open3D
+RUN apt-get update \
+    && apt-get install -y libgl1-mesa-glx libglib2.0-0 libgomp1 libusb-1.0-0
+
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_mocks.scripts/mock_project.pex /root/mock_project.pex
 COPY --from=0 /root/arcor2/dist/src.python.arcor2_mocks.scripts/mock_scene.pex /root/mock_scene.pex
 
