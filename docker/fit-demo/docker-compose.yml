@@ -75,37 +75,49 @@ services:
       - ./calibration.yaml:/root/calibration.yaml
 
   fit-demo-dobot:
-    image: arcor2/arcor2_dobot:0.4.0
+    image: arcor2/arcor2_dobot:0.4.1
     container_name: fit-demo-dobot
+    depends_on:
+      - fit-demo-mocks
     networks:
       - fit-demo-dobot-network
+      - fit-demo-robot-network
     ports:
         - "5018:5018"
     environment:
       - ARCOR2_DOBOT_MOCK=true
+      - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-mocks:5013
 
   fit-demo-dobot2:
-    image: arcor2/arcor2_dobot:0.4.0
+    image: arcor2/arcor2_dobot:0.4.1
     container_name: fit-demo-dobot2
+    depends_on:
+      - fit-demo-mocks
     networks:
       - fit-demo-dobot-network
+      - fit-demo-robot-network
     ports:
         - "5019:5018"
     environment:
       - ARCOR2_DOBOT_MOCK=true
+      - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-mocks:5013
 
   fit-demo-dobot3:
-    image: arcor2/arcor2_dobot:0.4.0
+    image: arcor2/arcor2_dobot:0.4.1
     container_name: fit-demo-dobot3
+    depends_on:
+      - fit-demo-mocks
     networks:
       - fit-demo-dobot-network
+      - fit-demo-robot-network
     ports:
         - "5120:5018"
     environment:
       - ARCOR2_DOBOT_MOCK=true
+      - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-mocks:5013
 
   fit-demo-mocks:
-    image: arcor2/arcor2_mocks:0.17.0
+    image: arcor2/arcor2_mocks:0.17.1
     container_name: fit-demo-mocks
     networks:
           - fit-demo-robot-network
