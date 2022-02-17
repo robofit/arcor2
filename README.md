@@ -32,7 +32,7 @@ environments on mobile devices,” in Companion of the 2022 ACM/IEEE Internation
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2022-01-25: [0.23.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.23.0) ([pypi](https://pypi.org/project/arcor2/0.23.0/)).
+ - 2022-02-17: [0.23.1](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.23.1) ([pypi](https://pypi.org/project/arcor2/0.23.1/)).
  
 ### arcor2_arserver
 
@@ -92,7 +92,7 @@ environments on mobile devices,” in Companion of the 2022 ACM/IEEE Internation
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
-- 2022-01-25: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.8.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.8.0), [pypi](https://pypi.org/project/arcor2-fit-demo/0.8.0/)).
+- 2022-02-17: [0.9.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.9.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.9.0), [pypi](https://pypi.org/project/arcor2-fit-demo/0.9.0/)).
   
 ### arcor2_kinect_azure
 
@@ -104,13 +104,13 @@ environments on mobile devices,” in Companion of the 2022 ACM/IEEE Internation
 
 [README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
 
- - 2021-10-25: [0.17.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.17.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.17.0), [pypi](https://pypi.org/project/arcor2-mocks/0.17.0/)).
+ - 2022-02-17: [0.17.1](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.17.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.17.1), [pypi](https://pypi.org/project/arcor2-mocks/0.17.1/)).
  
 ### arcor2_dobot
 
 [README](src/python/arcor2_dobot/README.md) | [CHANGELOG](src/python/arcor2_dobot/CHANGELOG.md)
 
- - 2022-01-25: [0.4.0](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.4.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.4.0), [pypi](https://pypi.org/project/arcor2-dobot/0.4.0/)).
+ - 2022-02-17: [0.4.1](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.4.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.4.1), [pypi](https://pypi.org/project/arcor2-dobot/0.4.1/)).
 
 ### arcor2_devel
 
