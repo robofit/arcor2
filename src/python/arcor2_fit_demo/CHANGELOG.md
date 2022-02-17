@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.0] - 2022-02-17
+
+### Changed
+
+- `pick` and `place` actions now have `safe_approach`, `safe_pick`/`safe_place` and `velocity` parameters.  
+
 ## [0.8.0] - 2022-01-25
 
 ### Added

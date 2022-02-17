@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import copy
+import logging
 import os
 from functools import wraps
 from typing import Optional
@@ -12,7 +14,9 @@ from arcor2_dobot.magician import DobotMagician
 from flask import Response, jsonify, request
 
 from arcor2 import env, json
+from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Pose
+from arcor2.data.scene import LineCheck
 from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
@@ -294,6 +298,11 @@ def put_eef_pose() -> RespT:
                 format: float
                 minimum: 0
                 maximum: 100
+            - in: query
+              name: safe
+              schema:
+                type: boolean
+                default: false
         requestBody:
               content:
                 application/json:
@@ -304,6 +313,8 @@ def put_eef_pose() -> RespT:
               description: Ok
             403:
               description: Not started
+            404:
+              description: Can't find safe path.
     """
 
     assert _dobot is not None
@@ -312,11 +323,39 @@ def put_eef_pose() -> RespT:
         raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
 
     pose = Pose.from_dict(request.json)
-    move_type: str = request.args.get("moveType", "jump")
+    move_type = MoveType(request.args.get("moveType", "jump"))
     velocity = float(request.args.get("velocity", default=50.0))
     acceleration = float(request.args.get("acceleration", default=50.0))
+    safe = request.args.get("safe") == "true"
 
-    _dobot.move(pose, MoveType(move_type), velocity, acceleration)
+    if safe:
+        cp = _dobot.get_end_effector_pose()
+
+        ip1 = copy.deepcopy(cp)
+        ip2 = copy.deepcopy(pose)
+
+        for _attempt in range(20):
+            res = scene_service.line_check(LineCheck(ip1.position, ip2.position))
+
+            if res.safe:
+                break
+
+            if move_type == MoveType.LINEAR:
+                raise FlaskException("There might be a collision.", error_code=400)
+
+            ip1.position.z += 0.01
+            ip2.position.z += 0.01
+
+        else:
+            return "Can't find safe path.", 404
+
+        logger.debug(f"Collision avoidance attempts: {_attempt}")
+
+        if _attempt > 0:
+            _dobot.move(ip1, move_type, velocity, acceleration)
+            _dobot.move(ip2, move_type, velocity, acceleration)
+
+    _dobot.move(pose, move_type, velocity, acceleration)
     return Response(status=204)
 
 
@@ -541,12 +580,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_DOBOT_MOCK"))
+
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Set logging level to debug.",
+        action="store_const",
+        const=logging.DEBUG,
+        default=logging.DEBUG if env.get_bool("ARCOR2_DOBOT_DEBUG") else logging.INFO,
+    )
+
     args = parser.parse_args()
+    logger.setLevel(args.debug)
 
     global _mock
     _mock = args.mock
     if _mock:
         logger.info("Starting as a mock!")
+
+    if not args.swagger:
+        scene_service.wait_for()
 
     run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint], args.swagger)
 
