@@ -2,6 +2,21 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.4.1] - 2022-02-17
+
+### Added
+
+- Support for safe movements.
+  - Connection to Scene Service Mock needed.
+  - New parameter `safe` for `PUT /eef/pose`.
+  - For JOINT and JUMP movements: add intermediate points with higher z, if there might be a collision.
+  - For LINEAR: raise an exception if there might be collision.
+- Debug logging can be turned on by adding `-d` or setting `ARCOR2_DOBOT_DEBUG`.
+
+### Fixed
+
+- In mock-mode, `cleanup` was throwing `AttributeError`.
+
 ## [0.4.0] - 2022-01-25
 
 ### Added

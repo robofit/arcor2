@@ -68,14 +68,10 @@ class AbstractDobot(FitCommonMixin, Robot):
     def move_to_pose(
         self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, linear: bool = True
     ) -> None:
-        if safe:
-            raise DobotException("Dobot does not support safe moves.")
-        self.move(target_pose, MoveType.LINEAR if linear else MoveType.JOINTS, speed * 100)
+        self.move(target_pose, MoveType.LINEAR if linear else MoveType.JOINTS, speed * 100, safe=safe)
 
     def move_to_joints(self, target_joints: list[Joint], speed: float, safe: bool = True) -> None:
-        if safe:
-            raise DobotException("Dobot does not support safe moves.")
-        self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100)
+        self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100, safe=safe)
 
     def home(self, *, an: Optional[str] = None) -> None:
         """Run the homing procedure."""
@@ -88,6 +84,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         move_type: MoveType,
         velocity: float = 50.0,
         acceleration: float = 50.0,
+        safe: bool = True,
         *,
         an: Optional[str] = None,
     ) -> None:
@@ -97,6 +94,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         :param move_type: Move type.
         :param velocity: Speed of move (percent).
         :param acceleration: Acceleration of move (percent).
+        :param safe: When set, the robot will try to avoid collisions.
         :return:
         """
 
@@ -108,7 +106,7 @@ class AbstractDobot(FitCommonMixin, Robot):
                 rest.Method.PUT,
                 f"{self.settings.url}/eef/pose",
                 body=pose,
-                params={"move_type": move_type, "velocity": velocity, "acceleration": acceleration},
+                params={"move_type": move_type, "velocity": velocity, "acceleration": acceleration, "safe": safe},
             )
 
     def suck(self, *, an: Optional[str] = None) -> None:
@@ -120,37 +118,65 @@ class AbstractDobot(FitCommonMixin, Robot):
 
         rest.call(rest.Method.PUT, f"{self.settings.url}/release")
 
-    def pick(self, pick_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+    def pick(
+        self,
+        pick_pose: Pose,
+        velocity: float = 50.0,
+        vertical_offset: float = 0.05,
+        safe_approach: bool = True,
+        safe_pick: bool = False,
+        *,
+        an: Optional[str] = None,
+    ) -> None:
         """Picks an item from given pose.
 
         :param pick_pose: Where to pick an object.
+        :param velocity: Speed of move (percent).
         :param vertical_offset: Vertical offset for pre/post pick pose.
+        :param safe_approach: Safe approach to the pre-pick position.
+        :param safe_pick: Safe picking movements.
         :return:
         """
 
+        assert 0.0 <= velocity <= 100.0
+
         pick_pose.position.z += vertical_offset
-        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+        self.move(pick_pose, MoveType.JOINTS, velocity, safe=safe_approach)  # pre-pick pose
         pick_pose.position.z -= vertical_offset
-        self.move(pick_pose, MoveType.JOINTS)  # pick pose
+        self.move(pick_pose, MoveType.LINEAR, velocity, safe=safe_pick)  # pick pose
         self.suck()
         pick_pose.position.z += vertical_offset
-        self.move(pick_pose, MoveType.JOINTS)  # pre-pick pose
+        self.move(pick_pose, MoveType.LINEAR, velocity, safe=False)  # back to pre-pick pose
 
-    def place(self, place_pose: Pose, vertical_offset: float = 0.05, *, an: Optional[str] = None) -> None:
+    def place(
+        self,
+        place_pose: Pose,
+        velocity: float = 50.0,
+        vertical_offset: float = 0.05,
+        safe_approach: bool = True,
+        safe_place: bool = False,
+        *,
+        an: Optional[str] = None,
+    ) -> None:
         """Places an item to a given pose.
 
         :param place_pose: Where to place the object.
+        :param velocity: Speed of move (percent).
         :param vertical_offset: Vertical offset for pre/post place pose.
+        :param safe_approach: Safe approach to the pre-pick position.
+        :param safe_place: Safe placement movements.
         :return:
         """
 
+        assert 0.0 <= velocity <= 100.0
+
         place_pose.position.z += vertical_offset
-        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+        self.move(place_pose, MoveType.JOINTS, velocity, safe=safe_approach)  # pre-place pose
         place_pose.position.z -= vertical_offset
-        self.move(place_pose, MoveType.JOINTS)  # place pose
+        self.move(place_pose, MoveType.LINEAR, velocity, safe=safe_place)  # place pose
         self.release()
         place_pose.position.z += vertical_offset
-        self.move(place_pose, MoveType.JOINTS)  # pre-place pose
+        self.move(place_pose, MoveType.LINEAR, velocity, safe=False)  # back to pre-place pose
 
     def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
         return rest.call(rest.Method.GET, f"{self.settings.url}/joints", list_return_type=Joint)

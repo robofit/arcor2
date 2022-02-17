@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.1] - 2022-02-17
+
+### Added
+
+- Simple collision checking on Scene Service Mock using Open3D ray-casting.
+  - Checks whether there is collision between two points.
+  - So far works only for primitive models.
+  - Amount of (safety) inflation (in meters) can be controlled by `-i` argument or by `ARCOR2_SCENE_INFLATION`. Default value is 0.01.
+- Debug logging can be turned on by adding `-d` or setting `ARCOR2_SCENE_DEBUG`.
+
 ## [0.17.0] - 2021-10-25
 
 ### Changed

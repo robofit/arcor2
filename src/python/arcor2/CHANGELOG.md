@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.23.1] - 2022-02-17
+
+### Added
+
+- Simple collision checking.
+  - Related dataclasses were added.
+  - New function in `scene_service` client.
+
 ## [0.23.0] - 2022-01-25
 
 ### Changed

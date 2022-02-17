@@ -8,7 +8,7 @@ from dataclasses_jsonschema import JsonSchemaMixin
 from arcor2 import rest
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Model3dType, Models
-from arcor2.data.scene import MeshFocusAction
+from arcor2.data.scene import LineCheck, LineCheckResult, MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.helpers import handle
 from arcor2.logging import get_logger
@@ -91,6 +91,16 @@ def collision_ids() -> set[str]:
 @handle(SceneServiceException, logger, message="Failed to focus the object.")
 def focus(mfa: MeshFocusAction) -> Pose:
     return rest.call(rest.Method.PUT, f"{URL}/utils/focus", body=mfa, return_type=Pose)
+
+
+@handle(SceneServiceException, logger, message="Failed to check whether line is safe.")
+def line_check(lc: LineCheck) -> LineCheckResult:
+    """This is specific to arcor2 Scene service.
+
+    :param lc:
+    :return:
+    """
+    return rest.call(rest.Method.PUT, f"{URL}/utils/lineSafe", body=lc, return_type=LineCheckResult)
 
 
 def delete_all_collisions() -> None:

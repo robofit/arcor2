@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -16,3 +17,17 @@ class MeshFocusAction(JsonSchemaMixin):
 
         if len(self.mesh_focus_points) != len(self.robot_space_points):
             raise Arcor2Exception("Invalid MeshFocusAction.")
+
+
+@dataclass
+class LineCheck(JsonSchemaMixin):
+
+    pt1: Position
+    pt2: Position
+
+
+@dataclass
+class LineCheckResult(JsonSchemaMixin):
+
+    safe: bool
+    object_id: Optional[str] = None
