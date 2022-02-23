@@ -1,0 +1,77 @@
+version: '3'
+
+services:
+  fit-demo-dobot-magician:
+    environment:
+      - ARCOR2_DOBOT_MOCK=false
+    devices:
+      - /dev/dobotMagician:/dev/dobot
+
+  fit-demo-dobot-m1:
+    environment:
+      - ARCOR2_DOBOT_MOCK=false
+    devices:
+      - /dev/dobotM1:/dev/dobot
+
+  fit-demo-mocks:
+    image: arcor2/arcor2_mocks:0.17.1
+    container_name: fit-demo-mocks
+    networks:
+          - fit-demo-robot-network
+    ports:
+      - "5013:5013"
+
+  fit-demo-project:
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.16.0
+    container_name: "fit-demo-project"
+    ports:
+      - "10000-10001:10000-10001"
+    environment:
+      MONGODB_URL: fit-demo-project-mongodb:27017
+    links:
+        - fit-demo-project-mongodb
+    depends_on:
+        - fit-demo-project-mongodb
+    networks:
+      - fit-demo-project-network
+    volumes:
+      - fit-demo-project-resources:/data/resources
+
+  fit-demo-project-mongodb:
+    image: mongo:4.2.15-bionic
+    container_name: "fit-demo-project-mongodb"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - fit-demo-project-mongodb:/data/db
+    expose:
+      - "27017"
+    networks:
+      - fit-demo-project-network
+
+  fit-demo-nginx:
+    image: nginx:1.21.1
+    container_name: "fit-demo-nginx"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "6790:80"
+    networks:
+      - fit-demo-project-network
+    depends_on:
+      - fit-demo-project
+
+volumes:
+  fit-demo-project-resources:
+  fit-demo-project-mongodb:
+  fit-demo-execution:
+  fit-demo-robotsystem-mongodb:
+
+networks:
+  fit-demo-robot-network:
+  fit-demo-execution-network:
+  fit-demo-project-network:
+  fit-demo-kinect-network:
+  fit-demo-dobot-network:
+  fit-demo-calibration-network:
