@@ -3,7 +3,6 @@ aiologger==0.6.1
 aiorun==2021.10.1
 apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!
 apispec[yaml]==5.1.1
-astunparse==1.6.3  # this is not necessary once switched to Python 3.9 (ast.unparse is there)
 autopep8==1.6.0
 colorlog==6.6.0
 Cython==0.29.27

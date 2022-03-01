@@ -25,7 +25,6 @@ from ast import (
 )
 from typing import Optional, Union
 
-import astunparse  # TODO this is not necessary once switched to Python 3.9 (ast.unparse is there)
 import autopep8
 
 from arcor2.source import SourceException
@@ -200,11 +199,11 @@ def get_name_attr(name: str, attr: str, ctx: Union[type[Load], type[Store]] = Lo
 def tree_to_str(tree: AST) -> str:
 
     fix_missing_locations(tree)
-    return autopep8.fix_code(astunparse.unparse(tree), options={"aggressive": 1, "max_line_length": 120})
+    return autopep8.fix_code(ast.unparse(tree), options={"aggressive": 1, "max_line_length": 120})
 
 
 def dump(tree: Module) -> str:
-    return astunparse.dump(tree)
+    return ast.dump(tree)
 
 
 def find_raises(tree: FunctionDef) -> list[Raise]:
