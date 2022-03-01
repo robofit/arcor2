@@ -570,7 +570,7 @@ def put_fk() -> RespT:
     return jsonify(_dobot.forward_kinematics(joints))
 
 
-@app.errorhandler(DobotApiException)  # type: ignore  # TODO what's wrong?
+@app.errorhandler(DobotApiException)
 def handle_dobot_exception(e: DobotApiException) -> tuple[str, int]:
     return json.dumps(str(e)), 400
 
