@@ -83,6 +83,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
             FunctionDef(
                 name="main",
                 args=arguments(
+                    posonlyargs=[],
                     args=[arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None)],
                     vararg=None,
                     kwonlyargs=[],
@@ -158,7 +159,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
 
 
 def global_action_points_class(project: CachedProject) -> str:
-    tree = Module(body=[])
+    tree = Module(body=[], type_ignores=[])
 
     tree.body.append(
         ImportFrom(
@@ -244,6 +245,7 @@ def global_action_points_class(project: CachedProject) -> str:
                     FunctionDef(
                         name="__init__",
                         args=arguments(
+                            posonlyargs=[],
                             args=[
                                 arg(arg="self", annotation=None, type_comment=None),
                                 arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
@@ -268,6 +270,7 @@ def global_action_points_class(project: CachedProject) -> str:
                     FunctionDef(
                         name=joints.name,
                         args=arguments(
+                            posonlyargs=[],
                             args=[arg(arg="self", annotation=None, type_comment=None)],
                             vararg=None,
                             kwonlyargs=[],
@@ -335,6 +338,7 @@ def global_action_points_class(project: CachedProject) -> str:
                     FunctionDef(
                         name="__init__",
                         args=arguments(
+                            posonlyargs=[],
                             args=[
                                 arg(arg="self", annotation=None, type_comment=None),
                                 arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
@@ -359,6 +363,7 @@ def global_action_points_class(project: CachedProject) -> str:
                     FunctionDef(
                         name=ori.name,
                         args=arguments(
+                            posonlyargs=[],
                             args=[arg(arg="self", annotation=None, type_comment=None)],
                             vararg=None,
                             kwonlyargs=[],
@@ -405,6 +410,7 @@ def global_action_points_class(project: CachedProject) -> str:
                 FunctionDef(
                     name="__init__",
                     args=arguments(
+                        posonlyargs=[],
                         args=[
                             arg(arg="self", annotation=None, type_comment=None),
                             arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),
@@ -429,6 +435,7 @@ def global_action_points_class(project: CachedProject) -> str:
             FunctionDef(
                 name="position",
                 args=arguments(
+                    posonlyargs=[],
                     args=[arg(arg="self", annotation=None, type_comment=None)],
                     vararg=None,
                     kwonlyargs=[],
@@ -472,6 +479,7 @@ def global_action_points_class(project: CachedProject) -> str:
             FunctionDef(
                 name="__init__",
                 args=arguments(
+                    posonlyargs=[],
                     args=[
                         arg(arg="self", annotation=None, type_comment=None),
                         arg(arg="res", annotation=Name(id=RES_CLS, ctx=Load()), type_comment=None),

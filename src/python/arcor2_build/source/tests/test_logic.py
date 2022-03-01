@@ -205,9 +205,9 @@ def test_branched_output() -> None:
 
     """
     bool_res = test_name.test(res.ac1)
-    if (bool_res == False):
+    if bool_res == False:
         test_name.test(res.ac3)
-    elif (bool_res == True):
+    elif bool_res == True:
         test_name.test(res.ac2)
     test_name.test(res.ac4)
     """
@@ -216,13 +216,13 @@ def test_branched_output() -> None:
 
     ac1_idx = subs_index(spl, "bool_res = test_name.test(an='ac1')")
 
-    if_bool_res_false_idx = subs_index(spl, "if (bool_res == False):")
+    if_bool_res_false_idx = subs_index(spl, "if bool_res == False:")
     assert if_bool_res_false_idx > ac1_idx
     assert cntsp(spl[if_bool_res_false_idx]) == cntsp(spl[ac1_idx])
     assert "test_name.test(an='ac3')" in spl[if_bool_res_false_idx + 1]
     assert cntsp(spl[if_bool_res_false_idx]) == cntsp(spl[if_bool_res_false_idx + 1]) - TAB
 
-    if_bool_res_true_idx = subs_index(spl, "if (bool_res == True):")
+    if_bool_res_true_idx = subs_index(spl, "if bool_res == True:")
     assert if_bool_res_true_idx > ac1_idx
     assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[ac1_idx])
     assert "test_name.test(an='ac2')" in spl[if_bool_res_true_idx + 1]
@@ -281,13 +281,13 @@ def test_branched_output_2() -> None:
 
     """
     bool_res = test_name.test(res.ac1)
-    if (bool_res == False):
+    if bool_res == False:
         bool2_res = test_name.test(res.ac4)
-        if (bool2_res == False):
+        if bool2_res == False:
             continue
-        elif (bool2_res == True):
+        elif bool2_res == True:
             test_name.test(res.ac5)
-    elif (bool_res == True):
+    elif bool_res == True:
         test_name.test(res.ac2)
         test_name.test(res.ac3)
     test_name.test(res.ac6)
@@ -298,7 +298,7 @@ def test_branched_output_2() -> None:
     # it has to be robust against changed order of blocks
     ac1_idx = subs_index(spl, "bool_res = test_name.test(an='ac1')")
 
-    if_bool_res_false_idx = subs_index(spl, "if (bool_res == False):")
+    if_bool_res_false_idx = subs_index(spl, "if bool_res == False:")
     assert if_bool_res_false_idx > ac1_idx
     assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_false_idx])
 
@@ -306,18 +306,18 @@ def test_branched_output_2() -> None:
     assert bool2_res_idx > if_bool_res_false_idx
     assert cntsp(spl[if_bool_res_false_idx]) == cntsp(spl[bool2_res_idx]) - TAB
 
-    if_bool_2_res_false_idx = subs_index(spl, "if (bool2_res == False):")
+    if_bool_2_res_false_idx = subs_index(spl, "if bool2_res == False:")
     assert cntsp(spl[if_bool_2_res_false_idx]) == cntsp(spl[bool2_res_idx])
     assert if_bool_2_res_false_idx > bool2_res_idx
     assert "continue" in spl[if_bool_2_res_false_idx + 1]
     assert cntsp(spl[bool2_res_idx]) == cntsp(spl[if_bool_2_res_false_idx + 1]) - TAB
 
-    if_bool_2_res_true_idx = subs_index(spl, "if (bool2_res == True):")
+    if_bool_2_res_true_idx = subs_index(spl, "if bool2_res == True:")
     assert if_bool_2_res_true_idx > bool2_res_idx
     assert "test_name.test(an='ac5')" in spl[if_bool_2_res_true_idx + 1]
     assert cntsp(spl[if_bool_2_res_true_idx]) == cntsp(spl[if_bool_2_res_true_idx + 1]) - TAB
 
-    if_bool_res_true_idx = subs_index(spl, "if (bool_res == True):")
+    if_bool_res_true_idx = subs_index(spl, "if bool_res == True:")
     assert if_bool_res_true_idx > ac1_idx
     assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_true_idx])
 
