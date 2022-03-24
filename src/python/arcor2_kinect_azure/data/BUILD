@@ -1,3 +1,1 @@
-resources(
-    sources = ["*.jpg", "*.png"]
-)
+resources(sources=["*.jpg", "*.png"])

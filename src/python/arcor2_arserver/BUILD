@@ -5,11 +5,10 @@ arcor2_python_distribution(
         "src/python/arcor2_arserver/clients",
         "src/python/arcor2_arserver/lock",
         "src/python/arcor2_arserver/object_types",
-        "src/python/arcor2_arserver/rpc"
+        "src/python/arcor2_arserver/rpc",
     ],
-    binaries=
-        {
-            "arcor2_arserver": "src/python/arcor2_arserver/scripts:arserver",
-            "arcor2_broadcaster": "src/python/arcor2_arserver/scripts:broadcaster"
-            }
+    binaries={
+        "arcor2_arserver": "src/python/arcor2_arserver/scripts:arserver",
+        "arcor2_broadcaster": "src/python/arcor2_arserver/scripts:broadcaster",
+    },
 )

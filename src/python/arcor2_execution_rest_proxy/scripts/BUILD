@@ -1,5 +1,3 @@
 python_sources()
 
-arcor2_pex_binary(
-    name = "execution_rest_proxy"
-)
+arcor2_pex_binary(name="execution_rest_proxy")

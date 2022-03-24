@@ -40,9 +40,9 @@ jobs:
     - name: bootstrap
       run: |
         ./pants --version
-    #- name: Check BUILD files
-    #  run: |
-    #    ./pants update-build-files --check
+    - name: Check BUILD files
+      run: |
+        ./pants update-build-files --check
     - name: install system dependencies
       run: |
         sudo apt install jq
