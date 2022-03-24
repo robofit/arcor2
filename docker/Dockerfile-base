@@ -24,3 +24,7 @@ COPY . /root/arcor2/
 
 RUN cd ~/arcor2 \
 	&& ./pants --version
+
+RUN apt-get install -y -q --no-install-recommends gnupg2 \
+    && cd ~/arcor2 \
+    && ./build-support/install_kinect_prerequisites.sh
