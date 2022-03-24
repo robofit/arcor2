@@ -25,7 +25,7 @@ def main() -> None:
     dy = pose.position.y - fk_pose.position.y
     dz = pose.position.z - fk_pose.position.z
 
-    print("Position error: {:+.09f}".format(math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)))
+    print("Position error: {:+.09f}".format(math.sqrt(dx**2 + dy**2 + dz**2)))
 
     print("dx: {:+.06f}".format(dx))
     print("dy: {:+.06f}".format(dy))

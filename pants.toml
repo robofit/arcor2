@@ -1,10 +1,11 @@
 [GLOBAL]
-pants_version = "2.9.0"
+pants_version = "2.10.0"
 colors = true
 process_execution_local_parallelism = 4
+use_deprecated_python_macros = false  # remove when updating to 2.11.0
 
 plugins = [
-  "packaging==21.0",
+  "packaging==21.3",
 ]
 
 backend_packages.add = [
@@ -36,7 +37,8 @@ requirement_constraints = "3rdparty/constraints.txt"
 search_path = ["<PATH>", "/usr/bin/python3.9"]
 
 [black]
-version = "black==21.12b0"
+interpreter_constraints = ["==3.9.*"]
+version = "black==22.1.0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
@@ -53,7 +55,7 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.931"
+version = "mypy==0.941"
 extra_requirements.add = [
   "numpy",
   "types-requests",

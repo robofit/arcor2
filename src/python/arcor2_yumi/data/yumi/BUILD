@@ -1,4 +1,10 @@
 resources(
-    name = "yumi",
-    sources = ["yumi.urdf", "yumi_description/meshes/*.stl", "yumi_description/meshes/coarse/*.stl", "yumi_description/meshes/gripper/*.stl", "yumi_description/meshes/gripper/coarse/*.stl"],
+    name="yumi",
+    sources=[
+        "yumi.urdf",
+        "yumi_description/meshes/*.stl",
+        "yumi_description/meshes/coarse/*.stl",
+        "yumi_description/meshes/gripper/*.stl",
+        "yumi_description/meshes/gripper/coarse/*.stl",
+    ],
 )

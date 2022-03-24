@@ -50,7 +50,7 @@ class Message:
             for param in self.params:
                 self.checksum += param
             self.checksum = self.checksum % 256
-            self.checksum = 2 ** 8 - self.checksum
+            self.checksum = 2**8 - self.checksum
             self.checksum = self.checksum % 256
             self.len = 0x02 + len(self.params)
 

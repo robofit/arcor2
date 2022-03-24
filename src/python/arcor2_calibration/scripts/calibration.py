@@ -318,7 +318,7 @@ def get_calibration() -> RespT:
                 continue
 
             mpose = poses[marker_id]
-            dist = math.sqrt(mpose.position.x ** 2 + mpose.position.y ** 2 + mpose.position.z ** 2)
+            dist = math.sqrt(mpose.position.x**2 + mpose.position.y**2 + mpose.position.z**2)
 
             # the closer the theta is to pi, the higher quality we get
             theta = quaternion.as_spherical_coords(mpose.orientation.as_quaternion())[0]

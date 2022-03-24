@@ -96,8 +96,8 @@ class DobotMagician(Dobot):
         rho_sq = pow(r - self.link_4_length, 2) + pow(z, 2)
         rho = math.sqrt(rho_sq)  # distance b/w the ends of the links joined at the elbow
 
-        l2_sq = self.link_2_length ** 2
-        l3_sq = self.link_3_length ** 2
+        l2_sq = self.link_2_length**2
+        l3_sq = self.link_3_length**2
 
         # law of cosines
         try:
