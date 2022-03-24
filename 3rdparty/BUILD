@@ -8,7 +8,6 @@ python_requirements(
         "websocket-client": ["websocket"],
         "pyhumps": ["humps"],
         "pyserial": ["serial"],
-        "pyk4a-bundle": ["pyk4a"],
     },
     overrides={
         "apispec-webframeworks": {

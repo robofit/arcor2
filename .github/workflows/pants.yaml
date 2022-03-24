@@ -45,6 +45,7 @@ jobs:
         ./pants update-build-files --check
     - name: install system dependencies
       run: |
+        sudo ./build-support/install_kinect_prerequisites.sh
         sudo apt install jq
     - name: Lint
       run: |

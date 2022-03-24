@@ -4,6 +4,7 @@
 
 - By default, the service runs on port 5016.
   - This can be changed by setting `ARCOR2_KINECT_AZURE_URL`.
+- Kinect SDK has to be installed beforehand (`sudo ./build-support/install_kinect_prerequisites.sh`).
 - You may need to run following commands when using the real sensor to set permissions:
 
 ```bash
