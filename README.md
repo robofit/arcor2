@@ -20,11 +20,9 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 ## Publications
  
-- M. Kapinus, V. Beran, Z. Materna, and D. Bambušek, “Spatially situated end-user robot programming in augmented reality,” in 2019
-28th IEEE International Conference on Robot and Human Interactive Communication (RO-MAN). IEEE, 2019, pp. 1–8.
-- M. Kapinus, D. Bambušek, Z. Materna, and V. Beran, “Improved indirect virtual objects selection methods for cluttered augmented reality
-environments on mobile devices,” in Companion of the 2022 ACM/IEEE International Conference on Human-Robot Interaction, 2022, accepted.
-- D. Bambušek, Z. Materna, M. Kapinus, and V. Beran, “Handheld augmented reality: Overcoming reachability limitations by enabling temporal switching to virtual reality,” in Companion of the 2022 ACM/IEEE International Conference on Human-Robot Interaction, 2022, accepted.
+- Kapinus, Michal, et al. "Spatially situated end-user robot programming in augmented reality." 2019 28th IEEE International Conference on Robot and Human Interactive Communication (RO-MAN). IEEE, 2019.
+- Kapinus, Michal, et al. "Improved Indirect Virtual Objects Selection Methods for Cluttered Augmented Reality Environments on Mobile Devices." Proceedings of the 2022 ACM/IEEE International Conference on Human-Robot Interaction. 2022.
+- Bambušek, Daniel, et al. "Handheld Augmented Reality: Overcoming Reachability Limitations by Enabling Temporal Switching to Virtual Reality." Proceedings of the 2022 ACM/IEEE International Conference on Human-Robot Interaction. 2022.
 
 ## Releases
 
@@ -38,13 +36,13 @@ environments on mobile devices,” in Companion of the 2022 ACM/IEEE Internation
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2022-01-25: [0.23.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.23.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=0.23.0), [pypi](https://pypi.org/project/arcor2-arserver/0.23.0/)).
+ - 2022-04-25: [0.24.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.24.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=0.24.0), [pypi](https://pypi.org/project/arcor2-arserver/0.24.0/)).
  
 ### arcor2_arserver_data
 
 [README](src/python/arcor2_arserver_data/README.md) | [CHANGELOG](src/python/arcor2_arserver_data/CHANGELOG.md)
 
- - 2022-01-25: [0.19.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F0.19.0) ([pypi](https://pypi.org/project/arcor2-arserver-data/0.19.0/)).
+ - 2022-04-25: [0.20.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F0.20.0) ([pypi](https://pypi.org/project/arcor2-arserver-data/0.20.0/)).
 
 ### arcor2_build
 
