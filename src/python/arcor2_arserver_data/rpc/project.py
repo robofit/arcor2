@@ -3,7 +3,7 @@ from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionParameter, BareProject, Flow, Joint, Orientation, Position, ProjectLogicIf
+from arcor2.data.common import ActionParameter, BareProject, Flow, Joint, Orientation, Position, Project, ProjectLogicIf
 from arcor2.data.rpc.common import RPC, IdArgs, RobotArg
 
 
@@ -85,6 +85,21 @@ class ListProjects(RPC):
             problems: Optional[list[str]] = None
 
         data: Optional[list[Data]] = None
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class GetProject(RPC):
+    @dataclass
+    class Request(RPC.Request):
+
+        args: IdArgs
+
+    @dataclass
+    class Response(RPC.Response):
+
+        data: Optional[Project] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -67,6 +67,16 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
     assert len(list_of_projects.data) == 1
     assert list_of_projects.data[0].id == project_id
 
+    get_scene_resp = ars.call_rpc(rpc.s.GetScene.Request(get_id(), IdArgs(scene.id)), rpc.s.GetScene.Response)
+    assert get_scene_resp.result
+    assert get_scene_resp.data
+    assert get_scene_resp.data.id == scene.id  # actually whole scene should be the same (except 'modified')
+
+    get_project_resp = ars.call_rpc(rpc.p.GetProject.Request(get_id(), IdArgs(project_id)), rpc.p.GetProject.Response)
+    assert get_project_resp.result
+    assert get_project_resp.data
+    assert get_project_resp.data.id == project_id  # actually whole project should be the same (except 'modified')
+
     """ TODO: fix this
     with ARServer(WS_CONNECTION_STR, timeout=10, event_mapping=event_mapping) as ars_2:
 

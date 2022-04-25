@@ -244,6 +244,11 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     return resp
 
 
+async def get_project_cb(req: srpc.p.GetProject.Request, ui: WsClient) -> srpc.p.GetProject.Response:
+
+    return srpc.p.GetProject.Response(data=(await storage.get_project(req.args.id)).project)
+
+
 async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClient) -> None:
     async def notify(ap: common.BareActionPoint, ori: common.NamedOrientation, joi: common.ProjectRobotJoints) -> None:
 

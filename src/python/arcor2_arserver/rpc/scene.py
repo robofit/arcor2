@@ -205,6 +205,11 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
     return resp
 
 
+async def get_scene_cb(req: srpc.s.GetScene.Request, ui: WsClient) -> srpc.s.GetScene.Response:
+
+    return srpc.s.GetScene.Response(data=(await storage.get_scene(req.args.id)).scene)
+
+
 async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsClient) -> None:
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE, glob.USERS.user_name(ui)):
