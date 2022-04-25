@@ -2,7 +2,7 @@ version: '3'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:0.23.0
+    image: arcor2/arcor2_arserver:0.24.0
     container_name: fit-demo-arserver
     depends_on:
       - fit-demo-project
