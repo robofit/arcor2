@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.24.0] - 2022-04-25
+
+### Added
+
+- New RPCs `GetScene` and `GetProject`.
+
 ## [0.23.0] - 2022-01-25
 
 ### Changed

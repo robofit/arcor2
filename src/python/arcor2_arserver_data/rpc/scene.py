@@ -3,7 +3,7 @@ from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import IdDesc, Parameter, Pose
+from arcor2.data.common import IdDesc, Parameter, Pose, Scene
 from arcor2.data.object_type import ObjectModel
 from arcor2.data.rpc.common import RPC, IdArgs
 
@@ -129,6 +129,21 @@ class ListScenes(RPC):
             problems: Optional[list[str]] = None
 
         data: Optional[list[Data]] = None
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+
+class GetScene(RPC):
+    @dataclass
+    class Request(RPC.Request):
+
+        args: IdArgs
+
+    @dataclass
+    class Response(RPC.Response):
+
+        data: Optional[Scene] = None
 
 
 # ----------------------------------------------------------------------------------------------------------------------
