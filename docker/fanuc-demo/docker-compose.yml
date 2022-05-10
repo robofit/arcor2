@@ -1,0 +1,149 @@
+version: '3'
+
+services:
+  fanuc-demo-arserver:
+    image: arcor2/arcor2_arserver:0.24.0
+    container_name: fanuc-demo-arserver
+    depends_on:
+      - fanuc-demo-project
+      - fanuc-demo-build
+      - fanuc-demo-execution
+      - fanuc-demo-mocks
+      - fanuc-demo-calibration
+      - fanuc-demo-fanuc
+    ports:
+      - "6789:6789"
+      - "6799:6799"
+    networks:
+          - fanuc-demo-scene-network
+          - fanuc-demo-project-network
+          - fanuc-demo-calibration-network
+          - fanuc-demo-fanuc-network
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://fanuc-demo-project:10000
+      - ARCOR2_SCENE_SERVICE_URL=http://fanuc-demo-mocks:5013
+      - ARCOR2_EXECUTION_URL=ws://fanuc-demo-execution:6790
+      - ARCOR2_BUILD_URL=http://fanuc-demo-build:5008
+      - ARCOR2_CALIBRATION_URL=http://fanuc-demo-calibration:5014
+
+  fanuc-demo-build:
+    image: arcor2/arcor2_build:0.22.0
+    container_name: fanuc-demo-build
+    depends_on:
+      - fanuc-demo-project
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://fanuc-demo-project:10000
+    ports:
+      - "5008:5008"
+    networks:           
+      - fanuc-demo-project-network
+
+  fanuc-demo-execution:
+    image: arcor2/arcor2_execution:0.20.0
+    container_name: fanuc-demo-execution
+    networks:
+      - fanuc-demo-execution-network
+      - fanuc-demo-scene-network
+      - fanuc-demo-fanuc-network
+    environment:
+      - ARCOR2_SCENE_SERVICE_URL=http://fanuc-demo-mocks:5013
+      - ARCOR2_PROJECT_PATH=/root/project
+    volumes:
+        - fanuc-demo-execution:/root/project
+
+  fanuc-demo-fanuc:
+    image: arcor2/arcor2_fanuc:0.1.0
+    container_name: fanuc-demo-fanuc
+    restart: on-failure:3  # TODO it often fails to contact Scene Service when starting, remove once we have healthcheck
+    depends_on:
+      - fanuc-demo-mocks
+    networks:
+      - fanuc-demo-fanuc
+      - fanuc-demo-scene-network
+    ports:
+        - "5027:5027"
+    environment:
+      - ARCOR2_SCENE_SERVICE_URL=http://fanuc-demo-mocks:5013
+
+  fanuc-demo-calibration:
+    image: arcor2/arcor2_calibration:0.7.0
+    networks:
+      - fanuc-demo-calibration-network
+    ports:
+      - "5014:5014"
+    environment:
+      - ARCOR2_CALIBRATION_URL=http://fanuc-demo-calibration:5014
+      - ARCOR2_CALIBRATION_MOCK=false
+    volumes:
+      - ./calibration.yaml:/root/calibration.yaml
+
+  fanuc-demo-mocks:
+    image: arcor2/arcor2_mocks:0.17.1
+    container_name: fanuc-demo-mocks
+    networks:
+          - fanuc-demo-scene-network
+    ports:
+      - "5013:5013"
+
+  fanuc-demo-project:
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.16.0
+    container_name: "fanuc-demo-project"
+    ports:
+      - "10000-10001:10000-10001"
+    environment:
+      MONGODB_URL: fanuc-demo-project-mongodb:27017
+    depends_on:
+        - fanuc-demo-project-mongodb
+    networks:
+      - fanuc-demo-project-network
+    volumes:
+      - fanuc-demo-project-resources:/data/resources
+
+  fanuc-demo-project-mongodb:
+    image: mongo:4.2.15-bionic
+    container_name: "fanuc-demo-project-mongodb"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - fanuc-demo-project-mongodb:/data/db
+    expose:
+      - "27017"
+    networks:
+      - fanuc-demo-project-network
+
+  fanuc-demo-nginx:
+    image: nginx:1.21.1
+    container_name: "fanuc-demo-nginx"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "6790:80"
+    networks:
+      - fanuc-demo-project-network
+    depends_on:
+      - fanuc-demo-project
+
+  fanuc-demo-upload-object-types:
+    image: arcor2/arcor2_fanuc_upload_object_types:0.1.0
+    container_name: "fanuc-demo-upload-object-types"
+    depends_on:
+      - fanuc-demo-project
+    networks:
+      - fanuc-demo-project-network
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://fanuc-demo-project:10000
+
+
+volumes:
+  fanuc-demo-project-resources:
+  fanuc-demo-project-mongodb:
+  fanuc-demo-execution:
+
+networks:
+  fanuc-demo-scene-network:
+  fanuc-demo-execution-network:
+  fanuc-demo-project-network:
+  fanuc-demo-fanuc-network:
+  fanuc-demo-calibration-network:
+  fanuc-demo-fanuc:

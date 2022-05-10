@@ -1,0 +1,10 @@
+resources(
+    name="fanuc_lrmate200id7l_urdf",
+    sources=[
+        "fanuc_lrmate200id7l.urdf",
+        "fanuc_lrmate200id_support/meshes/lrmate200id/collision/*.stl",
+        "fanuc_lrmate200id_support/meshes/lrmate200id/visual/*.stl",
+        "fanuc_lrmate200id_support/meshes/lrmate200id7l/collision/*.stl",
+        "fanuc_lrmate200id_support/meshes/lrmate200id7l/visual/*.stl",
+    ],
+)
