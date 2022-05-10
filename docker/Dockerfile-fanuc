@@ -1,0 +1,15 @@
+ARG version=latest
+FROM arcor2/arcor2_base:$version
+
+COPY . /root/arcor2/
+
+RUN cd ~/arcor2 \
+	&& ./pants package src/python/arcor2_fanuc/scripts:fanuc
+
+FROM arcor2/arcor2_dist_base:$version
+
+COPY --from=0 /root/arcor2/dist/src.python.arcor2_fanuc.scripts/fanuc.pex /root/fanuc.pex
+
+COPY docker/start-fanuc.sh ./start.sh
+
+EXPOSE 5027

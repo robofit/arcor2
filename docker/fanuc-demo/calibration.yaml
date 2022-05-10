@@ -1,0 +1,28 @@
+id: arcor2_fit_demo
+marker_size: 0.1
+min_dist: 0.5
+max_dist: 2.0
+blur_threshold: 150.0
+markers:
+  10:
+    pose:
+      position:
+        x: 0
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+  11:
+    pose:
+      position:
+        x: 1.05
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1

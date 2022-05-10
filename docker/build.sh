@@ -57,6 +57,14 @@ build_calibration_image () {
 	docker build -f Dockerfile-calibration -t arcor2/arcor2_calibration:"$(cat ../src/python/arcor2_calibration/VERSION)" --build-arg version="$VERSION" ../
 }
 
+build_fanuc_image () {
+	docker build -f Dockerfile-fanuc -t arcor2/arcor2_fanuc:"$(cat ../src/python/arcor2_fanuc/VERSION)" --build-arg version="$VERSION" ../
+}
+
+build_fanuc_objects_image () {
+	docker build -f Dockerfile-upload-fanuc-objects -t arcor2/arcor2_fanuc_upload_object_types:"$(cat ../src/python/arcor2_fanuc/VERSION)" --build-arg version="$VERSION" ../
+}
+
 build_all_images() {
 	build_dist_base_image
 	build_arserver_image
@@ -70,11 +78,13 @@ build_all_images() {
 	build_upload_builtin_objects_image
 	build_dobot_image
 	build_calibration_image
+	build_fanuc_image
+	build_fanuc_objects_image
 }
 
 if [ $# -eq 0 ]; then
     echo "Usage:"
-    echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [dobot] [calibration] [upload-fit-demo] [upload-builtin]"
+    echo "sudo sh build.sh VERSION [arserver] [build] [execution] [execution-proxy] [kinect-azure] [mocks] [devel] [dobot] [calibration] [upload-fit-demo] [upload-builtin] [fanuc] [fanuc-objects]"
     echo "sudo sh build.sh VERSION all"
     echo "$VERSION specifies version of base image. Optional parameters specifies which images should be build using version from their VERSION file."
     echo "If no optional parameter is specified, base image is build with version $VERSION."
@@ -124,6 +134,10 @@ do
     	build_upload_fit_demo_image
 	elif [ "$var" = "upload-builtin" ]; then
     	build_upload_builtin_objects_image
+  elif [ "$var" = "fanuc" ]; then
+    	build_fanuc_image
+  elif [ "$var" = "fanuc-objects" ]; then
+    	build_fanuc_objects_image
 	else
 	    echo "Unknown image $var"
             exit 0

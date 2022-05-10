@@ -14,5 +14,6 @@ python_requirements(
         "apispec-webframeworks": {
             "dependencies": ["#setuptools", "#Flask"]
         },  # https://github.com/marshmallow-code/apispec-webframeworks/issues/99
+        "fanucpy": {"dependencies": ["#sqlalchemy"]},  # https://github.com/torayeff/fanucpy/issues/7
     },
 )

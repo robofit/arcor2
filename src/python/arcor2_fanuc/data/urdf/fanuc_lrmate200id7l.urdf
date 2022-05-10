@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="fanuc_lrmate200id7l">
+  <!-- links: main serial chain -->
+  <link name="base_link">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/visual/base_link.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.278431372549 0.278431372549 0.278431372549 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/collision/base_link.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <link name="link_1">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/visual/link_1.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.96 0.76 0.13 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/collision/link_1.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <link name="link_2">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id7l/visual/link_2.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.96 0.76 0.13 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id7l/collision/link_2.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <link name="link_3">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/visual/link_3.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.96 0.76 0.13 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/collision/link_3.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <link name="link_4">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id7l/visual/link_4.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.96 0.76 0.13 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id7l/collision/link_4.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <link name="link_5">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/visual/link_5.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.96 0.76 0.13 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/collision/link_5.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <link name="link_6">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/visual/link_6.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.15 0.15 0.15 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://fanuc_lrmate200id_support/meshes/lrmate200id/collision/link_6.stl"/>
+      </geometry>
+    </collision>
+    <inertial>  <!-- added to make Unity happy, values are definitely wrong -->
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+  <!-- joints: main serial chain -->
+  <joint name="joint_1" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.330"/>
+    <parent link="base_link"/>
+    <child link="link_1"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="0" lower="-2.96705972839" upper="2.96705972839" velocity="6.45771823238"/>
+  </joint>
+  <joint name="joint_2" type="revolute">
+    <origin rpy="0 0 0" xyz="0.050 0 0"/>
+    <parent link="link_1"/>
+    <child link="link_2"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="0" lower="-1.74532925199" upper="2.53072741539" velocity="5.41052068118"/>
+  </joint>
+  <joint name="joint_3" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.440"/>
+    <parent link="link_2"/>
+    <child link="link_3"/>
+    <axis xyz="0 -1 0"/>
+    <limit effort="0" lower="-1.2217304764" upper="3.71755130675" velocity="7.15584993318"/>
+  </joint>
+  <joint name="joint_4" type="revolute">
+    <origin rpy="0 0 0" xyz="0 0 0.035"/>
+    <parent link="link_3"/>
+    <child link="link_4"/>
+    <axis xyz="-1 0 0"/>
+    <limit effort="0" lower="-3.31612557879" upper="3.31612557879" velocity="9.59931088597"/>
+  </joint>
+  <joint name="joint_5" type="revolute">
+    <origin rpy="0 0 0" xyz="0.420 0 0"/>
+    <parent link="link_4"/>
+    <child link="link_5"/>
+    <axis xyz="0 -1 0"/>
+    <limit effort="0" lower="-2.18166156499" upper="2.18166156499" velocity="9.51204442337"/>
+  </joint>
+  <joint name="joint_6" type="revolute">
+    <origin rpy="0 0 0" xyz="0.080 0 0"/>
+    <parent link="link_5"/>
+    <child link="link_6"/>
+    <axis xyz="-1 0 0"/>
+    <limit effort="0" lower="-6.28318530718" upper="6.28318530718" velocity="17.4532925199"/>
+  </joint>
+</robot>
+
