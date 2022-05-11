@@ -1,8 +1,7 @@
 [GLOBAL]
-pants_version = "2.10.0"
+pants_version = "2.11.0"
 colors = true
 process_execution_local_parallelism = 4
-use_deprecated_python_macros = false  # remove when updating to 2.11.0
 
 plugins = [
   "packaging==21.3",
@@ -32,6 +31,7 @@ root_patterns = [
 [python]
 interpreter_constraints = ["==3.9.*"]
 requirement_constraints = "3rdparty/constraints.txt"
+lockfile_generator="pex"
 
 [python-bootstrap]
 search_path = ["<PATH>", "/usr/bin/python3.9"]
@@ -55,7 +55,7 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.942"
+version = "mypy==0.950"
 extra_requirements.add = [
   "numpy",
   "types-requests",

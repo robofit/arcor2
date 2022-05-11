@@ -217,7 +217,7 @@ async def get_object_types() -> UpdatedObjectTypes:
         for removed in removed_object_ids:
             assert removed not in built_in_types_names(), "Attempt to remove built-in type."
             del glob.OBJECT_TYPES[removed]
-            await hlp.run_in_executor(remove_object_type, removed)
+            await remove_object_type(removed)
 
     glob.OBJECT_TYPES.update(updated_object_types)
 
