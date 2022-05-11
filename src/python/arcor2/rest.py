@@ -239,9 +239,9 @@ def call(
     if return_type is None:
         return_type = list_return_type
 
-    d: Union[list[Any], dict[str, Any]] = {}
+    d: Union[list[Any], dict[str, Any], None] = None
 
-    # prepare data into dict
+    # prepare body data into dict or list (if any)
     if isinstance(body, JsonSchemaMixin):
         d = humps.camelize(body.to_dict())
     elif isinstance(body, list):
@@ -256,15 +256,11 @@ def call(
 
     if params:
         params = humps.camelize(params)
-    else:
-        params = {}
 
-    assert params is not None
-
-    # requests just simply stringifies parameters, which does not work for booleans
-    for param_name, param_value in params.items():
-        if isinstance(param_value, bool):
-            params[param_name] = "true" if param_value else "false"
+        # requests just simply stringifies parameters, which does not work for booleans
+        for param_name, param_value in params.items():
+            if isinstance(param_value, bool):
+                params[param_name] = "true" if param_value else "false"
 
     if timeout is None:
         timeout = Timeout()
@@ -274,7 +270,11 @@ def call(
             resp = method.value(url, files=files, timeout=timeout, params=params)
         else:
             resp = method.value(
-                url, data=json.dumps(d).encode("utf-8"), timeout=timeout, headers=headers, params=params
+                url,
+                data=json.dumps(d).encode("utf-8") if d is not None else None,
+                timeout=timeout,
+                headers=headers,
+                params=params,
             )
     except requests.exceptions.RequestException as e:
         logger.debug("Request failed.", exc_info=True)
