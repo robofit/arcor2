@@ -218,7 +218,7 @@ async def register(
 
         if req.args.robot_id not in tasks:
             # start task
-            tasks[req.args.robot_id] = asyncio.create_task(coro(robot_inst))
+            tasks[req.args.robot_id] = asyncio.create_task(coro(robot_inst))  # type: ignore   # TODO figure it out
 
     else:
         try:

@@ -2,16 +2,16 @@ aiofiles==0.8.0
 aiologger==0.6.1
 aiorun==2022.4.1
 apispec-webframeworks==0.5.2  # dependency on Flask has to be specified manually!
-apispec[yaml]==5.1.1
+apispec[yaml]==5.2.1
 autopep8==1.6.0
 colorlog==6.6.0
 Cython==0.29.28
 dataclasses-jsonschema[fast-validation,apispec]==2.15.1
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
-Flask==2.1.1
+Flask==2.1.2
 lru-dict==1.1.7
-numpy-quaternion[scipy,numba]==2022.4.1
+numpy-quaternion[scipy,numba]==2022.4.2
 numpy==1.22.3
 openapi-spec-validator==0.4.0
 opencv-contrib-python==4.5.5.64
@@ -28,12 +28,12 @@ pytest-repeat==0.9.1
 pytest==7.1.2
 PyYAML==6.0
 requests==2.27.1
-setuptools==60.10.0
+setuptools==62.2.0
 sqlitedict==2.0.0
 types-aiofiles==0.8.8
 types-orjson==3.6.2
 types-setuptools==57.4.14
-types-requests==2.27.20
+types-requests==2.27.25
 types-PyYAML==6.0.7
 typing-inspect==0.7.1
 urdfpy==0.0.22

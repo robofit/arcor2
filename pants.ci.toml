@@ -1,6 +1,17 @@
 [GLOBAL]
-pantsd = false
-process_execution_local_parallelism = 2
+# Colors often work in CI, but the shell is usually not a TTY so Pants
+# doesn't attempt to use them by default.
+colors = true
 
-[python]
-resolver_jobs = 1
+[stats]
+log = true
+
+[test]
+use_coverage = true
+
+[coverage-py]
+report = ["xml"]
+global_report = true
+
+[pytest]
+args = ["-vv", "--no-header"]
