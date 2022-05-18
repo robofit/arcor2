@@ -7,6 +7,7 @@ autopep8==1.6.0
 colorlog==6.6.0
 Cython==0.29.28
 dataclasses-jsonschema[fast-validation,apispec]==2.15.1
+python-dateutil==2.8.2
 flask_cors==3.0.10
 flask-swagger-ui==3.36.0
 Flask==2.1.2
@@ -32,6 +33,7 @@ setuptools==62.2.0
 sqlitedict==2.0.0
 types-aiofiles==0.8.8
 types-orjson==3.6.2
+types-python-dateutil==2.8.15
 types-setuptools==57.4.14
 types-requests==2.27.25
 types-PyYAML==6.0.7

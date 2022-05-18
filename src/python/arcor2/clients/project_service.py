@@ -2,6 +2,8 @@ import os
 from datetime import datetime
 from typing import Optional
 
+from dateutil.parser import parse
+
 from arcor2 import rest
 from arcor2.data.common import Asset, IdDesc, Project, ProjectParameter, ProjectSources, Scene, SceneObjectOverride
 from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, MetaModel3d, Model, Model3dType, ObjectType
@@ -178,7 +180,7 @@ def get_object_type_ids() -> list[IdDesc]:
 def update_object_type(object_type: ObjectType) -> datetime:
 
     assert object_type.id
-    return datetime.fromisoformat(rest.call(rest.Method.PUT, f"{URL}/object_type", body=object_type, return_type=str))
+    return parse(rest.call(rest.Method.PUT, f"{URL}/object_type", body=object_type, return_type=str))
 
 
 @handle(ProjectServiceException, logger, message="Failed to delete the object type.")
@@ -198,7 +200,7 @@ def get_project_parameters(project_id: str) -> list[ProjectParameter]:
 
 @handle(ProjectServiceException, logger, message="Failed to add or update project parameters.")
 def update_project_parameters(project_id: str, parameters: list[ProjectParameter]) -> datetime:
-    return datetime.fromisoformat(
+    return parse(
         rest.call(rest.Method.GET, f"{URL}/projects/{project_id}/parameters", body=parameters, return_type=str)
     )
 
@@ -227,7 +229,7 @@ def get_project_sources(project_id: str) -> ProjectSources:
 def update_project(project: Project) -> datetime:
 
     assert project.id
-    return datetime.fromisoformat(rest.call(rest.Method.PUT, f"{URL}/project", return_type=str, body=project))
+    return parse(rest.call(rest.Method.PUT, f"{URL}/project", return_type=str, body=project))
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the project sources.")
@@ -281,7 +283,7 @@ def get_scene(scene_id: str) -> Scene:
 def update_scene(scene: Scene) -> datetime:
 
     assert scene.id
-    return datetime.fromisoformat(rest.call(rest.Method.PUT, f"{URL}/scene", return_type=str, body=scene))
+    return parse(rest.call(rest.Method.PUT, f"{URL}/scene", return_type=str, body=scene))
 
 
 @handle(ProjectServiceException, logger, message="Failed to delete the scene.")

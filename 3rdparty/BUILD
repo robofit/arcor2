@@ -8,6 +8,7 @@ python_requirements(
         "websocket-client": ["websocket"],
         "pyhumps": ["humps"],
         "pyserial": ["serial"],
+        "python-dateutil": ["dateutil"],
     },
     overrides={
         "apispec-webframeworks": {
