@@ -1,11 +1,11 @@
 import math
 
 import quaternion
-from arcor2_dobot.dobot import Dobot, DobotException
-from arcor2_dobot.dobot_api import DobotApiException
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Orientation, Pose, Position, StrEnum
+from arcor2_dobot.dobot import Dobot, DobotException
+from arcor2_dobot.dobot_api import DobotApiException
 
 
 class Joints(StrEnum):

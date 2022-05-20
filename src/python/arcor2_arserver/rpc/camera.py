@@ -1,6 +1,5 @@
 import asyncio
 
-from arcor2_calibration_data import client as calib_client
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.cached import UpdateableCachedScene
@@ -15,6 +14,7 @@ from arcor2_arserver.helpers import ensure_write_locked
 from arcor2_arserver.scene import ensure_scene_started, get_instance, update_scene_object_pose
 from arcor2_arserver_data.events.common import ProcessState
 from arcor2_arserver_data.rpc.camera import CalibrateCamera, CameraColorImage, CameraColorParameters
+from arcor2_calibration_data import client as calib_client
 
 
 async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> CameraColorImage.Response:

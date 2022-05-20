@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable, Optional
 
-from arcor2_runtime.action import results_to_json
-
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
 from arcor2.exceptions import Arcor2Exception
@@ -18,6 +16,7 @@ from arcor2_arserver.scene import SceneProblems, get_ot_modified, get_scene_stat
 from arcor2_arserver_data.events.actions import ActionExecution, ActionResult
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.project import OpenProject, ProjectClosed
+from arcor2_runtime.action import results_to_json
 
 
 @dataclass

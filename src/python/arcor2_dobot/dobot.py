@@ -3,13 +3,13 @@ import time
 from abc import ABCMeta, abstractmethod
 
 import quaternion
-from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Orientation, Pose, StrEnum
 from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.helpers import NonBlockingLock
 from arcor2.object_types.abstract import RobotException
+from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
 
 # TODO jogging
 

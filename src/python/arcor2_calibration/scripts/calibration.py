@@ -10,8 +10,6 @@ import time
 import numpy as np
 import quaternion
 import yaml
-from arcor2_calibration_data import CALIBRATION_URL, SERVICE_NAME, Corner, EstimatedPose, MarkerCorners
-from arcor2_calibration_data.client import CalibrateRobotArgs
 from dataclasses_jsonschema import ValidationError
 from flask import jsonify, request
 from PIL import Image
@@ -28,6 +26,8 @@ from arcor2_calibration import calibration
 from arcor2_calibration.calibration import detect_corners, estimate_camera_pose
 from arcor2_calibration.quaternions import weighted_average_quaternions
 from arcor2_calibration.robot import calibrate_robot
+from arcor2_calibration_data import CALIBRATION_URL, SERVICE_NAME, Corner, EstimatedPose, MarkerCorners
+from arcor2_calibration_data.client import CalibrateRobotArgs
 
 logger = get_logger(__name__)
 logger.propagate = False

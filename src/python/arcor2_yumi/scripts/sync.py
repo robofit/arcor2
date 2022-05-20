@@ -1,9 +1,8 @@
 import copy
 
-from arcor2_yumi.object_types.yumi import YuMi, YumiSettings
-
 from arcor2.data.common import Pose
 from arcor2.exceptions import Arcor2Exception
+from arcor2_yumi.object_types.yumi import YuMi, YumiSettings
 
 
 def main() -> None:

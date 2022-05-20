@@ -7,7 +7,6 @@ import zipfile
 from functools import wraps
 from typing import TYPE_CHECKING, Optional
 
-from arcor2_kinect_azure import get_data, version
 from flask import jsonify, request, send_file
 from PIL import Image
 
@@ -17,6 +16,7 @@ from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.image import image_to_bytes_io
 from arcor2.logging import get_logger
+from arcor2_kinect_azure import get_data, version
 
 logger = get_logger(__name__)
 

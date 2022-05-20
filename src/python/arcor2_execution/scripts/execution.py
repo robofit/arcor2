@@ -17,7 +17,6 @@ import websockets
 from aiofiles import tempfile  # type: ignore
 from aiologger.levels import LogLevel
 from aiorun import run
-from arcor2_runtime.package import PROJECT_PATH, read_package_meta, write_package_meta
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -32,6 +31,7 @@ from arcor2.helpers import port_from_url, run_in_executor
 from arcor2.logging import get_aiologger
 from arcor2_execution_data import EVENTS, URL, events, rpc
 from arcor2_execution_data.common import PackageSummary, ProjectMeta
+from arcor2_runtime.package import PROJECT_PATH, read_package_meta, write_package_meta
 
 logger = get_aiologger("Execution")
 

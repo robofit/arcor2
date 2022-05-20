@@ -1,9 +1,8 @@
 import time
 
+from arcor2.data.common import Joint, Pose, StrEnum
 from arcor2_dobot.dobot import Dobot, DobotException
 from arcor2_dobot.dobot_api import DobotApiException
-
-from arcor2.data.common import Joint, Pose, StrEnum
 
 
 class Joints(StrEnum):

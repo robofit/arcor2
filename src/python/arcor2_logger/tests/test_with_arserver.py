@@ -6,8 +6,6 @@ import tempfile
 from typing import Iterator
 
 import pytest
-from arcor2_logger.object_types.logging_test_object import LoggingTestObject
-from arcor2_logger.object_types.logging_test_robot import LoggingTestRobot
 
 from arcor2.clients import project_service, scene_service
 from arcor2.data.events import Event
@@ -16,6 +14,8 @@ from arcor2.helpers import find_free_port
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_execution_data import EVENTS as EXE_EVENTS
+from arcor2_logger.object_types.logging_test_object import LoggingTestObject
+from arcor2_logger.object_types.logging_test_robot import LoggingTestRobot
 
 LOGGER = logging.getLogger(__name__)
 

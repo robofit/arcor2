@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional
 
 import quaternion
-from arcor2_calibration_data import client as calibration
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
@@ -62,6 +61,7 @@ from arcor2_arserver.scene import (
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.objects import ObjectTypeMeta
+from arcor2_calibration_data import client as calibration
 
 
 @asynccontextmanager

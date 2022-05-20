@@ -1,9 +1,8 @@
+from arcor2.object_types.upload import Urdf, upload_def
 from arcor2_fanuc import get_data
 from arcor2_fanuc.object_types.fake_fanuc import FakeFanuc
 from arcor2_fanuc.object_types.fanuc import Fanuc
 from arcor2_fanuc.object_types.fanuc_lrmate200id7l import FanucLRMate200id7L
-
-from arcor2.object_types.upload import Urdf, upload_def
 
 
 def main() -> None:
