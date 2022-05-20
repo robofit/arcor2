@@ -12,7 +12,6 @@ from typing import get_type_hints
 import websockets
 from aiologger.levels import LogLevel
 from aiorun import run
-from arcor2_runtime import events as runtime_events
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -41,6 +40,7 @@ from arcor2_arserver_data.rpc import objects as obj_rpc
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 from arcor2_execution_data import EXPOSED_RPCS
 from arcor2_execution_data import RPCS as EXE_RPCS
+from arcor2_runtime import events as runtime_events
 
 
 async def handle_manager_incoming_messages(manager_client) -> None:

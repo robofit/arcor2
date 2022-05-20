@@ -1,11 +1,10 @@
 import os
 
-from arcor2_runtime.events import RobotEef, RobotJoints
-
 from arcor2 import package_version
 from arcor2.data import events as arcor2_events
 from arcor2.data.rpc.common import RPC, Version
 from arcor2_execution_data import events, rpc
+from arcor2_runtime.events import RobotEef, RobotJoints
 
 URL = os.getenv("ARCOR2_EXECUTION_URL", "ws://0.0.0.0:6790")
 

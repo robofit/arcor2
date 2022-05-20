@@ -1,8 +1,7 @@
+from arcor2.object_types.upload import upload_def, upload_whatever
 from arcor2_logger.object_types.logging_mixin import LoggingMixin
 from arcor2_logger.object_types.logging_test_object import LoggingTestObject
 from arcor2_logger.object_types.logging_test_robot import LoggingTestRobot
-
-from arcor2.object_types.upload import upload_def, upload_whatever
 
 
 def main() -> None:

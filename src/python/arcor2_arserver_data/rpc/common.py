@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-from arcor2_calibration_data import EstimatedPose, MarkerCorners
 from dataclasses_jsonschema import JsonSchemaMixin
 
 from arcor2.data.camera import CameraParameters
 from arcor2.data.rpc.common import RPC
+from arcor2_calibration_data import EstimatedPose, MarkerCorners
 
 # ----------------------------------------------------------------------------------------------------------------------
 

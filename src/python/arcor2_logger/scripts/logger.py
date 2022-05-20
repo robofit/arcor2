@@ -5,8 +5,6 @@ import sys
 import websockets
 from aiologger.levels import LogLevel
 from aiorun import run
-from arcor2_logger import version
-from arcor2_logger.object_types.logging_mixin import Level, LogMessage, Register
 from dataclasses_jsonschema import ValidationError
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -14,6 +12,8 @@ from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_aiologger
+from arcor2_logger import version
+from arcor2_logger.object_types.logging_mixin import Level, LogMessage, Register
 
 logger = get_aiologger("Logger")
 

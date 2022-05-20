@@ -15,14 +15,13 @@ from queue import Queue
 from threading import Thread
 from typing import TYPE_CHECKING, Optional
 
-import arcor2_execution_rest_proxy
 import websocket
-from arcor2_runtime.package import PROJECT_PATH
 from dataclasses_jsonschema import JsonSchemaMixin
 from flask import Response, jsonify, request, send_file
 from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
 
+import arcor2_execution_rest_proxy
 from arcor2 import json
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
@@ -32,6 +31,7 @@ from arcor2.flask import RespT, create_app, run_app
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
 from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc
+from arcor2_runtime.package import PROJECT_PATH
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "ARCOR2 Execution Service Proxy"

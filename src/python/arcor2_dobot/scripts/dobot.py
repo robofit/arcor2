@@ -7,10 +7,6 @@ import os
 from functools import wraps
 from typing import Optional
 
-from arcor2_dobot import version
-from arcor2_dobot.dobot import Dobot, DobotApiException, MoveType
-from arcor2_dobot.m1 import DobotM1
-from arcor2_dobot.magician import DobotMagician
 from flask import Response, jsonify, request
 
 from arcor2 import env, json
@@ -20,6 +16,10 @@ from arcor2.data.scene import LineCheck
 from arcor2.flask import FlaskException, RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
+from arcor2_dobot import version
+from arcor2_dobot.dobot import Dobot, DobotApiException, MoveType
+from arcor2_dobot.m1 import DobotM1
+from arcor2_dobot.magician import DobotMagician
 
 logger = get_logger(__name__)
 

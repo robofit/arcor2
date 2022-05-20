@@ -1,7 +1,6 @@
+from arcor2.object_types.upload import Urdf, upload_def
 from arcor2_yumi import get_data
 from arcor2_yumi.object_types.yumi import YuMi
-
-from arcor2.object_types.upload import Urdf, upload_def
 
 
 def main() -> None:
