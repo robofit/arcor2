@@ -86,6 +86,12 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
  - 2022-01-25: [0.16.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F0.16.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution_proxy/tags?page=1&ordering=last_updated&name=0.16.0), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/0.16.0/)).
  
+### arcor2_fanuc
+
+[README](src/python/arcor2_fanuc/README.md) | [CHANGELOG](src/python/arcor2_fanuc/CHANGELOG.md)
+
+- 2022-05-23: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fanuc%2F0.1.0) ([docker-service](https://hub.docker.com/r/arcor2/arcor2_fanuc/tags?page=1&ordering=last_updated&name=0.1.0), [docker-objects](https://hub.docker.com/r/arcor2/arcor2_fanuc_upload_object_types/tags?page=1&ordering=last_updated&name=0.1.0), [pypi](https://pypi.org/project/arcor2-fanuc/0.1.0/)). 
+
 ### arcor2_fit_demo
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
