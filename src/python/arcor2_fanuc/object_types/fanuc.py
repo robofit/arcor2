@@ -9,7 +9,7 @@ from arcor2.object_types.abstract import Robot, RobotException, Settings
 @dataclass
 class FanucSettings(Settings):
 
-    url: str = "http://fanuc-demo-fanuc-service:5027"
+    url: str = "http://fanuc-demo-robot:5027"
 
 
 class Fanuc(Robot):

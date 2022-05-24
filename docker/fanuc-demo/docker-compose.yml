@@ -10,7 +10,7 @@ services:
       - fanuc-demo-execution
       - fanuc-demo-mocks
       - fanuc-demo-calibration
-      - fanuc-demo-fanuc
+      - fanuc-demo-robot
     ports:
       - "6789:6789"
       - "6799:6799"
@@ -18,7 +18,7 @@ services:
           - fanuc-demo-scene-network
           - fanuc-demo-project-network
           - fanuc-demo-calibration-network
-          - fanuc-demo-fanuc-network
+          - fanuc-demo-robot-network
     environment:
       - ARCOR2_PROJECT_SERVICE_URL=http://fanuc-demo-project:10000
       - ARCOR2_SCENE_SERVICE_URL=http://fanuc-demo-mocks:5013
@@ -44,21 +44,21 @@ services:
     networks:
       - fanuc-demo-execution-network
       - fanuc-demo-scene-network
-      - fanuc-demo-fanuc-network
+      - fanuc-demo-robot-network
     environment:
       - ARCOR2_SCENE_SERVICE_URL=http://fanuc-demo-mocks:5013
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
         - fanuc-demo-execution:/root/project
 
-  fanuc-demo-fanuc:
+  fanuc-demo-robot:
     image: arcor2/arcor2_fanuc:0.1.0
-    container_name: fanuc-demo-fanuc
+    container_name: fanuc-demo-robot
     restart: on-failure:3  # TODO it often fails to contact Scene Service when starting, remove once we have healthcheck
     depends_on:
       - fanuc-demo-mocks
     networks:
-      - fanuc-demo-fanuc
+      - fanuc-demo-robot
       - fanuc-demo-scene-network
     ports:
         - "5027:5027"
@@ -144,6 +144,6 @@ networks:
   fanuc-demo-scene-network:
   fanuc-demo-execution-network:
   fanuc-demo-project-network:
-  fanuc-demo-fanuc-network:
+  fanuc-demo-robot-network:
   fanuc-demo-calibration-network:
-  fanuc-demo-fanuc:
+  fanuc-demo-robot:
