@@ -13,6 +13,3 @@ jobs:
     - name: Check syntax of fit-demo
       run: |
         docker-compose -f docker/fit-demo/docker-compose.yml config
-    - name: Check syntax of kinali-demo
-      run: |
-        docker-compose -f docker/kinali-demo/docker-compose.yml config
