@@ -8,14 +8,14 @@ services:
       - fit-demo-project
       - fit-demo-build
       - fit-demo-execution
-      - fit-demo-kinect
+      # - fit-demo-kinect
       - fit-demo-mocks
       - fit-demo-calibration
     ports:
       - "6789:6789"
       - "6799:6799"
     networks:
-          - fit-demo-kinect-network
+          # - fit-demo-kinect-network
           - fit-demo-scene-network
           - fit-demo-project-network
           - fit-demo-dobot-magician-network
@@ -54,15 +54,16 @@ services:
     volumes:
         - fit-demo-execution:/root/project
 
-  fit-demo-kinect:
-    image: arcor2/arcor2_kinect_azure:0.4.0
-    container_name: fit-demo-kinect
-    networks:
-      - fit-demo-kinect-network
-    ports:
-        - "5016:5016"
-    environment:
-      - ARCOR2_KINECT_AZURE_MOCK=true
+# not used at the moment
+#  fit-demo-kinect:
+#    image: arcor2/arcor2_kinect_azure:0.4.0
+#    container_name: fit-demo-kinect
+#    networks:
+#      - fit-demo-kinect-network
+#    ports:
+#        - "5016:5016"
+#    environment:
+#      - ARCOR2_KINECT_AZURE_MOCK=true
 
   fit-demo-calibration:
     image: arcor2/arcor2_calibration:0.7.0
@@ -114,32 +115,32 @@ services:
     ports:
       - "5013:5013"
 
+  fit-demo-assets:
+    image: registry.gitlab.com/kinalisoft/test-it-off/assets:0.1.4
+    container_name: "fit-demo-assets"
+    environment:
+        - "ASSETS_FOLDER=/tmp/assets"
+    volumes:
+        - fit-demo-assets:/tmp/assets
+    networks:
+        - fit-demo-assets-network
+    expose:
+        - "20040"
+    ports:
+        - "20040:20040"
+
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.16.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.17.6
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
     environment:
-      MONGODB_URL: fit-demo-project-mongodb:27017
+      - "ASSETS_SERVICE_URL=http://fit-demo-assets:20040"
     depends_on:
-        - fit-demo-project-mongodb
+        - fit-demo-assets
     networks:
       - fit-demo-project-network
-    volumes:
-      - fit-demo-project-resources:/data/resources
-
-  fit-demo-project-mongodb:
-    image: mongo:4.2.15-bionic
-    container_name: "fit-demo-project-mongodb"
-    environment:
-      - MONGO_DATA_DIR=/data/db
-      - MONGO_LOG_DIR=/dev/null
-    volumes:
-      - fit-demo-project-mongodb:/data/db
-    expose:
-      - "27017"
-    networks:
-      - fit-demo-project-network
+      - fit-demo-assets-network
 
   fit-demo-nginx:
     image: nginx:1.21.1
@@ -165,15 +166,15 @@ services:
 
 
 volumes:
-  fit-demo-project-resources:
-  fit-demo-project-mongodb:
+  fit-demo-assets:
   fit-demo-execution:
 
 networks:
   fit-demo-scene-network:
   fit-demo-execution-network:
   fit-demo-project-network:
-  fit-demo-kinect-network:
+  fit-demo-assets-network:
+#  fit-demo-kinect-network:
   fit-demo-dobot-magician-network:
   fit-demo-dobot-m1-network:
   fit-demo-calibration-network:
