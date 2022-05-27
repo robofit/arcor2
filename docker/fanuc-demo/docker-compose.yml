@@ -85,32 +85,32 @@ services:
     ports:
       - "5013:5013"
 
+  fanuc-demo-assets:
+    image: registry.gitlab.com/kinalisoft/test-it-off/assets:0.1.4
+    container_name: "fanuc-demo-assets"
+    environment:
+        - "ASSETS_FOLDER=/tmp/assets"
+    volumes:
+        - fanuc-demo-assets:/tmp/assets
+    networks:
+        - fanuc-demo-assets-network
+    expose:
+        - "20040"
+    ports:
+        - "20040:20040"
+
   fanuc-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.16.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.17.6
     container_name: "fanuc-demo-project"
     ports:
       - "10000-10001:10000-10001"
     environment:
-      MONGODB_URL: fanuc-demo-project-mongodb:27017
+      - "ASSETS_SERVICE_URL=http://fanuc-demo-assets:20040"
     depends_on:
-        - fanuc-demo-project-mongodb
+        - fanuc-demo-assets
     networks:
       - fanuc-demo-project-network
-    volumes:
-      - fanuc-demo-project-resources:/data/resources
-
-  fanuc-demo-project-mongodb:
-    image: mongo:4.2.15-bionic
-    container_name: "fanuc-demo-project-mongodb"
-    environment:
-      - MONGO_DATA_DIR=/data/db
-      - MONGO_LOG_DIR=/dev/null
-    volumes:
-      - fanuc-demo-project-mongodb:/data/db
-    expose:
-      - "27017"
-    networks:
-      - fanuc-demo-project-network
+      - fanuc-demo-assets-network
 
   fanuc-demo-nginx:
     image: nginx:1.21.1
@@ -136,13 +136,13 @@ services:
 
 
 volumes:
-  fanuc-demo-project-resources:
-  fanuc-demo-project-mongodb:
+  fanuc-demo-assets:
   fanuc-demo-execution:
 
 networks:
   fanuc-demo-scene-network:
   fanuc-demo-execution-network:
+  fanuc-demo-assets-network:
   fanuc-demo-project-network:
   fanuc-demo-robot-network:
   fanuc-demo-calibration-network:
