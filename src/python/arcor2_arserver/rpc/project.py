@@ -1223,7 +1223,7 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
 async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> None:
 
     scene = glob.LOCK.scene_or_exception()
-    proj = glob.LOCK.project_or_exception()
+    proj = glob.LOCK.project_or_exception(must_have_logic=True)
     user_name = glob.USERS.user_name(ui)
 
     to_lock = await get_unlocked_objects([req.args.start, req.args.end], user_name)
@@ -1255,7 +1255,7 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient
     # TODO lock RPC when used
 
     scene = glob.LOCK.scene_or_exception()
-    proj = glob.LOCK.project_or_exception()
+    proj = glob.LOCK.project_or_exception(must_have_logic=True)
 
     updated_project = copy.deepcopy(proj)
     updated_logic_item = updated_project.logic_item(req.args.logic_item_id)
@@ -1282,7 +1282,7 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient
 
 async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient) -> None:
 
-    proj = glob.LOCK.project_or_exception()
+    proj = glob.LOCK.project_or_exception(must_have_logic=True)
     logic_item = proj.logic_item(req.args.logic_item_id)
 
     user_name = glob.USERS.user_name(ui)

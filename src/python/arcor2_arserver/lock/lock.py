@@ -94,9 +94,12 @@ class Lock:
     def project(self, project: Optional[UpdateableCachedProject] = None) -> None:
         self._project = project
 
-    def project_or_exception(self) -> UpdateableCachedProject:
+    def project_or_exception(self, *, must_have_logic: bool = False) -> UpdateableCachedProject:
         if not self._project:
             raise Arcor2Exception("Project not opened.")
+
+        if must_have_logic and not self._project.has_logic:
+            raise Arcor2Exception("Project without logic.")
 
         return self._project
 
