@@ -8,7 +8,7 @@ import tempfile
 import time
 import uuid
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from queue import Queue
@@ -16,7 +16,7 @@ from threading import Thread
 from typing import TYPE_CHECKING, Optional
 
 import websocket
-from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema import DEFAULT_SCHEMA_TYPE, FieldMeta, JsonSchemaMixin
 from flask import Response, jsonify, request, send_file
 from sqlitedict import SqliteDict
 from werkzeug.utils import secure_filename
@@ -31,10 +31,12 @@ from arcor2.flask import RespT, create_app, run_app
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
 from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc
+from arcor2_execution_rest_proxy.exceptions import NotFound, PackageRunState, RpcFail, WebApiError
 from arcor2_runtime.package import PROJECT_PATH
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
-SERVICE_NAME = "ARCOR2 Execution Service Proxy"
+SERVICE_NAME = "Execution Web API"
+DEPENDENCIES: Optional[dict[str, str]] = None
 
 DB_PATH = os.getenv("ARCOR2_EXECUTION_PROXY_DB_PATH", "/tmp")  # should be directory where DBs can be stored
 TOKENS_DB_PATH = os.path.join(DB_PATH, "tokens")
@@ -55,39 +57,103 @@ class ExecutionState(Enum):
 class SummaryProject(JsonSchemaMixin):
     """Describes a project."""
 
-    id: str
-    name: str
-    description: str
+    id: str = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Project id.",
+        ).as_dict
+    )
+    name: str = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Project name.",
+        ).as_dict
+    )
+    description: str = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Project description.",
+        ).as_dict
+    )
 
 
 @dataclass
 class SummaryPackage(JsonSchemaMixin):
     """Describes execution package."""
 
-    id: str
-    name: Optional[str] = None
-    created: Optional[datetime] = None
-    executed: Optional[datetime] = None
-    project: Optional[SummaryProject] = None
+    id: str = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Execution package id.",
+        ).as_dict
+    )
+    name: Optional[str] = field(
+        default=None, metadata=FieldMeta(schema_type=DEFAULT_SCHEMA_TYPE, description="Execution package name.").as_dict
+    )
+    created: Optional[datetime] = field(
+        default=None, metadata=FieldMeta(schema_type=DEFAULT_SCHEMA_TYPE, description="Date of creation.").as_dict
+    )
+    executed: Optional[datetime] = field(
+        default=None, metadata=FieldMeta(schema_type=DEFAULT_SCHEMA_TYPE, description="Date of last execution.").as_dict
+    )
+    project: Optional[SummaryProject] = field(
+        default=None,
+        metadata=FieldMeta(schema_type=DEFAULT_SCHEMA_TYPE, description="Related project description.").as_dict,
+    )
 
 
 @dataclass
 class ExecutionInfo(JsonSchemaMixin):
     """Stores information about package execution."""
 
-    state: ExecutionState
-    activePackageId: Optional[str] = None
-    exceptionMessage: Optional[str] = None
-    actionPointIds: Optional[set[str]] = None
+    state: ExecutionState = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Execution process state descriptor.",
+        ).as_dict
+    )
+    activePackageId: Optional[str] = field(
+        default=None,
+        metadata=FieldMeta(schema_type=DEFAULT_SCHEMA_TYPE, description="Id of the active execution package.").as_dict,
+    )
+    exceptionMessage: Optional[str] = field(
+        default=None,
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE, description="Message of occurred exception if any."
+        ).as_dict,
+    )
+    actionPointIds: Optional[set[str]] = field(
+        default=None,
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="List of action points ids relevant to the current execution point.",
+        ).as_dict,
+    )
 
 
 @dataclass
 class Token(JsonSchemaMixin):
     """Describes Token."""
 
-    id: str
-    name: str
-    access: bool = False
+    id: str = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Token id.",
+        ).as_dict
+    )
+    name: str = field(
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Token name.",
+        ).as_dict
+    )
+    access: Optional[bool] = field(
+        default=False,
+        metadata=FieldMeta(
+            schema_type=DEFAULT_SCHEMA_TYPE,
+            description="Token access permission.",
+        ).as_dict,
+    )
 
 
 app = create_app(__name__)
@@ -213,7 +279,7 @@ def package_stopped() -> bool:
 
 @app.route("/tokens/create", methods=["POST"])
 def post_token() -> RespT:
-    """post_token
+    """Create new token
     ---
     post:
         summary: Creates a token with the given name.
@@ -234,6 +300,12 @@ def post_token() -> RespT:
                 application/json:
                   schema:
                     $ref: Token
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     token = Token(uuid.uuid4().hex, request.args["name"])
@@ -249,7 +321,7 @@ def get_tokens() -> RespT:
     """Get all known tokens.
     ---
     get:
-      summary: Tokens.
+      summary: Lists all existing tokens.
       operationId: GetTokens
       tags:
         - Tokens
@@ -262,51 +334,57 @@ def get_tokens() -> RespT:
                 type: array
                 items:
                   $ref: Token
+        500:
+          description: "Error types: **General**."
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
     with tokens_db() as tokens:
         return jsonify(list(tokens.values())), 200
 
 
-@app.route("/tokens/<string:tokenId>", methods=["DELETE"])
-def delete_token(tokenId: str) -> RespT:  # noqa
+@app.route("/tokens/<string:id>", methods=["DELETE"])
+def delete_token(id: str) -> RespT:  # noqa
     """Delete token.
     ---
     delete:
-      summary: Remove given token from known tokens.
+      summary: Deletes a given token from known tokens.
       operationId: RemoveToken
       tags:
         - Tokens
       parameters:
         - in: path
-          name: tokenId
+          name: id
           schema:
             type: string
           required: true
-          description: unique ID
+          description: unique token ID
       responses:
         200:
-          description: Success
-        404:
-           description: Token not found
-           content:
-             application/json:
-               schema:
-                 type: string
+          description: Token has been deleted
+        500:
+          description: "Error types: **General**, **NotFound**."
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
     with tokens_db() as tokens:
         try:
-            del tokens[tokenId]
+            del tokens[id]
         except KeyError:
-            return jsonify("Token not found"), 404
+            raise NotFound("Token not found")
 
     return Response(status=200)
 
 
-@app.route("/tokens/<string:tokenId>/access", methods=["PUT"])
-def put_token_access(tokenId: str) -> RespT:  # noqa
-    """put_token_access
+@app.route("/tokens/<string:id>/access", methods=["PUT"])
+def put_token_access(id: str) -> RespT:  # noqa
+    """Set token access rights
     ---
     put:
         summary: Sets execution access rights for given token.
@@ -315,42 +393,42 @@ def put_token_access(tokenId: str) -> RespT:  # noqa
            - Tokens
         parameters:
             - in: path
-              name: tokenId
+              name: id
               schema:
                 type: string
               required: true
-              description: Token Id to have access value changed.
+              description: Token id to have access value changed.
             - in: query
-              name: newAccess
+              name: access
               schema:
                 type: boolean
               required: true
               description: New token access value.
         responses:
             200:
-              description: Ok
-            404:
-              description: Token not found
+              description: Access rights has been successfully changed
+            500:
+              description: "Error types: **General**, **NotFound**."
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     with tokens_db() as tokens:
         try:
-            token = Token.from_dict(tokens[tokenId])
+            token = Token.from_dict(tokens[id])
         except KeyError:
-            return jsonify("Token not found"), 404
-        token.access = request.args["newAccess"] == "true"
-        tokens[tokenId] = token.to_dict()
+            raise NotFound("Token not found.")
+        token.access = request.args["access"] == "true"
+        tokens[id] = token.to_dict()
 
     return Response(status=200)
 
 
-@app.route("/tokens/<string:tokenId>/access", methods=["GET"])
-def get_token_access(tokenId: str) -> RespT:  # noqa
-    """get_token_access
+@app.route("/tokens/<string:id>/access", methods=["GET"])
+def get_token_access(id: str) -> RespT:  # noqa
+    """Gets execution access rights for given token
     ---
     get:
         summary: Gets execution access rights for given token.
@@ -359,7 +437,7 @@ def get_token_access(tokenId: str) -> RespT:  # noqa
            - Tokens
         parameters:
             - in: path
-              name: tokenId
+              name: id
               schema:
                 type: string
               required: true
@@ -371,38 +449,38 @@ def get_token_access(tokenId: str) -> RespT:  # noqa
                 application/json:
                   schema:
                     type: boolean
-            404:
-              description: Token not found
+            500:
+              description: "Error types: **General**, **NotFound**."
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     with tokens_db() as tokens:
         try:
-            token = Token.from_dict(tokens[tokenId])
+            token = Token.from_dict(tokens[id])
         except KeyError:
-            return jsonify("Token not found"), 404
+            raise NotFound("Token not found.")
         return jsonify(token.access), 200
 
 
-@app.route("/packages/<string:packageId>", methods=["PUT"])
-def put_package(packageId: str) -> RespT:  # noqa
-    """Put package
+@app.route("/packages/<string:id>", methods=["POST"])
+def post_package(id: str) -> RespT:  # noqa
+    """Create execution package with supplied id
     ---
     put:
         summary: Adds the execution package.
-        operationId: PutPackage
+        operationId: PostPackage
         tags:
            - Packages
         parameters:
             - in: path
-              name: packageId
+              name: id
               schema:
                 type: string
               required: true
-              description: Unique package Id
+              description: Unique execution package Id
         requestBody:
               content:
                 multipart/form-data:
@@ -417,15 +495,13 @@ def put_package(packageId: str) -> RespT:  # noqa
                         format: binary
         responses:
             200:
-              description: Ok
+              description: The execution package has been successfully created
             500:
-              description: Another error occurred.
+              description: "Error types: **General**, **RpcFail**."
               content:
                 application/json:
                   schema:
-                    type: array
-                    items:
-                      type: string
+                    $ref: WebApiError
     """
 
     file = request.files["executionPackage"]
@@ -440,30 +516,30 @@ def put_package(packageId: str) -> RespT:  # noqa
             b64_bytes = base64.b64encode(zip_file.read())
             b64_str = b64_bytes.decode()
 
-    resp = call_rpc(rpc.UploadPackage.Request(id=get_id(), args=rpc.UploadPackage.Request.Args(packageId, b64_str)))
+    resp = call_rpc(rpc.UploadPackage.Request(id=get_id(), args=rpc.UploadPackage.Request.Args(id, b64_str)))
 
     if resp.result:
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to post the execution package.", content=json.dumps(resp.messages))
 
 
-@app.route("/packages/<string:packageId>", methods=["GET"])
-def get_package(packageId: str) -> RespT:  # noqa
+@app.route("/packages/<string:id>", methods=["GET"])
+def get_package(id: str) -> RespT:  # noqa
     """Get execution package.
     ---
     get:
-      summary: Get zip file with execution package.
+      summary: Gets a zip file with the execution package.
       operationId: GetPackage
       tags:
         - Packages
       parameters:
         - in: path
-          name: packageId
+          name: id
           schema:
             type: string
           required: true
-          description: Unique package Id
+          description: Unique execution package Id
       responses:
         200:
           description: Return archive of the execution package (.zip).
@@ -472,17 +548,20 @@ def get_package(packageId: str) -> RespT:  # noqa
               schema:
                 type: string
                 format: binary
-        404:
-          description: Package ID was not found.
+        500:
+          description: "Error types: **General**, **NotFound**."
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
-    if not package_exists(packageId):
-        return Response(status=404)
+    if not package_exists(id):
+        raise NotFound("Execution package ID not found.")
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-
-        archive_path = os.path.join(tmpdirname, packageId)
-        shutil.make_archive(archive_path, "zip", os.path.join(PROJECT_PATH, packageId))
+        archive_path = os.path.join(tmpdirname, id)
+        shutil.make_archive(archive_path, "zip", os.path.join(PROJECT_PATH, id))
 
         return send_file(archive_path + ".zip", as_attachment=True, max_age=0)
 
@@ -498,13 +577,19 @@ def get_packages() -> RespT:
         - Packages
       responses:
         200:
-          description: Summary of all packages on execution service.
+          description: Summary of all execution packages on service.
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: SummaryPackage
+        500:
+          description: "Error types: **General**"
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
     resp = call_rpc(rpc.ListPackages.Request(id=get_id()))
@@ -524,19 +609,19 @@ def get_packages() -> RespT:
     return jsonify(ret), 200
 
 
-@app.route("/packages/<string:packageId>", methods=["DELETE"])
-def delete_package(packageId: str) -> RespT:  # noqa
-    """Delete package.
+@app.route("/packages/<string:id>", methods=["DELETE"])
+def delete_package(id: str) -> RespT:  # noqa
+    """Delete the execution package.
     ---
     delete:
-      summary: Delete package.
+      summary: Deletes the execution package.
       operationId: DeletePackage
       tags:
         - Packages
       parameters:
         - in: path
-          name: packageId
-          description: Unique package Id
+          name: id
+          description: Unique execution package Id
           schema:
             type: string
           required: true
@@ -544,94 +629,85 @@ def delete_package(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: Ok
-        404:
-          description: Package not found
         500:
-          description: Another error occurred.
+          description: "Error types: **General**, **NotFound**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
-    if not package_exists(packageId):
-        return Response(status=404)
+    if not package_exists(id):
+        raise NotFound("Execution package ID not found.")
 
-    resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=packageId)))
+    resp = call_rpc(rpc.DeletePackage.Request(id=get_id(), args=arcor2_rpc.common.IdArgs(id=id)))
 
     if resp.result:
-        breakpoints.pop(packageId, None)
+        breakpoints.pop(id, None)
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to delete the execution package.", content=json.dumps(resp.messages))
 
 
-@app.route("/packages/<string:packageId>/start", methods=["PUT"])
-def package_start(packageId: str) -> RespT:  # noqa
+@app.route("/packages/<string:id>/start", methods=["PUT"])
+def package_start(id: str) -> RespT:  # noqa
     """Run project
     ---
     put:
-      summary: Start execution of the execution package.
+      summary: Starts execution of the execution package.
       operationId: StartPackage
       tags:
         - Packages
       parameters:
         - in: path
-          name: packageId
+          name: id
           schema:
             type: string
           required: true
-          description: Unique package Id
+          description: Unique execution package Id
       responses:
         200:
-          description: Ok
-        400:
-            description: Another package is active (running or paused).
-        404:
-          description: Package not found
+          description: Execution was successfully started.
         500:
-          description: Another error occurred.
+          description:
+            "Error types: **General**, **NotFound**, **PackageRunState**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
-    if not package_exists(packageId):
-        return Response(status=404)
+    if not package_exists(id):
+        raise NotFound("Execution package ID not found.")
 
     if package_run_state():
-        return Response(status=400)
+        raise PackageRunState("Another execution package is running or paused.")
 
-    resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=packageId)))
+    resp = call_rpc(rpc.RunPackage.Request(id=get_id(), args=rpc.RunPackage.Request.Args(id=id)))
 
     if resp.result:
-        breakpoints.pop(packageId, None)
+        breakpoints.pop(id, None)
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to start the execution package.", content=json.dumps(resp.messages))
 
 
-@app.route("/packages/<string:packageId>/breakpoints", methods=["PUT"])
-def put_breakpoints(packageId: str) -> RespT:  # noqa
-    """Add breakpoints for a package
+@app.route("/packages/<string:id>/breakpoints", methods=["PUT"])
+def put_breakpoints(id: str) -> RespT:  # noqa
+    """Add breakpoints for the execution package
     ---
     put:
-      summary: Add breakpoints for a package.
+      summary: Adds breakpoints for the execution package.
       operationId: UpdateBreakpoints
       tags:
         - Packages
       parameters:
         - in: path
-          name: packageId
+          name: id
           schema:
             type: string
           required: true
-          description: The unique identification of the package.
+          description: The unique identification of the execution package.
         - in: query
           name: breakpoints
           schema:
@@ -643,73 +719,80 @@ def put_breakpoints(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: Breakpoints were updated.
-        400:
-          description: Can't put breakpoints when the package is active (running or paused).
-        404:
-          description:  The package cannot be found.
+        500:
+          description:
+            "Error types: **General**, **NotFound**, **PackageRunState**."
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
-    if not package_exists(packageId):
-        return Response(status=404)
+    if not package_exists(id):
+        raise NotFound("Execution package ID not found.")
 
     if not package_stopped():
-        return Response(status=400)
+        raise PackageRunState("Can't put breakpoints when the execution package is active (running or paused).")
 
-    breakpoints[packageId] = set(request.args.getlist("breakpoints"))
+    breakpoints[id] = set(request.args.getlist("breakpoints"))
     return Response(status=200)
 
 
-@app.route("/packages/<string:packageId>/breakpoints", methods=["GET"])
-def get_breakpoints(packageId: str) -> RespT:  # noqa
-    """Get breakpoints for a package
+@app.route("/packages/<string:id>/breakpoints", methods=["GET"])
+def get_breakpoints(id: str) -> RespT:  # noqa
+    """Get breakpoints for the execution package
     ---
     get:
-      summary: Get breakpoints for a package.
+      summary: Gets breakpoints for the execution package.
       operationId: GetBreakpoints
       tags:
         - Packages
       parameters:
         - in: path
-          name: packageId
+          name: id
           schema:
             type: string
           required: true
-          description: The unique identification of the package.
+          description: The unique identification of the execution package.
       responses:
         200:
-            description: List of breakpoints for a package.
+            description: List of breakpoints for the execution package.
             content:
               application/json:
                 schema:
                   type: array
                   items:
                     type: string
-        404:
-          description:  The package cannot be found.
+        500:
+          description: "Error types: **General**, **NotFound**."
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
-    if not package_exists(packageId):
-        return Response(status=404)
+    if not package_exists(id):
+        raise NotFound("Execution package ID not found.")
 
-    return jsonify(list(breakpoints.get(packageId, [])))
+    return jsonify(list(breakpoints.get(id, [])))
 
 
-@app.route("/packages/<string:packageId>/debug", methods=["PUT"])
-def package_debug(packageId: str) -> RespT:  # noqa
+@app.route("/packages/<string:id>/debug", methods=["PUT"])
+def package_debug(id: str) -> RespT:  # noqa
     """Debug project
     ---
     put:
-      summary: Start debugging of the execution package.
+      summary: Starts debugging of the execution package.
       operationId: DebugPackage
       tags:
         - Packages
       parameters:
         - in: path
-          name: packageId
+          name: id
           schema:
             type: string
           required: true
-          description: The unique identification of the package.
+          description: The unique identification of the execution package.
         - in: query
           name: breakOnFirstAction
           schema:
@@ -719,76 +802,66 @@ def package_debug(packageId: str) -> RespT:  # noqa
       responses:
         200:
           description: The debugging process successfully started.
-        400:
-            description: Another package is active (running or paused).
-        404:
-          description:  The package cannot be found.
         500:
-          description: Another error occurred.
+          description: "Error types: **General**, **NotFound**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
-    if not package_exists(packageId):
-        return Response(status=404)
+    if not package_exists(id):
+        raise NotFound("Execution package ID not found.")
 
     if package_run_state():
-        return Response(status=400)
+        raise PackageRunState("Another execution package is active (running or paused).")
 
     resp = call_rpc(
         rpc.RunPackage.Request(
             id=get_id(),
             args=rpc.RunPackage.Request.Args(
-                packageId,
+                id,
                 request.args.get("breakOnFirstAction", default="false") == "true",
-                breakpoints.get(packageId, None),
+                breakpoints.get(id, None),
             ),
         )
     )
 
     if resp.result:
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to debug the execution package.", content=json.dumps(resp.messages))
 
 
 @app.route("/packages/stop", methods=["PUT"])
 def packages_stop() -> RespT:
-    """Stops running package.
+    """Stops running the execution package.
     ---
     put:
-      summary: Stops execution of the given package.
+      summary: Stops execution of the active execution package.
       operationId: StopPackage
       tags:
         - Packages
       responses:
         200:
-          description: Ok
-        400:
-          description: Package is not running.
+          description: The execution package has been successfully stopped.
         500:
-          description: Another error occurred.
+          description: "Error types: **General**, **PackageRunState**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
     if not package_run_state():
-        return Response(status=400)
+        raise PackageRunState("The execution package is not running.")
 
     resp = call_rpc(rpc.StopPackage.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to stop the execution package.", content=json.dumps(resp.messages))
 
 
 @app.route("/packages/step", methods=["PUT"])
@@ -802,107 +875,95 @@ def packages_step() -> RespT:
         - Packages
       responses:
         200:
-          description: Ok
-        400:
-          description: There is no paused package.
+          description: Step was successfully performed.
         500:
-          description: Another error occurred.
+          description: "Error types: **General**, **PackageRunState**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
     if not package_paused():
-        return Response(status=400)
+        raise PackageRunState("The execution package is not paused.")
 
     resp = call_rpc(rpc.StepAction.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to stop the execution package.", content=json.dumps(resp.messages))
 
 
 @app.route("/packages/pause", methods=["PUT"])
 def packages_pause() -> RespT:
-    """Pauses running package.
+    """Pauses running the execution package.
     ---
     put:
-      summary: Pause execution of the given package.
+      summary: Pauses execution of the active execution package.
       operationId: PausePackage
       tags:
         - Packages
       responses:
         200:
-          description: Ok
-        400:
-          description: There is no running package.
+          description: The execution package has been successfully paused.
         500:
-          description: Another error occurred.
+          description: "Error types: **General**, **PackageRunState**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
     if not package_running():
-        return Response(status=400)
+        raise PackageRunState("The execution package is not running.")
 
     resp = call_rpc(rpc.PausePackage.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to pause the execution package.", content=json.dumps(resp.messages))
 
 
 @app.route("/packages/resume", methods=["PUT"])
 def packages_resume() -> RespT:
-    """Resumes running package.
+    """Resumes running of the execution package.
     ---
     put:
-      summary: Resumes execution of the given package.
+      summary: Resumes running of the active execution package.
       operationId: ResumePackage
       tags:
         - Packages
       responses:
         200:
-          description: Ok
-        400:
-          description: There is no paused package.
+          description: The execution package has been successfully resumed.
         500:
-          description: Another error occurred.
+          description: "Error types: **General**, **PackageRunState**, **RpcFail**."
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                $ref: WebApiError
     """
 
     if not package_paused():
-        return Response(status=400)
+        raise PackageRunState("The execution package is not paused.")
 
     resp = call_rpc(rpc.ResumePackage.Request(id=get_id()))
 
     if resp.result:
         return Response(status=200)
-    else:
-        return jsonify(resp.messages), 500
+
+    raise RpcFail("Failed to resume the execution package.", content=json.dumps(resp.messages))
 
 
-@app.route("/packages/executioninfo", methods=["GET"])
-def packages_executioninfo() -> RespT:
-    """/packages/executioninfo
+@app.route("/packages/state", methods=["GET"])
+def packages_state() -> RespT:
+    """Get information about current execution state.
     ---
     get:
-      summary: Get information about current execution state.
-      operationId: GetExecutionInfo
+      summary: Gets information about current execution state.
+      operationId: packagesState
       tags:
         - Packages
       responses:
@@ -912,6 +973,12 @@ def packages_executioninfo() -> RespT:
             application/json:
               schema:
                 $ref: ExecutionInfo
+        500:
+          description: "Error types: **General**"
+          content:
+            application/json:
+              schema:
+                $ref: WebApiError
     """
 
     if package_state.state == PackageState.Data.StateEnum.UNDEFINED:
@@ -964,8 +1031,9 @@ def main() -> None:
         SERVICE_NAME,
         arcor2_execution_rest_proxy.version(),
         PORT,
-        [SummaryPackage, ExecutionInfo, Token],
+        [SummaryPackage, ExecutionInfo, Token, WebApiError],
         args.swagger,
+        dependencies=DEPENDENCIES,
     )
 
 

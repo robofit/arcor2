@@ -142,7 +142,7 @@
         }
       }
     },
-    "/packages/executioninfo": {
+    "/packages/state": {
       "get": {
         "tags": [
           "Packages"
