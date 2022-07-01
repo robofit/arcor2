@@ -2,6 +2,21 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.17.0] - 2022-07-01
+
+### Changed
+
+- **BREAKING**: Implement new error handling flow. Error codes of **every** endpoint were replaced with error 
+  types as described in swagger documentation.
+- **BREAKING**: `/packages/executioninfo` endpoint changed to `/packages/state`. Tests updated.
+- Update API description.
+- Change service name.
+
+### Added
+
+- New API exceptions added.
+- `SummaryProject`, `SummaryPackage`, `ExecutionInfo`, `Token` fields description.
+
 ## [0.16.0] - 2022-01-25
 
 ### Added
