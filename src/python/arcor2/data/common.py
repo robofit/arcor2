@@ -771,8 +771,12 @@ class Error(JsonSchemaMixin):
 
 
 @dataclass
-class WebApiError(JsonSchemaMixin):
-
-    message: str
+class WebApiError(JsonSchemaMixin, Arcor2Exception):
     service: str
-    errors: Optional[list[Error]] = None
+    message: str
+    type: str
+    description: str
+    content: Optional[str] = None
+
+    def __str__(self):
+        return f"{self.service} ({self.type}): {self.message}"

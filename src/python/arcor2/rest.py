@@ -31,22 +31,6 @@ class RestException(Arcor2Exception):
     pass
 
 
-class RestHttpException(RestException):
-    """Exception with associated HTTP status (error) code."""
-
-    def __init__(self, *args, error_code: int):
-        super().__init__(*args)
-        self.error_code = error_code
-
-
-class WebApiException(RestHttpException):
-    """Exception with associated WebApiError."""
-
-    def __init__(self, *args, error_code: int, web_api_error: WebApiError):
-        super().__init__(*args, error_code=error_code)
-        self.web_api_error = web_api_error
-
-
 class Method(Enum):
     """Enumeration of supported HTTP methods."""
 
@@ -347,18 +331,16 @@ def _handle_response(resp: requests.Response) -> None:
         cont = json.loads(decoded_content)
     except json.JsonException:
         # response contains invalid JSON
-        raise RestHttpException(decoded_content, error_code=resp.status_code)
+        raise RestException(decoded_content)
 
     if isinstance(cont, str):  # just plain text
-        raise RestHttpException(cont, error_code=resp.status_code)
+        raise RestException(cont)
     elif isinstance(cont, dict):  # this could be WebApiError
 
         try:
-            err = WebApiError.from_dict(cont)
+            raise WebApiError.from_dict(cont)
         except ValidationError:
-            raise RestHttpException(str(cont), error_code=resp.status_code)
-
-        raise WebApiException(err.message, error_code=resp.status_code, web_api_error=err)
+            raise RestException(str(cont))
 
 
 def get_image(url: str) -> Image.Image:
