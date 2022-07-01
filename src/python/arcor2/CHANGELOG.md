@@ -2,6 +2,38 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.24.0] - 2022-07-01
+
+### Changed
+
+- **BREAKING**: `data.common.WebApiError` is now JSON based exception.
+  - Property `errors` was removed.
+  - New properties `type`, `description` and optional `content`.
+
+- **BREAKING**: `flask.FlaskException` class updated. 
+  - `FlaskException` does no longer accept message and error code, but only `message` and optional `context`.
+  - New `service` and `description` properties should be overridden by subclasses.
+  - Exception instances are now convertible to JSON.
+
+- **BREAKING**: Flask API error handlers return 500 error code for any error.
+   `WebApiError` JSON object is supplied in response body.
+
+- **BREAKING** : `rest.WebApiException`, `rest.RestHttpException` class gone. `WebApiError` and 
+ `RestException` are raised instead. No HTTP code is supplied as the only possible error code is 500.
+
+- **BREAKING** : `scene_service` client changed.
+  - `world_pose` now call `.../world-pose` instead of `.../worldPose`.
+  - `local_pose` now call `.../local-pose` instead of `.../localPose`.
+  - `line_check` now call `.../line-safe` instead of `.../lineSafe`.
+  - `upsert_collision` model id moved from query parameters to path.
+
+
+### Added
+- New `WebApiErrorFactory` class was implemented to generate service specific
+  `WebApiError` schemas for swagger documentation.
+
+- `flask.run_app` now accept optional `dependencies` argument.
+
 ## [0.23.1] - 2022-02-17
 
 ### Added
