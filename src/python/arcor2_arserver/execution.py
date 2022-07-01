@@ -95,9 +95,12 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
 
         await hlp.run_in_executor(
             rest.download,
-            f"{BUILD_URL}/project/{project_id}/publish",
+            f"{BUILD_URL}/project/publish",
             path,
-            {"packageName": package_name},
+            {
+                "packageName": package_name,
+                "projectId": project_id,
+            },
         )
 
         async with aiofiles.open(path, "rb") as zip_file:
