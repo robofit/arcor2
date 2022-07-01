@@ -23,7 +23,7 @@ from arcor2.data.common import Project, ProjectSources, Scene
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import Models, ObjectModel, ObjectType
 from arcor2.exceptions import Arcor2Exception
-from arcor2.flask import FlaskException, RespT, create_app, run_app
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url, save_and_import_type_def
 from arcor2.logging import get_logger
 from arcor2.object_types.abstract import Generic
@@ -33,7 +33,8 @@ from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
 from arcor2_build.source.utils import global_action_points_class
-from arcor2_build_data import SERVICE_NAME, URL, ImportResult
+from arcor2_build_data import DEPENDENCIES, SERVICE_NAME, URL, ImportResult
+from arcor2_build_data.exceptions import Conflict, InvalidPackage, InvalidProject, NotFound, WebApiError
 
 OBJECT_TYPE_MODULE = "arcor2_object_types"
 
@@ -67,7 +68,7 @@ def get_base_from_project_service(
         try:
             base_ast = parse(base_obj_type.source)
         except Arcor2Exception:
-            raise FlaskException(f"Invalid code of the {base_obj_type.id} (base of {obj_type.id}).", error_code=401)
+            raise InvalidPackage(f"Invalid code of the {base_obj_type.id} (base of {obj_type.id}).")
 
         # try to get base of the base
         get_base_from_project_service(types_dict, tmp_dir, scene_object_types, base_obj_type, zf, ot_path, base_ast)
@@ -97,13 +98,13 @@ def get_base_from_imported_package(
         try:
             base_obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(base)}.py")
         except KeyError:
-            raise FlaskException(f"Could not find {base} object type (base of {obj_type.id}).", error_code=401)
+            raise InvalidPackage(f"Could not find {base} object type (base of {obj_type.id}).")
 
         # first try if the code is valid
         try:
             base_ast = parse(base_obj_type_src)
         except Arcor2Exception:
-            raise FlaskException(f"Invalid code of the {base} (base of {obj_type.id}).", error_code=401)
+            raise InvalidPackage(f"Invalid code of the {base} (base of {obj_type.id}).")
 
         types_dict[base] = ObjectType(base, base_obj_type_src)
 
@@ -194,7 +195,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
             except Arcor2Exception as e:
                 logger.exception(f"Failed to prepare package content. {str(e)}")
-                raise FlaskException(str(e), error_code=404)
+                raise NotFound(str(e))
 
             script_path = "script.py"
 
@@ -213,7 +214,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                             parse(script)
                         except SourceException:
                             logger.exception("Failed to parse code of the uploaded script.")
-                            raise FlaskException("Invalid code.", error_code=501)
+                            raise InvalidProject("Invalid source code.")
 
                         zf.writestr(script_path, script)
 
@@ -234,7 +235,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
             except Arcor2Exception as e:
                 logger.exception("Failed to generate script.")
-                raise FlaskException(str(e), error_code=501)
+                raise InvalidProject(str(e))
 
     logger.info(f"Done with {package_name} (scene {scene.name}, project {project.name}).")
     mem_zip.seek(0)
@@ -242,28 +243,28 @@ def _publish(project_id: str, package_name: str) -> RespT:
     return send_file(mem_zip, as_attachment=True, max_age=0, download_name=f"{package_name}_package.zip")
 
 
-@app.route("/project/<string:project_id>/publish", methods=["GET"])
-def project_publish(project_id: str) -> RespT:
+@app.route("/project/publish", methods=["GET"])
+def project_publish() -> RespT:
     """Publish project
     ---
     get:
       tags:
-        - Build
-      summary: Get zip file with execution package. To be used by the Execution service.
+        - Project
+      summary: Gets the Execution package.
       operationId: ProjectPublish
       parameters:
-        - in: path
-          name: project_id
+        - in: query
+          name: projectId
           schema:
             type: string
           required: true
-          description: unique ID
+          description: Id of the project to be published.
         - in: query
           name: packageName
           schema:
             type: string
           required: false
-          description: Package name
+          description: Name to be used for package created.
       responses:
         200:
           description: Returns archive of the execution package (.zip).
@@ -272,21 +273,15 @@ def project_publish(project_id: str) -> RespT:
                 schema:
                   type: string
                   format: binary
-        404:
-            description: Project ID or some of the required items was not found.
-            content:
-              application/json:
-                schema:
-                  type: string
-        501:
-            description: Project invalid.
-            content:
-              application/json:
-                schema:
-                  type: string
+        500:
+          description: "Error types: **General**, **NotFound**, **InvalidProject**."
+          content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
-    return _publish(project_id, request.args.get("packageName", default=""))
+    return _publish(request.args["projectId"], request.args.get("packageName", default=""))
 
 
 T = TypeVar("T", bound=JsonSchemaMixin)
@@ -308,7 +303,7 @@ def project_import() -> RespT:
     ---
     put:
       tags:
-        - Build
+        - Project
       summary: Imports a project from execution package.
       operationId: ProjectImport
       parameters:
@@ -317,31 +312,31 @@ def project_import() -> RespT:
               schema:
                 type: boolean
                 default: false
-              description: overwrite Scene
+              description: Replace existing scene.json with new one for specified project.
             - in: query
               name: overwriteProject
               schema:
                 type: boolean
                 default: false
-              description: overwrite Project
+              description: Replace existing project.json with new one for specified project.
             - in: query
               name: overwriteObjectTypes
               schema:
                 type: boolean
                 default: false
-              description: overwrite ObjectTypes
+              description: Replace existing Object Type definition with new one for specified project.
             - in: query
               name: overwriteProjectSources
               schema:
                 type: boolean
                 default: false
-              description: overwrite ProjectSources
+              description: Replace all existing project sources with new ones.
             - in: query
               name: overwriteCollisionModels
               schema:
                 type: boolean
                 default: false
-              description: overwrite collision models
+              description: Replace existing collision models with new ones for specified project.
       requestBody:
               content:
                 multipart/form-data:
@@ -355,37 +350,18 @@ def project_import() -> RespT:
                         format: binary
       responses:
         200:
-          description: Ok
+          description: Project was successfully imported.
           content:
                 application/json:
                   schema:
                     $ref: ImportResult
-        400:
-          description: Some other error occurred.
+        500:
+          description: "Error types: **General**, **NotFound**, **InvalidPackage**, **Conflict**."
           content:
                 application/json:
                   schema:
-                    type: string
-        401:
-          description: Invalid execution package.
-          content:
-                application/json:
-                  schema:
-                    type: string
-        402:
-          description: A difference between package/project service detected (overwrite needed).
-          content:
-                application/json:
-                  schema:
-                    type: string
-        404:
-          description: Something is missing.
-          content:
-                application/json:
-                  schema:
-                    type: string
+                    $ref: WebApiError
     """
-
     file = request.files["executionPackage"]
 
     overwrite_scene = request.args.get("overwriteScene", default="false") == "true"
@@ -408,19 +384,19 @@ def project_import() -> RespT:
         try:
             project = read_dc_from_zip(zip_file, "data/project.json", Project)
         except KeyError:
-            raise FlaskException("Could not find project.json.", error_code=404)
+            raise NotFound("Could not find project.json.")
         except (json.JsonException, ValidationError) as e:
-            raise FlaskException(f"Failed to process project.json. {str(e)}", error_code=401)
+            raise InvalidPackage(f"Failed to process project.json. {str(e)}")
 
         try:
             scene = read_dc_from_zip(zip_file, "data/scene.json", Scene)
         except KeyError:
-            raise FlaskException("Could not find scene.json.", error_code=404)
+            raise NotFound("Could not find scene.json.")
         except (json.JsonException, ValidationError) as e:
-            return json.dumps(f"Failed to process scene.json. {str(e)}"), 401
+            raise InvalidPackage(f"Failed to process scene.json. {str(e)}")
 
         if project.scene_id != scene.id:
-            raise FlaskException("Project assigned to different scene id.", error_code=401)
+            raise InvalidPackage("Project assigned to different scene id.")
 
         with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -442,12 +418,12 @@ def project_import() -> RespT:
                 try:
                     obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(obj_type_name)}.py")
                 except KeyError:
-                    raise FlaskException(f"Object type {obj_type_name} is missing in the package.", error_code=404)
+                    raise NotFound(f"Object type {obj_type_name} is missing in the package.")
 
                 try:
                     ast = parse(obj_type_src)
                 except Arcor2Exception:
-                    raise FlaskException(f"Invalid code of the {obj_type_name} object type.", error_code=401)
+                    raise InvalidPackage(f"Invalid code of the {obj_type_name} object type.")
 
                 # TODO fill in OT description (is it used somewhere?)
                 objects[obj_type_name] = ObjectType(obj_type_name, obj_type_src)
@@ -458,7 +434,7 @@ def project_import() -> RespT:
                 assert obj_type_name == type_def.__name__
 
                 if type_def.abstract():
-                    raise FlaskException(f"Scene contains abstract object type: {obj_type_name}.", error_code=401)
+                    raise InvalidPackage(f"Scene contains abstract object type: {obj_type_name}.")
 
         for obj_type in objects.values():  # handle models
 
@@ -475,9 +451,8 @@ def project_import() -> RespT:
             obj_type.model = model.metamodel()
 
             if obj_type.id != obj_type.model.id:
-                raise FlaskException(
+                raise InvalidPackage(
                     f"Model id ({obj_type.model.id}) has to be the same as ObjectType id ({obj_type.id}).",
-                    error_code=401,
                 )
 
             models[obj_type.id] = model
@@ -488,12 +463,12 @@ def project_import() -> RespT:
             try:
                 script = zip_file.read("script.py").decode("UTF-8")
             except KeyError:
-                raise FlaskException("Could not find script.py.", error_code=404)
+                raise NotFound("Could not find script.py.")
 
             try:
                 parse(script)
             except Arcor2Exception:
-                raise FlaskException("Invalid code of the main script.", error_code=401)
+                raise InvalidPackage("Invalid code of the main script.")
 
     # check that we are not going to overwrite something
     if not overwrite_scene:
@@ -509,7 +484,7 @@ def project_import() -> RespT:
             ps_scene.modified = scene.modified = None
 
             if ps_scene != scene:
-                raise FlaskException("Scene difference detected. Overwrite needed.", error_code=402)
+                raise Conflict("Scene difference detected. Overwrite needed.")
 
     if not overwrite_project:
 
@@ -524,7 +499,7 @@ def project_import() -> RespT:
             ps_project.modified = project.modified = None
 
             if ps_project != project:
-                raise FlaskException("Project difference detected. Overwrite needed.", error_code=402)
+                raise Conflict("Project difference detected. Overwrite needed.")
 
     if not overwrite_object_types:
 
@@ -536,9 +511,7 @@ def project_import() -> RespT:
 
                 # ignore changes in description (no one cares)
                 if ot.source != obj_type.source or ot.model != obj_type.model:
-                    raise FlaskException(
-                        f"Difference detected for {obj_type.id} object type. Overwrite needed.", error_code=402
-                    )
+                    raise Conflict(f"Difference detected for {obj_type.id} object type. Overwrite needed.")
             except ps.ProjectServiceException:
                 pass
 
@@ -546,7 +519,7 @@ def project_import() -> RespT:
 
         try:
             if ps.get_project_sources(project.id).script != script:
-                raise FlaskException("Script difference detected. Overwrite needed.", error_code=402)
+                raise Conflict("Script difference detected. Overwrite needed.")
         except ps.ProjectServiceException:
             pass
 
@@ -555,7 +528,7 @@ def project_import() -> RespT:
         for model in models.values():
             try:
                 if model != ps.get_model(model.id, model.type()):
-                    raise FlaskException("Collision model difference detected. Overwrite needed.", error_code=402)
+                    raise Conflict("Collision model difference detected. Overwrite needed.")
             except ps.ProjectServiceException:
                 pass
 
@@ -599,8 +572,9 @@ def main() -> None:
         SERVICE_NAME,
         arcor2_build.version(),
         port_from_url(URL),
-        [ImportResult],
+        [ImportResult, WebApiError],
         print_spec=args.swagger,
+        dependencies=DEPENDENCIES,
     )
 
 
