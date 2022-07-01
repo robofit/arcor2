@@ -2,6 +2,7 @@
 
 import argparse
 import copy
+import json
 import logging
 import os
 from functools import wraps
@@ -9,22 +10,23 @@ from typing import Optional
 
 from flask import Response, jsonify, request
 
-from arcor2 import env, json
+from arcor2 import env
 from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Pose
 from arcor2.data.scene import LineCheck
-from arcor2.flask import FlaskException, RespT, create_app, run_app
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2_dobot import version
 from arcor2_dobot.dobot import Dobot, DobotApiException, MoveType
+from arcor2_dobot.exceptions import DobotGeneral, NotFound, StartError, WebApiError
 from arcor2_dobot.m1 import DobotM1
 from arcor2_dobot.magician import DobotMagician
 
 logger = get_logger(__name__)
 
 URL = os.getenv("ARCOR2_DOBOT_URL", "http://localhost:5018")
-SERVICE_NAME = "Dobot Service"
+SERVICE_NAME = "Dobot Web API"
 
 app = create_app(__name__)
 
@@ -41,7 +43,7 @@ def requires_started(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not started():
-            return "Not started", 403
+            raise StartError("Not started")
         return f(*args, **kwargs)
 
     return wrapped
@@ -79,18 +81,22 @@ def put_start() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Already started
+            500:
+              description: "Error types: **General**, **DobotGeneral**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if started():
-        return "Already started.", 403
+        raise StartError("Already started.")
 
     model: str = request.args.get("model", default="magician")
     port: str = request.args.get("port", default="/dev/dobot")
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise DobotGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
 
@@ -115,8 +121,12 @@ def put_stop() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     global _dobot
@@ -141,8 +151,12 @@ def get_started() -> RespT:
                 application/json:
                     schema:
                         type: boolean
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     return jsonify(started())
@@ -178,8 +192,12 @@ def put_conveyor_speed() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     speed = float(request.args.get("velocity", default=50.0))
@@ -227,8 +245,12 @@ def put_conveyor_distance() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     speed = float(request.args.get("velocity", default=50.0))
@@ -256,8 +278,12 @@ def get_eef_pose() -> RespT:
                 application/json:
                     schema:
                         $ref: Pose
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
@@ -311,16 +337,18 @@ def put_eef_pose() -> RespT:
         responses:
             200:
               description: Ok
-            403:
-              description: Not started
-            404:
-              description: Can't find safe path.
+            500:
+              description: "Error types: **General**, **DobotGeneral**, **StartError**, **NotFound**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise DobotGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
     move_type = MoveType(request.args.get("moveType", "jump"))
@@ -341,13 +369,13 @@ def put_eef_pose() -> RespT:
                 break
 
             if move_type == MoveType.LINEAR:
-                raise FlaskException("There might be a collision.", error_code=400)
+                raise DobotGeneral("There might be a collision.")
 
             ip1.position.z += 0.01
             ip2.position.z += 0.01
 
         else:
-            return "Can't find safe path.", 404
+            raise NotFound("Can't find safe path.")
 
         logger.debug(f"Collision avoidance attempts: {_attempt}")
 
@@ -371,8 +399,12 @@ def put_home() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
@@ -396,8 +428,12 @@ def get_hand_teaching() -> RespT:
                 application/json:
                     schema:
                         type: boolean
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot
@@ -421,8 +457,12 @@ def put_hand_teaching() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot
@@ -442,8 +482,12 @@ def put_suck() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
@@ -463,8 +507,12 @@ def put_release() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
@@ -490,8 +538,12 @@ def get_joints() -> RespT:
                         type: array
                         items:
                             $ref: Joint
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
@@ -521,14 +573,18 @@ def put_ik() -> RespT:
                         type: array
                         items:
                             $ref: Joint
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **DobotGeneral**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise DobotGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
     return jsonify(_dobot.inverse_kinematics(pose))
@@ -557,14 +613,18 @@ def put_fk() -> RespT:
                 application/json:
                     schema:
                         $ref: Pose
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **DobotGeneral**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert _dobot is not None
 
     if not isinstance(request.json, list):
-        raise FlaskException("Body should be a JSON array containing joints.", error_code=400)
+        raise DobotGeneral("Body should be a JSON array containing joints.")
 
     joints = [Joint.from_dict(j) for j in request.json]
     return jsonify(_dobot.forward_kinematics(joints))
@@ -572,7 +632,7 @@ def put_fk() -> RespT:
 
 @app.errorhandler(DobotApiException)
 def handle_dobot_exception(e: DobotApiException) -> tuple[str, int]:
-    return json.dumps(str(e)), 400
+    return json.dumps(DobotGeneral(str(e)).to_dict()), 500
 
 
 def main() -> None:
@@ -601,7 +661,7 @@ def main() -> None:
     if not args.swagger:
         scene_service.wait_for()
 
-    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint], args.swagger)
+    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint, WebApiError], args.swagger)
 
     if _dobot:
         _dobot.cleanup()
