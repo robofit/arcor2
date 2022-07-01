@@ -20,14 +20,15 @@ from arcor2.clients import scene_service
 from arcor2.data.common import Joint, Orientation, Pose, Position
 from arcor2.data.scene import LineCheck
 from arcor2.exceptions import Arcor2Exception
-from arcor2.flask import FlaskException, RespT, create_app, run_app
+from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2_fanuc import version
+from arcor2_fanuc.exceptions import FanucGeneral, NotFound, StartError, WebApiError
 
 logger = get_logger(__name__)
 
-SERVICE_NAME = os.getenv("ARCOR2_FANUC_SERVICE_NAME", "Fanuc Service")
+SERVICE_NAME = os.getenv("ARCOR2_FANUC_SERVICE_NAME", "Fanuc Web API")
 URL = os.getenv("ARCOR2_FANUC_SERVICE_URL", "http://localhost:5027")
 ROBOT_HOST = os.getenv("ARCOR2_FANUC_ROBOT_HOST", "192.168.104.140")
 ROBOT_PORT = env.get_int("ARCOR2_FANUC_ROBOT_PORT", 18735)
@@ -226,7 +227,7 @@ def requires_started(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not started():
-            return "Not started", 403
+            raise StartError("Not started.")
         return f(*args, **kwargs)
 
     return wrapped
@@ -248,15 +249,19 @@ def put_start() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Already started
+            500:
+              description: "Error types: **General**, **FanucGeneral**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if started():
-        return "Already started.", 403
+        raise StartError("Already started.")
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise FanucGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
 
@@ -266,7 +271,7 @@ def put_start() -> RespT:
         robot.connect()
     except ConnectionRefusedError as e:
         logger.error(f"Failed to connect to {ROBOT_HOST}:{ROBOT_PORT}. {str(e)}")
-        return "Maybe the robot is not running?", 400
+        raise FanucGeneral("Maybe the robot is not running?")
 
     gl.robot = robot
     gl.pose = pose
@@ -291,8 +296,12 @@ def put_stop() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert gl.robot is not None
@@ -316,6 +325,12 @@ def get_started() -> RespT:
                 application/json:
                     schema:
                         type: boolean
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     return jsonify(started())
@@ -337,8 +352,12 @@ def get_eef_pose() -> RespT:
                 application/json:
                     schema:
                         $ref: Pose
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert gl.robot is not None
@@ -392,18 +411,20 @@ def put_eef_pose() -> RespT:
                   schema:
                     $ref: Pose
         responses:
-            200:
+            204:
               description: Ok
-            403:
-              description: Not started
-            404:
-              description: Can't find safe path.
+            500:
+              description: "Error types: **General**, **FanucGeneral**, **StartError**, **NotFound**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert gl.robot is not None
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise FanucGeneral("Body should be a JSON dict containing Pose.")
 
     abs_pose = Pose.from_dict(request.json)
     pose = tr.make_pose_rel(gl.pose, abs_pose)
@@ -428,13 +449,13 @@ def put_eef_pose() -> RespT:
                 break
 
             if linear:
-                raise FlaskException("There might be a collision.", error_code=400)
+                raise FanucGeneral("There might be a collision.")
 
             ip1.position.z += 0.01
             ip2.position.z += 0.01
 
         else:
-            return "Can't find safe path.", 404
+            raise NotFound("Can't find safe path.")
 
         logger.debug(f"Collision avoidance attempts: {_attempt}")
 
@@ -467,8 +488,12 @@ def get_joints() -> RespT:
                         type: array
                         items:
                             $ref: Joint
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert gl.robot is not None
@@ -498,8 +523,12 @@ def put_gripper() -> RespT:
         responses:
             204:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert gl.robot is not None
@@ -526,8 +555,12 @@ def get_gripper() -> RespT:
                 application/json:
                     schema:
                         type: boolean
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     assert gl.robot is not None
@@ -554,7 +587,7 @@ def main() -> None:
     if not args.swagger:
         scene_service.wait_for()
 
-    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint], args.swagger)
+    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint, WebApiError], args.swagger)
 
     if gl.robot:
         gl.robot.disconnect()
