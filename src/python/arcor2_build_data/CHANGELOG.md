@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.12.0] - 2022-07-01
+
+### Added
+
+- Add new exception classes.
+- Add `arcor2_build` dependency map.
+- Add `ImportResult` fields descriptions.
+
+### Changed
+- Update `arcor2_build` service name.
+
 ## [0.11.0] - 2021-10-25
 
 ### Changed
