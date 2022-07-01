@@ -15,9 +15,10 @@ from flask import jsonify, request
 
 from arcor2 import env
 from arcor2.data import common, object_type, scene
-from arcor2.flask import FlaskException, Response, RespT, create_app, run_app
+from arcor2.flask import Response, RespT, create_app, run_app
 from arcor2.logging import get_logger
 from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
+from arcor2_mocks.exceptions_scene import NotFound, SceneGeneral, WebApiError
 
 app = create_app(__name__)
 logger = get_logger(__name__)
@@ -47,8 +48,8 @@ def delay() -> None:
     time.sleep(random.normalvariate(delay_mean, delay_sigma))
 
 
-@app.route("/collisions/box", methods=["PUT"])
-def put_box() -> RespT:
+@app.route("/collisions/box/<string:id>", methods=["PUT"])
+def put_box(id: str) -> RespT:
     """Add or update collision box.
     ---
     put:
@@ -56,8 +57,10 @@ def put_box() -> RespT:
             - Collisions
         description: Add or update collision box.
         parameters:
-            - name: boxId
-              in: query
+            - name: id
+              in: path
+              description: unique box collision ID
+              required: true
               schema:
                 type: string
             - name: sizeX
@@ -82,25 +85,31 @@ def put_box() -> RespT:
                     $ref: Pose
         responses:
             200:
-              description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
+                description: Ok
+                content:
+                    application/json:
+                        schema:
+                            type: string
+            500:
+                description: "Error types: **General**, **SceneGeneral**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
     """
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = request.args.to_dict()
-    box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
+    box = object_type.Box(id, float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
     collision_objects[box.id] = CollisionObject(box, common.Pose.from_dict(humps.decamelize(request.json)))
 
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/sphere", methods=["PUT"])
-def put_sphere() -> RespT:
+@app.route("/collisions/sphere/<string:id>", methods=["PUT"])
+def put_sphere(id: str) -> RespT:
     """Add or update collision sphere.
     ---
     put:
@@ -108,8 +117,10 @@ def put_sphere() -> RespT:
             - Collisions
         description: Add or update collision sphere.
         parameters:
-            - name: sphereId
-              in: query
+            - name: id
+              in: path
+              description: unique sphere collision ID
+              required: true
               schema:
                 type: string
             - name: radius
@@ -129,19 +140,25 @@ def put_sphere() -> RespT:
                 application/json:
                   schema:
                     type: string
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = humps.decamelize(request.args.to_dict())
-    sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
+    sphere = object_type.Sphere(id, float(args["radius"]))
     collision_objects[sphere.id] = CollisionObject(sphere, common.Pose.from_dict(humps.decamelize(request.json)))
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/cylinder", methods=["PUT"])
-def put_cylinder() -> RespT:
+@app.route("/collisions/cylinder/<string:id>", methods=["PUT"])
+def put_cylinder(id: str) -> RespT:
     """Add or update collision cylinder.
     ---
     put:
@@ -149,8 +166,10 @@ def put_cylinder() -> RespT:
             - Collisions
         description: Add or update collision cylinder.
         parameters:
-            - name: cylinderId
-              in: query
+            - name: id
+              in: path
+              description: unique cylinder collision ID
+              required: true
               schema:
                 type: string
             - name: radius
@@ -175,19 +194,25 @@ def put_cylinder() -> RespT:
                 application/json:
                   schema:
                     type: string
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = humps.decamelize(request.args.to_dict())
-    cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
+    cylinder = object_type.Cylinder(id, float(args["radius"]), float(args["height"]))
     collision_objects[cylinder.id] = CollisionObject(cylinder, common.Pose.from_dict(humps.decamelize(request.json)))
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/mesh", methods=["PUT"])
-def put_mesh() -> RespT:
+@app.route("/collisions/mesh/<string:id>", methods=["PUT"])
+def put_mesh(id: str) -> RespT:
     """Add or update collision mesh.
     ---
     put:
@@ -195,8 +220,10 @@ def put_mesh() -> RespT:
             - Collisions
         description: Add or update collision mesh.
         parameters:
-            - name: meshId
-              in: query
+            - name: id
+              in: path
+              description: unique mesh collision ID
+              required: true
               schema:
                 type: string
             - name: meshFileId
@@ -233,19 +260,25 @@ def put_mesh() -> RespT:
                 application/json:
                   schema:
                     type: string
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing Pose.", error_code=400)
+        raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
+    mesh = object_type.Mesh(id, args["mesh_file_id"])
     collision_objects[mesh.id] = CollisionObject(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/<string:collisionId>", methods=["DELETE"])
-def delete_collision(collisionId: str) -> RespT:
+@app.route("/collisions/<string:id>", methods=["DELETE"])
+def delete_collision(id: str) -> RespT:
     """Deletes collision object.
     ---
     delete:
@@ -253,7 +286,7 @@ def delete_collision(collisionId: str) -> RespT:
             - Collisions
         summary: Deletes collision object.
         parameters:
-            - name: collisionId
+            - name: id
               in: path
               description: unique ID
               required: true
@@ -262,18 +295,18 @@ def delete_collision(collisionId: str) -> RespT:
         responses:
             200:
               description: Ok
-            404:
-              description: Model not found.
+            500:
+              description: "Error types: **General**, **NotFound**."
               content:
                 application/json:
                   schema:
-                    type: string
+                    $ref: WebApiError
     """
 
     try:
-        del collision_objects[collisionId]
+        del collision_objects[id]
     except KeyError:
-        return jsonify("Not found"), 404
+        raise NotFound("Collision not found")
 
     return Response(status=200)
 
@@ -287,14 +320,20 @@ def get_collisions() -> RespT:
         - Collisions
         summary: Gets collision ids.
         responses:
-            '200':
+            200:
               description: Success
               content:
                 application/json:
                   schema:
                     type: array
                     items:
-                        type: string
+                      type: string
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     return jsonify(list(collision_objects.keys()))
@@ -317,15 +356,21 @@ def put_focus() -> RespT:
             200:
               description: Ok
               content:
-                  application/json:
-                      schema:
-                        $ref: Pose
+                application/json:
+                  schema:
+                    $ref: Pose
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     return jsonify(common.Pose().to_dict())
 
 
-@app.route("/utils/lineSafe", methods=["PUT"])
+@app.route("/utils/line-safe", methods=["PUT"])
 def put_line_safe() -> RespT:
     """Checks whether the line between two points intersects any object.
     ---
@@ -342,13 +387,19 @@ def put_line_safe() -> RespT:
             200:
               description: Ok
               content:
-                  application/json:
-                      schema:
-                        $ref: LineCheckResult
+                application/json:
+                  schema:
+                    $ref: LineCheckResult
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if not isinstance(request.json, dict):
-        raise FlaskException("Body should be a JSON dict containing LineCheck.", error_code=400)
+        raise SceneGeneral("Body should be a JSON dict containing LineCheck.")
 
     if not collision_objects:
         logger.debug("Safe. No collision object.")
@@ -430,6 +481,12 @@ def put_start() -> RespT:
         responses:
             200:
               description: Ok
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     global started
@@ -449,6 +506,12 @@ def put_stop() -> RespT:
         responses:
             200:
               description: Ok
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     global started
@@ -471,9 +534,15 @@ def get_started() -> RespT:
             200:
               description: Ok
               content:
-                  application/json:
-                      schema:
-                        type: boolean
+                application/json:
+                  schema:
+                    type: boolean
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     return jsonify(started)
@@ -515,6 +584,7 @@ def main() -> None:
         version(),
         SCENE_PORT,
         [
+            WebApiError,
             common.Pose,
             object_type.Box,
             object_type.Cylinder,
