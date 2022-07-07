@@ -17,11 +17,12 @@ from arcor2.helpers import port_from_url
 from arcor2.image import image_to_bytes_io
 from arcor2.logging import get_logger
 from arcor2_kinect_azure import get_data, version
+from arcor2_kinect_azure.exceptions import StartError, WebApiError
 
 logger = get_logger(__name__)
 
 URL = os.getenv("ARCOR2_KINECT_AZURE_URL", "http://localhost:5016")
-SERVICE_NAME = "Kinect Azure Service"
+SERVICE_NAME = "Kinect Azure Web API"
 
 app = create_app(__name__)
 
@@ -45,7 +46,7 @@ def requires_started(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
         if not started():
-            return "Not started", 403
+            raise StartError("Not started")
         return f(*args, **kwargs)
 
     return wrapped
@@ -72,12 +73,16 @@ def put_start() -> RespT:
         responses:
             200:
               description: Ok
-            403:
-              description: Already started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if started():
-        return "Already started.", 403
+        raise StartError("Already started.")
 
     if _mock:
         global _mock_started
@@ -106,8 +111,12 @@ def put_stop() -> RespT:
         responses:
             200:
               description: Ok
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if _mock:
@@ -136,8 +145,12 @@ def get_started() -> RespT:
                 application/json:
                     schema:
                         type: boolean
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     return jsonify(started()), 200
@@ -159,8 +172,12 @@ def get_image_color() -> RespT:
                 image/jpeg:
                     schema:
                         type: string
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if _mock:
@@ -192,8 +209,12 @@ def get_color_camera_parameters() -> RespT:
                 application/json:
                   schema:
                     $ref: CameraParameters
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if _mock:
@@ -204,7 +225,7 @@ def get_color_camera_parameters() -> RespT:
         assert _kinect is not None
 
         if not _kinect.color_camera_params:
-            return "Failed to get camera parameters", 403
+            raise StartError("Failed to get camera parameters")
 
         params = _kinect.color_camera_params
 
@@ -235,8 +256,12 @@ def get_image_depth() -> RespT:
                 image/png:
                     schema:
                         type: string
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if _mock:
@@ -265,8 +290,12 @@ def get_image_both() -> RespT:
                     schema:
                       type: string
                       format: binary
-            403:
-              description: Not started
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
     """
 
     if _mock:
@@ -302,7 +331,7 @@ def main() -> None:
     if _mock:
         logger.info("Starting as a mock!")
 
-    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [CameraParameters], args.swagger)
+    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [CameraParameters, WebApiError], args.swagger)
 
     if _kinect:
         _kinect.cleanup()
