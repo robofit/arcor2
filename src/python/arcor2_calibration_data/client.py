@@ -9,6 +9,7 @@ from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Joint, Pose
 from arcor2.exceptions import Arcor2Exception
 from arcor2_calibration_data import CALIBRATION_URL, EstimatedPose, MarkerCorners
+from arcor2_calibration_data.exceptions import NotFound
 
 
 class CalibrationException(Arcor2Exception):
@@ -58,8 +59,8 @@ def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool =
                 return_type=EstimatedPose,
                 files={"image": buff.getvalue()},
             )
-        except rest.RestException as e:
-            if isinstance(e, rest.RestHttpException) and e.error_code == 404:
+        except (rest.WebApiError, rest.RestException) as e:
+            if isinstance(e, rest.WebApiError) and e.type == NotFound.type:
                 raise MarkerNotFound(str(e)) from e
 
             raise CalibrationException(str(e)) from e

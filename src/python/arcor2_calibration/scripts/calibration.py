@@ -28,6 +28,7 @@ from arcor2_calibration.quaternions import weighted_average_quaternions
 from arcor2_calibration.robot import calibrate_robot
 from arcor2_calibration_data import CALIBRATION_URL, SERVICE_NAME, Corner, EstimatedPose, MarkerCorners
 from arcor2_calibration_data.client import CalibrateRobotArgs
+from arcor2_calibration_data.exceptions import Invalid, NotFound, WebApiError
 
 logger = get_logger(__name__)
 logger.propagate = False
@@ -97,6 +98,12 @@ def put_calibrate_robot() -> RespT:
                 application/json:
                   schema:
                     $ref: Pose
+            500:
+              description: "Error types: **General**."
+              content:
+                    application/json:
+                      schema:
+                        $ref: WebApiError
 
     """
 
@@ -189,6 +196,12 @@ def get_marker_corners() -> RespT:
                     type: array
                     items:
                         $ref: MarkerCorners
+            500:
+              description: "Error types: **General**."
+              content:
+                    application/json:
+                      schema:
+                        $ref: WebApiError
 
     """
 
@@ -281,13 +294,12 @@ def get_calibration() -> RespT:
                 application/json:
                   schema:
                     $ref: EstimatedPose
-            404:
-              description: No marker found.
+            500:
+              description: "Error types: **General**, **NotFound**, **Invalid**."
               content:
-                application/json:
-                  schema:
-                    type: string
-
+                    application/json:
+                      schema:
+                        $ref: WebApiError
     """
 
     file = request.files["image"]
@@ -304,7 +316,7 @@ def get_calibration() -> RespT:
         poses = estimate_camera_pose(camera_matrix, dist_matrix, image, MARKER_SIZE)
 
         if not poses:
-            return jsonify("No marker detected."), 404
+            raise NotFound("No marker detected.")
 
         quality_dict: dict[int, float] = {k: 0.0 for k, v in MARKERS.items()}
         known_markers: list[tuple[Pose, float]] = []
@@ -340,7 +352,7 @@ def get_calibration() -> RespT:
             logger.debug(f"...overall quality : {marker_quality:.3f}")
 
         if not known_markers:
-            return jsonify("No known marker detected."), 404
+            raise NotFound("No known marker detected.")
 
         weights = [marker[1] for marker in known_markers]
         wsum = sum(weights)
@@ -351,7 +363,7 @@ def get_calibration() -> RespT:
                 f"Camera matrix: {camera_matrix}\n"
                 f"Dist matrix: {dist_matrix}"
             )
-            return jsonify("Invalid input data."), 500
+            raise Invalid("Invalid input data.")
 
         # combine all detections
         pose = Pose()
@@ -459,7 +471,7 @@ def main() -> None:
         SERVICE_NAME,
         arcor2_calibration.version(),
         port_from_url(CALIBRATION_URL),
-        [Pose, CalibrateRobotArgs, MarkerCorners, EstimatedPose],
+        [Pose, CalibrateRobotArgs, MarkerCorners, EstimatedPose, WebApiError],
         getattr(args, "swagger", False),
     )
 
