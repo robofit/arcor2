@@ -7,7 +7,7 @@ from arcor2 import package_version
 from arcor2.data.common import Pose
 
 CALIBRATION_URL = os.getenv("ARCOR2_CALIBRATION_URL", "http://localhost:5014")
-SERVICE_NAME = "ARCOR2 Calibration Service"
+SERVICE_NAME = "ARCOR2 Calibration Web API"
 
 
 def version() -> str:
