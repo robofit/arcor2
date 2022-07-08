@@ -30,7 +30,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2022-02-17: [0.23.1](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.23.1) ([pypi](https://pypi.org/project/arcor2/0.23.1/)).
+ - 2022-07-08: [0.24.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.24.0) ([pypi](https://pypi.org/project/arcor2/0.24.0/)).
  
 ### arcor2_arserver
 
@@ -48,13 +48,13 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
-- 2022-02-04: [0.22.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.22.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=0.22.0), [pypi](https://pypi.org/project/arcor2-build/0.22.0/)).
+- 2022-07-08: [0.23.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F0.23.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=0.23.0), [pypi](https://pypi.org/project/arcor2-build/0.23.0/)).
 
 ### arcor2_build_data
 
 [README](src/python/arcor2_build_data/README.md) | [CHANGELOG](src/python/arcor2_build_data/CHANGELOG.md)
 
- - 2021-10-25: [0.11.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build_data%2F0.11.0) ([pypi](https://pypi.org/project/arcor2-build-data/0.11.0/)).
+ - 2022-07-08: [0.12.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build_data%2F0.12.0) ([pypi](https://pypi.org/project/arcor2-build-data/0.12.0/)).
 
 ### arcor2_calibration
 
