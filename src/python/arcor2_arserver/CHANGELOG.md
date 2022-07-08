@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.25.0] - WIP
+
+### Changed
+
+- Adaptation to changes in API of Build service.
+
 ## [0.24.0] - 2022-04-25
 
 ### Added
