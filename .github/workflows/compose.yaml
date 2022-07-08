@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Check syntax of fit-demo
       run: |
-        docker-compose -f docker/fit-demo/docker-compose.yml config
+        docker-compose -f compose-files/fit-demo/docker-compose.yml config
     - name: Check syntax of fanuc-demo
       run: |
-          docker-compose -f docker/fanuc-demo/docker-compose.yml config
+          docker-compose -f compose-files/fanuc-demo/docker-compose.yml config
