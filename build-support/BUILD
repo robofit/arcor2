@@ -1,0 +1,1 @@
+file(name="install_kinect_prerequisites.sh", source="install_kinect_prerequisites.sh")

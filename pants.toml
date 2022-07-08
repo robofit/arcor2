@@ -14,7 +14,9 @@ backend_packages.add = [
   "pants.backend.python.typecheck.mypy",
   "pants.backend.python.lint.isort",
   "pants.backend.python.lint.docformatter",
-  "setup_kwargs_plugin"
+  "setup_kwargs_plugin",
+  "pants.backend.docker",
+  "pants.backend.docker.lint.hadolint"
 ]
 
 build_file_prelude_globs = [
