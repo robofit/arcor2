@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional
 
 import aiofiles
 import websockets
-from aiofiles import tempfile  # type: ignore
+from aiofiles import tempfile
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp

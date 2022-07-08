@@ -14,7 +14,7 @@ from typing import Awaitable, Optional, Union
 import aiofiles
 import aiofiles.os
 import websockets
-from aiofiles import tempfile  # type: ignore
+from aiofiles import tempfile
 from aiologger.levels import LogLevel
 from aiorun import run
 from dataclasses_jsonschema import ValidationError

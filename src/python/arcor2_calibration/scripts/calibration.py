@@ -376,7 +376,7 @@ def get_calibration() -> RespT:
             quaternion.from_float_array(weighted_average_quaternions(quaternions, np.array(weights)))
         )
 
-        quality = np.mean(list(quality_dict.values()))
+        quality = float(np.mean(list(quality_dict.values())))
 
     inverse = request.args.get("inverse", default="false") == "true"
 

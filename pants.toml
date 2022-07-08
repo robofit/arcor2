@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.11.0"
+pants_version = "2.12.0"
 colors = true
 process_execution_local_parallelism = 4
 
@@ -38,7 +38,7 @@ search_path = ["<PATH>", "/usr/bin/python3.9"]
 
 [black]
 interpreter_constraints = ["==3.9.*"]
-version = "black==22.3.0"
+version = "black==22.6.0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
@@ -55,7 +55,7 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.950"
+version = "mypy==0.961"
 extra_requirements.add = [
   "numpy",
   "types-requests",
