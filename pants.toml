@@ -16,7 +16,10 @@ backend_packages.add = [
   "pants.backend.python.lint.docformatter",
   "setup_kwargs_plugin",
   "pants.backend.docker",
-  "pants.backend.docker.lint.hadolint"
+  "pants.backend.docker.lint.hadolint",
+  "pants.backend.shell",
+  "pants.backend.shell.lint.shfmt",
+  "pants.backend.shell.lint.shellcheck",
 ]
 
 build_file_prelude_globs = [
