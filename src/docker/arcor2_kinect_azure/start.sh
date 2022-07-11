@@ -1,4 +1,4 @@
-#!/bin/bash  
+#!/bin/bash
 
 cd || exit
 ./kinect_azure.pex

@@ -1,4 +1,4 @@
-file(name="start.sh", source="start.sh")
+shell_source(name="start.sh", source="start.sh")
 
 docker_image(
     name="arcor2_execution_proxy",
