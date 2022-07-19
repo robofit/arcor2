@@ -14,6 +14,10 @@ To get an idea of what our research is about, take a look at a video that was cr
 
 [![Augmented Reality in Robot Programming: ABB YuMi showcase](http://i3.ytimg.com/vi/1sN1aUmuBjg/hqdefault.jpg)](https://youtu.be/1sN1aUmuBjg)
 
+The video presenting the ARCOR2 system and its development in detail:
+
+[![ARCOR2: Framework for Collaborative End-User Management of Industrial Robotic Workplaces using AR](https://img.youtube.com/vi/RI1uiIEiPK8/hqdefault.jpg)](https://youtu.be/RI1uiIEiPK8)
+
 The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (offline PCB testing), where our system was applied:
 
 [![Test-it-off: robotic system for automatic products inspection](http://i3.ytimg.com/vi/6uktcrJCmc0/hqdefault.jpg)](https://youtu.be/6uktcrJCmc0)
