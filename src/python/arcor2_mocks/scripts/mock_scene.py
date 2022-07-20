@@ -48,8 +48,8 @@ def delay() -> None:
     time.sleep(random.normalvariate(delay_mean, delay_sigma))
 
 
-@app.route("/collisions/box/<string:id>", methods=["PUT"])
-def put_box(id: str) -> RespT:
+@app.route("/collisions/box", methods=["PUT"])
+def put_box() -> RespT:
     """Add or update collision box.
     ---
     put:
@@ -57,8 +57,8 @@ def put_box(id: str) -> RespT:
             - Collisions
         description: Add or update collision box.
         parameters:
-            - name: id
-              in: path
+            - name: boxId
+              in: query
               description: unique box collision ID
               required: true
               schema:
@@ -102,14 +102,14 @@ def put_box(id: str) -> RespT:
         raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = request.args.to_dict()
-    box = object_type.Box(id, float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
+    box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
     collision_objects[box.id] = CollisionObject(box, common.Pose.from_dict(humps.decamelize(request.json)))
 
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/sphere/<string:id>", methods=["PUT"])
-def put_sphere(id: str) -> RespT:
+@app.route("/collisions/sphere", methods=["PUT"])
+def put_sphere() -> RespT:
     """Add or update collision sphere.
     ---
     put:
@@ -117,8 +117,8 @@ def put_sphere(id: str) -> RespT:
             - Collisions
         description: Add or update collision sphere.
         parameters:
-            - name: id
-              in: path
+            - name: sphereId
+              in: query
               description: unique sphere collision ID
               required: true
               schema:
@@ -152,13 +152,13 @@ def put_sphere(id: str) -> RespT:
         raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = humps.decamelize(request.args.to_dict())
-    sphere = object_type.Sphere(id, float(args["radius"]))
+    sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
     collision_objects[sphere.id] = CollisionObject(sphere, common.Pose.from_dict(humps.decamelize(request.json)))
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/cylinder/<string:id>", methods=["PUT"])
-def put_cylinder(id: str) -> RespT:
+@app.route("/collisions/cylinder", methods=["PUT"])
+def put_cylinder() -> RespT:
     """Add or update collision cylinder.
     ---
     put:
@@ -166,8 +166,8 @@ def put_cylinder(id: str) -> RespT:
             - Collisions
         description: Add or update collision cylinder.
         parameters:
-            - name: id
-              in: path
+            - name: cylinderId
+              in: query
               description: unique cylinder collision ID
               required: true
               schema:
@@ -206,13 +206,13 @@ def put_cylinder(id: str) -> RespT:
         raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = humps.decamelize(request.args.to_dict())
-    cylinder = object_type.Cylinder(id, float(args["radius"]), float(args["height"]))
+    cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
     collision_objects[cylinder.id] = CollisionObject(cylinder, common.Pose.from_dict(humps.decamelize(request.json)))
     return jsonify("ok"), 200
 
 
-@app.route("/collisions/mesh/<string:id>", methods=["PUT"])
-def put_mesh(id: str) -> RespT:
+@app.route("/collisions/mesh", methods=["PUT"])
+def put_mesh() -> RespT:
     """Add or update collision mesh.
     ---
     put:
@@ -220,8 +220,8 @@ def put_mesh(id: str) -> RespT:
             - Collisions
         description: Add or update collision mesh.
         parameters:
-            - name: id
-              in: path
+            - name: meshId
+              in: query
               description: unique mesh collision ID
               required: true
               schema:
@@ -272,7 +272,7 @@ def put_mesh(id: str) -> RespT:
         raise SceneGeneral("Body should be a JSON dict containing Pose.")
 
     args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(id, args["mesh_file_id"])
+    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
     collision_objects[mesh.id] = CollisionObject(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
     return jsonify("ok"), 200
 
