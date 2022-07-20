@@ -2,6 +2,18 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+
+## [0.24.1] - 2022-08-17
+
+### Changed
+
+- Target REST endpoints for `arcor2.clients.scene_service` updated to match new API convention.
+  - `/collisions/{model_type}/{model_id}` changed to `/collisions/{model_type}`, `model_id` moved to request 
+  parameters as `{model_type}Id`.
+  - `/transforms/{transform_id}/local-pose` changed to `/transforms/{transform_id}/pose/local`.
+  - `/transforms/{transform_id}/world-pose` changed to `/transforms/{transform_id}/pose/world`.
+
+
 ## [0.24.0] - 2022-07-08
 
 ### Changed
