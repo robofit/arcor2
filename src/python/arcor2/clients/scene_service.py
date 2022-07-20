@@ -63,8 +63,10 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshPa
     >>> scene_service.upsert_collision(box, Pose(Position(1, 0, 0), Orientation(0, 0, 0, 1)))
     """
 
-    model_id = model.id
     params = model.to_dict()
+    model_type = model.type().value.lower()
+
+    params[f"{model_type}Id"] = model.id
     del params["id"]
 
     if model.type() == Model3dType.MESH:
@@ -74,7 +76,7 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshPa
         if mesh_parameters:
             params.update(mesh_parameters.to_dict())
 
-    rest.call(rest.Method.PUT, f"{URL}/collisions/{model.type().value.lower()}/{model_id}", body=pose, params=params)
+    rest.call(rest.Method.PUT, f"{URL}/collisions/{model_type}", body=pose, params=params)
 
 
 @handle(SceneServiceException, logger, message="Failed to delete the collision.")
@@ -147,14 +149,14 @@ def upsert_transform(transform_id: str, parent: str, pose: Pose) -> None:
 def local_pose(transform_id: str) -> Pose:
     """Gets relative pose to parent."""
 
-    return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/local-pose", return_type=Pose)
+    return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/pose/local", return_type=Pose)
 
 
 @handle(SceneServiceException, logger, message="Failed to get the world pose.")
 def world_pose(transform_id: str) -> Pose:
     """Gets absolute pose in world space."""
 
-    return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/world-pose", return_type=Pose)
+    return rest.call(rest.Method.GET, f"{URL}/transforms/{transform_id}/pose/world", return_type=Pose)
 
 
 __all__ = [
