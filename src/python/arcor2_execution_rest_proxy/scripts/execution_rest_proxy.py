@@ -469,7 +469,7 @@ def get_token_access(id: str) -> RespT:  # noqa
 def post_package(id: str) -> RespT:  # noqa
     """Create execution package with supplied id
     ---
-    put:
+    post:
         summary: Adds the execution package.
         operationId: PostPackage
         tags:
@@ -963,7 +963,7 @@ def packages_state() -> RespT:
     ---
     get:
       summary: Gets information about current execution state.
-      operationId: packagesState
+      operationId: PackagesState
       tags:
         - Packages
       responses:
