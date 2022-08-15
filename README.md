@@ -120,14 +120,10 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
  - 2022-02-17: [0.4.1](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.4.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.4.1), [pypi](https://pypi.org/project/arcor2-dobot/0.4.1/)).
 
-### arcor2_devel
-
- - 2021-05-28: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_devel%2F0.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_devel/tags?page=1&ordering=last_updated&name=0.1.0)).
-
 ### arcor2_yumi
 
  - 2021-10-25: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_yumi%2F0.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_yumi/tags?page=1&ordering=last_updated&name=0.1.0)).
 
 ### arcor2_runtime
 
- - 2022-01-25: [0.3.0](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F0.3.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_runtime/tags?page=1&ordering=last_updated&name=0.3.0)).
+ - 2022-08-15: [0.3.1](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F0.3.1) ([pypi](https://pypi.org/project/arcor2-runtime/0.3.1/)).
