@@ -2,7 +2,7 @@ version: '3'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:0.24.0
+    image: arcor2/arcor2_arserver:0.25.0
     container_name: fit-demo-arserver
     depends_on:
       - fit-demo-project
@@ -29,7 +29,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
 
   fit-demo-build:
-    image: arcor2/arcor2_build:0.22.0
+    image: arcor2/arcor2_build:0.23.0
     container_name: fit-demo-build
     depends_on:
       - fit-demo-project
@@ -41,7 +41,7 @@ services:
       - fit-demo-project-network
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:0.20.0
+    image: arcor2/arcor2_execution:0.20.1
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
@@ -108,7 +108,7 @@ services:
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-mocks:5013
 
   fit-demo-mocks:
-    image: arcor2/arcor2_mocks:0.17.1
+    image: arcor2/arcor2_mocks:0.18.0
     container_name: fit-demo-mocks
     networks:
           - fit-demo-scene-network
@@ -116,7 +116,7 @@ services:
       - "5013:5013"
 
   fit-demo-assets:
-    image: registry.gitlab.com/kinalisoft/test-it-off/assets:0.1.4
+    image: registry.gitlab.com/kinalisoft/test-it-off/assets:0.2.0
     container_name: "fit-demo-assets"
     environment:
         - "ASSETS_FOLDER=/tmp/assets"
@@ -130,7 +130,7 @@ services:
         - "20040:20040"
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.17.6
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.18.1
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
