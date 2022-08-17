@@ -286,16 +286,16 @@ async def test_possibility_of_locking_tree(lock: Lock) -> None:
     await lock.write_lock(ap.id, test)
     with pytest.raises(CannotLock):
         await lock.check_lock_tree(ap_ap.id, "another_user")
-    assert await lock.check_lock_tree(ap_ap.id, test) is None
+    await lock.check_lock_tree(ap_ap.id, test)
     await lock.write_unlock(ap.id, test)
-    assert await lock.check_lock_tree(ap_ap.id, test) is None
+    await lock.check_lock_tree(ap_ap.id, test)
 
     await lock.read_lock(ap.id, test)
     with pytest.raises(CannotLock):
         await lock.check_lock_tree(ap_ap.id, "another_user")
-    assert await lock.check_lock_tree(ap_ap.id, test) is None
+    await lock.check_lock_tree(ap_ap.id, test)
     await lock.read_unlock(ap.id, test)
-    assert await lock.check_lock_tree(ap_ap.id, test) is None
+    await lock.check_lock_tree(ap_ap.id, test)
 
 
 @pytest.mark.asyncio()
