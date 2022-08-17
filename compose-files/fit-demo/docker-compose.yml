@@ -115,19 +115,19 @@ services:
     ports:
       - "5013:5013"
 
-  fit-demo-assets:
-    image: registry.gitlab.com/kinalisoft/test-it-off/assets:0.2.0
-    container_name: "fit-demo-assets"
+  fit-demo-asset:
+    image: registry.gitlab.com/kinalisoft/test-it-off/asset:0.3.2
+    container_name: "fit-demo-asset"
     environment:
         - "ASSETS_FOLDER=/tmp/assets"
     volumes:
-        - fit-demo-assets:/tmp/assets
+        - fit-demo-asset:/tmp/assets
     networks:
-        - fit-demo-assets-network
+        - fit-demo-asset-network
     expose:
-        - "20040"
+        - "10040"
     ports:
-        - "20040:20040"
+        - "10040:10040"
 
   fit-demo-project:
     image: registry.gitlab.com/kinalisoft/test-it-off/project:0.18.1
@@ -135,12 +135,12 @@ services:
     ports:
       - "10000-10001:10000-10001"
     environment:
-      - "ASSETS_SERVICE_URL=http://fit-demo-assets:20040"
+      - "ASSET_SERVICE_URL=http://fit-demo-asset:10040"
     depends_on:
-        - fit-demo-assets
+        - fit-demo-asset
     networks:
       - fit-demo-project-network
-      - fit-demo-assets-network
+      - fit-demo-asset-network
 
   fit-demo-nginx:
     image: nginx:1.21.1
@@ -166,14 +166,14 @@ services:
 
 
 volumes:
-  fit-demo-assets:
+  fit-demo-asset:
   fit-demo-execution:
 
 networks:
   fit-demo-scene-network:
   fit-demo-execution-network:
   fit-demo-project-network:
-  fit-demo-assets-network:
+  fit-demo-asset-network:
 #  fit-demo-kinect-network:
   fit-demo-dobot-magician-network:
   fit-demo-dobot-m1-network:
