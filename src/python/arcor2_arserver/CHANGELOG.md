@@ -2,11 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.25.0] - WIP
+## [0.25.0] - 2022-08-17
 
 ### Changed
 
-- Adaptation to changes in API of Build service.
+- Adaptation to changes in API of the Build service.
+- Updated scene client (changed API).
 
 ## [0.24.0] - 2022-04-25
 
