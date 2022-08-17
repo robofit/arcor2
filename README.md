@@ -34,13 +34,13 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2022-07-08: [0.24.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.24.0) ([pypi](https://pypi.org/project/arcor2/0.24.0/)).
+ - 2022-08-17: [0.24.1](https://github.com/robofit/arcor2/releases/tag/arcor2%2F0.24.1) ([pypi](https://pypi.org/project/arcor2/0.24.1/)).
  
 ### arcor2_arserver
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2022-04-25: [0.24.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.24.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=0.24.0), [pypi](https://pypi.org/project/arcor2-arserver/0.24.0/)).
+ - 2022-08-17: [0.25.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F0.25.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=0.25.0), [pypi](https://pypi.org/project/arcor2-arserver/0.25.0/)).
  
 ### arcor2_arserver_data
 
@@ -76,7 +76,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2022-01-25: [0.20.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.20.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.20.0), [pypi](https://pypi.org/project/arcor2-execution/0.20.0/)).
+ - 2022-08-17: [0.20.1](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F0.20.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=0.20.1), [pypi](https://pypi.org/project/arcor2-execution/0.20.1/)).
  
 ### arcor2_execution_data
 
@@ -112,7 +112,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
 
- - 2022-02-17: [0.17.1](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.17.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.17.1), [pypi](https://pypi.org/project/arcor2-mocks/0.17.1/)).
+ - 2022-08-17: [0.18.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.18.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.18.0), [pypi](https://pypi.org/project/arcor2-mocks/0.18.0/)).
  
 ### arcor2_dobot
 
@@ -126,4 +126,4 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 ### arcor2_runtime
 
- - 2022-08-15: [0.3.1](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F0.3.1) ([pypi](https://pypi.org/project/arcor2-runtime/0.3.1/)).
+ - 2022-08-17: [0.3.2](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F0.3.2) ([pypi](https://pypi.org/project/arcor2-runtime/0.3.2/)).
