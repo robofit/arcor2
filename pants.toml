@@ -47,7 +47,7 @@ version = "black==22.6.0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
-version = "flake8==4.0.1"
+version = "flake8==5.0.4"
 extra_requirements.add = [
   "flake8-tidy-imports",
   "flake8-annotations-coverage",
@@ -60,7 +60,7 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.961"
+version = "mypy==0.971"
 extra_requirements.add = [
   "numpy",
   "types-requests",
