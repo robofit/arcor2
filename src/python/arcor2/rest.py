@@ -22,7 +22,7 @@ ReturnType = Union[None, type[Primitive], type[DataClass], type[BytesIO]]
 
 OptBody = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin], Sequence[Primitive]]]
 OptParams = Optional[dict[str, Primitive]]
-OptFiles = Optional[dict[str, Union[bytes, str]]]
+OptFiles = Optional[dict[str, Union[Union[bytes, str], tuple[str, Union[bytes, str]]]]]
 
 
 class RestException(Arcor2Exception):
