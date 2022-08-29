@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.9.1] - 2022-08-29
+
+### Changed
+
+- Fixed upload of URDF files (`arcor2`).
+
+
 ## [0.9.0] - 2022-02-17
 
 ### Changed
