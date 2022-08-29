@@ -93,7 +93,7 @@ def save_file(file_id: str, path: str) -> None:
 def upload_file(file_id: str, file_content: bytes) -> None:
     """Uploads a file."""
 
-    rest.call(rest.Method.PUT, f"{URL}/files/{file_id}", files={"file": file_content})
+    rest.call(rest.Method.PUT, f"{URL}/files/{file_id}", files={"file": (file_id, file_content)})
     assert file_id in files_ids()
 
 
