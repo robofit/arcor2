@@ -76,8 +76,8 @@ def start_processes() -> Iterator[None]:
         for cmd in (
             "./src.python.arcor2_mocks.scripts/mock_project.pex",
             "./src.python.arcor2_mocks.scripts/mock_scene.pex",
-            "./src.python.arcor2_execution.scripts/execution.pex",
-            "./src.python.arcor2_build.scripts/build.pex",
+            ["./src.python.arcor2_execution.scripts/execution.pex", "--debug"],
+            ["./src.python.arcor2_build.scripts/build.pex", "--debug"],
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))
 
