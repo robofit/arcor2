@@ -1,10 +1,10 @@
-# inspired by https://github.com/pantsbuild/example-python/blob/main/.github/workflows/pants.yaml
-# also see https://stackoverflow.com/a/66632107/3142796
+# cache from master branch can be shared with PR workflows
+# see https://stackoverflow.com/a/71061281/3142796 and https://stackoverflow.com/a/66632107/3142796
 
-name: Pants
+name: Pants-update-cache
 
 on:
-  pull_request:
+  push:
     branches:
       - master
 
@@ -73,25 +73,13 @@ jobs:
     - name: bootstrap
       run: |
         ./pants --version
-    - name: Check BUILD files
-      run: |
-        ./pants update-build-files --check
     - name: install system dependencies
       run: |
         sudo ./build-support/install_kinect_prerequisites.sh
         sudo apt install jq
-    - name: Lint
+    - name: Get dependencies
       run: |
-        ./pants --changed-since=origin/master lint
-    - name: Typecheck
-      run: |
-        ./pants check --changed-since=origin/master --changed-dependees=transitive
-    - name: Test
-      run: |
-        ./pants --changed-since=origin/master --changed-dependees=transitive test
-    - name: Packages
-      run: |
-        ./pants filter --target-type=python_distribution :: | xargs ./pants package
+        ./pants export
     - name: Upload pants log
       uses: actions/upload-artifact@v2
       with:
