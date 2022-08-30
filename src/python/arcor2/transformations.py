@@ -210,3 +210,22 @@ def abs_pose_from_ap_orientation(scene: CScene, project: CProject, orientation_i
         parent_id = parent.parent_id
 
     return pose
+
+
+def abs_position_from_ap(scene: CScene, project: CProject, ap_id: str) -> Position:
+    """Returns absolute Position without modifying anything within the project.
+
+    :param ap_id:
+    :return:
+    """
+
+    ap = project.bare_action_point(ap_id)
+    pose = Pose(ap.position, Orientation())
+    parent_id = ap.parent
+
+    while parent_id:
+        parent = get_parent_pose(scene, project, parent_id)
+        pose = make_pose_abs(parent.pose, pose)
+        parent_id = parent.parent_id
+
+    return pose.position

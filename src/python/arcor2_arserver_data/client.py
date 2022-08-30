@@ -109,25 +109,27 @@ class ARServer:
         :return:
         """
 
-        try:
-            evt = self._event_queue.get_nowait()
-        except Empty:
+        while True:
+
             try:
-                recv_dict = json.loads(self._ws.recv())
-            except websocket.WebSocketTimeoutException:
-                raise ARServerClientException("Timeouted.")
+                evt = self._event_queue.get_nowait()
+            except Empty:
+                try:
+                    recv_dict = json.loads(self._ws.recv())
+                except websocket.WebSocketTimeoutException:
+                    raise ARServerClientException("Timeouted.")
 
-            if not isinstance(recv_dict, dict):
-                raise ARServerClientException(f"Invalid data received: {recv_dict}")
+                if not isinstance(recv_dict, dict):
+                    raise ARServerClientException(f"Invalid data received: {recv_dict}")
 
-            if "event" not in recv_dict:
-                raise ARServerClientException(f"Expected event, got: {recv_dict}")
-            evt = self.event_mapping[recv_dict["event"]].from_dict(recv_dict)
+                if "event" not in recv_dict:
+                    raise ARServerClientException(f"Expected event, got: {recv_dict}")
+                evt = self.event_mapping[recv_dict["event"]].from_dict(recv_dict)
 
-        if drop_everything_until and not isinstance(evt, drop_everything_until):
-            return self.get_event(drop_everything_until)
+            if drop_everything_until and not isinstance(evt, drop_everything_until):
+                continue
 
-        return evt
+            return evt
 
     def close(self) -> None:
         self._ws.close()

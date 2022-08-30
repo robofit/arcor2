@@ -1069,7 +1069,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
             for param in new_act.parameters:
 
-                if param.type != PosePlugin.type_name():  # TODO also handle joints!
+                if param.type != PosePlugin.type_name():  # TODO also handle joints and positions!
                     continue
 
                 old_ori = proj.bare_ap_and_orientation(PosePlugin.orientation_id(proj, new_act.id, param.name))[1]

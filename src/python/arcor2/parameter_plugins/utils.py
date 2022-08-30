@@ -24,6 +24,7 @@ def load_plugins() -> None:
     from arcor2.parameter_plugins.integer_enum import IntegerEnumPlugin
     from arcor2.parameter_plugins.joints import JointsPlugin
     from arcor2.parameter_plugins.pose import PosePlugin
+    from arcor2.parameter_plugins.position import PositionPlugin
     from arcor2.parameter_plugins.string import StringPlugin
     from arcor2.parameter_plugins.string_enum import StringEnumPlugin
 
@@ -38,6 +39,7 @@ def load_plugins() -> None:
         IntegerEnumPlugin,
         JointsPlugin,
         PosePlugin,
+        PositionPlugin,
         # PoseListPlugin,
         StringPlugin,
         # StringListPlugin,
