@@ -1,11 +1,10 @@
 from arcor2.flask import FlaskException, WebApiErrorFactory
-from arcor2_build import __name__ as package_name
 
 
 class BuildServiceException(FlaskException):
     """Base flask exception for build service."""
 
-    service = package_name
+    service = "arcor2_build"
 
 
 class NotFound(BuildServiceException):
