@@ -1,11 +1,10 @@
 from arcor2.flask import FlaskException, WebApiErrorFactory
-from arcor2_calibration import __name__ as package_name
 
 
 class CalibrationServiceException(FlaskException):
     """Base flask exception for calibration service."""
 
-    service = package_name
+    service = "arcor2_calibration"
 
 
 class NotFound(CalibrationServiceException):
