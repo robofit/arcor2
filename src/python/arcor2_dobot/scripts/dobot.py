@@ -635,6 +635,21 @@ def handle_dobot_exception(e: DobotApiException) -> tuple[str, int]:
     return json.dumps(DobotGeneral(str(e)).to_dict()), 500
 
 
+@app.route("/health")
+def health():
+    """Healthcheck.
+    ---
+    get:
+        tags:
+            - Service
+        description: Gets service health status.
+        responses:
+            204:
+              description: The service is up and running.
+    """
+    return Response(status=204)
+
+
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)

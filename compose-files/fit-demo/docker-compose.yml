@@ -1,16 +1,25 @@
-version: '3'
+version: '3.4'
 
 services:
   fit-demo-arserver:
     image: arcor2/arcor2_arserver:0.25.0
     container_name: fit-demo-arserver
     depends_on:
-      - fit-demo-project
-      - fit-demo-build
-      - fit-demo-execution
+      fit-demo-project:
+        condition: service_started
+      fit-demo-build:
+        condition: service_healthy
+      fit-demo-execution:
+        condition: service_started
       # - fit-demo-kinect
-      - fit-demo-mocks
-      - fit-demo-calibration
+      fit-demo-mocks:
+        condition: service_healthy
+      fit-demo-calibration:
+        condition: service_healthy
+      fit-demo-dobot-magician:
+        condition: service_healthy
+      fit-demo-dobot-m1:
+        condition: service_healthy
     ports:
       - "6789:6789"
       - "6799:6799"
@@ -39,6 +48,13 @@ services:
       - "5008:5008"
     networks:           
       - fit-demo-project-network
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:5008/health" ]
+      interval: 5s
+      retries: 50
+      start_period: 40s
+      timeout: 10s
+
 
   fit-demo-execution:
     image: arcor2/arcor2_execution:0.20.1
@@ -76,13 +92,19 @@ services:
       - ARCOR2_CALIBRATION_MOCK=false
     volumes:
       - ./calibration.yaml:/root/calibration.yaml
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:5014/health" ]
+      interval: 5s
+      retries: 50
+      start_period: 40s
+      timeout: 10s
 
   fit-demo-dobot-magician:
     image: arcor2/arcor2_dobot:0.4.1
     container_name: fit-demo-dobot-magician
-    restart: on-failure:3  # TODO it often fails to contact Scene Service when starting, remove once we have healthcheck
     depends_on:
-      - fit-demo-mocks
+      fit-demo-mocks:
+        condition: service_healthy
     networks:
       - fit-demo-dobot-magician-network
       - fit-demo-scene-network
@@ -91,13 +113,19 @@ services:
     environment:
       - ARCOR2_DOBOT_MOCK=true
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-mocks:5013
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:5018/health" ]
+      interval: 5s
+      retries: 50
+      start_period: 40s
+      timeout: 10s
 
   fit-demo-dobot-m1:
     image: arcor2/arcor2_dobot:0.4.1
     container_name: fit-demo-dobot-m1
-    restart: on-failure:3  # TODO it often fails to contact Scene Service when starting, remove once we have healthcheck
     depends_on:
-      - fit-demo-mocks
+      fit-demo-mocks:
+        condition: service_healthy
     networks:
       - fit-demo-dobot-m1-network
       - fit-demo-scene-network
@@ -106,6 +134,12 @@ services:
     environment:
       - ARCOR2_DOBOT_MOCK=true
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-mocks:5013
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:5018/health" ]
+      interval: 5s
+      retries: 50
+      start_period: 40s
+      timeout: 10s
 
   fit-demo-mocks:
     image: arcor2/arcor2_mocks:0.18.0
@@ -114,6 +148,12 @@ services:
           - fit-demo-scene-network
     ports:
       - "5013:5013"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:5013/health"]
+      interval: 5s
+      retries: 50
+      start_period: 40s
+      timeout: 10s
 
   fit-demo-asset:
     image: registry.gitlab.com/kinalisoft/test-it-off/asset:0.3.2
