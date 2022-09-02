@@ -1,5 +1,5 @@
 from arcor2.flask import FlaskException, WebApiErrorFactory
-from arcor2_mocks import __name__ as package_name
+from arcor2_scene import __name__ as package_name
 
 
 class SceneException(FlaskException):

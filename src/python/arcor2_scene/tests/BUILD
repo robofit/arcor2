@@ -3,7 +3,3 @@ python_tests(
         "src/python/arcor2_scene/scripts:scene",
     ]
 )
-
-python_test_utils(
-    name="test_utils",
-)

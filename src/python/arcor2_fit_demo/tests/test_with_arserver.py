@@ -58,7 +58,7 @@ def start_processes() -> Iterator[None]:
         scene_port = find_free_port()
         scene_url = f"http://0.0.0.0:{scene_port}"
         my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
-        my_env["ARCOR2_SCENE_SERVICE_MOCK_PORT"] = str(scene_port)
+        my_env["ARCOR2_SCENE_SERVICE_PORT"] = str(scene_port)
         scene_service.URL = scene_url
 
         my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
@@ -70,7 +70,7 @@ def start_processes() -> Iterator[None]:
 
         for cmd in (
             "./src.python.arcor2_mocks.scripts/mock_project.pex",
-            "./src.python.arcor2_mocks.scripts/mock_scene.pex",
+            "./src.python.arcor2_scene.scripts/scene.pex",
             "./src.python.arcor2_execution.scripts/execution.pex",
         ):
             processes.append(sp.Popen(cmd, env=my_env, stdout=sp.PIPE, stderr=sp.STDOUT))

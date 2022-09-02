@@ -1,8 +1,7 @@
 FROM python:3.9-slim-bullseye
 ENTRYPOINT ["/root/start.sh"]
 
-COPY src.python.arcor2_mocks.scripts/mock_project.pex /root/mock_project.pex
-COPY src.python.arcor2_mocks.scripts/mock_scene.pex /root/mock_scene.pex
+COPY src.python.arcor2_scene.scripts/scene.pex /root/scene.pex
 
 # libgomp1 and libusb-1.0-0 are because of Open3D
 # curl is for healthcheck
@@ -11,4 +10,4 @@ RUN apt-get update \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
-COPY src/docker/arcor2_mocks/start.sh /root/start.sh
+COPY src/docker/arcor2_scene/start.sh /root/start.sh
