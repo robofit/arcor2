@@ -12,7 +12,7 @@ from flask import Response, jsonify, request
 
 from arcor2 import env
 from arcor2.clients import scene_service
-from arcor2.data.common import Joint, Pose
+from arcor2.data.common import Joint, Pose, StrEnum
 from arcor2.data.scene import LineCheck
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
@@ -25,8 +25,22 @@ from arcor2_dobot.magician import DobotMagician
 
 logger = get_logger(__name__)
 
+
+class DobotModels(StrEnum):
+    MAGICIAN: str = "magician"
+    M1: str = "m1"
+
+
 URL = os.getenv("ARCOR2_DOBOT_URL", "http://localhost:5018")
-SERVICE_NAME = "Dobot Web API"
+DOBOT_PORT = os.getenv("ARCOR2_DOBOT_PORT", "/dev/dobot")
+DOBOT_MODEL = DobotModels(os.getenv("ARCOR2_DOBOT_MODEL", DobotModels.MAGICIAN))
+
+SERVICE_NAME = f"Dobot Web API ({DOBOT_MODEL})"
+
+dobot_model_mapping: dict[DobotModels, type[Dobot]] = {DobotModels.MAGICIAN: DobotMagician, DobotModels.M1: DobotM1}
+
+assert set(dobot_model_mapping.keys()) == DobotModels.set()
+
 
 app = create_app(__name__)
 
@@ -57,22 +71,6 @@ def put_start() -> RespT:
         description: Start the robot.
         tags:
            - State
-        parameters:
-            - in: query
-              name: port
-              schema:
-                type: string
-                default: /dev/dobot
-              description: Dobot port
-            - in: query
-              name: model
-              schema:
-                type: string
-                enum:
-                    - magician
-                    - m1
-              required: true
-              description: Dobot model
         requestBody:
               content:
                 application/json:
@@ -92,19 +90,14 @@ def put_start() -> RespT:
     if started():
         raise StartError("Already started.")
 
-    model: str = request.args.get("model", default="magician")
-    port: str = request.args.get("port", default="/dev/dobot")
-
     if not isinstance(request.json, dict):
         raise DobotGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
 
-    mapping: dict[str, type[Dobot]] = {"magician": DobotMagician, "m1": DobotM1}
-
     global _dobot
 
-    _dobot = mapping[model](pose, port, _mock)
+    _dobot = dobot_model_mapping[DOBOT_MODEL](pose, DOBOT_PORT, _mock)
 
     return Response(status=204)
 
@@ -676,7 +669,15 @@ def main() -> None:
     if not args.swagger:
         scene_service.wait_for()
 
-    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [Pose, Joint, WebApiError], args.swagger)
+    run_app(
+        app,
+        SERVICE_NAME,
+        version(),
+        port_from_url(URL),
+        [Pose, Joint, WebApiError],
+        args.swagger,
+        dependencies={"ARCOR2 Scene": "0.1.0"},
+    )
 
     if _dobot:
         _dobot.cleanup()

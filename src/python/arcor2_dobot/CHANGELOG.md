@@ -2,13 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.5.0] - WIP
+## [0.5.0] - 2022-09-02
 
 ### Changed
 - **BREAKING**: Implement new error handling flow. Error codes of **every** endpoint were replaced with error 
   types as described in swagger documentation.
-
-- Update API description.
+- Updated API description.
+- Model and port are now set using environment variables.
 
 ### Added
 - New exception classes

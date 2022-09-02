@@ -13,3 +13,4 @@ RUN apt-get update \
 COPY src/docker/arcor2_execution/start.sh /root/start.sh
 
 EXPOSE 6790
+ENV PYTHONOPTIMIZE=1

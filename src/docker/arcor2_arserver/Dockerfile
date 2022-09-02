@@ -13,3 +13,5 @@ RUN apt-get update \
 RUN pip3 install --no-cache-dir uploadserver==2.0.1
 
 COPY src/docker/arcor2_arserver/start.sh /root/start.sh
+
+ENV PYTHONOPTIMIZE=1

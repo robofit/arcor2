@@ -100,7 +100,7 @@ services:
       timeout: 10s
 
   fit-demo-dobot-magician:
-    image: arcor2/arcor2_dobot:0.4.1
+    image: arcor2/arcor2_dobot:0.5.0
     container_name: fit-demo-dobot-magician
     depends_on:
       fit-demo-scene:
@@ -113,6 +113,7 @@ services:
     environment:
       - ARCOR2_DOBOT_MOCK=true
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
+      - ARCOR2_DOBOT_MODEL=magician
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:5018/health" ]
       interval: 5s
@@ -121,7 +122,7 @@ services:
       timeout: 10s
 
   fit-demo-dobot-m1:
-    image: arcor2/arcor2_dobot:0.4.1
+    image: arcor2/arcor2_dobot:0.5.0
     container_name: fit-demo-dobot-m1
     depends_on:
       fit-demo-scene:
@@ -134,6 +135,7 @@ services:
     environment:
       - ARCOR2_DOBOT_MOCK=true
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
+      - ARCOR2_DOBOT_MODEL=m1
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:5018/health" ]
       interval: 5s
@@ -156,7 +158,7 @@ services:
       timeout: 10s
 
   fit-demo-asset:
-    image: registry.gitlab.com/kinalisoft/test-it-off/asset:0.3.2
+    image: registry.gitlab.com/kinalisoft/test-it-off/asset:0.4.0
     container_name: "fit-demo-asset"
     environment:
         - "ASSETS_FOLDER=/tmp/assets"
@@ -170,7 +172,7 @@ services:
         - "10040:10040"
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.18.1
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.19.0
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
@@ -195,7 +197,7 @@ services:
       - fit-demo-project
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:0.9.1
+    image: arcor2/arcor2_upload_fit_demo:0.10.0
     container_name: "fit-demo-upload-object-types"
     depends_on:
       - fit-demo-project
