@@ -108,11 +108,11 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
  - 2021-05-21: [0.4.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinect_azure%2F0.4.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_kinect_azure/tags?page=1&ordering=last_updated&name=0.4.0), [pypi](https://pypi.org/project/arcor2_kinect_azure/0.4.0/)).
 
-### arcor2_mocks
+### arcor2_scene
 
 [README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
 
- - 2022-08-17: [0.18.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.18.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_mocks/tags?page=1&ordering=last_updated&name=0.18.0), [pypi](https://pypi.org/project/arcor2-mocks/0.18.0/)).
+ - 2022-09-02: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_scene%2F0.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_scene/tags?page=1&ordering=last_updated&name=0.1.0), [pypi](https://pypi.org/project/arcor2-scene/0.1.0/)).
  
 ### arcor2_dobot
 

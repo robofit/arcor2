@@ -17,8 +17,8 @@ from arcor2 import env
 from arcor2.data import common, object_type, scene
 from arcor2.flask import Response, RespT, create_app, run_app
 from arcor2.logging import get_logger
-from arcor2_mocks import SCENE_PORT, SCENE_SERVICE_NAME, version
-from arcor2_mocks.exceptions_scene import NotFound, SceneGeneral, WebApiError
+from arcor2_scene import SCENE_PORT, SCENE_SERVICE_NAME, version
+from arcor2_scene.exceptions import NotFound, SceneGeneral, WebApiError
 
 app = create_app(__name__)
 logger = get_logger(__name__)
@@ -35,8 +35,8 @@ collision_objects: dict[str, CollisionObject] = {}
 started: bool = False
 inflation = 0.01
 
-delay_mean = env.get_float("ARCOR2_MOCK_SCENE_DELAY_MEAN", 0)
-delay_sigma = env.get_float("ARCOR2_MOCK_SCENE_DELAY_SIGMA", 0)
+delay_mean = env.get_float("ARCOR2_SCENE_DELAY_MEAN", 0)
+delay_sigma = env.get_float("ARCOR2_SCENE_DELAY_SIGMA", 0)
 
 
 def delay() -> None:
