@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 from typing import Optional
 
 from arcor2 import rest
 from arcor2.data.common import Joint, Pose, StrEnum
 
-from .abstract_dobot import AbstractDobot, DobotSettings, MoveType
+from .abstract_dobot import AbstractDobot, MoveType
+from .fit_common_mixin import UrlSettings
 
 
 class Joints(StrEnum):
@@ -15,14 +17,20 @@ class Joints(StrEnum):
     J5: str = "magician_joint_5"
 
 
+@dataclass
+class MagicianSettings(UrlSettings):
+
+    url: str = "http://fit-demo-dobot-magician:5018"
+
+
 class DobotMagician(AbstractDobot):
 
     _ABSTRACT = False
     urdf_package_name = "dobot-magician.zip"
 
-    def __init__(self, obj_id: str, name: str, pose: Pose, settings: DobotSettings) -> None:
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: MagicianSettings) -> None:
         super(DobotMagician, self).__init__(obj_id, name, pose, settings)
-        self._start("magician")
+        self._start()
 
     def move_to_calibration_pose(self) -> None:
 

@@ -100,7 +100,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
-- 2022-08-29: [0.9.1](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.9.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.9.1), [pypi](https://pypi.org/project/arcor2-fit-demo/0.9.1/)).
+- 2022-09-02: [0.10.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F0.10.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=0.10.0), [pypi](https://pypi.org/project/arcor2-fit-demo/0.10.0/)).
   
 ### arcor2_kinect_azure
 
@@ -124,7 +124,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_dobot/README.md) | [CHANGELOG](src/python/arcor2_dobot/CHANGELOG.md)
 
- - 2022-02-17: [0.4.1](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.4.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.4.1), [pypi](https://pypi.org/project/arcor2-dobot/0.4.1/)).
+ - 2022-09-02: [0.5.0](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F0.5.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=0.5.0), [pypi](https://pypi.org/project/arcor2-dobot/0.5.0/)).
 
 ### arcor2_yumi
 

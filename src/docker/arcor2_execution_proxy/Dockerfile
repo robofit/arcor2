@@ -8,3 +8,4 @@ COPY src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /ro
 COPY src/docker/arcor2_execution_proxy/start.sh /root/start.sh
 
 EXPOSE 5009
+ENV PYTHONOPTIMIZE=1

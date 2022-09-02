@@ -12,3 +12,4 @@ RUN apt-get update \
         && rm -rf /var/lib/apt/lists/*
 
 COPY src/docker/arcor2_kinect_azure/start.sh /root/start.sh
+ENV PYTHONOPTIMIZE=1

@@ -11,3 +11,4 @@ RUN apt-get update \
         && rm -rf /var/lib/apt/lists/*
 
 COPY src/docker/arcor2_scene/start.sh /root/start.sh
+ENV PYTHONOPTIMIZE=1

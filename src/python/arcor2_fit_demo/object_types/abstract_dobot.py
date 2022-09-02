@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Optional, cast
+from typing import Optional
 
 from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
@@ -7,13 +6,7 @@ from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
 from arcor2.object_types.abstract import Robot, RobotException
 
-from .fit_common_mixin import FitCommonMixin, UrlSettings
-
-
-@dataclass
-class DobotSettings(UrlSettings):
-
-    port: str = "/dev/dobot"
+from .fit_common_mixin import FitCommonMixin
 
 
 class DobotException(RobotException):
@@ -31,10 +24,7 @@ class AbstractDobot(FitCommonMixin, Robot):
 
     robot_type = RobotType.SCARA
 
-    def __init__(self, obj_id: str, name: str, pose: Pose, settings: DobotSettings) -> None:
-        super(AbstractDobot, self).__init__(obj_id, name, pose, settings)
-
-    def _start(self, model: str) -> None:
+    def _start(self) -> None:
 
         if self._started():
             self._stop()
@@ -42,13 +32,8 @@ class AbstractDobot(FitCommonMixin, Robot):
         rest.call(
             rest.Method.PUT,
             f"{self.settings.url}/state/start",
-            params={"model": model, "port": self.settings.port},
             body=self.pose,
         )
-
-    @property
-    def settings(self) -> DobotSettings:  # type: ignore
-        return cast(DobotSettings, super(AbstractDobot, self).settings)
 
     def cleanup(self):
         self._stop()
