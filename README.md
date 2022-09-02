@@ -110,10 +110,16 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 ### arcor2_scene
 
-[README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
+[README](src/python/arcor2_scene/README.md) | [CHANGELOG](src/python/arcor2_scene/CHANGELOG.md)
 
  - 2022-09-02: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_scene%2F0.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_scene/tags?page=1&ordering=last_updated&name=0.1.0), [pypi](https://pypi.org/project/arcor2-scene/0.1.0/)).
  
+### arcor2_mocks
+
+[README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
+
+ - 2022-09-02: [0.19.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F0.19.0) ([pypi](https://pypi.org/project/arcor2-mocks/0.19.0/)).
+
 ### arcor2_dobot
 
 [README](src/python/arcor2_dobot/README.md) | [CHANGELOG](src/python/arcor2_dobot/CHANGELOG.md)
