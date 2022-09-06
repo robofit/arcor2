@@ -9,6 +9,4 @@ python_tests(
     ]
 )
 
-python_test_utils(
-    name="test_utils",
-)
+python_test_utils(name="test_utils", sources=["conftest.py", "testutils.py"])

@@ -1,17 +1,20 @@
 import json
 
+import pytest
+
 from arcor2.clients import project_service
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.object_types.random_actions import RandomActions
 from arcor2.object_types.time_actions import TimeActions
-from arcor2_arserver.tests.conftest import LOGGER, add_logic_item, close_project, event, save_project, wait_for_event
+from arcor2_arserver.tests.testutils import LOGGER, add_logic_item, close_project, event, save_project, wait_for_event
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_execution_data import events as eevents
 from arcor2_execution_data import rpc as erpc
 
 
+@pytest.mark.additional_deps(["./src.python.arcor2.scripts/upload_builtin_objects.pex"])
 def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
 
     event(ars, events.c.ShowMainScreen)

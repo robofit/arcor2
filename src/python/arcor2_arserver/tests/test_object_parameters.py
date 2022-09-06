@@ -2,15 +2,20 @@ import json
 
 from arcor2.data.common import Parameter, Scene
 from arcor2.data.rpc.common import IdArgs
-from arcor2_arserver.tests.conftest import event, lock_object, save_project, unlock_object
+from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
+from arcor2_arserver.tests.testutils import event, lock_object, save_project, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -> None:
 
+    upload_def(ObjectWithSettings)
+
     assert ars.call_rpc(rpc.s.OpenScene.Request(get_id(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
+
+    assert len(event(ars, events.o.ChangedObjectTypes).data) == 1
 
     event(ars, events.s.OpenScene)
     event(ars, events.s.SceneState)

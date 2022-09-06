@@ -6,7 +6,7 @@ from arcor2.data.common import ActionParameter, Flow, Position
 from arcor2.object_types.upload import upload_def
 from arcor2.parameter_plugins.position import PositionPlugin
 from arcor2.test_objects.position_param import PositionParam
-from arcor2_arserver.tests.conftest import (
+from arcor2_arserver.tests.testutils import (
     add_logic_item,
     close_project,
     event,
