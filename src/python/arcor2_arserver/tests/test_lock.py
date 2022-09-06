@@ -12,7 +12,7 @@ from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.globals import Lock
 from arcor2_arserver.helpers import ctx_read_lock
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
-from arcor2_arserver.tests.conftest import ars_connection_str, event, event_mapping, lock_object, unlock_object
+from arcor2_arserver.tests.testutils import ars_connection_str, event, event_mapping, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 

@@ -6,7 +6,7 @@ from arcor2.data.rpc.common import RobotArg
 from arcor2.object_types.upload import upload_def
 from arcor2.test_objects.box import Box
 from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
-from arcor2_arserver.tests.conftest import event, lock_object, unlock_object
+from arcor2_arserver.tests.testutils import event, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 

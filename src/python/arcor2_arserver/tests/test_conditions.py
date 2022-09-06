@@ -3,15 +3,20 @@ import json
 from arcor2.data.common import Flow, FlowTypes, LogicItem, Position, ProjectLogicIf, Scene
 from arcor2.data.rpc import get_id
 from arcor2.data.rpc.common import IdArgs
-from arcor2_arserver.tests.conftest import add_logic_item, event, lock_object, save_project
+from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_with_actions import ObjectWithActions
+from arcor2_arserver.tests.testutils import add_logic_item, event, lock_object, save_project
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer
 
 
 def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -> None:
 
+    upload_def(ObjectWithActions)
+
     assert ars.call_rpc(rpc.s.OpenScene.Request(get_id(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
+
+    assert len(event(ars, events.o.ChangedObjectTypes).data) == 1
 
     event(ars, events.s.OpenScene)
     event(ars, events.s.SceneState)

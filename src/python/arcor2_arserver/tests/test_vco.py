@@ -2,7 +2,7 @@ import time
 
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box, ObjectModel
-from arcor2_arserver.tests.conftest import event, project_service
+from arcor2_arserver.tests.testutils import event, project_service
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 

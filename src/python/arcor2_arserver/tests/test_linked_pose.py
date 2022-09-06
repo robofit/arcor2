@@ -4,7 +4,8 @@ from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.data.common import ActionParameter, Flow, Pose, Position
 from arcor2.object_types.upload import upload_def
-from arcor2_arserver.tests.conftest import (
+from arcor2_arserver.tests.objects.object_returning_pose import ObjectReturningPose
+from arcor2_arserver.tests.testutils import (
     add_logic_item,
     close_project,
     event,
@@ -13,7 +14,6 @@ from arcor2_arserver.tests.conftest import (
     unlock_object,
     wait_for_event,
 )
-from arcor2_arserver.tests.objects.object_returning_pose import ObjectReturningPose
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_execution_data import events as eevents

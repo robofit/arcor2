@@ -1,7 +1,7 @@
 from arcor2.data import common
 from arcor2.data.events import Event
 from arcor2.data.rpc.common import IdArgs
-from arcor2_arserver.tests.conftest import close_project, event, save_project
+from arcor2_arserver.tests.testutils import close_project, event, save_project
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 

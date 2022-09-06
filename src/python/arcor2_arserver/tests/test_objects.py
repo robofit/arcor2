@@ -6,7 +6,7 @@ from arcor2.object_types.abstract import CollisionObject
 from arcor2.object_types.upload import upload_def
 from arcor2.test_objects.box import Box as BoxType
 from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
-from arcor2_arserver.tests.conftest import event, lock_object, project_service, unlock_object
+from arcor2_arserver.tests.testutils import event, lock_object, project_service, unlock_object
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
