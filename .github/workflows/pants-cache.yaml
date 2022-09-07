@@ -81,7 +81,7 @@ jobs:
       run: |
         ./pants export
     - name: Upload pants log
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: pants-log
         path: .pants.d/pants.log
