@@ -6,7 +6,7 @@ class SceneException(FlaskException):
     service = package_name
 
 
-class SceneGeneral(FlaskException):
+class SceneGeneral(SceneException):
     description = "Occurs when some requirements are not met."
 
 

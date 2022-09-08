@@ -6,7 +6,7 @@ class FanucException(FlaskException):
     service = package_name
 
 
-class FanucGeneral(FlaskException):
+class FanucGeneral(FanucException):
     description = General.description
 
 

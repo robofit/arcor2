@@ -6,7 +6,7 @@ class DobotException(FlaskException):
     service = package_name
 
 
-class DobotGeneral(FlaskException):
+class DobotGeneral(DobotException):
     description = General.description
 
 
