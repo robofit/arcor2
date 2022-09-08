@@ -80,15 +80,7 @@ def start_processes(request) -> Iterator[None]:
         my_env["ARCOR2_BUILD_URL"] = build_url
         processes.append(sp.Popen(["./src.python.arcor2_build.scripts/build.pex", "--debug"], **kwargs))  # type: ignore
 
-        for _ in range(60):
-            try:
-                rest.call(rest.Method.GET, f"{build_url}/health")  # to check whether Build is running
-                break
-            except rest.RestException:
-                pass
-            time.sleep(1)
-        else:
-            raise Exception("Build is not responding.")
+        check_health("Build", build_url)
 
         if additional_deps:
             for dep in additional_deps:
@@ -119,6 +111,19 @@ def start_processes(request) -> Iterator[None]:
         yield None
 
         finish_processes(processes)
+
+
+def check_health(service_name: str, service_url: str, timeout: int = 60) -> None:
+
+    for _ in range(timeout):
+        try:
+            rest.call(rest.Method.GET, f"{service_url}/health")  # to check whether the service is running
+            break
+        except rest.RestException:
+            pass
+        time.sleep(1)
+    else:
+        raise Exception(f"{service_name} service at {service_url} is not responding.")
 
 
 def ars_connection_str() -> str:
