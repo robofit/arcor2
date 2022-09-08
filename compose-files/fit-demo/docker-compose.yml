@@ -100,7 +100,7 @@ services:
       timeout: 10s
 
   fit-demo-dobot-magician:
-    image: arcor2/arcor2_dobot:0.5.0
+    image: arcor2/arcor2_dobot:0.5.1
     container_name: fit-demo-dobot-magician
     depends_on:
       fit-demo-scene:
@@ -122,7 +122,7 @@ services:
       timeout: 10s
 
   fit-demo-dobot-m1:
-    image: arcor2/arcor2_dobot:0.5.0
+    image: arcor2/arcor2_dobot:0.5.1
     container_name: fit-demo-dobot-m1
     depends_on:
       fit-demo-scene:
@@ -144,7 +144,7 @@ services:
       timeout: 10s
 
   fit-demo-scene:
-    image: arcor2/arcor2_scene:0.1.0
+    image: arcor2/arcor2_scene:0.1.1
     container_name: fit-demo-scene
     networks:
           - fit-demo-scene-network

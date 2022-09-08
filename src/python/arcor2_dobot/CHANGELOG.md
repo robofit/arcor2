@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.5.1] - 2022-09-08
+
+### Fixed
+
+- `DobotGeneral` had wrong ancestor.
+
 ## [0.5.0] - 2022-09-02
 
 ### Changed
