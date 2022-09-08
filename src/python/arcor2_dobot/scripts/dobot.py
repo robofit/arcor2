@@ -344,7 +344,7 @@ def put_eef_pose() -> RespT:
         raise DobotGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
-    move_type = MoveType(request.args.get("moveType", "jump"))
+    move_type = MoveType(request.args.get("moveType", MoveType.JUMP))
     velocity = float(request.args.get("velocity", default=50.0))
     acceleration = float(request.args.get("acceleration", default=50.0))
     safe = request.args.get("safe") == "true"
