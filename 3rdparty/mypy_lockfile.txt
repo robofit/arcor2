@@ -53,11 +53,6 @@
             },
             {
               "algorithm": "sha256",
-              "hash": "77a514ea15d3007d33a9e2157b0ba9c267496acf12a7f2b9b9f8446337aac5b0",
-              "url": "https://files.pythonhosted.org/packages/77/91/53304c05871cc38e95e7e5c3e2d0f84c1822d61a731c02434a20b12ea118/mypy-0.971-cp39-cp39-win_amd64.whl"
-            },
-            {
-              "algorithm": "sha256",
               "hash": "d744f72eb39f69312bc6c2abf8ff6656973120e2eb3f3ec4f758ed47e414a4bf",
               "url": "https://files.pythonhosted.org/packages/9a/f6/51c1fe6dcd657fbecb130bd78ea665a26e0c44e637373de6ac141a54f83c/mypy-0.971-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl"
             }
@@ -99,8 +94,8 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "78a63d2df1d947bd9d1b11d35564c2f9e4b57898aae4626638056ec1a231c40c",
-              "url": "https://files.pythonhosted.org/packages/23/a4/0c900aa23c934018f714f1c168e6f615bc70fc26a9a996b06185e6d33665/numpy-1.23.3-cp39-cp39-win_amd64.whl"
+              "hash": "d5422d6a1ea9b15577a9432e26608c73a78faf0b9039437b075cf322c92e98e7",
+              "url": "https://files.pythonhosted.org/packages/fe/8c/1dfc141202fb2b6b75f9ca4a6681eb5cb7f328d6d2d9d186e5675c468e6a/numpy-1.23.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
             },
             {
               "algorithm": "sha256",
@@ -121,16 +116,6 @@
               "algorithm": "sha256",
               "hash": "09f6b7bdffe57fc61d869a22f506049825d707b288039d30f26a0d0d8ea05164",
               "url": "https://files.pythonhosted.org/packages/81/03/6b9e924e39d90a67a7c01952b5768818ed24f888b0da9f333ad2246a3514/numpy-1.23.3-cp39-cp39-macosx_10_9_x86_64.whl"
-            },
-            {
-              "algorithm": "sha256",
-              "hash": "c1ba66c48b19cc9c2975c0d354f24058888cdc674bebadceb3cdc9ec403fb5d1",
-              "url": "https://files.pythonhosted.org/packages/89/68/0400fdd510bc2e22aa658873110a525452de90bd1058eb55183438d8527b/numpy-1.23.3-cp39-cp39-win32.whl"
-            },
-            {
-              "algorithm": "sha256",
-              "hash": "d5422d6a1ea9b15577a9432e26608c73a78faf0b9039437b075cf322c92e98e7",
-              "url": "https://files.pythonhosted.org/packages/fe/8c/1dfc141202fb2b6b75f9ca4a6681eb5cb7f328d6d2d9d186e5675c468e6a/numpy-1.23.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
             }
           ],
           "project_name": "numpy",
@@ -175,15 +160,11 @@
           "version": "4.3"
         }
       ],
-      "platform_tag": [
-        "cp39",
-        "cp39",
-        "manylinux_2_31_x86_64"
-      ]
+      "platform_tag": null
     }
   ],
   "path_mappings": {},
-  "pex_version": "2.1.90",
+  "pex_version": "2.1.102",
   "prefer_older_binary": false,
   "requirements": [
     "mypy==0.971",
@@ -194,6 +175,10 @@
   ],
   "resolver_version": "pip-2020-resolver",
   "style": "universal",
+  "target_systems": [
+    "linux",
+    "mac"
+  ],
   "transitive": true,
   "use_pep517": null
 }
