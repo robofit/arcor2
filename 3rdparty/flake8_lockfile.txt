@@ -126,13 +126,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "db5d7a831ef4412a224b26c708967ff816818cabae415e76b8c58df156c4b8e5",
-              "url": "https://files.pythonhosted.org/packages/0c/b9/52ee0bc650ac484ee0a806a9dc0a34c4f76a4e9867f01d3979ede678c5cd/flake8_bugbear-22.7.1-py3-none-any.whl"
+              "hash": "e74350a4cfc670e184f3433c223b1e7378f1cf8345ded6c8f12ac1a50c5df22b",
+              "url": "https://files.pythonhosted.org/packages/80/6c/7f3cf652b3faea3d684d3e6e9229bacbad4f53db75062b1cb5cdb7bdfbad/flake8_bugbear-22.9.11-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "e450976a07e4f9d6c043d4f72b17ec1baf717fe37f7997009c8ae58064f88305",
-              "url": "https://files.pythonhosted.org/packages/20/6f/4685e2de876ba4b189806ab2b9fc2e4bb970b02319dbd8e87ffc5643593e/flake8-bugbear-22.7.1.tar.gz"
+              "hash": "39236c0e97160d1ab05d9f87422173d16e925a6220b3635bfc4aee766bf8194a",
+              "url": "https://files.pythonhosted.org/packages/70/c3/4c3eb4cb4ea4435dc02a976bf1b1c0183c1baa957c3476d05fe4d76c6306/flake8-bugbear-22.9.11.tar.gz"
             }
           ],
           "project_name": "flake8-bugbear",
@@ -145,7 +145,7 @@
             "pre-commit; extra == \"dev\""
           ],
           "requires_python": ">=3.6",
-          "version": "22.7.1"
+          "version": "22.9.11"
         },
         {
           "artifacts": [
@@ -320,15 +320,11 @@
           "version": "2.5"
         }
       ],
-      "platform_tag": [
-        "cp39",
-        "cp39",
-        "manylinux_2_31_x86_64"
-      ]
+      "platform_tag": null
     }
   ],
   "path_mappings": {},
-  "pex_version": "2.1.90",
+  "pex_version": "2.1.102",
   "prefer_older_binary": false,
   "requirements": [
     "flake8-annotations-coverage",
@@ -344,6 +340,10 @@
   ],
   "resolver_version": "pip-2020-resolver",
   "style": "universal",
+  "target_systems": [
+    "linux",
+    "mac"
+  ],
   "transitive": true,
   "use_pep517": null
 }
