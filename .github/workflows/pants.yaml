@@ -75,7 +75,7 @@ jobs:
         ./pants --version
     - name: Check BUILD files
       run: |
-        ./pants update-build-files --check
+        ./pants --changed-since=HEAD update-build-files --check
     - name: install system dependencies
       run: |
         sudo ./build-support/install_kinect_prerequisites.sh
@@ -89,7 +89,10 @@ jobs:
     - name: Test
       run: |
         ./pants --changed-since=origin/master --changed-dependees=transitive test
-    - name: Packages
+    - name: Build Docker images
+      run: |
+        ./pants --filter-target-type=docker_image --changed-since=origin/master --changed-dependees=transitive package
+    - name: Build Python packages
       run: |
         ./pants filter --target-type=python_distribution :: | xargs ./pants package
         # check for cyclic dependencies or other problems
