@@ -9,9 +9,10 @@ from PIL import Image
 from arcor2.data.common import Orientation, Pose, Position
 from arcor2.exceptions import Arcor2Exception
 
-aruco_dict = aruco.Dictionary_get(aruco.DICT_7X7_1000)
-
 BLUR_THRESHOLD: float = 150.0
+
+aruco_dict = aruco.Dictionary_get(aruco.DICT_7X7_1000)
+detector_params = aruco.DetectorParameters_create()
 
 
 def detect_corners(
@@ -24,7 +25,7 @@ def detect_corners(
     gray = cv2.cvtColor(np.array(image), cv2.COLOR_RGBA2GRAY)
 
     # scaling to a defined resolution is necessary in order to get similar results for different resolutions
-    # resolution is choosen to be the same as resolution used by arcore
+    # resolution is chosen to be the same as resolution used by arcore
     # another approach could be to normalize computed variance by number of pixels
     variance_of_laplacian = cv2.Laplacian(
         cv2.resize(gray, (640, 480), interpolation=cv2.INTER_NEAREST), cv2.CV_64F
@@ -33,13 +34,10 @@ def detect_corners(
     if variance_of_laplacian < BLUR_THRESHOLD:
         raise Arcor2Exception(f"Blur score {variance_of_laplacian:.2f} is below the threshold.")
 
-    parameters = aruco.DetectorParameters_create()
-    if refine:  # takes 3x longer
-        parameters.cornerRefinementMethod = aruco.CORNER_REFINE_APRILTAG  # default is none
+    # it takes 3x longer with aruco.CORNER_REFINE_APRILTAG
+    detector_params.cornerRefinementMethod = aruco.CORNER_REFINE_APRILTAG if refine else aruco.CORNER_REFINE_NONE
 
-    corners, ids, _ = aruco.detectMarkers(
-        gray, aruco_dict, cameraMatrix=camera_matrix_arr, distCoeff=dist_matrix_arr, parameters=parameters
-    )
+    corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=detector_params)
 
     return camera_matrix_arr, dist_matrix_arr, gray, corners, ids
 
@@ -68,7 +66,7 @@ def estimate_camera_pose(
         aruco.drawDetectedMarkers(backtorgb, corners)  # Draw A square around the markers
 
         for idx in range(len(ids)):
-            aruco.drawAxis(backtorgb, camera_matrix_arr, dist_matrix_arr, rvec[idx], tvec[idx], 0.15)
+            cv2.drawFrameAxes(backtorgb, camera_matrix_arr, dist_matrix_arr, rvec[idx], tvec[idx], 0.15)
 
         cv2.imwrite("marker.jpg", backtorgb)
 
