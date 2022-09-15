@@ -2,12 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.8.0] - WIP
+## [0.8.0] - 2022-09-15
 
 ### Changed
 
 - **BREAKING**: Implement new error handling flow. Error codes of **every** endpoint were replaced with error 
   types as described in swagger documentation.
+- Updated to reflect changes in `cv2.aruco`.
+
 
 ## [0.7.0] - 2021-10-25
 

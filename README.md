@@ -64,7 +64,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_calibration/README.md) | [CHANGELOG](src/python/arcor2_calibration/CHANGELOG.md)
 
- - 2021-10-25: [0.7.0](https://github.com/robofit/arcor2/releases/tag/arcor2_calibration%2F0.7.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_calibration/tags?page=1&ordering=last_updated&name=0.7.0), ([pypi](https://pypi.org/project/arcor2-calibration/0.7.0/)).
+ - 2022-09-15: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_calibration%2F0.8.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_calibration/tags?page=1&ordering=last_updated&name=0.8.0), ([pypi](https://pypi.org/project/arcor2-calibration/0.8.0/)).
 
 ### arcor2_calibration_data
 
