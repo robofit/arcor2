@@ -1,4 +1,4 @@
-FROM python:3.9-slim-bullseye
+FROM python:3.9.14-slim-bullseye
 ENTRYPOINT ["/root/start.sh"]
 
 RUN mkdir -p /root/project
