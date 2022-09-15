@@ -1,9 +1,9 @@
-FROM python:3.9-slim-bullseye
+FROM python:3.9.14-slim-bullseye
 ENTRYPOINT ["/root/start.sh"]
 
 # curl is for healthcheck
 RUN apt-get update \
-        && apt-get install -y -q --no-install-recommends curl=7.74.0-1.3+deb11u2 \
+        && apt-get install -y -q --no-install-recommends curl=7.74.0-1.3+deb11u3 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
