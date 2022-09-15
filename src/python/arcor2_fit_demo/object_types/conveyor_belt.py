@@ -1,4 +1,5 @@
 import time
+from dataclasses import dataclass
 from typing import Optional
 
 from arcor2 import rest
@@ -16,6 +17,12 @@ class Direction(StrEnum):
     BACKWARDS: str = "backwards"
 
 
+@dataclass
+class ConveyorBeltSettings(UrlSettings):
+
+    url: str = "http://fit-demo-dobot-magician:5018"
+
+
 class ConveyorBelt(FitCommonMixin, CollisionObject):
 
     mesh_filename = "conveyor_belt.fbx"
@@ -27,7 +34,7 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
         name: str,
         pose: Pose,
         collision_model: Models,
-        settings: UrlSettings,
+        settings: ConveyorBeltSettings,
     ) -> None:
 
         super(ConveyorBelt, self).__init__(obj_id, name, pose, collision_model, settings)

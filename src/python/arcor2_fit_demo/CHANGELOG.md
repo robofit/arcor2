@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [0.10.1] - 2022-09-15
+
+### Fixed
+
+- Default url was missing for `ConveyorBelt`.
+
 ## [0.10.0] - 2022-09-02
 
 ### Changed
