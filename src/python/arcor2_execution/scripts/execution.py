@@ -200,7 +200,7 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
 
     logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(
-        "python3.9",
+        "python3.10",
         *args,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,

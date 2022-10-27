@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import abc
 import concurrent.futures as cf
 import logging
 import os
@@ -96,7 +95,7 @@ class GenericProtocol(Protocol):
         ...
 
 
-class LoggingMixin(metaclass=abc.ABCMeta):
+class LoggingMixin:
     """Provides logging capabilities to ObjectTypes.
 
     Calls to all log_ methods are non-blocking.

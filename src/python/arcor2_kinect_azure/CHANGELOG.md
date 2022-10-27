@@ -2,13 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.5.0] - WIP
+## [0.5.0] - 2022-10-27
 
 ### Changed
 
 - **BREAKING**: Implement new error handling flow. Error codes of **every** endpoint were replaced with error 
   types as described in swagger documentation.
-- Change service name.
+- Changed service name.
+- Switched to Python 3.10, updated dependencies.
 
 ## [0.4.0] - 2021-10-25
 

@@ -3,6 +3,12 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 
+## [0.25.0] - 2022-10-27
+
+### Changed
+
+- Switched to Python 3.10, updated dependencies.
+
 ## [0.24.2] - 2022-08-29
 
 ### Changed
