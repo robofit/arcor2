@@ -4,7 +4,7 @@ import struct
 from collections import deque
 from enum import IntEnum
 from threading import RLock
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import numpy as np
 import serial
@@ -18,13 +18,13 @@ This was originally https://github.com/luismesas/pydobot
 
 
 class Message:
-    def __init__(self, b: Optional[bytes] = None) -> None:
+    def __init__(self, b: None | bytes = None) -> None:
 
         self.header: bytes = bytes([0xAA, 0xAA])
         self.len: int = 0x00
         self.ctrl: int = 0x00
         self.params: bytearray = bytearray([])
-        self.checksum: Optional[int] = None
+        self.checksum: None | int = None
 
         if b:
             self.header = b[0:2]
@@ -243,7 +243,7 @@ class Alarm(IntEnum):
 
 
 class DobotApi:
-    def __init__(self, port: Optional[str] = None) -> None:
+    def __init__(self, port: None | str = None) -> None:
 
         self.logger = logging.Logger(__name__)
         self._lock = RLock()
@@ -305,7 +305,7 @@ class DobotApi:
         with self._lock:
             self._ser.write(msg.bytes())
 
-    def _read_message(self) -> Optional[Message]:
+    def _read_message(self) -> None | Message:
 
         # Search for begin
         begin_found = False

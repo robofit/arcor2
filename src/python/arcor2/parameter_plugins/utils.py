@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Optional
+from typing import Any
 
 from arcor2.parameter_plugins import ParameterPluginException
 from arcor2.parameter_plugins.base import ParameterPlugin
@@ -89,7 +89,7 @@ def plugin_from_type(param_type: type[Any]) -> type[ParameterPlugin]:
         except AttributeError:
             type_name = str(param_type)
 
-        plugin: Optional[type[ParameterPlugin]] = None
+        plugin: None | type[ParameterPlugin] = None
         for k, v in non_exact_types().items():
             if inspect.isclass(param_type) and issubclass(param_type, k):
                 if plugin is not None:

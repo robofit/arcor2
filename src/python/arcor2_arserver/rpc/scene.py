@@ -2,7 +2,7 @@ import asyncio
 import copy
 import functools
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator
 
 import quaternion
 from websockets.server import WebSocketServerProtocol as WsClient
@@ -523,7 +523,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
     return None
 
 
-async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> Optional[srpc.s.DeleteScene.Response]:
+async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> None | srpc.s.DeleteScene.Response:
 
     if glob.LOCK.scene:
         raise Arcor2Exception("Scene has to be closed first.")

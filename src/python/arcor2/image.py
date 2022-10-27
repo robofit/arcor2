@@ -1,5 +1,4 @@
 import io
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -16,7 +15,7 @@ def image_to_cv2(pil_image: Image, mode=cv2.COLOR_RGB2BGR) -> np.ndarray:
     return cv2.cvtColor(np.array(pil_image), mode)
 
 
-def image_to_bytes_io(value: Image, target_format: str = "jpeg", target_mode: Optional[str] = None) -> io.BytesIO:
+def image_to_bytes_io(value: Image, target_format: str = "jpeg", target_mode: None | str = None) -> io.BytesIO:
 
     output = io.BytesIO()
 

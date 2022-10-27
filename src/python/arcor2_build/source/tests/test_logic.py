@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 
 import pytest
 
@@ -29,13 +28,13 @@ class Test(Generic):
 
     INT = 1234
 
-    def get_int(self, *, an: Optional[str] = None) -> int:
+    def get_int(self, *, an: None | str = None) -> int:
         return self.INT
 
-    def test(self, *, an: Optional[str] = None) -> bool:
+    def test(self, *, an: None | str = None) -> bool:
         pass
 
-    def test_par(self, param: int, *, an: Optional[str] = None) -> None:
+    def test_par(self, param: int, *, an: None | str = None) -> None:
         pass
 
 

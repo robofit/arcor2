@@ -1,7 +1,7 @@
 import select
 import sys
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar, Union, cast
+from typing import Any, Callable, TypeVar, cast
 
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import Pose, ProjectRobotJoints
@@ -16,7 +16,7 @@ AP_ID_ATTR = "_ap_id"
 
 _pause_on_next_action = False
 start_paused = False
-breakpoints: Optional[set[str]] = None
+breakpoints: None | set[str] = None
 
 
 def patch_object_actions(type_def: type[Generic]) -> None:
@@ -51,7 +51,7 @@ try:
     import msvcrt
     import time
 
-    def read_stdin(timeout: float = 0.0) -> Union[str, None]:
+    def read_stdin(timeout: float = 0.0) -> str | None:
 
         time_to_end = time.monotonic() + timeout
 
@@ -68,7 +68,7 @@ try:
 except ImportError:
 
     # Linux solution
-    def read_stdin(timeout: float = 0.0) -> Union[str, None]:
+    def read_stdin(timeout: float = 0.0) -> str | None:
 
         if select.select([sys.stdin], [], [], timeout)[0]:
             return sys.stdin.readline().strip()
@@ -114,7 +114,7 @@ def print_event(event: Event) -> None:
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def results_to_json(res: Any) -> Optional[list[str]]:
+def results_to_json(res: Any) -> None | list[str]:
     """Prepares action results into list of JSONs. Return value could be tuple
     or single value.
 
@@ -133,7 +133,7 @@ def results_to_json(res: Any) -> Optional[list[str]]:
 
 # action_id*, function
 # *might be unknown for projects without logic
-_executed_action: Optional[tuple[Optional[str], Callable]] = None
+_executed_action: None | tuple[None | str, Callable] = None
 
 
 def action(f: F) -> F:
@@ -154,14 +154,14 @@ def action(f: F) -> F:
     """
 
     @wraps(f)
-    def wrapper(obj: Generic, *action_args: Any, an: Optional[str] = None, **kwargs: Any) -> Any:
+    def wrapper(obj: Generic, *action_args: Any, an: None | str = None, **kwargs: Any) -> Any:
 
         # remembers the outermost action
         # when set, serves as a flag, that we are inside an action
         # ...then when another action is executed, we know that it is a nested one (and the outer one is composite)
         global _executed_action
 
-        action_id: Optional[str] = None
+        action_id: None | str = None
         action_mapping_provided = hasattr(obj, ACTION_NAME_ID_MAPPING_ATTR)
 
         # if not set (e.g. when writing actions manually), do not attempt to get action IDs from names

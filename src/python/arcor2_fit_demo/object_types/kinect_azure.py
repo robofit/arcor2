@@ -1,5 +1,4 @@
 from io import BytesIO
-from typing import Optional
 
 from PIL import Image
 
@@ -9,7 +8,7 @@ from arcor2.data.common import ActionMetadata, Pose
 from arcor2.data.object_type import Models
 from arcor2.object_types.abstract import Camera
 
-from .fit_common_mixin import FitCommonMixin, UrlSettings
+from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class KinectAzure(FitCommonMixin, Camera):
@@ -43,10 +42,10 @@ class KinectAzure(FitCommonMixin, Camera):
     def _start(self) -> None:
         rest.call(rest.Method.PUT, f"{self.settings.url}/state/start")
 
-    def color_image(self, *, an: Optional[str] = None) -> Image.Image:
+    def color_image(self, *, an: None | str = None) -> Image.Image:
         return rest.get_image(f"{self.settings.url}/color/image")
 
-    def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
+    def depth_image(self, averaged_frames: int = 1, *, an: None | str = None) -> Image.Image:
         return Image.open(
             rest.call(
                 rest.Method.GET,

@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import Generic, Settings
@@ -10,17 +9,17 @@ class TimeActions(Generic):
 
     _ABSTRACT = False
 
-    def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
+    def __init__(self, obj_id: str, name: str, settings: None | Settings = None) -> None:
         super(TimeActions, self).__init__(obj_id, name, settings)
-        self._last_time: Optional[float] = None
+        self._last_time: None | float = None
 
-    def sleep(self, seconds: float = 1.0, *, an: Optional[str] = None) -> None:
+    def sleep(self, seconds: float = 1.0, *, an: None | str = None) -> None:
 
         assert 0.0 <= seconds <= 10.0e6
 
         time.sleep(seconds)
 
-    def rate(self, period: float = 1.0, *, an: Optional[str] = None) -> None:
+    def rate(self, period: float = 1.0, *, an: None | str = None) -> None:
         """Can be used to maintain desired rate of the loop. Should be the
         first action.
 
@@ -41,7 +40,7 @@ class TimeActions(Generic):
 
         self._last_time = now
 
-    def time_ns(self, *, an: Optional[str] = None) -> int:
+    def time_ns(self, *, an: None | str = None) -> int:
         """Returns nanoseconds since Unix Epoch.
 
         :return:

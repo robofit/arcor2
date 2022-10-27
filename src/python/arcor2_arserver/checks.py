@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import (
@@ -271,7 +269,7 @@ def check_action_params(
                 raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has invalid value. {str(e)}")
 
 
-def check_flows(parent: Union[CachedProject, ProjectFunction], action: Action, action_meta: ObjectAction) -> None:
+def check_flows(parent: CachedProject | ProjectFunction, action: Action, action_meta: ObjectAction) -> None:
     """Raises exception if there is something wrong with flow(s).
 
     :param parent:
@@ -316,7 +314,7 @@ def scene_problems(obj_types: ObjectTypeDict, scene: CachedScene) -> list[str]:
     return problems
 
 
-def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: Optional[str]) -> None:
+def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: None | str) -> None:
 
     if not parent:
         return

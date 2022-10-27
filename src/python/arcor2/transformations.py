@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedProjectException
@@ -36,7 +36,7 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
 class Parent(NamedTuple):
 
     pose: Pose
-    parent_id: Optional[str] = None  # parent of the parent
+    parent_id: None | str = None  # parent of the parent
 
 
 def get_parent_pose(scene: CScene, project: CProject, parent_id: str) -> Parent:

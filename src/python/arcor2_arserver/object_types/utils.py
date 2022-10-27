@@ -2,7 +2,7 @@ import copy
 import inspect
 import os
 from ast import AST
-from typing import Optional, get_type_hints
+from typing import get_type_hints
 
 import humps
 import typing_inspect
@@ -72,8 +72,10 @@ def get_dataclass_params(type_def: type[JsonSchemaMixin]) -> list[ParameterMeta]
             continue
 
         if issubclass(ttype, JsonSchemaMixin):
-            pm = ParameterMeta(name=name, type="dataclass")  # TODO come-up with plugin for this?
-            pm.children = get_dataclass_params(ttype)
+            pass
+            # TODO disabled as it is anyway not supported by AREditor
+            # pm = ParameterMeta(name=name, type="dataclass")  # TODO come-up with plugin for this?
+            # pm.children = get_dataclass_params(ttype)
         else:
             param_type = plugin_from_type(ttype)
             assert param_type is not None
@@ -169,7 +171,7 @@ def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction
                 raise IgnoreActionException("Action is missing 'an' parameter.")
 
             try:
-                if hints["an"] != Optional[str]:
+                if hints["an"] != str | None:  # noqa:E711
                     raise IgnoreActionException("Parameter 'an' has invalid type annotation.")
             except KeyError:
                 raise IgnoreActionException("Parameter 'an' is missing type annotation.")

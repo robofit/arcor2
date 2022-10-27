@@ -3,7 +3,7 @@ import inspect
 import os
 import shutil
 from dataclasses import is_dataclass
-from typing import Any, Callable, Iterator, Optional, Union, get_type_hints
+from typing import Any, Callable, Iterator, get_type_hints
 
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
@@ -86,7 +86,7 @@ class DataError(Arcor2Exception):
 
 
 def settings_from_params(
-    type_def: type[Generic], settings: list[Parameter], overrides: Optional[list[Parameter]] = None
+    type_def: type[Generic], settings: list[Parameter], overrides: None | list[Parameter] = None
 ) -> Settings:
     """Constructs instance of Settings from two arrays of parameters (scene
     settings and project overrides).
@@ -151,14 +151,25 @@ def get_settings_def(type_def: type[Generic]) -> type[Settings]:
     except KeyError:
         raise Arcor2Exception("Type has no settings.")
 
-    if typing_inspect.is_optional_type(param.annotation):
-        settings_cls = typing_inspect.get_args(param.annotation)[0]
+    args = typing_inspect.get_args(param.annotation)
+
+    # should support all of: 'Optional[Settings]', 'None | Settings', 'Settings, None'
+    if typing_inspect.is_optional_type(param.annotation) or (
+        typing_inspect.is_union_type(param.annotation) and None in args
+    ):
+
+        for arg in args:
+            if arg != type(None):  # noqa: E721
+                settings_cls = arg
+                break
+        else:
+            raise Arcor2Exception("Can't find annotation for object settings.")
     else:
         settings_cls = param.annotation
 
     try:
         if not issubclass(settings_cls, Settings):
-            raise Arcor2Exception("Settings have invalid type.")
+            raise Arcor2Exception(f"Settings have invalid type ({settings_cls.__name__}).")
     except TypeError:
         raise Arcor2Exception("Settings have invalid annotation.")
 
@@ -168,7 +179,7 @@ def get_settings_def(type_def: type[Generic]) -> type[Settings]:
     return settings_cls
 
 
-def base_from_source(source: Union[str, ast.AST], cls_name: str) -> list[str]:
+def base_from_source(source: str | ast.AST, cls_name: str) -> list[str]:
     """Returns list, where the first element is name of the base class and
     others are mixins.
 

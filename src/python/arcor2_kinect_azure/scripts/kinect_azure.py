@@ -5,7 +5,7 @@ import io
 import os
 import zipfile
 from functools import wraps
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from flask import jsonify, request, send_file
 from PIL import Image
@@ -29,7 +29,7 @@ app = create_app(__name__)
 if TYPE_CHECKING:
     from arcor2_kinect_azure.kinect_azure import KinectAzure
 
-_kinect: Optional["KinectAzure"] = None
+_kinect: "None | KinectAzure" = None
 _mock: bool = False
 _mock_started: bool = False
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, cast
+from typing import cast
 
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose
@@ -66,7 +66,7 @@ class Fanuc(Robot):
         safe: bool = True,
         linear: bool = False,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Moves the robot's end-effector to a specific pose.
 
@@ -89,16 +89,16 @@ class Fanuc(Robot):
                 params={"velocity": velocity, "acceleration": acceleration, "safe": safe, "linear": linear},
             )
 
-    def gripper_close(self, *, an: Optional[str] = None) -> None:
+    def gripper_close(self, *, an: None | str = None) -> None:
         """Close the gripper."""
         rest.call(rest.Method.PUT, f"{self.settings.url}/gripper", params={"state": False})
 
-    def gripper_open(self, *, an: Optional[str] = None) -> None:
+    def gripper_open(self, *, an: None | str = None) -> None:
         """Open the gripper."""
 
         rest.call(rest.Method.PUT, f"{self.settings.url}/gripper", params={"state": True})
 
-    def gripper_state(self, *, an: Optional[str] = None) -> bool:
+    def gripper_state(self, *, an: None | str = None) -> bool:
         """Checks whether the gripper is open.
 
         :param an:
@@ -115,7 +115,7 @@ class Fanuc(Robot):
         safe_approach: bool = True,
         safe_pick: bool = False,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Picks an item from given pose.
 
@@ -147,7 +147,7 @@ class Fanuc(Robot):
         safe_approach: bool = True,
         safe_place: bool = False,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Places an item to a given pose.
 

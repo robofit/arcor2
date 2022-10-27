@@ -8,7 +8,7 @@ import sys
 from concurrent import futures
 from contextlib import closing
 from threading import Lock
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, TypeVar
 
 import humps
 from packaging.version import Version, parse
@@ -60,8 +60,8 @@ S = TypeVar("S")
 async def run_in_executor(
     func: Callable[..., S],
     *args: Any,
-    executor: Optional[futures.Executor] = None,
-    propagate: Optional[list[type[Exception]]] = None,
+    executor: None | futures.Executor = None,
+    propagate: None | list[type[Exception]] = None,
 ) -> S:
     """Executes synchronous function in an executor. Catches all exceptions are
     re-raises them as Arcor2Exception.

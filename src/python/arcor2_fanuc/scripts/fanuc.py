@@ -8,7 +8,6 @@ import time
 from dataclasses import dataclass
 from functools import wraps
 from threading import Lock, Thread
-from typing import Optional
 
 import requests
 from fanucpy import Robot
@@ -166,7 +165,7 @@ class ThreadSafeRobot(Robot):
 @dataclass
 class Globals:
 
-    robot: Optional[ThreadSafeRobot] = None
+    robot: None | ThreadSafeRobot = None
     pose: Pose = Pose()
 
 

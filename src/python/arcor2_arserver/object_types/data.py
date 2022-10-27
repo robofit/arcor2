@@ -1,6 +1,5 @@
 from ast import AST
 from dataclasses import dataclass, field
-from typing import Optional
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
@@ -12,10 +11,10 @@ from arcor2_arserver_data.robot import RobotMeta
 class ObjectTypeData:
 
     meta: ObjectTypeMeta
-    type_def: Optional[type[Generic]] = None
+    type_def: None | type[Generic] = None
     actions: dict[str, ObjectAction] = field(default_factory=dict)
-    ast: Optional[AST] = None
-    robot_meta: Optional[RobotMeta] = None
+    ast: None | AST = None
+    robot_meta: None | RobotMeta = None
 
     def __post_init__(self) -> None:
         if not self.meta.disabled:

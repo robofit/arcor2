@@ -1,4 +1,4 @@
-from typing import Any, Sequence, TypeVar, Union
+from typing import Any, Sequence, TypeVar
 
 import orjson
 
@@ -9,7 +9,7 @@ class JsonException(Arcor2Exception):
     pass
 
 
-JsonType = Union[bool, str, int, float, dict[str, Any], Sequence[Any], None]
+JsonType = bool | str | int | float | dict[str, Any] | Sequence[Any] | None
 
 
 T = TypeVar("T")

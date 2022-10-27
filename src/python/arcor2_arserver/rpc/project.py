@@ -1,7 +1,7 @@
 import asyncio
 import copy
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Optional
+from typing import Any, AsyncGenerator
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -984,8 +984,8 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
 
     async def copy_action_point(
         orig_ap: common.BareActionPoint,
-        new_parent_id: Optional[str] = None,
-        position: Optional[common.Position] = None,
+        new_parent_id: None | str = None,
+        position: None | common.Position = None,
     ) -> None:
 
         assert await glob.LOCK.is_read_locked(orig_ap.id, user_name)

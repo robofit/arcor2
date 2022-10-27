@@ -1,7 +1,6 @@
 import os
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -46,7 +45,7 @@ def wait_for(timeout: float = 10.0) -> None:
 
 
 @handle(SceneServiceException, logger, message="Failed to add or update the collision model.")
-def upsert_collision(model: Models, pose: Pose, mesh_parameters: Optional[MeshParameters] = None) -> None:
+def upsert_collision(model: Models, pose: Pose, mesh_parameters: None | MeshParameters = None) -> None:
     """Adds arbitrary collision model to the collision scene.
 
     :param model: Box, Sphere, Cylinder, Mesh

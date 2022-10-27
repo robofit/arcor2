@@ -1,6 +1,5 @@
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Pose, StrEnum
@@ -8,7 +7,7 @@ from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import CollisionObject
 
-from .fit_common_mixin import FitCommonMixin, UrlSettings
+from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class Direction(StrEnum):
@@ -50,7 +49,7 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
                 raise Arcor2Exception("Failed to connect to the Dobot Service.")
 
     def set_velocity(
-        self, velocity: float = 0.5, direction: Direction = Direction.FORWARD, *, an: Optional[str] = None
+        self, velocity: float = 0.5, direction: Direction = Direction.FORWARD, *, an: None | str = None
     ) -> None:
         """Belt will move indefinitely with given velocity.
 
@@ -76,7 +75,7 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
         distance: float = 0.55,
         direction: Direction = Direction.FORWARD,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Belt will move by given distance.
 

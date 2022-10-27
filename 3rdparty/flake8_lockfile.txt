@@ -9,6 +9,7 @@
 //     "CPython==3.10.*"
 //   ],
 //   "generated_with_requirements": [
+//     "flake8-absolute-import",
 //     "flake8-annotations-coverage",
 //     "flake8-bugbear",
 //     "flake8-pantsbuild",
@@ -105,6 +106,21 @@
           ],
           "requires_python": ">=3.6.1",
           "version": "5.0.4"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
+              "hash": "d24f189bca52ffc0d13e8046606ea42d22a9ad9d409bf39e52b93493cf2ffd2c",
+              "url": "https://files.pythonhosted.org/packages/5b/90/a117932fd7ae43da11f239182b9fc8fc23e26bdd24abec76a5a4c3e31aca/flake8_absolute_import-1.0.0.1-py3-none-any.whl"
+            }
+          ],
+          "project_name": "flake8-absolute-import",
+          "requires_dists": [
+            "flake8>=3.7"
+          ],
+          "requires_python": ">=3.4",
+          "version": "1.0.0.1"
         },
         {
           "artifacts": [
@@ -333,6 +349,7 @@
   "pip_version": "20.3.4-patched",
   "prefer_older_binary": false,
   "requirements": [
+    "flake8-absolute-import",
     "flake8-annotations-coverage",
     "flake8-bugbear",
     "flake8-pantsbuild",

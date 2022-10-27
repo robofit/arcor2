@@ -1,7 +1,7 @@
 import os
 import zipfile
 from io import BytesIO
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 from arcor2.clients import project_service as ps
 from arcor2.data.object_type import Mesh, Models, ObjectType
@@ -29,9 +29,9 @@ def upload_whatever(type_def: type[object]) -> None:
 
 def upload_def(
     type_def: type[Generic],
-    model: Optional[Models] = None,
-    urdf: Optional[Urdf] = None,
-    file_to_upload: Optional[str] = None,
+    model: None | Models = None,
+    urdf: None | Urdf = None,
+    file_to_upload: None | str = None,
 ) -> None:
     """Uploads ObjectType definition to the Project service.
 

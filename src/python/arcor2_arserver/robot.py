@@ -1,6 +1,6 @@
 import asyncio
 import inspect
-from typing import Any, Optional
+from typing import Any
 
 import arcor2.helpers as hlp
 from arcor2.cached import CachedScene
@@ -26,7 +26,7 @@ class SingleArmRobotException(Arcor2Exception):
     pass
 
 
-def prepare_args(robot_inst: Robot, args: list[Any], arm_id: Optional[str]) -> list[Any]:
+def prepare_args(robot_inst: Robot, args: list[Any], arm_id: None | str) -> list[Any]:
 
     if isinstance(robot_inst, MultiArmRobot):
         args.append(arm_id)
@@ -48,7 +48,7 @@ async def get_arms(robot_inst: Robot) -> set[str]:
     return await hlp.run_in_executor(robot_inst.get_arm_ids)
 
 
-async def get_end_effectors(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
+async def get_end_effectors(robot_inst: Robot, arm_id: None | str) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing end effectors.
@@ -57,7 +57,7 @@ async def get_end_effectors(robot_inst: Robot, arm_id: Optional[str]) -> set[str
     return await hlp.run_in_executor(robot_inst.get_end_effectors_ids, *prepare_args(robot_inst, [], arm_id))
 
 
-async def get_grippers(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
+async def get_grippers(robot_inst: Robot, arm_id: None | str) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing grippers.
@@ -66,7 +66,7 @@ async def get_grippers(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
     return await hlp.run_in_executor(robot_inst.grippers, *prepare_args(robot_inst, [], arm_id))
 
 
-async def get_suctions(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
+async def get_suctions(robot_inst: Robot, arm_id: None | str) -> set[str]:
     """
     :param robot_inst:
     :return: IDs of existing suctions.
@@ -76,7 +76,7 @@ async def get_suctions(robot_inst: Robot, arm_id: Optional[str]) -> set[str]:
 
 
 async def get_pose_and_joints(
-    robot_inst: Robot, end_effector: str, arm_id: Optional[str]
+    robot_inst: Robot, end_effector: str, arm_id: None | str
 ) -> tuple[common.Pose, list[common.Joint]]:
 
     return await asyncio.gather(
@@ -85,7 +85,7 @@ async def get_pose_and_joints(
     )
 
 
-async def get_end_effector_pose(robot_inst: Robot, end_effector: str, arm_id: Optional[str]) -> common.Pose:
+async def get_end_effector_pose(robot_inst: Robot, end_effector: str, arm_id: None | str) -> common.Pose:
     """
     :param robot_inst:
     :param end_effector:
@@ -97,9 +97,7 @@ async def get_end_effector_pose(robot_inst: Robot, end_effector: str, arm_id: Op
     )
 
 
-async def get_robot_joints(
-    robot_inst: Robot, arm_id: Optional[str], include_gripper: bool = False
-) -> list[common.Joint]:
+async def get_robot_joints(robot_inst: Robot, arm_id: None | str, include_gripper: bool = False) -> list[common.Joint]:
     """
     :param robot_inst:
     :return: List of joints
@@ -195,9 +193,9 @@ async def stop(robot_inst: Robot) -> None:
 async def ik(
     robot_inst: Robot,
     end_effector_id: str,
-    arm_id: Optional[str],
+    arm_id: None | str,
     pose: common.Pose,
-    start_joints: Optional[list[common.Joint]] = None,
+    start_joints: None | list[common.Joint] = None,
     avoid_collisions: bool = True,
 ) -> list[common.Joint]:
 
@@ -207,7 +205,7 @@ async def ik(
     )
 
 
-async def fk(robot_inst: Robot, end_effector_id: str, arm_id: Optional[str], joints: list[common.Joint]) -> common.Pose:
+async def fk(robot_inst: Robot, end_effector_id: str, arm_id: None | str, joints: list[common.Joint]) -> common.Pose:
 
     return await hlp.run_in_executor(
         robot_inst.forward_kinematics, *prepare_args(robot_inst, [end_effector_id, joints], arm_id)
@@ -218,7 +216,7 @@ async def check_reachability(
     scene: CachedScene,
     robot_inst: Robot,
     end_effector_id: str,
-    arm_id: Optional[str],
+    arm_id: None | str,
     pose: common.Pose,
     safe: bool = True,
 ) -> None:
@@ -251,7 +249,7 @@ async def check_robot_before_move(robot_inst: Robot) -> None:
 async def _move_to_pose(
     robot_inst: Robot,
     end_effector_id: str,
-    arm_id: Optional[str],
+    arm_id: None | str,
     pose: common.Pose,
     speed: float,
     safe: bool,
@@ -271,12 +269,12 @@ async def _move_to_pose(
 async def move_to_pose(
     robot_inst: Robot,
     end_effector_id: str,
-    arm_id: Optional[str],
+    arm_id: None | str,
     pose: common.Pose,
     speed: float,
     safe: bool,
     linear: bool,
-    lock_owner: Optional[str] = None,
+    lock_owner: None | str = None,
 ) -> None:
 
     try:
@@ -312,7 +310,7 @@ async def move_to_pose(
 async def move_to_ap_orientation(
     robot_inst: Robot,
     end_effector_id: str,
-    arm_id: Optional[str],
+    arm_id: None | str,
     pose: common.Pose,
     speed: float,
     orientation_id: str,
@@ -356,7 +354,7 @@ async def move_to_ap_orientation(
 
 
 async def _move_to_joints(
-    robot_inst: Robot, joints: list[common.Joint], speed: float, safe: bool, arm_id: Optional[str]
+    robot_inst: Robot, joints: list[common.Joint], speed: float, safe: bool, arm_id: None | str
 ) -> None:
 
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
@@ -373,8 +371,8 @@ async def move_to_joints(
     joints: list[common.Joint],
     speed: float,
     safe: bool,
-    arm_id: Optional[str],
-    lock_owner: Optional[str] = None,
+    arm_id: None | str,
+    lock_owner: None | str = None,
 ) -> None:
 
     try:
@@ -412,7 +410,7 @@ async def move_to_ap_joints(
     speed: float,
     joints_id: str,
     safe: bool,
-    arm_id: Optional[str],
+    arm_id: None | str,
 ) -> None:
 
     Data = sevts.r.RobotMoveToActionPointJoints.Data
@@ -444,7 +442,7 @@ async def move_to_ap_joints(
     )
 
 
-async def check_eef_arm(robot_inst: Robot, arm_id: Optional[str], eef_id: Optional[str] = None) -> None:
+async def check_eef_arm(robot_inst: Robot, arm_id: None | str, eef_id: None | str = None) -> None:
 
     if isinstance(robot_inst, MultiArmRobot):
         if not arm_id:

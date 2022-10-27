@@ -1,5 +1,3 @@
-from typing import Optional
-
 from arcor2.cached import CachedProject, CachedProjectException
 from arcor2.data.common import Action
 from arcor2.exceptions import Arcor2Exception
@@ -9,7 +7,7 @@ LogicContainer = CachedProject  # TODO make it Union[CachedProject, CachedProjec
 # TODO def validate_logic() -> to be called before saving project / building the package
 
 
-def check_for_loops(parent: LogicContainer, first_action_id: Optional[str] = None) -> None:
+def check_for_loops(parent: LogicContainer, first_action_id: None | str = None) -> None:
     """Finds loops in logic. Can process even unfinished logic, when first
     action id is provided.
 

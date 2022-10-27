@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from typing import Optional
 
 from dateutil.parser import parse
 
@@ -207,7 +206,7 @@ def delete_project(project_id: str) -> None:
 
 @handle(ProjectServiceException, logger, message="Failed to clone the project.")
 def clone_project(
-    project_id: str, new_project_name: str, new_description: Optional[str] = None, new_project_id: Optional[str] = None
+    project_id: str, new_project_name: str, new_description: None | str = None, new_project_id: None | str = None
 ) -> Project:
 
     if not new_project_id:

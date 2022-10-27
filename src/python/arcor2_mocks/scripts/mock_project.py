@@ -3,7 +3,6 @@
 import argparse
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Optional
 
 import humps
 from flask import jsonify, request, send_file
@@ -25,7 +24,7 @@ CYLINDERS: dict[str, object_type.Cylinder] = {}
 SPHERES: dict[str, object_type.Sphere] = {}
 MESHES: dict[str, object_type.Mesh] = {}
 
-FILES: dict[str, tuple[BytesIO, Optional[str]]] = {}
+FILES: dict[str, tuple[BytesIO, None | str]] = {}
 
 
 # ----------------------------------------------------------------------------------------------------------------------

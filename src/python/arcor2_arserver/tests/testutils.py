@@ -4,7 +4,7 @@ import os
 import subprocess as sp
 import tempfile
 import time
-from typing import Iterator, Optional, TypeVar
+from typing import Iterator, TypeVar
 
 import pytest
 
@@ -44,7 +44,7 @@ def start_processes(request) -> Iterator[None]:
 
     global _arserver_port
 
-    additional_deps: Optional[list[str]] = None
+    additional_deps: None | list[str] = None
 
     if m := request.node.get_closest_marker("additional_deps"):
         additional_deps = m.args[0]
@@ -176,7 +176,7 @@ def wait_for_event(ars: ARServer, evt_type: type[E]) -> E:
 
 
 def add_logic_item(
-    ars: ARServer, start: str, end: str, condition: Optional[common.ProjectLogicIf] = None
+    ars: ARServer, start: str, end: str, condition: None | common.ProjectLogicIf = None
 ) -> common.LogicItem:
 
     assert ars.call_rpc(

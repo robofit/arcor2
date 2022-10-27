@@ -1,13 +1,11 @@
-from typing import Optional
-
 from arcor2.data.common import Joint, Pose
 from arcor2.object_types.abstract import Robot, Settings
 
-from .logging_mixin import LoggingMixin
+from .logging_mixin import LoggingMixin  # noqa:ABS101
 
 
 class LoggingTestRobot(LoggingMixin, Robot):
-    def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: None | Settings = None) -> None:
         super().__init__(obj_id, name, pose, settings)
         self.logger = self.get_logger()
         self.logger.info("Initialized.")

@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene, UpdateableCachedProject
@@ -27,7 +27,7 @@ class ProjectProblems(SceneProblems):
 _project_problems: dict[str, ProjectProblems] = {}
 
 
-async def get_project_problems(scene: CachedScene, project: CachedProject) -> Optional[list[str]]:
+async def get_project_problems(scene: CachedScene, project: CachedProject) -> None | list[str]:
     """Handle caching of project problems."""
 
     assert scene.modified

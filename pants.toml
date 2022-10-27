@@ -57,6 +57,8 @@ extra_requirements.add = [
   "flake8-pytest-style",
   "flake8-bugbear",
   "flake8-pantsbuild",
+#  "flake8-new-union-types",  TODO enable when https://github.com/s-knibbs/dataclasses-jsonschema/issues/195 is solved
+  "flake8-absolute-import",
   "vulture"
 ]
 lockfile = "3rdparty/flake8_lockfile.txt"
@@ -64,6 +66,7 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 [mypy]
 version = "mypy==0.982"
+interpreter_constraints = ["==3.10.*"]
 extra_requirements.add = [
   "numpy"
 ]

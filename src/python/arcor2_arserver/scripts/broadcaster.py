@@ -1,6 +1,6 @@
 import asyncio
 import socket
-from typing import Optional, Text, Union
+from typing import Text
 
 from arcor2.data.common import BroadcastInfo
 from arcor2_arserver.globals import PORT
@@ -34,7 +34,7 @@ Address = tuple[str, int]
 
 
 class BroadcastProtocol(asyncio.DatagramProtocol):
-    def __init__(self, target: Address, *, loop: Optional[asyncio.AbstractEventLoop] = None):
+    def __init__(self, target: Address, *, loop: None | asyncio.AbstractEventLoop = None):
         self.target = target
         self.loop = asyncio.get_event_loop() if loop is None else loop
 
@@ -45,7 +45,7 @@ class BroadcastProtocol(asyncio.DatagramProtocol):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.broadcast()
 
-    def datagram_received(self, data: Union[bytes, Text], addr: Address):
+    def datagram_received(self, data: bytes | Text, addr: Address):
         pass
 
     def broadcast(self) -> None:

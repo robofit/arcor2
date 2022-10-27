@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Any, Optional, Union
+from typing import Any
 
 from websockets.server import WebSocketServerProtocol as WsClient
 
@@ -15,20 +15,20 @@ VERBOSE: bool = False
 
 PORT: int = int(os.getenv("ARCOR2_ARSERVER_PORT", 6789))
 
-MAIN_SCREEN: Optional[ShowMainScreen.Data] = ShowMainScreen.Data(ShowMainScreen.Data.WhatEnum.ScenesList)
+MAIN_SCREEN: None | ShowMainScreen.Data = ShowMainScreen.Data(ShowMainScreen.Data.WhatEnum.ScenesList)
 
 OBJECT_TYPES: ObjectTypeDict = ObjTypeDict()
 
 SCENE_OBJECT_INSTANCES: dict[str, Generic] = {}
 
-RUNNING_ACTION: Optional[str] = None  # ID of an action that is being executed during project editing
-RUNNING_ACTION_PARAMS: Optional[list[Any]] = None
+RUNNING_ACTION: None | str = None  # ID of an action that is being executed during project editing
+RUNNING_ACTION_PARAMS: None | list[Any] = None
 
 PACKAGE_STATE = events.PackageState.Data()
-PACKAGE_INFO: Optional[events.PackageInfo.Data] = None
+PACKAGE_INFO: None | events.PackageInfo.Data = None
 
 # there might be some long-running action being executed when ui connects, so let's them know
-ACTION_STATE_BEFORE: Optional[events.ActionStateBefore.Data] = None
+ACTION_STATE_BEFORE: None | events.ActionStateBefore.Data = None
 
 TEMPORARY_PACKAGE: bool = False
 
@@ -43,7 +43,7 @@ LOCK: Lock = Lock(OBJECT_TYPES)
 
 USERS: Users = Users()
 
-PREV_RESULTS: dict[str, Union[tuple[Any], Any]] = {}
+PREV_RESULTS: dict[str, tuple[Any] | Any] = {}
 
 
 def remove_prev_result(action_id: str) -> None:

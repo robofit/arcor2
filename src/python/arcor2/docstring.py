@@ -18,7 +18,6 @@
 import re
 import sys
 from dataclasses import dataclass
-from typing import Optional
 
 PARAM_OR_RETURNS_REGEX = re.compile(":(?:param|returns)")
 RETURNS_REGEX = re.compile(":returns: (?P<doc>.*)", re.S)
@@ -27,12 +26,12 @@ PARAM_REGEX = re.compile(r":param (?P<name>[\*\w]+): (?P<doc>.*?)" r"(?:(?=:para
 
 @dataclass
 class Docstring:
-    short_description: Optional[str] = None
-    long_description: Optional[str] = None
-    params: Optional[dict[str, str]] = None
-    returns: Optional[str] = None
+    short_description: None | str = None
+    long_description: None | str = None
+    params: None | dict[str, str] = None
+    returns: None | str = None
 
-    def param(self, name: str) -> Optional[str]:
+    def param(self, name: str) -> None | str:
 
         if not self.params:
             return None
@@ -76,7 +75,7 @@ def reindent(string: str) -> str:
     return "\n".join(line.strip() for line in string.strip().split("\n"))
 
 
-def parse_docstring(docstring: Optional[str]) -> Docstring:
+def parse_docstring(docstring: None | str) -> Docstring:
     """Parse the docstring into its components."""
 
     doc = Docstring()
