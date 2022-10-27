@@ -382,7 +382,6 @@ class SceneObject(JsonSchemaMixin, ModelMixin):
     type: str
     pose: Optional[Pose] = None
     parameters: list[Parameter] = field(default_factory=list)
-    children: list[SceneObject] = field(default_factory=list)
     id: str = ""
 
     @classmethod
@@ -747,19 +746,6 @@ class BroadcastInfo(JsonSchemaMixin):
 
     host: str
     port: int
-
-
-@dataclass
-class Asset(JsonSchemaMixin):
-    """Untyped object (JSON)."""
-
-    id: str
-    name: str
-    description: Optional[str] = None
-    uri: Optional[str] = None
-    type: Optional[str] = None
-    tags: Optional[list[str]] = None
-    metadata: Optional[str] = None  # json
 
 
 @dataclass

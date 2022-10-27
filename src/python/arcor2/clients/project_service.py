@@ -5,7 +5,7 @@ from typing import Optional
 from dateutil.parser import parse
 
 from arcor2 import rest
-from arcor2.data.common import Asset, IdDesc, Project, ProjectParameter, ProjectSources, Scene, SceneObjectOverride
+from arcor2.data.common import IdDesc, Project, ProjectParameter, ProjectSources, Scene, SceneObjectOverride
 from arcor2.data.object_type import MODEL_MAPPING, Mesh, MeshList, MetaModel3d, Model, Model3dType, ObjectType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.exceptions.helpers import handle
@@ -25,45 +25,6 @@ logger = get_logger("Project")
 
 class ProjectServiceException(Arcor2Exception):
     pass
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Assets
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@handle(ProjectServiceException, logger, message="Failed to list assets.")
-def assets_ids() -> set[str]:
-    """Gets IDs of stored assets."""
-
-    ret_list = rest.call(rest.Method.GET, f"{URL}/assets", list_return_type=str)
-    ret_set = set(ret_list)
-    assert len(ret_list) == len(ret_set), f"There is a duplicate asset ID in {ret_list}."
-
-    return ret_set
-
-
-@handle(ProjectServiceException, logger, message="Failed to update the asset.")
-def update_asset(asset: Asset) -> None:
-    """Adds or updates the asset."""
-
-    rest.call(rest.Method.PUT, f"{URL}/assets", body=asset)
-    assert asset.id in assets_ids()
-
-
-@handle(ProjectServiceException, logger, message="Failed to get the asset.")
-def get_asset(asset_id: str) -> Asset:
-    """Gets the asset."""
-
-    return rest.call(rest.Method.GET, f"{URL}/assets/{asset_id}", return_type=Asset)
-
-
-@handle(ProjectServiceException, logger, message="Failed to delete the asset.")
-def delete_asset(asset_id: str) -> None:
-    """Deletes the asset."""
-
-    rest.call(rest.Method.DELETE, f"{URL}/assets/{asset_id}")
-    assert asset_id not in assets_ids()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
