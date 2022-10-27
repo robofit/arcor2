@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import abc
 import copy
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, unique
 from json import JSONEncoder
 from typing import Any, Iterator, NamedTuple, Optional, TypeVar, cast
 
+import fastuuid as uuid
 import numpy as np
 import quaternion
 from dataclasses_jsonschema import DEFAULT_SCHEMA_TYPE, JsonSchemaMixin

@@ -1,4 +1,4 @@
-import uuid
+import fastuuid as uuid
 
 from arcor2.data.rpc import common
 

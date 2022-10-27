@@ -6,7 +6,6 @@ import os
 import shutil
 import tempfile
 import time
-import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -15,6 +14,7 @@ from queue import Queue
 from threading import Thread
 from typing import TYPE_CHECKING, Optional
 
+import fastuuid as uuid
 import websocket
 from dataclasses_jsonschema import DEFAULT_SCHEMA_TYPE, FieldMeta, JsonSchemaMixin
 from flask import Response, jsonify, request, send_file
