@@ -173,8 +173,6 @@ def check_project_parameter(proj: CachedProject, parameter: ProjectParameter) ->
 def check_object(obj_types: ObjectTypeDict, scene: CachedScene, obj: SceneObject, new_one: bool = False) -> None:
     """Checks if object can be added into the scene."""
 
-    assert not obj.children
-
     if obj.type not in obj_types:
         raise Arcor2Exception(f"Unknown ObjectType {obj.type}.")
 
