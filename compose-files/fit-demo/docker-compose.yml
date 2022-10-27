@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:0.25.0
+    image: arcor2/arcor2_arserver:0.26.0
     container_name: fit-demo-arserver
     depends_on:
       fit-demo-project:
@@ -38,7 +38,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
 
   fit-demo-build:
-    image: arcor2/arcor2_build:0.23.0
+    image: arcor2/arcor2_build:0.24.0
     container_name: fit-demo-build
     depends_on:
       - fit-demo-project
@@ -57,7 +57,7 @@ services:
 
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:0.20.1
+    image: arcor2/arcor2_execution:0.21.0
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
@@ -82,7 +82,7 @@ services:
 #      - ARCOR2_KINECT_AZURE_MOCK=true
 
   fit-demo-calibration:
-    image: arcor2/arcor2_calibration:0.8.0
+    image: arcor2/arcor2_calibration:0.9.0
     networks:
       - fit-demo-calibration-network
     ports:
@@ -100,7 +100,7 @@ services:
       timeout: 10s
 
   fit-demo-dobot-magician:
-    image: arcor2/arcor2_dobot:0.5.1
+    image: arcor2/arcor2_dobot:0.6.0
     container_name: fit-demo-dobot-magician
     depends_on:
       fit-demo-scene:
@@ -122,7 +122,7 @@ services:
       timeout: 10s
 
   fit-demo-dobot-m1:
-    image: arcor2/arcor2_dobot:0.5.1
+    image: arcor2/arcor2_dobot:0.6.0
     container_name: fit-demo-dobot-m1
     depends_on:
       fit-demo-scene:
@@ -144,7 +144,7 @@ services:
       timeout: 10s
 
   fit-demo-scene:
-    image: arcor2/arcor2_scene:0.1.1
+    image: arcor2/arcor2_scene:0.2.0
     container_name: fit-demo-scene
     networks:
           - fit-demo-scene-network
@@ -185,7 +185,7 @@ services:
       - fit-demo-asset-network
 
   fit-demo-nginx:
-    image: nginx:1.21.1
+    image: nginx:1.23.2
     container_name: "fit-demo-nginx"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
@@ -197,8 +197,18 @@ services:
       - fit-demo-project
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:0.10.0
+    image: arcor2/arcor2_upload_fit_demo:0.11.0
     container_name: "fit-demo-upload-object-types"
+    depends_on:
+      - fit-demo-project
+    networks:
+      - fit-demo-project-network
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://fit-demo-project:10000
+
+  fit-demo-upload-builtin-objects:
+    image: arcor2/arcor2_upload_builtin_objects:0.25.0
+    container_name: "fit-demo-upload-builtin-objects"
     depends_on:
       - fit-demo-project
     networks:

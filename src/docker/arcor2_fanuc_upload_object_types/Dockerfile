@@ -1,4 +1,4 @@
-FROM python:3.9.14-slim-bullseye
+FROM python:3.10.8-slim-bullseye
 
 COPY src.python.arcor2_fanuc.scripts/upload_objects.pex /root/upload_objects.pex
 

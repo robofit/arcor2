@@ -69,8 +69,10 @@ class Generic(metaclass=abc.ABCMeta):
     def __repr__(self) -> str:
         return str(self.__dict__)
 
-    def cleanup(self) -> None:
+    def cleanup(self) -> None:  # noqa:B027
         """This method is called when a scene is closed or when script ends.
+
+        It may or may not be overridden in derived classes (it is not abstract by purpose).
 
         :return:
         """

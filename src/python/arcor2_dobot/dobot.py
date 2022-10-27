@@ -106,7 +106,7 @@ class Dobot(metaclass=ABCMeta):
     def forward_kinematics(self, joints: list[Joint]) -> Pose:
         raise Arcor2NotImplemented()
 
-    def _handle_pose_out(self, pose: Pose) -> None:
+    def _handle_pose_out(self, pose: Pose) -> None:  # noqa:B027
         """This is called (only for a real robot) from `get_end_effector_pose`
         so derived classes can do custom changes to the pose.
 
@@ -116,7 +116,7 @@ class Dobot(metaclass=ABCMeta):
 
         pass
 
-    def _handle_pose_in(self, pose: Pose) -> None:
+    def _handle_pose_in(self, pose: Pose) -> None:  # noqa:B027
         """This is called (only for a real robot) from `move` so derived
         classes can do custom changes to the pose.
 
