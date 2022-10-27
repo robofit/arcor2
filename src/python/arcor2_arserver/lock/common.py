@@ -1,6 +1,6 @@
-from typing import Iterable, Union
+from typing import Iterable
 
-ObjIds = Union[Iterable[str], str]
+ObjIds = Iterable[str] | str
 
 
 def obj_ids_to_list(val: ObjIds) -> list[str]:

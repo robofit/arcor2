@@ -2,7 +2,6 @@ import abc
 import copy
 import inspect
 from dataclasses import dataclass
-from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL import Image
@@ -36,7 +35,7 @@ class Generic(metaclass=abc.ABCMeta):
     CANCEL_MAPPING: CancelDict = {}
     _ABSTRACT = True
 
-    def __init__(self, obj_id: str, name: str, settings: Optional[Settings] = None) -> None:
+    def __init__(self, obj_id: str, name: str, settings: None | Settings = None) -> None:
 
         self.id = obj_id
         self.name = name
@@ -85,7 +84,7 @@ class GenericWithPose(Generic):
         obj_id: str,
         name: str,
         pose: Pose,
-        settings: Optional[Settings] = None,
+        settings: None | Settings = None,
     ) -> None:
 
         super(GenericWithPose, self).__init__(obj_id, name, settings)
@@ -107,7 +106,7 @@ class GenericWithPose(Generic):
     def pose(self, pose: Pose) -> None:
         self._pose = pose
 
-    def update_pose(self, new_pose: Pose, *, an: Optional[str] = None) -> None:
+    def update_pose(self, new_pose: Pose, *, an: None | str = None) -> None:
         """Enables control over object's pose in the world.
 
         :param new_pose: New pose for the object.
@@ -122,7 +121,7 @@ class GenericWithPose(Generic):
 class CollisionObject(GenericWithPose):
 
     # name of the file that should be uploaded to the Project service together with this ObjectType
-    mesh_filename: Optional[str] = None
+    mesh_filename: None | str = None
 
     def __init__(
         self,
@@ -130,7 +129,7 @@ class CollisionObject(GenericWithPose):
         name: str,
         pose: Pose,
         collision_model: Models,
-        settings: Optional[Settings] = None,
+        settings: None | Settings = None,
     ) -> None:
 
         super().__init__(obj_id, name, pose, settings)
@@ -174,7 +173,7 @@ class CollisionObject(GenericWithPose):
             scene_service.delete_collision_id(self.id)
         self._enabled = enabled
 
-    def set_enabled(self, state: bool, *, an: Optional[str] = None) -> None:
+    def set_enabled(self, state: bool, *, an: None | str = None) -> None:
         """Enables control of the object's collision model.
 
         :param state: State of a collision model.
@@ -195,7 +194,7 @@ class VirtualCollisionObject(CollisionObject):
         name: str,
         pose: Pose,
         collision_model: PrimitiveModels,
-        settings: Optional[Settings] = None,
+        settings: None | Settings = None,
     ) -> None:
 
         if settings and not isinstance(settings, Settings):
@@ -215,12 +214,12 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
     class KinematicsException(Arcor2Exception):
         pass
 
-    def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: None | Settings = None) -> None:
         super(Robot, self).__init__(obj_id, name, pose, settings)
         self._move_lock = NonBlockingLock()
 
     robot_type = RobotType.ARTICULATED
-    urdf_package_name: Optional[str] = None
+    urdf_package_name: None | str = None
 
     @property
     def move_in_progress(self) -> bool:
@@ -304,7 +303,7 @@ class Robot(GenericWithPose, metaclass=abc.ABCMeta):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[list[Joint]] = None,
+        start_joints: None | list[Joint] = None,
         avoid_collisions: bool = True,
     ) -> list[Joint]:
         """Computes inverse kinematics.
@@ -354,15 +353,15 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> set[str]:
+    def get_end_effectors_ids(self, arm_id: None | str = None) -> set[str]:
         pass
 
     @abc.abstractmethod
-    def get_end_effector_pose(self, end_effector: str, arm_id: Optional[str] = None) -> Pose:
+    def get_end_effector_pose(self, end_effector: str, arm_id: None | str = None) -> Pose:
         pass
 
     @abc.abstractmethod
-    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> list[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: None | str = None) -> list[Joint]:
         """With no arm specified, returns all robot joints. Otherwise, returns
         joints for the given arm.
 
@@ -372,11 +371,11 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def grippers(self, arm_id: Optional[str] = None) -> set[str]:
+    def grippers(self, arm_id: None | str = None) -> set[str]:
         return set()
 
     @abc.abstractmethod
-    def suctions(self, arm_id: Optional[str] = None) -> set[str]:
+    def suctions(self, arm_id: None | str = None) -> set[str]:
         return set()
 
     def check_if_ready_to_move(self) -> None:
@@ -405,7 +404,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         speed: float,
         safe: bool = True,
         linear: bool = True,
-        arm_id: Optional[str] = None,
+        arm_id: None | str = None,
     ) -> None:
         """Move given robot's end effector to the selected pose.
 
@@ -420,7 +419,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         raise Arcor2NotImplemented("Robot does not support moving to pose.")
 
     def move_to_joints(
-        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: None | str = None
     ) -> None:
         """Sets target joint values.
 
@@ -437,9 +436,9 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[list[Joint]] = None,
+        start_joints: None | list[Joint] = None,
         avoid_collisions: bool = True,
-        arm_id: Optional[str] = None,
+        arm_id: None | str = None,
     ) -> list[Joint]:
         """Computes inverse kinematics.
 
@@ -451,7 +450,7 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         """
         raise Arcor2NotImplemented()
 
-    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: Optional[str] = None) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: None | str = None) -> Pose:
         """Computes forward kinematics.
 
         :param end_effector_id: Target end effector name
@@ -460,14 +459,14 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
         """
         raise Arcor2NotImplemented()
 
-    def get_hand_teaching_mode(self, arm_id: Optional[str] = None) -> bool:
+    def get_hand_teaching_mode(self, arm_id: None | str = None) -> bool:
         """
         This is expected to be implemented if the robot supports set_hand_teaching_mode
         :return:
         """
         raise Arcor2NotImplemented()
 
-    def set_hand_teaching_mode(self, enabled: bool, arm_id: Optional[str] = None) -> None:
+    def set_hand_teaching_mode(self, enabled: bool, arm_id: None | str = None) -> None:
         raise Arcor2NotImplemented()
 
 
@@ -480,16 +479,16 @@ class Camera(CollisionObject, metaclass=abc.ABCMeta):
         name: str,
         pose: Pose,
         collision_model: Models,
-        settings: Optional[Settings] = None,
+        settings: None | Settings = None,
     ) -> None:
         super(Camera, self).__init__(obj_id, name, pose, collision_model, settings)
 
-        self.color_camera_params: Optional[CameraParameters] = None
+        self.color_camera_params: None | CameraParameters = None
 
-    def color_image(self, *, an: Optional[str] = None) -> Image.Image:
+    def color_image(self, *, an: None | str = None) -> Image.Image:
         raise Arcor2NotImplemented()
 
-    def depth_image(self, averaged_frames: int = 1, *, an: Optional[str] = None) -> Image.Image:
+    def depth_image(self, averaged_frames: int = 1, *, an: None | str = None) -> Image.Image:
         """This should provide depth image transformed into color camera
         perspective.
 

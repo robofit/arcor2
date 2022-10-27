@@ -1,7 +1,7 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncIterator, Optional, TypeVar
+from typing import AsyncIterator, TypeVar
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
@@ -109,7 +109,7 @@ async def delete_if_not_used(meta: ObjectTypeMeta) -> None:
     await notif.broadcast_event(evtr)
 
 
-async def save_scene(scene: Optional[UpdateableCachedScene] = None) -> None:
+async def save_scene(scene: None | UpdateableCachedScene = None) -> None:
 
     if not scene:
         scene = glob.LOCK.scene_or_exception()
@@ -127,7 +127,7 @@ def get_ot_modified(ots: set[str]) -> dict[str, datetime]:
     return {k: v.meta.modified for k, v in glob.OBJECT_TYPES.items() if k in ots and v.meta.modified is not None}
 
 
-async def get_scene_problems(scene: CachedScene) -> Optional[list[str]]:
+async def get_scene_problems(scene: CachedScene) -> None | list[str]:
     """Handle caching of scene problems."""
 
     assert scene.modified
@@ -163,9 +163,9 @@ async def get_scene_problems(scene: CachedScene) -> Optional[list[str]]:
 async def update_scene_object_pose(
     scene: UpdateableCachedScene,
     obj: SceneObject,
-    pose: Optional[Pose] = None,
-    obj_inst: Optional[GenericWithPose] = None,
-    lock_owner: Optional[str] = None,
+    pose: None | Pose = None,
+    obj_inst: None | GenericWithPose = None,
+    lock_owner: None | str = None,
 ) -> None:
     """Performs all necessary actions when pose of an object is updated.
 
@@ -205,7 +205,7 @@ async def update_scene_object_pose(
         await glob.LOCK.write_unlock(obj.id, lock_owner, True)
 
 
-async def set_scene_state(state: SceneState.Data.StateEnum, message: Optional[str] = None) -> None:
+async def set_scene_state(state: SceneState.Data.StateEnum, message: None | str = None) -> None:
 
     global _scene_state
     _scene_state = SceneState(SceneState.Data(state, message))
@@ -280,7 +280,7 @@ async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dr
     logger.debug(f"Object {obj.id} ({obj.type}) added to scene.")
 
 
-async def create_object_instance(obj: SceneObject, overrides: Optional[list[Parameter]] = None) -> None:
+async def create_object_instance(obj: SceneObject, overrides: None | list[Parameter] = None) -> None:
 
     obj_type = glob.OBJECT_TYPES[obj.type]
 
@@ -306,7 +306,7 @@ async def create_object_instance(obj: SceneObject, overrides: Optional[list[Para
                 )
             elif issubclass(obj_type.type_def, CollisionObject):
                 assert obj.pose is not None
-                coll_model: Optional[Models] = None
+                coll_model: None | Models = None
                 if obj_type.meta.object_model:
                     coll_model = obj_type.meta.object_model.model()
 
@@ -386,7 +386,7 @@ async def cleanup_object(obj: Generic) -> None:
         raise Arcor2Exception(f"Failed to cleanup {obj.name}. {str(e)}") from e
 
 
-async def stop_scene(scene: CachedScene, message: Optional[str] = None, already_locked: bool = False) -> None:
+async def stop_scene(scene: CachedScene, message: None | str = None, already_locked: bool = False) -> None:
     """Destroys scene object instances."""
 
     async def _stop_scene() -> None:

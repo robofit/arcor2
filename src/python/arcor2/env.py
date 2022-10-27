@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 from arcor2.exceptions import Arcor2Exception
 
@@ -12,7 +11,7 @@ def get_bool(variable_name: str, default: bool = False) -> bool:
     return os.getenv(variable_name, str(default)).lower() in ("true", "1")
 
 
-def get_int(variable_name: str, default: Optional[int] = None) -> int:
+def get_int(variable_name: str, default: None | int = None) -> int:
 
     val = os.getenv(variable_name, default)
 
@@ -25,7 +24,7 @@ def get_int(variable_name: str, default: Optional[int] = None) -> int:
         raise Arcor2EnvException(f"Variable {variable_name} has invalid value: {val}.")
 
 
-def get_float(variable_name: str, default: Optional[float] = None) -> float:
+def get_float(variable_name: str, default: None | float = None) -> float:
 
     val = os.getenv(variable_name, default)
 

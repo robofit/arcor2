@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import deque
-from typing import Any, Awaitable, Callable, Coroutine, Optional, TypeVar
+from typing import Any, Awaitable, Callable, Coroutine, TypeVar
 
 import websockets
 from aiologger.levels import LogLevel
@@ -19,7 +19,7 @@ RPCT = TypeVar("RPCT", bound=RPC)
 ReqT = TypeVar("ReqT", bound=RPC.Request)
 RespT = TypeVar("RespT", bound=RPC.Response)
 
-RPC_CB = Callable[[ReqT, WsClient], Coroutine[Any, Any, Optional[RespT]]]
+RPC_CB = Callable[[ReqT, WsClient], Coroutine[Any, Any, None | RespT]]
 RPC_DICT_TYPE = dict[str, tuple[type[RPC], RPC_CB]]
 
 EventT = TypeVar("EventT", bound=Event)
@@ -49,7 +49,7 @@ async def server(
     register: Callable[[Any], Awaitable[None]],
     unregister: Callable[[Any], Awaitable[None]],
     rpc_dict: RPC_DICT_TYPE,
-    event_dict: Optional[EVENT_DICT_TYPE] = None,
+    event_dict: None | EVENT_DICT_TYPE = None,
     verbose: bool = False,
 ) -> None:
     async def handle_message(msg: str) -> None:

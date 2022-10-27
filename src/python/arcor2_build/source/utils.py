@@ -29,7 +29,6 @@ from ast import (
     stmt,
     withitem,
 )
-from typing import Union
 
 import humps
 
@@ -190,7 +189,7 @@ def global_action_points_class(project: CachedProject) -> str:
         )
     )
 
-    aps_init_body: list[Union[Assign, Pass]] = []
+    aps_init_body: list[Assign | Pass] = []
 
     for ap in project.action_points:
 

@@ -1,11 +1,10 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from arcor2 import rest
 from arcor2.data.common import Joint, Pose, StrEnum
 
-from .abstract_dobot import AbstractDobot, MoveType
-from .fit_common_mixin import UrlSettings
+from .abstract_dobot import AbstractDobot, MoveType  # noqa:ABS101
+from .fit_common_mixin import UrlSettings  # noqa:ABS101
 
 
 class Joints(StrEnum):
@@ -48,7 +47,7 @@ class DobotMagician(AbstractDobot):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[list[Joint]] = None,
+        start_joints: None | list[Joint] = None,
         avoid_collisions: bool = True,
     ) -> list[Joint]:
         """Computes inverse kinematics.

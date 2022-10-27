@@ -1,5 +1,3 @@
-from typing import Optional
-
 from arcor2.data.common import ActionMetadata, Joint, Pose
 from arcor2.object_types.abstract import Robot
 
@@ -34,7 +32,7 @@ class FakeFanuc(Robot):
         safe: bool = True,
         linear: bool = False,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Moves the robot's end-effector to a specific pose.
 

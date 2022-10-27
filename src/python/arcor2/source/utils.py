@@ -23,7 +23,6 @@ from ast import (
     alias,
     fix_missing_locations,
 )
-from typing import Optional, Union
 
 import autopep8
 
@@ -59,10 +58,10 @@ def find_asserts(tree: FunctionDef) -> list[Assert]:
     return ff.asserts
 
 
-def find_function(name: str, tree: Union[Module, AST]) -> FunctionDef:
+def find_function(name: str, tree: Module | AST) -> FunctionDef:
     class FindFunction(NodeVisitor):
         def __init__(self) -> None:
-            self.function_node: Optional[FunctionDef] = None
+            self.function_node: None | FunctionDef = None
 
         def visit_FunctionDef(self, node: FunctionDef) -> None:
             if node.name == name:
@@ -81,10 +80,10 @@ def find_function(name: str, tree: Union[Module, AST]) -> FunctionDef:
     return ff.function_node
 
 
-def find_class_def(name: str, tree: Union[Module, AST]) -> ClassDef:
+def find_class_def(name: str, tree: Module | AST) -> ClassDef:
     class FindClassDef(NodeVisitor):
         def __init__(self) -> None:
-            self.cls_def_node: Optional[ClassDef] = None
+            self.cls_def_node: None | ClassDef = None
 
         def visit_ClassDef(self, node: ClassDef) -> None:
             if node.name == name:
@@ -155,7 +154,7 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
 
 
 def add_method_call(
-    body: list, instance: str, method: str, args: list, kwargs: list, returns: list[str], index: Optional[int] = None
+    body: list, instance: str, method: str, args: list, kwargs: list, returns: list[str], index: None | int = None
 ) -> None:
     """Adds method call to be body of a container. By default, it appends. When
     index is specified, it inserts.
@@ -172,7 +171,7 @@ def add_method_call(
 
     call = Call(func=get_name_attr(instance, method), args=args, keywords=kwargs)
 
-    cont: Union[Expr, Assign, None] = None
+    cont: Expr | Assign | None = None
 
     if not returns:
         cont = Expr(value=call)
@@ -192,7 +191,7 @@ def get_name(name: str) -> Name:
     return Name(id=name, ctx=Load())
 
 
-def get_name_attr(name: str, attr: str, ctx: Union[type[Load], type[Store]] = Load) -> Attribute:
+def get_name_attr(name: str, attr: str, ctx: type[Load] | type[Store] = Load) -> Attribute:
     return Attribute(value=get_name(name), attr=attr, ctx=ctx())
 
 

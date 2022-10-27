@@ -90,7 +90,7 @@ class IntegerEnumPlugin(ParameterPlugin):
     @classmethod
     def need_to_be_imported(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> Optional[list[ImportTuple]]:
+    ) -> None | list[ImportTuple]:
 
         enum_cls = cls.parameter_value(type_defs, scene, project, action_id, parameter_id).__class__
         # TODO does this work as expected in all cases?

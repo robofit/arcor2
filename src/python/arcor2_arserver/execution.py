@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import aiofiles
 import websockets
@@ -35,7 +35,7 @@ MANAGER_RPC_REQUEST_QUEUE: ReqQueue = ReqQueue()
 MANAGER_RPC_RESPONSES: dict[int, RespQueue] = {}
 
 
-async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: Optional[set[str]] = None) -> None:
+async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: None | set[str] = None) -> None:
 
     # TODO lock scene and project?
 
@@ -119,7 +119,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
     return package_id
 
 
-async def manager_request(req: rpc.common.RPC.Request, ui: Optional[WsClient] = None) -> rpc.common.RPC.Response:
+async def manager_request(req: rpc.common.RPC.Request, ui: None | WsClient = None) -> rpc.common.RPC.Response:
 
     assert req.id not in MANAGER_RPC_RESPONSES
 

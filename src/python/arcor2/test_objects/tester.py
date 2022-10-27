@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from arcor2.data.common import ActionMetadata
 from arcor2.object_types.abstract import CollisionObject
@@ -16,7 +15,7 @@ class Tester(CollisionObject):
         self._param1: str = ""
 
     def run_test(
-        self, seq: list[float], seq_id: list[str], eqp_res: list[bool], *, an: Optional[str] = None
+        self, seq: list[float], seq_id: list[str], eqp_res: list[bool], *, an: None | str = None
     ) -> list[bool]:
         """Run test with many parameters.
 
@@ -27,7 +26,7 @@ class Tester(CollisionObject):
         """
         return [bool(seq), bool(seq_id), bool(eqp_res)]
 
-    def long_running_action(self, *, an: Optional[str] = None) -> None:
+    def long_running_action(self, *, an: None | str = None) -> None:
         """This runs for long time.
 
         :return:
@@ -38,7 +37,7 @@ class Tester(CollisionObject):
                 self._cancel = False
                 break
 
-    def long_running_action_with_params(self, param1: str, *, an: Optional[str] = None) -> None:
+    def long_running_action_with_params(self, param1: str, *, an: None | str = None) -> None:
         """Runs for long time.
 
         :param param1:
@@ -51,10 +50,10 @@ class Tester(CollisionObject):
                 self._cancel = False
                 break
 
-    def simple_cancel(self, *, an: Optional[str] = None) -> None:
+    def simple_cancel(self, *, an: None | str = None) -> None:
         self._cancel = True
 
-    def cancel_with_param(self, param1: str, *, an: Optional[str] = None) -> None:
+    def cancel_with_param(self, param1: str, *, an: None | str = None) -> None:
         assert param1 == self._param1
         self._cancel = True
 

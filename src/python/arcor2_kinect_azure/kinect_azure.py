@@ -1,6 +1,6 @@
 import json
 from threading import Lock
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 
 import numpy as np
 import pyk4a
@@ -53,7 +53,7 @@ class KinectAzure:
         img = self.color_image()
 
         # no need to handle depth camera parameters as we will always provide transformed depth image
-        self.color_camera_params: Optional[CameraParameters] = None
+        self.color_camera_params: None | CameraParameters = None
 
         try:
             for camera in c["CalibrationInformation"]["Cameras"]:

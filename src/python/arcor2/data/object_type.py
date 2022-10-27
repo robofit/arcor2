@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -92,10 +92,10 @@ class Mesh(Model):
 
 MeshList = list[Mesh]
 
-PrimitiveModels = Union[Box, Sphere, Cylinder]
-Models = Union[Box, Sphere, Cylinder, Mesh]
+PrimitiveModels = Box | Sphere | Cylinder
+Models = Box | Sphere | Cylinder | Mesh
 
-MODEL_MAPPING: dict[Model3dType, Union[type[Box], type[Sphere], type[Cylinder], type[Mesh]]] = {
+MODEL_MAPPING: dict[Model3dType, type[Box] | type[Sphere] | type[Cylinder] | type[Mesh]] = {
     Box.type(): Box,
     Sphere.type(): Sphere,
     Cylinder.type(): Cylinder,
@@ -167,4 +167,5 @@ class ParameterMeta(JsonSchemaMixin):
     description: Optional[str] = None
     default_value: Optional[str] = None
     extra: Optional[str] = None
-    children: list["ParameterMeta"] = field(default_factory=list)
+    # TODO not supported by AREditor, leads to Unable to create schema for 'ParameterMeta'
+    # children: list[ParameterMeta] = field(default_factory=list)

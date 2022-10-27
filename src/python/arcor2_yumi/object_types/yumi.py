@@ -10,7 +10,7 @@ import socket
 import time
 from dataclasses import dataclass
 from threading import Event, Lock
-from typing import Iterable, NamedTuple, Optional, cast
+from typing import Iterable, NamedTuple, cast
 
 import numpy as np
 import quaternion
@@ -109,7 +109,7 @@ class RWS:
         self._session.auth = HTTPDigestAuth(username, password)
         self._headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
 
-    def _post(self, url: str, data: Optional[dict] = None, params: Optional[dict] = None) -> requests.Response:
+    def _post(self, url: str, data: None | dict = None, params: None | dict = None) -> requests.Response:
 
         if params is None:
             params = {}
@@ -120,7 +120,7 @@ class RWS:
 
         return self._session.post(f"{self._base_url}/{url}", data=data, params=params, headers=self._headers)
 
-    def _get(self, url: str, params: Optional[dict] = None) -> requests.Response:
+    def _get(self, url: str, params: None | dict = None) -> requests.Response:
 
         if params is None:
             params = {}
@@ -462,7 +462,7 @@ class YumiSocket:
             if not self._socket:
                 raise YumiException()
 
-            raw_res: Optional[RawResponse] = None
+            raw_res: None | RawResponse = None
 
             self._socket.settimeout(req_packet.timeout)
 
@@ -556,7 +556,7 @@ class YuMiArm:
         for s in self._sockets:
             s.close()
 
-    def _request(self, req: str, timeout: Optional[float] = None, socket: Optional[YumiSocket] = None) -> RawResponse:
+    def _request(self, req: str, timeout: None | float = None, socket: None | YumiSocket = None) -> RawResponse:
 
         if timeout is None:
             timeout = self._comm_timeout
@@ -748,7 +748,7 @@ class YuMiArm:
         req = self._construct_req(CmdCodes.goto_pose_sync, body)
         self._request(req, timeout=self._motion_timeout)
 
-    def goto_pose_delta(self, translation: Iterable[float], rotation: Optional[Iterable[float]] = None) -> None:
+    def goto_pose_delta(self, translation: Iterable[float], rotation: None | Iterable[float] = None) -> None:
         """Goto a target pose by transforming the current pose using the given
         translation and rotation.
 
@@ -873,8 +873,8 @@ class YuMiArm:
 
     def open_gripper(
         self,
-        force: Optional[float] = None,
-        width: Optional[float] = None,
+        force: None | float = None,
+        width: None | float = None,
         no_wait: bool = False,
     ) -> None:
         """Opens the gripper to the target width.
@@ -941,9 +941,9 @@ class YuMiArm:
 
     def calibrate_gripper(
         self,
-        max_speed: Optional[float] = None,
-        hold_force: Optional[float] = None,
-        phys_limit: Optional[float] = None,
+        max_speed: None | float = None,
+        hold_force: None | float = None,
+        phys_limit: None | float = None,
         skip_if_already_calibrated=True,
     ) -> None:
         """Calibrates the gripper.
@@ -1065,7 +1065,7 @@ class YuMi(MultiArmRobot):
         self._buffsize = 4096
         self._motion_timeout = 20.0
         self._comm_timeout = 5.0
-        self._speed: Optional[int] = None
+        self._speed: None | int = None
 
         self._left = YuMiArm(YumiArms.LEFT, settings.ip, 5000, self._buffsize, self._motion_timeout, self._comm_timeout)
         self._right = YuMiArm(
@@ -1124,7 +1124,7 @@ class YuMi(MultiArmRobot):
     def settings(self) -> YumiSettings:
         return cast(YumiSettings, super().settings)
 
-    def _arm_by_name(self, name: Optional[str]) -> YuMiArm:
+    def _arm_by_name(self, name: None | str) -> YuMiArm:
 
         if name is None:
             raise YumiException("Arm has to be specified.")
@@ -1139,17 +1139,17 @@ class YuMi(MultiArmRobot):
     def get_arm_ids(self) -> set[str]:
         return set(self._mapping)
 
-    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> set[str]:
+    def get_end_effectors_ids(self, arm_id: None | str = None) -> set[str]:
 
         self._arm_by_name(arm_id)
         return {"default"}
 
-    def get_end_effector_pose(self, end_effector: str, arm_id: Optional[str] = None) -> Pose:
+    def get_end_effector_pose(self, end_effector: str, arm_id: None | str = None) -> Pose:
 
         arm = self._arm_by_name(arm_id)
         return tr.make_pose_abs(self.pose, arm.get_pose())
 
-    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> list[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: None | str = None) -> list[Joint]:
 
         if arm_id is None:
 
@@ -1171,10 +1171,10 @@ class YuMi(MultiArmRobot):
 
         return self._arm_by_name(arm_id).joints(include_gripper)
 
-    def grippers(self, arm_id: Optional[str] = None) -> set[str]:
+    def grippers(self, arm_id: None | str = None) -> set[str]:
         return set(self._mapping)
 
-    def suctions(self, arm_id: Optional[str] = None) -> set[str]:
+    def suctions(self, arm_id: None | str = None) -> set[str]:
         return set()
 
     def move_to_pose(
@@ -1184,7 +1184,7 @@ class YuMi(MultiArmRobot):
         speed: float,
         safe: bool = True,
         linear: bool = True,
-        arm_id: Optional[str] = None,
+        arm_id: None | str = None,
     ) -> None:
         """Move given robot's end effector to the selected pose.
 
@@ -1227,7 +1227,7 @@ class YuMi(MultiArmRobot):
                     evt.set()  # this terminates block_while_running
 
     def move_to_joints(
-        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: None | str = None
     ) -> None:
         """Sets target joint values.
 
@@ -1256,9 +1256,9 @@ class YuMi(MultiArmRobot):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[list[Joint]] = None,
+        start_joints: None | list[Joint] = None,
         avoid_collisions: bool = True,
-        arm_id: Optional[str] = None,
+        arm_id: None | str = None,
     ) -> list[Joint]:
         """Computes inverse kinematics.
 
@@ -1271,7 +1271,7 @@ class YuMi(MultiArmRobot):
 
         return self._arm_by_name(arm_id).ik(tr.make_pose_rel(self.pose, pose))
 
-    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: Optional[str] = None) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: None | str = None) -> Pose:
         """Computes forward kinematics.
 
         :param end_effector_id: Target end effector name
@@ -1281,10 +1281,10 @@ class YuMi(MultiArmRobot):
 
         return tr.make_pose_abs(self.pose, self._arm_by_name(arm_id).fk(joints))
 
-    def get_hand_teaching_mode(self, arm_id: Optional[str] = None) -> bool:
+    def get_hand_teaching_mode(self, arm_id: None | str = None) -> bool:
         return self._arm_by_name(arm_id).lead_through
 
-    def set_hand_teaching_mode(self, enabled: bool, arm_id: Optional[str] = None) -> None:
+    def set_hand_teaching_mode(self, enabled: bool, arm_id: None | str = None) -> None:
         self._arm_by_name(arm_id).lead_through = enabled
 
     def cleanup(self) -> None:
@@ -1309,7 +1309,7 @@ class YuMi(MultiArmRobot):
         pick_speed: float = 0.25,
         vertical_offset: float = 0.05,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Picks an object from a horizontal surface.
 
@@ -1341,7 +1341,7 @@ class YuMi(MultiArmRobot):
         place_speed: float = 0.25,
         vertical_offset: float = 0.05,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Places an object on a horizontal surface.
 
@@ -1366,7 +1366,7 @@ class YuMi(MultiArmRobot):
     place.__action__ = ActionMetadata(composite=True)  # type: ignore
 
     def move_arm(
-        self, arm: YumiArms, pose: Pose, speed: float = 0.5, linear: bool = True, *, an: Optional[str] = None
+        self, arm: YumiArms, pose: Pose, speed: float = 0.5, linear: bool = True, *, an: None | str = None
     ) -> None:
         """Moves the arm's TCP to the given pose.
 
@@ -1383,7 +1383,7 @@ class YuMi(MultiArmRobot):
 
     move_arm.__action__ = ActionMetadata()  # type: ignore
 
-    def close_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 0.0, *, an: Optional[str] = None) -> None:
+    def close_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 0.0, *, an: None | str = None) -> None:
         """Closes the gripper as close to as possible with maximum force.
 
         :param arm: Selected arm.
@@ -1399,7 +1399,7 @@ class YuMi(MultiArmRobot):
 
     close_gripper.__action__ = ActionMetadata()  # type: ignore
 
-    def open_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 1.0, *, an: Optional[str] = None) -> None:
+    def open_gripper(self, arm: YumiArms, force: float = 1.0, width: float = 1.0, *, an: None | str = None) -> None:
         """Opens the gripper to the target width.
 
         :param arm: Selected arm.
@@ -1415,9 +1415,7 @@ class YuMi(MultiArmRobot):
 
     open_gripper.__action__ = ActionMetadata()  # type: ignore
 
-    def move_both_arms(
-        self, left_pose: Pose, right_pose: Pose, speed: float = 0.5, *, an: Optional[str] = None
-    ) -> None:
+    def move_both_arms(self, left_pose: Pose, right_pose: Pose, speed: float = 0.5, *, an: None | str = None) -> None:
         """Commands both arms to go to assigned poses in sync.
 
         Sync means both motions will end at the same time.

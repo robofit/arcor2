@@ -19,7 +19,6 @@ from ast import (
     expr,
     keyword,
 )
-from typing import Optional, Union
 
 import humps
 
@@ -58,7 +57,7 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     for param in project.parameters:
         val = json.loads(param.value)
 
-        aval: Optional[expr] = None
+        aval: None | expr = None
 
         if isinstance(val, bool):  # subclass of int
             aval = NameConstant(value=val, kind=None)
@@ -84,7 +83,7 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     return SCRIPT_HEADER + tree_to_str(tree)
 
 
-Container = Union[FunctionDef, If, While]  # TODO remove While
+Container = FunctionDef | If | While  # TODO remove While
 
 
 def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project: CProject) -> None:
@@ -109,7 +108,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
         return depth
 
-    def _add_logic(container: Container, current_action: Action, super_container: Optional[Container] = None) -> None:
+    def _add_logic(container: Container, current_action: Action, super_container: None | Container = None) -> None:
 
         # more paths could lead  to the same action, so it might be already added
         # ...this is easier than searching the tree
@@ -216,7 +215,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
         else:
 
-            root_if: Optional[If] = None
+            root_if: None | If = None
 
             # action has more outputs - each output should have condition
             for idx, output in enumerate(outputs):

@@ -1,6 +1,6 @@
 import time
 from queue import Empty, Queue
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import websocket
 from dataclasses_jsonschema import ValidationError
@@ -32,7 +32,7 @@ class ARServer:
         self,
         ws_connection_str: str = "ws://0.0.0.0:6789",
         timeout: float = 3.0,
-        event_mapping: Optional[dict[str, type[events.Event]]] = None,
+        event_mapping: None | dict[str, type[events.Event]] = None,
     ):
 
         self._ws = websocket.WebSocket()
@@ -102,7 +102,7 @@ class ARServer:
         assert req.request == resp.response
         return resp
 
-    def get_event(self, drop_everything_until: Optional[type[events.Event]] = None) -> events.Event:
+    def get_event(self, drop_everything_until: None | type[events.Event] = None) -> events.Event:
         """Returns queued events (if any) or wait until some event arrives.
 
         :param drop_everything_until: Drop any event until there is one of required type.

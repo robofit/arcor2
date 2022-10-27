@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
@@ -34,4 +33,4 @@ class PackageSummary(JsonSchemaMixin):
 
     id: str
     package_meta: PackageMeta = field(metadata=dict(description="Content of 'package.json'."))
-    project_meta: Optional[ProjectMeta] = None
+    project_meta: None | ProjectMeta = None

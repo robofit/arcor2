@@ -2,7 +2,7 @@ import abc
 import ast
 import copy
 from ast import AST
-from typing import Any, Callable, NamedTuple, Optional
+from typing import Any, Callable, NamedTuple
 
 import humps
 
@@ -109,7 +109,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def need_to_be_imported(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> Optional[list[ImportTuple]]:
+    ) -> None | list[ImportTuple]:
         return None
 
     @classmethod

@@ -9,7 +9,7 @@ import sys
 import time
 import zipfile
 from datetime import datetime, timezone
-from typing import Awaitable, Optional, Union
+from typing import Awaitable
 
 import aiofiles
 import aiofiles.os
@@ -35,14 +35,14 @@ from arcor2_runtime.package import PROJECT_PATH, read_package_meta, write_packag
 
 logger = get_aiologger("Execution")
 
-PROCESS: Union[asyncio.subprocess.Process, None] = None
+PROCESS: asyncio.subprocess.Process | None = None
 PACKAGE_STATE_EVENT: PackageState = PackageState(PackageState.Data())  # undefined state
-RUNNING_PACKAGE_ID: Optional[str] = None
+RUNNING_PACKAGE_ID: None | str = None
 
 # in case of man. written scripts, this might not be sent
-PACKAGE_INFO_EVENT: Optional[PackageInfo] = None
+PACKAGE_INFO_EVENT: None | PackageInfo = None
 
-TASK: Optional[asyncio.Task] = None
+TASK: None | asyncio.Task = None
 
 CLIENTS: set[WsClient] = set()
 
@@ -350,7 +350,7 @@ async def get_summary(path: str) -> PackageSummary:
     raise Arcor2Exception("Invalid package.")
 
 
-async def get_opt_summary(path: str) -> Optional[PackageSummary]:
+async def get_opt_summary(path: str) -> None | PackageSummary:
 
     if not os.path.isfile(os.path.join(path, MAIN_SCRIPT_NAME)):
         logger.warn(f"Package at {path} does not contain main script.")

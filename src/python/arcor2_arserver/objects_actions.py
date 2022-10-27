@@ -1,5 +1,5 @@
 import asyncio
-from typing import NamedTuple, Union
+from typing import NamedTuple
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
@@ -185,7 +185,7 @@ async def get_object_types() -> UpdatedObjectTypes:
 
     updated_object_types: ObjectTypeDict = {}
 
-    object_type_ids: Union[set[str], list[str]] = await storage.get_object_type_ids()
+    object_type_ids: set[str] | list[str] = await storage.get_object_type_ids()
 
     if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
         import random

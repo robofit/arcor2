@@ -1,5 +1,4 @@
 import io
-from typing import Optional
 
 import pytest
 
@@ -13,7 +12,7 @@ from arcor2_runtime.action import ACTION_NAME_ID_MAPPING_ATTR, AP_ID_ATTR, patch
 
 def test_patch_object_actions(monkeypatch, capsys) -> None:
     class MyObject(Generic):
-        def action(self, pose: Pose, *, an: Optional[str] = None) -> None:
+        def action(self, pose: Pose, *, an: None | str = None) -> None:
             pass
 
         action.__action__ = ActionMetadata()  # type: ignore
@@ -66,7 +65,7 @@ def test_patch_object_actions(monkeypatch, capsys) -> None:
 
 def test_patch_object_actions_without_mapping(monkeypatch, capsys) -> None:
     class MyObject(Generic):
-        def action(self, pose: Pose, *, an: Optional[str] = None) -> None:
+        def action(self, pose: Pose, *, an: None | str = None) -> None:
             pass
 
         action.__action__ = ActionMetadata()  # type: ignore
@@ -112,24 +111,24 @@ def test_patch_object_actions_without_mapping(monkeypatch, capsys) -> None:
 
 def test_composite_action(monkeypatch, capsys) -> None:
     class MyObject(Generic):
-        def inner_inner_action(self, *, an: Optional[str] = None) -> None:
+        def inner_inner_action(self, *, an: None | str = None) -> None:
             pass
 
-        def inner_action(self, *, an: Optional[str] = None) -> None:
+        def inner_action(self, *, an: None | str = None) -> None:
             self.inner_inner_action()
 
-        def inner_action_2(self, *, an: Optional[str] = None) -> None:
+        def inner_action_2(self, *, an: None | str = None) -> None:
             pass
 
-        def action(self, *, an: Optional[str] = None) -> None:
+        def action(self, *, an: None | str = None) -> None:
             self.inner_action()
             self.inner_action_2()
 
-        def action_wo_flag(self, *, an: Optional[str] = None) -> None:
+        def action_wo_flag(self, *, an: None | str = None) -> None:
             self.inner_action()
             self.inner_action_2()
 
-        def action_with_inner_name_spec(self, *, an: Optional[str] = None) -> None:
+        def action_with_inner_name_spec(self, *, an: None | str = None) -> None:
             self.inner_action(an="whatever")
 
         inner_inner_action.__action__ = ActionMetadata()  # type: ignore
@@ -198,7 +197,7 @@ def test_unknown_parameter_type(monkeypatch, capsys) -> None:
         pass
 
     class MyObject(Generic):
-        def action(self, param: UnknownParameterType, *, an: Optional[str] = None) -> None:
+        def action(self, param: UnknownParameterType, *, an: None | str = None) -> None:
             pass
 
         action.__action__ = ActionMetadata()  # type: ignore

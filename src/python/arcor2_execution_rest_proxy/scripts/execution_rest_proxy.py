@@ -36,7 +36,7 @@ from arcor2_runtime.package import PROJECT_PATH
 
 PORT = int(os.getenv("ARCOR2_EXECUTION_PROXY_PORT", 5009))
 SERVICE_NAME = "Execution Web API"
-DEPENDENCIES: Optional[dict[str, str]] = None
+DEPENDENCIES: None | dict[str, str] = None
 
 DB_PATH = os.getenv("ARCOR2_EXECUTION_PROXY_DB_PATH", "/tmp")  # should be directory where DBs can be stored
 TOKENS_DB_PATH = os.path.join(DB_PATH, "tokens")
@@ -158,7 +158,7 @@ class Token(JsonSchemaMixin):
 
 app = create_app(__name__)
 
-ws: Optional[websocket.WebSocket] = None
+ws: None | websocket.WebSocket = None
 
 if TYPE_CHECKING:
     ReqQueue = Queue[arcor2_rpc.common.RPC.Request]  # this is only processed by mypy
@@ -172,13 +172,13 @@ rpc_request_queue: ReqQueue = ReqQueue()
 rpc_responses: dict[int, RespQueue] = {}
 
 package_state: PackageState.Data = PackageState.Data()
-package_info: Optional[PackageInfo.Data] = None
+package_info: None | PackageInfo.Data = None
 exception_messages: list[str] = []
 
 # hold last action state for AP visualization
 # do not unset ActionStateBefore event, this information might be used even after ActionStateAfter event
-action_state_before: Optional[ActionStateBefore.Data] = None
-action_state_after: Optional[ActionStateAfter.Data] = None
+action_state_before: None | ActionStateBefore.Data = None
+action_state_after: None | ActionStateAfter.Data = None
 
 breakpoints: dict[str, set[str]] = {}
 

@@ -1,7 +1,7 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Optional, Type, Union, cast
+from typing import Optional, Type, TypeAlias, Union, cast
 
 from apispec import APISpec
 from apispec_webframeworks.flask import FlaskPlugin
@@ -16,7 +16,8 @@ from arcor2 import env
 from arcor2.data.common import WebApiError as IWebApiError
 from arcor2.exceptions import Arcor2Exception
 
-RespT = Union[Response, tuple[str, int], tuple[Response, int]]
+# TODO mypy likes Union here :-/
+RespT: TypeAlias = Union[Response, tuple[str, int], tuple[Response, int]]  # noqa:NU001
 
 
 class FlaskException(Arcor2Exception):
@@ -26,7 +27,7 @@ class FlaskException(Arcor2Exception):
     service: str
     description: str
 
-    def __init__(self, message: str, content: Optional[str] = None):
+    def __init__(self, message: str, content: None | str = None):
         super().__init__(message)
         self.content = content
 
@@ -120,11 +121,11 @@ def run_app(
     name: str,
     version: str,
     port: int,
-    dataclasses: Optional[list[type[JsonSchemaMixin]]] = None,
+    dataclasses: None | list[type[JsonSchemaMixin]] = None,
     print_spec: bool = False,
-    dependencies: Optional[dict[str, str]] = None,
+    dependencies: None | dict[str, str] = None,
     *,
-    api_version: Optional[str] = None,
+    api_version: None | str = None,
 ) -> None:
     if not api_version:
         api_version = version

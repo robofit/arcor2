@@ -1,6 +1,5 @@
 import inspect
 from enum import Enum
-from typing import Union
 
 from apispec import APISpec
 from apispec.exceptions import DuplicateComponentNameError
@@ -12,7 +11,7 @@ from arcor2.data.events import Event
 from arcor2.data.rpc.common import RPC
 
 
-def _rename_childs(obj: Union[type[JsonSchemaMixin], type[Enum]]) -> None:
+def _rename_childs(obj: type[JsonSchemaMixin] | type[Enum]) -> None:
 
     for _, child_obj in inspect.getmembers(obj, inspect.isclass):
 

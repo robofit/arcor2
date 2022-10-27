@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Iterator, Optional, Union, ValuesView
+from typing import TYPE_CHECKING, Iterator, ValuesView
 
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
@@ -22,15 +22,15 @@ class CachedBase:
 
     __slots__ = "id", "name", "description", "created", "modified", "int_modified"
 
-    def __init__(self, data: Union[cmn.Scene, cmn.Project, CachedScene, CachedProject]) -> None:
+    def __init__(self, data: cmn.Scene | cmn.Project | CachedScene | CachedProject) -> None:
 
         self.id: str = data.id
         self.name: str = data.name
         self.description: str = data.description
 
-        self.created: Optional[datetime] = data.created
-        self.modified: Optional[datetime] = data.modified
-        self.int_modified: Optional[datetime] = data.int_modified
+        self.created: None | datetime = data.created
+        self.modified: None | datetime = data.modified
+        self.int_modified: None | datetime = data.int_modified
 
 
 class UpdateableMixin:
@@ -38,8 +38,8 @@ class UpdateableMixin:
     if TYPE_CHECKING:
         __slots__ = "modified", "int_modified"
 
-        modified: Optional[datetime] = None
-        int_modified: Optional[datetime] = None
+        modified: None | datetime = None
+        int_modified: None | datetime = None
     else:
         __slots__ = ()
 
@@ -72,7 +72,7 @@ class CachedScene(CachedBase):
 
     __slots__ = ("_objects", "_object_types")
 
-    def __init__(self, scene: Union[cmn.Scene, CachedScene]) -> None:
+    def __init__(self, scene: cmn.Scene | CachedScene) -> None:
 
         super().__init__(scene)
 
@@ -143,7 +143,7 @@ class UpdateableCachedScene(UpdateableMixin, CachedScene):
 
     __slots__ = ()
 
-    def __init__(self, scene: Union[cmn.Scene, CachedScene]):
+    def __init__(self, scene: cmn.Scene | CachedScene):
         super(UpdateableCachedScene, self).__init__(copy.deepcopy(scene))
 
     def upsert_object(self, obj: cmn.SceneObject) -> None:
@@ -220,13 +220,13 @@ class CachedProject(CachedBase):
         "project_objects_ids",
     )
 
-    def __init__(self, project: Union[cmn.Project, CachedProject]):
+    def __init__(self, project: cmn.Project | CachedProject):
 
         super().__init__(project)
 
         self.scene_id: str = project.scene_id
         self.has_logic: bool = project.has_logic
-        self.project_objects_ids: Optional[list[str]] = project.project_objects_ids
+        self.project_objects_ids: None | list[str] = project.project_objects_ids
 
         self._action_points: dict[str, cmn.BareActionPoint] = {}
 
@@ -472,7 +472,7 @@ class CachedProject(CachedBase):
 
     def first_action_id(self) -> str:
 
-        first_action: Optional[str] = None
+        first_action: None | str = None
 
         for item in self._logic_items.values():
             if item.start == item.START:
@@ -536,7 +536,7 @@ class CachedProject(CachedBase):
 
     def get_by_id(
         self, obj_id: str
-    ) -> Union[cmn.BareActionPoint, cmn.NamedOrientation, cmn.ProjectRobotJoints, cmn.Action, cmn.ProjectParameter]:
+    ) -> cmn.BareActionPoint | cmn.NamedOrientation | cmn.ProjectRobotJoints | cmn.Action | cmn.ProjectParameter:
 
         if obj_id in self._action_points:  # AP
             return self._action_points[obj_id]
@@ -551,7 +551,7 @@ class CachedProject(CachedBase):
 
         raise CachedProjectException("Object not found.")
 
-    def get_parent_id(self, obj_id: str) -> Optional[str]:
+    def get_parent_id(self, obj_id: str) -> None | str:
 
         if obj_id in self._action_points:  # AP
             return self._action_points[obj_id].parent if self._action_points[obj_id].parent else None
@@ -564,7 +564,7 @@ class CachedProject(CachedBase):
 
         raise CachedProjectException("Object not found.")
 
-    def _upsert_child(self, parent: Optional[str], child: str) -> None:
+    def _upsert_child(self, parent: None | str, child: str) -> None:
         if parent:
             if parent not in self._childs:
                 self._childs[parent] = set()
@@ -582,14 +582,14 @@ class CachedProject(CachedBase):
 
         return ret | {c for s in [self.childs(ch, True) for ch in ret] for c in s}
 
-    def _remove_child(self, parent: Optional[str], child: str) -> None:
+    def _remove_child(self, parent: None | str, child: str) -> None:
 
         if parent and parent in self._childs:
             self._childs[parent].remove(child)
             if not self._childs[parent]:
                 del self._childs[parent]
 
-    def update_child(self, obj_id: str, old_parent: Optional[str], new_parent: Optional[str]) -> None:
+    def update_child(self, obj_id: str, old_parent: None | str, new_parent: None | str) -> None:
 
         self._remove_child(old_parent, obj_id)
         self._upsert_child(new_parent, obj_id)
@@ -599,7 +599,7 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
 
     __slots__ = ()
 
-    def __init__(self, project: Union[cmn.Project, CachedProject]):
+    def __init__(self, project: cmn.Project | CachedProject):
         super().__init__(copy.deepcopy(project))
 
     def upsert_action(self, ap_id: str, action: cmn.Action) -> None:
@@ -687,7 +687,7 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
         return value.joints
 
     def upsert_action_point(
-        self, ap_id: str, name: str, position: cmn.Position, parent: Optional[str] = None
+        self, ap_id: str, name: str, position: cmn.Position, parent: None | str = None
     ) -> cmn.BareActionPoint:
 
         try:

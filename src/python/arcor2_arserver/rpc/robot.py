@@ -1,7 +1,7 @@
 import asyncio
 import math
 import time
-from typing import Awaitable, Callable, Optional
+from typing import Awaitable, Callable
 
 import numpy as np
 from websockets.server import WebSocketServerProtocol as WsClient
@@ -76,14 +76,14 @@ async def robot_joints_event(robot_inst: Robot) -> None:
     logger.info(f"Sending joints for {robot_inst.name} stopped.")
 
 
-async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: Optional[str] = None) -> RobotEef.Data.EefPose:
+async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: None | str = None) -> RobotEef.Data.EefPose:
 
     return RobotEef.Data.EefPose(eef_id, (await robot.get_end_effector_pose(robot_inst, eef_id, arm_id)), arm_id)
 
 
 async def robot_eef_pose_event(robot_inst: Robot) -> None:
 
-    eefs: dict[Optional[str], set[str]] = {}
+    eefs: dict[None | str, set[str]] = {}
 
     try:
         try:

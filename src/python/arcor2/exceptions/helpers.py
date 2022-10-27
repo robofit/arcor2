@@ -1,6 +1,6 @@
 import functools
 import logging
-from typing import Any, Callable, Optional, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
 from arcor2.exceptions import Arcor2Exception
 
@@ -11,7 +11,7 @@ def handle(
     raise_type: type[Arcor2Exception],
     logger: logging.Logger,
     except_type: type[Arcor2Exception] = Arcor2Exception,
-    message: Optional[str] = None,
+    message: None | str = None,
 ) -> Callable[[F], F]:
     def _handle_exceptions(func: F) -> F:
         @functools.wraps(func)

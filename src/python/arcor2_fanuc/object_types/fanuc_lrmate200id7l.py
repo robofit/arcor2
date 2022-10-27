@@ -1,4 +1,4 @@
-from .fanuc import Fanuc
+from .fanuc import Fanuc  # noqa:ABS101
 
 
 class FanucLRMate200id7L(Fanuc):

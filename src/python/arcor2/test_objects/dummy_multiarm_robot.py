@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from arcor2 import transformations as tr
 from arcor2.data.common import Joint, Pose, StrEnum
@@ -28,7 +27,7 @@ class DummyMultiArmRobot(MultiArmRobot):
 
     JOINTS: dict[str, list[Joint]] = {Arms.left: [Joint("l_joint_1", 1.0)], Arms.right: [Joint("r_joint_1", -1.0)]}
 
-    def __init__(self, obj_id: str, name: str, pose: Pose, settings: Optional[Settings] = None) -> None:
+    def __init__(self, obj_id: str, name: str, pose: Pose, settings: None | Settings = None) -> None:
         super().__init__(obj_id, name, pose, settings)
 
         self._hand_teaching: dict[str, bool] = {self.Arms.left: False, self.Arms.right: False}
@@ -43,7 +42,7 @@ class DummyMultiArmRobot(MultiArmRobot):
         return self.Arms.set()
 
     @staticmethod
-    def _get_from_dict(d: dict[str, set[str]], arm_id: Optional[str] = None) -> set[str]:
+    def _get_from_dict(d: dict[str, set[str]], arm_id: None | str = None) -> set[str]:
 
         if arm_id is None:
             raise Arcor2Exception("Arm has to be specified.")
@@ -53,10 +52,10 @@ class DummyMultiArmRobot(MultiArmRobot):
         except KeyError:
             raise Arcor2Exception("Unknown arm.")
 
-    def get_end_effectors_ids(self, arm_id: Optional[str] = None) -> set[str]:
+    def get_end_effectors_ids(self, arm_id: None | str = None) -> set[str]:
         return self._get_from_dict(self.EEF, arm_id)
 
-    def get_end_effector_pose(self, end_effector: str, arm_id: Optional[str] = None) -> Pose:
+    def get_end_effector_pose(self, end_effector: str, arm_id: None | str = None) -> Pose:
 
         if end_effector not in self.get_end_effectors_ids(arm_id):
             raise Arcor2Exception("Unknown end effector.")
@@ -65,7 +64,7 @@ class DummyMultiArmRobot(MultiArmRobot):
 
         return tr.make_pose_abs(self.pose, self._poses[arm_id][end_effector])
 
-    def robot_joints(self, include_gripper: bool = False, arm_id: Optional[str] = None) -> list[Joint]:
+    def robot_joints(self, include_gripper: bool = False, arm_id: None | str = None) -> list[Joint]:
         """With no arm specified, returns all robot joints. Otherwise, returns
         joints for the given arm.
 
@@ -81,10 +80,10 @@ class DummyMultiArmRobot(MultiArmRobot):
         except KeyError:
             raise Arcor2Exception("Unknown arm.")
 
-    def grippers(self, arm_id: Optional[str] = None) -> set[str]:
+    def grippers(self, arm_id: None | str = None) -> set[str]:
         return self._get_from_dict(self.GRIPPERS, arm_id)
 
-    def suctions(self, arm_id: Optional[str] = None) -> set[str]:
+    def suctions(self, arm_id: None | str = None) -> set[str]:
         return self._get_from_dict(self.SUCTIONS, arm_id)
 
     def move_to_pose(
@@ -94,7 +93,7 @@ class DummyMultiArmRobot(MultiArmRobot):
         speed: float,
         safe: bool = True,
         linear: bool = True,
-        arm_id: Optional[str] = None,
+        arm_id: None | str = None,
     ) -> None:
         """Move given robot's end effector to the selected pose.
 
@@ -117,7 +116,7 @@ class DummyMultiArmRobot(MultiArmRobot):
             self._poses[arm_id][end_effector_id] = tr.make_pose_rel(self.pose, target_pose)
 
     def move_to_joints(
-        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: Optional[str] = None
+        self, target_joints: list[Joint], speed: float, safe: bool = True, arm_id: None | str = None
     ) -> None:
         """Sets target joint values.
 
@@ -142,9 +141,9 @@ class DummyMultiArmRobot(MultiArmRobot):
         self,
         end_effector_id: str,
         pose: Pose,
-        start_joints: Optional[list[Joint]] = None,
+        start_joints: None | list[Joint] = None,
         avoid_collisions: bool = True,
-        arm_id: Optional[str] = None,
+        arm_id: None | str = None,
     ) -> list[Joint]:
         """Computes inverse kinematics.
 
@@ -165,7 +164,7 @@ class DummyMultiArmRobot(MultiArmRobot):
         except KeyError:
             raise Arcor2Exception("Unknown arm.")
 
-    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: Optional[str] = None) -> Pose:
+    def forward_kinematics(self, end_effector_id: str, joints: list[Joint], arm_id: None | str = None) -> Pose:
         """Computes forward kinematics.
 
         :param end_effector_id: Target end effector name
@@ -178,7 +177,7 @@ class DummyMultiArmRobot(MultiArmRobot):
 
         return Pose()
 
-    def get_hand_teaching_mode(self, arm_id: Optional[str] = None) -> bool:
+    def get_hand_teaching_mode(self, arm_id: None | str = None) -> bool:
         """
         This is expected to be implemented if the robot supports set_hand_teaching_mode
         :return:
@@ -192,7 +191,7 @@ class DummyMultiArmRobot(MultiArmRobot):
         except KeyError:
             raise Arcor2Exception("Unknown arm.")
 
-    def set_hand_teaching_mode(self, enabled: bool, arm_id: Optional[str] = None) -> None:
+    def set_hand_teaching_mode(self, enabled: bool, arm_id: None | str = None) -> None:
 
         if arm_id is None:
             raise Arcor2Exception("Arm has to be specified.")

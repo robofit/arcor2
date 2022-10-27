@@ -6,7 +6,6 @@ import json
 import logging
 import os
 from functools import wraps
-from typing import Optional
 
 from flask import Response, jsonify, request
 
@@ -44,7 +43,7 @@ assert set(dobot_model_mapping.keys()) == DobotModels.set()
 
 app = create_app(__name__)
 
-_dobot: Optional[Dobot] = None
+_dobot: None | Dobot = None
 _mock = False
 
 

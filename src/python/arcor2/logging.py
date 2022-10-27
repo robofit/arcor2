@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import aiologger
 import colorlog
@@ -29,7 +28,7 @@ def logger_formatter(log_format=DEFAULT_LOG_FORMAT, date_format=DEFAULT_DATE_FOR
 def get_aiologger(
     name: str,
     level: aiologger.levels.LogLevel = aiologger.levels.LogLevel.INFO,
-    formatter: Optional[logging.Formatter] = None,
+    formatter: None | logging.Formatter = None,
 ) -> aiologger.Logger:
 
     if formatter is None:

@@ -1,12 +1,10 @@
-from typing import Optional
-
 from arcor2 import DynamicParamTuple as DPT
 from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
 from arcor2.object_types.abstract import Robot, RobotException
 
-from .fit_common_mixin import FitCommonMixin
+from .fit_common_mixin import FitCommonMixin  # noqa:ABS101
 
 
 class DobotException(RobotException):
@@ -58,7 +56,7 @@ class AbstractDobot(FitCommonMixin, Robot):
     def move_to_joints(self, target_joints: list[Joint], speed: float, safe: bool = True) -> None:
         self.move(self.forward_kinematics("", target_joints), MoveType.LINEAR, speed * 100, safe=safe)
 
-    def home(self, *, an: Optional[str] = None) -> None:
+    def home(self, *, an: None | str = None) -> None:
         """Run the homing procedure."""
         with self._move_lock:
             rest.call(rest.Method.PUT, f"{self.settings.url}/home")
@@ -71,7 +69,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         acceleration: float = 50.0,
         safe: bool = True,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Moves the robot's end-effector to a specific pose.
 
@@ -94,11 +92,11 @@ class AbstractDobot(FitCommonMixin, Robot):
                 params={"move_type": move_type, "velocity": velocity, "acceleration": acceleration, "safe": safe},
             )
 
-    def suck(self, *, an: Optional[str] = None) -> None:
+    def suck(self, *, an: None | str = None) -> None:
         """Turns on the suction."""
         rest.call(rest.Method.PUT, f"{self.settings.url}/suck")
 
-    def release(self, *, an: Optional[str] = None) -> None:
+    def release(self, *, an: None | str = None) -> None:
         """Turns off the suction."""
 
         rest.call(rest.Method.PUT, f"{self.settings.url}/release")
@@ -111,7 +109,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         safe_approach: bool = True,
         safe_pick: bool = False,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Picks an item from given pose.
 
@@ -141,7 +139,7 @@ class AbstractDobot(FitCommonMixin, Robot):
         safe_approach: bool = True,
         safe_place: bool = False,
         *,
-        an: Optional[str] = None,
+        an: None | str = None,
     ) -> None:
         """Places an item to a given pose.
 

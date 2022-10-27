@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Iterable, Optional, Union
+from typing import AsyncGenerator, Iterable
 
 from arcor2 import env
 from arcor2.cached import CachedProjectException, UpdateableCachedProject, UpdateableCachedScene
@@ -54,8 +54,8 @@ class Lock:
     )
 
     def __init__(self, obj_types: ObjectTypeDict) -> None:
-        self._scene: Optional[UpdateableCachedScene] = None
-        self._project: Optional[UpdateableCachedProject] = None
+        self._scene: None | UpdateableCachedScene = None
+        self._project: None | UpdateableCachedProject = None
         self._object_types = obj_types
 
         self._lock: asyncio.Lock = asyncio.Lock()
@@ -70,11 +70,11 @@ class Lock:
         self._retry_wait: float = env.get_float("ARCOR2_ARSERVER_LOCK_RETRY_WAIT", 0.15)
 
     @property
-    def scene(self) -> Optional[UpdateableCachedScene]:
+    def scene(self) -> None | UpdateableCachedScene:
         return self._scene
 
     @scene.setter
-    def scene(self, scene: Optional[UpdateableCachedScene] = None) -> None:
+    def scene(self, scene: None | UpdateableCachedScene = None) -> None:
         self._scene = scene
 
     def scene_or_exception(self, ensure_project_closed: bool = False) -> UpdateableCachedScene:
@@ -87,11 +87,11 @@ class Lock:
         return self._scene
 
     @property
-    def project(self) -> Optional[UpdateableCachedProject]:
+    def project(self) -> None | UpdateableCachedProject:
         return self._project
 
     @project.setter
-    def project(self, project: Optional[UpdateableCachedProject] = None) -> None:
+    def project(self, project: None | UpdateableCachedProject = None) -> None:
         self._project = project
 
     def project_or_exception(self, *, must_have_logic: bool = False) -> UpdateableCachedProject:
@@ -110,7 +110,7 @@ class Lock:
         return self._ui_user_locks
 
     @asynccontextmanager
-    async def get_lock(self, dry_run: bool = False) -> AsyncGenerator[Optional[asyncio.Lock], None]:
+    async def get_lock(self, dry_run: bool = False) -> AsyncGenerator[None | asyncio.Lock, None]:
         """Get lock for data structure, method should be used for operation
         with whole scene/project e.g. saving project, where no changes should
         be made during this operation.
@@ -608,16 +608,16 @@ class Lock:
 
             return False
 
-    def get_by_id(
-        self, obj_id: str
-    ) -> Union[
-        cmn.SceneObject,
-        cmn.BareActionPoint,
-        cmn.NamedOrientation,
-        cmn.ProjectRobotJoints,
-        cmn.Action,
-        cmn.ProjectParameter,
-    ]:
+    TypesWithId = (
+        cmn.SceneObject
+        | cmn.BareActionPoint
+        | cmn.NamedOrientation
+        | cmn.ProjectRobotJoints
+        | cmn.Action
+        | cmn.ProjectParameter
+    )
+
+    def get_by_id(self, obj_id: str) -> TypesWithId:
         """Retrive object by it's ID."""
 
         if self.project:

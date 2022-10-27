@@ -4,7 +4,7 @@ import os
 import time
 from threading import Event
 from types import TracebackType
-from typing import Optional, TypeVar
+from typing import TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
@@ -28,7 +28,7 @@ from arcor2_runtime.exceptions import print_exception
 
 
 class ResourcesException(Arcor2Exception):
-    def __init__(self, message: str, exceptions: Optional[list[Arcor2Exception]] = None):
+    def __init__(self, message: str, exceptions: None | list[Arcor2Exception] = None):
         super().__init__(message)
         self.exceptions = exceptions
 
@@ -42,7 +42,7 @@ _streaming_period = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
 
 def stream_pose(robot_inst: Robot) -> None:
 
-    arm_eef: dict[Optional[str], set[str]] = {}
+    arm_eef: dict[None | str, set[str]] = {}
 
     try:
         if isinstance(robot_inst, MultiArmRobot):
@@ -94,7 +94,7 @@ class Resources:
 
     def __init__(self, apply_action_mapping: bool = True) -> None:
 
-        models: dict[str, Optional[Models]] = {}
+        models: dict[str, None | Models] = {}
 
         scene = self.read_project_data(Scene.__name__.lower(), Scene)
         project = self.read_project_data(Project.__name__.lower(), Project)
@@ -257,9 +257,9 @@ class Resources:
 
     def __exit__(
         self,
-        ex_type: Optional[type[BaseException]],
-        ex_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        ex_type: None | type[BaseException],
+        ex_value: None | BaseException,
+        traceback: None | TracebackType,
     ) -> bool:
 
         _shutting_down.set()

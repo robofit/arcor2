@@ -15,11 +15,9 @@ DynamicParamDict = dict[str, DynamicParamTuple]
 # key: action, value: cancel method
 CancelDict = dict[str, str]
 
-warnings.filterwarnings(action="ignore", category=UserWarning, module="quaternion")
 
-warnings.filterwarnings(
-    action="ignore", category=UserWarning, module="dataclasses_jsonschema", message="Unable to create schema for 'Any'"
-)
+if __debug__:
+    warnings.filterwarnings("error", module="dataclasses_jsonschema")  # make warnings fatal because they are
 
 
 def package_version(package: str, file: str = "VERSION") -> str:

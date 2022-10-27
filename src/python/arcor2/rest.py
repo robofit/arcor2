@@ -2,7 +2,7 @@ import logging
 from enum import Enum
 from functools import partial
 from io import BytesIO
-from typing import Any, NamedTuple, Optional, Sequence, TypeVar, Union, overload
+from typing import Any, NamedTuple, Sequence, TypeAlias, TypeVar, Union, overload
 
 import humps
 import requests
@@ -17,12 +17,13 @@ from arcor2.logging import get_logger
 # typing-related definitions
 DataClass = TypeVar("DataClass", bound=JsonSchemaMixin)
 Primitive = TypeVar("Primitive", str, int, float, bool)
-ReturnValue = Union[None, Primitive, DataClass, BytesIO]
-ReturnType = Union[None, type[Primitive], type[DataClass], type[BytesIO]]
+ReturnValue: TypeAlias = BytesIO | DataClass | Primitive | None
+# TODO mypy likes Union here :-/
+ReturnType: TypeAlias = Union[type[BytesIO], type[DataClass], type[Primitive], None]  # noqa:NU001
 
-OptBody = Optional[Union[JsonSchemaMixin, Sequence[JsonSchemaMixin], Sequence[Primitive]]]
-OptParams = Optional[dict[str, Primitive]]
-OptFiles = Optional[dict[str, Union[Union[bytes, str], tuple[str, Union[bytes, str]]]]]
+OptBody: TypeAlias = JsonSchemaMixin | Sequence[JsonSchemaMixin] | Sequence[Primitive] | None
+OptParams: TypeAlias = dict[str, Primitive] | None
+OptFiles: TypeAlias = dict[str, bytes | str | tuple[str, bytes | str]] | None
 
 
 class RestException(Arcor2Exception):
@@ -61,7 +62,7 @@ class Timeout(NamedTuple):
     read: float = 20.0
 
 
-OptTimeout = Optional[Timeout]
+OptTimeout = None | Timeout
 
 
 # module-level variables
@@ -223,7 +224,7 @@ def call(
     if return_type is None:
         return_type = list_return_type
 
-    d: Union[list[Any], dict[str, Any], None] = None
+    d: list[Any] | dict[str, Any] | None = None
 
     # prepare body data into dict or list (if any)
     if isinstance(body, JsonSchemaMixin):

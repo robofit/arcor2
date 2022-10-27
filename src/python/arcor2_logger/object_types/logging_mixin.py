@@ -4,7 +4,7 @@ import concurrent.futures as cf
 import logging
 import os
 from dataclasses import dataclass
-from typing import Optional, Protocol
+from typing import Protocol
 
 import websocket
 from dataclasses_jsonschema import JsonSchemaMixin
@@ -55,7 +55,7 @@ class Logger:
         self._ws.connect(os.getenv("ARCOR2_LOGGER_URL", "ws://0.0.0.0:8765"))
         self._executor = cf.ThreadPoolExecutor(max_workers=1)
         self._executor.submit(self._ws.send, Register(obj.id, obj.name, obj.__class__.__name__).to_json())
-        self._last_task: Optional[cf.Future] = None
+        self._last_task: None | cf.Future = None
 
     def _log(self, message: str, level: Level) -> None:
         if not self._ws.connected:
