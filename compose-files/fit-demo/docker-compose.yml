@@ -154,7 +154,7 @@ services:
       test: ["CMD", "curl", "--fail", "http://localhost:5013/health"]
       interval: 5s
       retries: 50
-      start_period: 40s
+      start_period: 60s
       timeout: 10s
 
   fit-demo-asset:
