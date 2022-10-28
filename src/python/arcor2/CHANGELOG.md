@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Switched to Python 3.10, updated dependencies.
+- Removed unused `children` property from `SceneObject`.
+- Removed unused assets-related functions from Project service client.
 
 ## [0.24.2] - 2022-08-29
 
