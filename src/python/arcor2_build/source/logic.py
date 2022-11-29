@@ -19,6 +19,7 @@ from ast import (
     expr,
     keyword,
 )
+from typing import Optional, Union
 
 import humps
 
@@ -34,6 +35,37 @@ from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
 from arcor2_build.source.utils import empty_script_tree, find_function, find_last_assign, main_loop
+
+######################
+import json
+import ast
+
+from arcor2.data.common import (
+    Action,
+    ActionParameter,
+    ActionPoint,
+    Flow,
+    LogicItem,
+    Position,
+    Project,
+    ProjectLogicIf,
+    Scene,
+)
+from ast import (
+    Call,
+    Expr,
+    While, 
+    NodeVisitor,
+    Constant
+)
+from arcor2.data.object_type import ObjectType
+from llist import sllist
+
+from arcor2_build.scripts.build import read_dc_from_zip, read_str_from_zip
+import zipfile
+
+#####################
+objects: dict[str, ObjectType] = {}
 
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
@@ -57,7 +89,7 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     for param in project.parameters:
         val = json.loads(param.value)
 
-        aval: None | expr = None
+        aval: Optional[expr] = None
 
         if isinstance(val, bool):  # subclass of int
             aval = NameConstant(value=val, kind=None)
@@ -83,7 +115,7 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     return SCRIPT_HEADER + tree_to_str(tree)
 
 
-Container = FunctionDef | If | While  # TODO remove While
+Container = Union[FunctionDef, If, While]  # TODO remove While
 
 
 def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project: CProject) -> None:
@@ -108,7 +140,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
         return depth
 
-    def _add_logic(container: Container, current_action: Action, super_container: None | Container = None) -> None:
+    def _add_logic(container: Container, current_action: Action, super_container: Optional[Container] = None) -> None:
 
         # more paths could lead  to the same action, so it might be already added
         # ...this is easier than searching the tree
@@ -215,7 +247,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
         else:
 
-            root_if: None | If = None
+            root_if: Optional[If] = None
 
             # action has more outputs - each output should have condition
             for idx, output in enumerate(outputs):
@@ -266,3 +298,290 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
     if loop and isinstance(loop.body[-1], Continue):
         # delete unnecessary continue
         del loop.body[-1]
+
+###########################################################
+def find_While(tree: Union[Module, AST]) -> While:
+    class FindWhile(NodeVisitor):
+        def __init__(self) -> None:
+            self.While_node: Optional[While] = None
+
+        def visit_While(self, node: While) -> None:
+            self.While_node = node
+            self.generic_visit(node)
+            return
+
+    ff = FindWhile()
+    ff.visit(tree)
+
+    return ff.While_node
+
+def find_Call(tree: Union[Module, AST]) -> Call:
+    class FindCall(NodeVisitor):
+        def __init__(self) -> None:
+            self.Call_node: Optional[Call] = None
+
+        def visit_Call(self, node: Call) -> None:
+            self.Call_node = node
+            return
+
+    ff = FindCall()
+    ff.visit(tree)
+
+    return ff.Call_node
+
+def find_keyword(tree: Union[Module, AST]) -> keyword:
+    class Findkeyword(NodeVisitor):
+        def __init__(self) -> None:
+            self.keyword_node: Optional[keyword] = None
+
+        def visit_keyword(self, node: keyword) -> None:
+            self.keyword_node = node
+            return
+
+    ff = Findkeyword()
+    ff.visit(tree)
+
+    return ff.keyword_node
+
+def find_Compare(tree: Union[Module, AST]) -> list[Compare]:
+    class FindCompare(NodeVisitor):
+        def __init__(self) -> None:
+            self.Compare_node: list[Compare] = []
+
+        def visit_Compare(self, node: Compare) -> None:
+            self.Compare_node.append(node)
+            return
+
+    ff = FindCompare()
+    ff.visit(tree)
+
+    return ff.Compare_node[0]
+
+def get_pro_sce_scr(file):
+
+    project=0
+    scene=0
+    script=0
+
+    with zipfile.ZipFile(file+'.zip', 'r') as zip_file:
+        try:
+            project = read_dc_from_zip(zip_file, file+"/data/project.json", Project)
+        except KeyError:
+            print("Could not find project.json.")
+
+        try:
+            scene = read_dc_from_zip(zip_file, file+"/data/scene.json", Scene)
+        except KeyError:
+            print("Could not find project.json.")
+
+        for scene_obj in scene.objects:
+            obj_type_name = scene_obj.type
+            if obj_type_name in objects:  # there might be more instances of the same type
+                continue
+            logger.debug(f"Importing {obj_type_name}.")
+
+            try:
+                obj_type_src = read_str_from_zip(zip_file, file+f"/object_types/{humps.depascalize(obj_type_name)}.py")
+            except KeyError:
+                print(f"Object type {obj_type_name} is missing in the package.")
+
+
+        logger.debug("Importing the main script.")
+        try:
+            script = zip_file.read(file+"/script.py").decode("UTF-8")            
+        except KeyError:
+            print("Could not find script.py.")
+
+        return project, scene, script
+
+def gen_logic(ac_id, lst, condition = ""):
+
+    if condition == "check_if":
+        for i in range(lst.size):
+            node = lst.nodeat(i)
+            if node.value.end == '':
+                node.value.end= ac_id
+        item = LogicItem(ac_id, "")
+        lst.append(item)
+
+    elif condition == "add_if_LogicItem":
+        item = LogicItem(ac_id, "")
+        lst.append(item)
+
+    else:
+        lst.last.value.end = ac_id
+        item = LogicItem(ac_id, "")
+        lst.append(item)
+
+    return
+
+def gen_actions(ap1, node, variables: list, flows="", original_project=0, original_scene=0):
+    parameters = []
+    type = ""
+    final_flows = [Flow()]
+
+    rest_of_node = find_Call(node)
+
+    # flow
+    if flows:
+        final_flows = [Flow(outputs=[(flows)])]
+
+    # type
+    tmp = ast.unparse(rest_of_node.func)
+    length = len(original_scene.objects)
+    #looking for type of action
+    for i in range(length):
+        if (tmp.find(original_scene.objects[i].name+".") != -1):   
+            #raplece name from code to scene definition 
+            type = tmp.replace(original_scene.objects[i].name+".",(original_scene.objects[i].id+"/"))
+            break
+    
+    # name 
+    name = ast.unparse(find_keyword(rest_of_node).value).replace("\'","")
+
+    # parameters
+    #TODO: value
+    try:
+        num_of_args = len(rest_of_node.args)
+        num_of_variables = len(variables)
+        for j in range(num_of_args):  
+            condition = 0 
+            arg = ast.unparse(rest_of_node.args[j])
+
+            if isinstance(rest_of_node.args[j], Constant):      #TODO: constant from objects
+                pass
+                
+            elif condition == 0:
+                for i in range(len(original_project.parameters)):       #constant from scene
+                    if arg == original_project.parameters[i].name:
+                        parameters+=[ActionParameter("param", ActionParameter.TypeEnum.PROJECT_PARAMETER, json.dumps(original_project.parameters[i].id))]
+                        condition = 1
+                        break
+
+            elif condition == 0:
+                for i in range(num_of_variables):                       #variable
+                    if  arg == variables[i]:
+                        parameters+=[ActionParameter("param", ActionParameter.TypeEnum.LINK, json.dumps(f"{variables[i+1]}/default/0"))]
+                        break
+                    i += 1
+
+    except:
+        parameters=[]
+  
+    ac1 = Action(name, type, flows=final_flows, parameters=parameters)
+    ap1.actions.append(ac1)   
+        
+    #adding variables to list with actions id
+    if flows != Flow():
+        variables.append(flows)     
+        variables.append(ac1.id)
+    
+    return ac1.id, variables
+
+def evaluate_if (ap1, lst, node, variables: list, ac_id = "", original_project =0, original_scene=0):
+
+    rest_of_node = find_Compare(node)
+    what = ast.unparse(rest_of_node.left)
+    value = ast.unparse(rest_of_node.comparators)
+    if value == "True":
+        value="true"
+    else:
+        value="false"
+
+    for i in range(len(variables)):
+        if what == variables[i]:
+            what = variables[i+1]+"/default/0"
+            break
+        i += 1
+
+    #orelse 
+    if ac_id:                        
+        gen_logic(ac_id, lst, "add_if_LogicItem")   
+    #first if
+    else:  
+        ac_id = lst.last.value.start
+
+    lst.last.value.condition = ProjectLogicIf(f"{what}", value)
+    variables = evaluate_nodes(ap1, lst, node, variables, original_project, original_scene)
+
+    if node.orelse:
+        #if node orelse contains "if" and "else" and not only "elif" this will find them all 
+        for tmp_node in node.orelse:
+            variables = evaluate_if(ap1, lst, tmp_node, variables, ac_id, original_project, original_scene)
+
+    return variables
+
+def evaluate_nodes(ap1: ActionPoint, lst: sllist, tree: Module, variables :list, original_project : Project, original_scene : Scene):
+    
+    #if condition is on, then in future generate LogicItems 
+    # will be chcek all nodes in lst and added id of next action as end of LogicItems 
+    # in case the condition is active and another node is "if" that node will by processed as "elif" inside "evaluate_if" 
+    condition = 0
+    ac_id = 0
+
+    for node in tree.body:
+
+        if isinstance(node, Expr):
+            ac_id, variables = gen_actions(ap1, node, variables, "", original_project, original_scene)
+
+            if condition == 1:
+                gen_logic(ac_id, lst, "check_if")
+                condition = 0
+            else:
+                gen_logic(ac_id, lst)
+
+        elif isinstance(node, Assign):
+            flows = ast.unparse(node.targets)
+            ac_id, variables = gen_actions(ap1, node, variables, flows, original_project, original_scene)
+
+            if condition == 1:
+                gen_logic(ac_id, lst, "check_if")
+                condition = 0
+            else:
+                gen_logic(ac_id, lst)
+                
+        elif isinstance(node, If):
+            if condition == 0: 
+                ac_id = lst.last.value.start
+                variables = evaluate_if(ap1, lst, node, variables, "", original_project, original_scene)
+                condition = 1
+            else:
+                variables = evaluate_if(ap1, lst, node, variables, ac_id, original_project, original_scene)
+
+        elif isinstance(node, Continue):
+            lst.last.value.end = LogicItem.END
+                
+    return variables
+
+def python_to_json(file):
+    # TODO: compare
+
+    original_project, original_scene, script = get_pro_sce_scr(file)
+
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    #linked-list of LogicItems
+    lst = sllist()
+    start_item = LogicItem(LogicItem.START, "")
+    lst.append(start_item)
+
+    #list of variables with id actions, where variable was declared
+    variables = []
+
+    tree = ast.parse(script)
+    tree = find_While(tree)
+    evaluate_nodes(ap1, lst, tree, variables, original_project, original_scene)
+
+    #adding END in to LogicItem with empty end
+    for i in range(lst.size):    
+        node = lst.nodeat(i)
+        if node.value.end == '':
+            node.value.end= LogicItem.END
+
+        #adding logicitems to project
+        project.logic.append(node.value)
+
+    return project
+#python_to_json('pkg_2ce3d90033994836a5ce4d083759645d')
