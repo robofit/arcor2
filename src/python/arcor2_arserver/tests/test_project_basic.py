@@ -26,6 +26,13 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
         rpc.p.OpenProject.Request(get_id(), IdArgs("some-random-nonsense")), rpc.p.OpenProject.Response
     ).result
 
+    # TODO the check is workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+    # attempt to create project with "incorrect" name
+    assert not ars.call_rpc(
+        rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args(scene.id, scene.name)),
+        rpc.p.NewProject.Response,
+    ).result
+
     # correct scene_id
     assert ars.call_rpc(
         rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args(scene.id, project_name)),
@@ -51,6 +58,15 @@ def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.
     assert not ars.call_rpc(
         rpc.p.NewProject.Request(get_id(), rpc.p.NewProject.Request.Args("some non-sense string", "blah")),
         rpc.p.NewProject.Response,
+    ).result
+
+    # TODO the check is workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+    # attempt to rename the project to "incorrect" name
+    assert not ars.call_rpc(
+        rpc.p.RenameProject.Request(
+            get_id(), rpc.p.RenameProject.Request.Args(open_project_evt.data.project.id, scene.name)
+        ),
+        rpc.p.RenameProject.Response,
     ).result
 
     save_project(ars)
