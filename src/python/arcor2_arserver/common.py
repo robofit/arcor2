@@ -7,6 +7,10 @@ from arcor2_arserver import logger
 from arcor2_arserver.clients import project_service as storage
 
 
+async def scene_names() -> set[str]:
+    return {scn.name for scn in (await storage.get_scenes())}
+
+
 async def project_names() -> set[str]:
     return {proj.name for proj in (await storage.get_projects())}
 

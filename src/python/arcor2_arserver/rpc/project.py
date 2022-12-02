@@ -29,7 +29,7 @@ from arcor2_arserver.checks import (
     find_object_action,
 )
 from arcor2_arserver.clients import project_service as storage
-from arcor2_arserver.common import project_names
+from arcor2_arserver.common import project_names, scene_names
 from arcor2_arserver.helpers import (
     ctx_read_lock,
     ctx_write_lock,
@@ -826,6 +826,9 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
 
         unique_name(req.args.name, (await project_names()))
 
+        # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+        unique_name(req.args.name, (await scene_names()))
+
         if await glob.LOCK.get_write_locks_count() > 1:  # project lock also counts
             raise Arcor2Exception("Project has locked objects")
 
@@ -835,6 +838,11 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
         if glob.LOCK.scene:
             if glob.LOCK.scene.id != req.args.scene_id:
                 raise Arcor2Exception("Another scene is opened.")
+
+            # the scene might not be saved yet - another check
+            # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+            if req.args.name == glob.LOCK.scene.name:
+                raise Arcor2Exception("A project can't have the same name as the scene.")
 
             if glob.LOCK.scene.has_changes:
                 await save_scene()
@@ -1405,6 +1413,10 @@ async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> 
 async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> None:
 
     unique_name(req.args.new_name, (await project_names()))
+
+    # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+    unique_name(req.args.new_name, (await scene_names()))
+
     user_name = glob.USERS.user_name(ui)
 
     await ensure_write_locked(req.args.project_id, user_name)
