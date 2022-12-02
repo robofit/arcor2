@@ -220,6 +220,7 @@ class AddActionPointJointsUsingRobot(RPC):
             robot_id: str
             name: str = "default"
             arm_id: Optional[str] = None
+            end_effector_id: Optional[str] = None
 
         args: Args
         dry_run: bool = False

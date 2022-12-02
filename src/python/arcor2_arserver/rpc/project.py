@@ -286,7 +286,9 @@ async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClien
         ap = proj.upsert_action_point(common.ActionPoint.uid(), req.args.name, pose.position)
         ori = common.NamedOrientation("default", pose.orientation)
         proj.upsert_orientation(ap.id, ori)
-        joi = common.ProjectRobotJoints("default", req.args.robot_id, joints, True, req.args.arm_id)
+        joi = common.ProjectRobotJoints(
+            "default", req.args.robot_id, joints, True, req.args.arm_id, req.args.end_effector_id
+        )
         proj.upsert_joints(ap.id, joi)
 
         asyncio.ensure_future(notify(ap, ori, joi))
@@ -318,7 +320,9 @@ async def add_action_point_joints_using_robot_cb(
         if req.dry_run:
             return None
 
-        prj = common.ProjectRobotJoints(req.args.name, req.args.robot_id, new_joints, True, req.args.arm_id)
+        prj = common.ProjectRobotJoints(
+            req.args.name, req.args.robot_id, new_joints, True, req.args.arm_id, req.args.end_effector_id
+        )
         proj.upsert_joints(ap.id, prj)
 
         evt = sevts.p.JointsChanged(prj)
