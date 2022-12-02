@@ -50,7 +50,7 @@ version = "black==22.10.0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
-version = "flake8==5.0.4"
+version = "flake8==6.0.0"
 extra_requirements.add = [
   "flake8-tidy-imports",
   "flake8-annotations-coverage",
@@ -65,12 +65,12 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.982"
+version = "mypy==0.991"
 interpreter_constraints = ["==3.10.*"]
 extra_requirements.add = [
   "numpy"
 ]
-extra_type_stubs = ["types-PyYAML==6.0.11", "types-aiofiles==22.1.0", "types-orjson==3.6.2", "types-python-dateutil==2.8.19", "types-requests==2.28.11.2",  "types-setuptools==65.5.0.2"]
+extra_type_stubs = ["types-PyYAML==6.0.12.2", "types-aiofiles==22.1.0.4", "types-orjson==3.6.2", "types-python-dateutil==2.8.19.4", "types-requests==2.28.11.5",  "types-setuptools==65.6.0.1"]
 lockfile = "3rdparty/mypy_lockfile.txt"
 
 [pytest]

@@ -32,7 +32,7 @@ class Test(Generic):
         return self.INT
 
     def test(self, *, an: None | str = None) -> bool:
-        pass
+        return True
 
     def test_par(self, param: int, *, an: None | str = None) -> None:
         pass
