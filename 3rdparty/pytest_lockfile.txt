@@ -143,13 +143,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "2ac84b496be68464a2da60da518af3785fff8b7ec0d090a581604bc870bdee41",
-              "url": "https://files.pythonhosted.org/packages/de/4c/2854d9e3dcce78108126aa3634186a64ddbfd06d4d69af74954665529e52/exceptiongroup-1.0.0-py3-none-any.whl"
+              "hash": "542adf9dea4055530d6e1279602fa5cb11dab2395fa650b8674eaec35fc4a828",
+              "url": "https://files.pythonhosted.org/packages/ce/2e/9a327cc0d2d674ee2d570ee30119755af772094edba86d721dda94404d1a/exceptiongroup-1.0.4-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "affbabf13fb6e98988c38d9c5650e701569fe3c1de3233cfb61c5f33774690ad",
-              "url": "https://files.pythonhosted.org/packages/4f/7e/eca80dbb5c10ec12ffb50884f52ecbff653cb5f443b0529244a748f114da/exceptiongroup-1.0.0.tar.gz"
+              "hash": "bd14967b79cd9bdb54d97323216f8fdf533e278df937aa2a90089e7d6e06e5ec",
+              "url": "https://files.pythonhosted.org/packages/fa/e1/4f89a2608978a78876a76e69e82fa1fc5ce3fb346297eed2a51dd3df2dcf/exceptiongroup-1.0.4.tar.gz"
             }
           ],
           "project_name": "exceptiongroup",
@@ -157,7 +157,7 @@
             "pytest>=6; extra == \"test\""
           ],
           "requires_python": ">=3.7",
-          "version": "1"
+          "version": "1.0.4"
         },
         {
           "artifacts": [
@@ -369,13 +369,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "2c85a835df33fda40fe3973b451e0c194ca11bc2c007eabff90bb3d156fc172b",
-              "url": "https://files.pythonhosted.org/packages/f1/26/c94ee7873982c5ddde3e62e7b04ee8d6800f843f0729676255e414acee94/pytest_asyncio-0.20.1-py3-none-any.whl"
+              "hash": "07e0abf9e6e6b95894a39f688a4a875d63c2128f76c02d03d16ccbc35bcc0f8a",
+              "url": "https://files.pythonhosted.org/packages/65/57/fb0d22ee0d9cd8d8b277cdf4fd7efa3e245c9577d2c2d54c6c2c18b535a2/pytest_asyncio-0.20.2-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "626699de2a747611f3eeb64168b3575f70439b06c3d0206e6ceaeeb956e65519",
-              "url": "https://files.pythonhosted.org/packages/9e/8f/5a918ac4e2366b61156e16fa9bfb3be52401d81f5309efb1f4e04d99ac39/pytest-asyncio-0.20.1.tar.gz"
+              "hash": "32a87a9836298a881c0ec637ebcc952cfe23a56436bdc0d09d1511941dd8a812",
+              "url": "https://files.pythonhosted.org/packages/eb/db/479f1c43df26c42c9797dfc866dc98bcf28d3765ae49bf2da681ab344b72/pytest-asyncio-0.20.2.tar.gz"
             }
           ],
           "project_name": "pytest-asyncio",
@@ -389,7 +389,7 @@
             "typing-extensions>=3.7.2; python_version < \"3.8\""
           ],
           "requires_python": ">=3.7",
-          "version": "0.20.1"
+          "version": "0.20.2"
         },
         {
           "artifacts": [
