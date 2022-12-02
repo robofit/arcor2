@@ -119,46 +119,46 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "46846318467efc4556ccfd27816e004270a9eeeeb4d062ce5e6fc7a87c573f93",
-              "url": "https://files.pythonhosted.org/packages/63/82/2179fdc39bc1bb43296f638ae1dfe2581ec2617b4e87c28b0d23d44b997f/pathspec-0.10.1-py3-none-any.whl"
+              "hash": "88c2606f2c1e818b978540f73ecc908e13999c6c3a383daf3705652ae79807a5",
+              "url": "https://files.pythonhosted.org/packages/42/79/94b21d5fabb97749ca94590315abe150a750483c87add8543781bcb6cd26/pathspec-0.10.2-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "7ace6161b621d31e7902eb6b5ae148d12cfd23f4a249b9ffb6b9fee12084323d",
-              "url": "https://files.pythonhosted.org/packages/24/9f/a9ae1e6efa11992dba2c4727d94602bd2f6ee5f0dedc29ee2d5d572c20f7/pathspec-0.10.1.tar.gz"
+              "hash": "8f6bf73e5758fd365ef5d58ce09ac7c27d2833a8d7da51712eac6e27e35141b0",
+              "url": "https://files.pythonhosted.org/packages/a2/29/959c72e1a6c3c25eaa46b9bfcc7fd401f65af83163d4796af09272c83c8a/pathspec-0.10.2.tar.gz"
             }
           ],
           "project_name": "pathspec",
           "requires_dists": [],
           "requires_python": ">=3.7",
-          "version": "0.10.1"
+          "version": "0.10.2"
         },
         {
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "027d8e83a2d7de06bbac4e5ef7e023c02b863d7ea5d079477e722bb41ab25788",
-              "url": "https://files.pythonhosted.org/packages/ed/22/967181c94c3a4063fe64e15331b4cb366bdd7dfbf46fcb8ad89650026fec/platformdirs-2.5.2-py3-none-any.whl"
+              "hash": "af0276409f9a02373d540bf8480021a048711d572745aef4b7842dad245eba10",
+              "url": "https://files.pythonhosted.org/packages/61/e0/15ba41c6716acb033c3793be3a02f26c53914ecd9bdd6b315001f8f5f581/platformdirs-2.5.4-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "58c8abb07dcb441e6ee4b11d8df0ac856038f944ab98b7be6b27b2a3c7feef19",
-              "url": "https://files.pythonhosted.org/packages/ff/7b/3613df51e6afbf2306fc2465671c03390229b55e3ef3ab9dd3f846a53be6/platformdirs-2.5.2.tar.gz"
+              "hash": "1006647646d80f16130f052404c6b901e80ee4ed6bef6792e1f238a8969106f7",
+              "url": "https://files.pythonhosted.org/packages/cb/5f/dda8451435f17ed8043eab5ffe04e47d703debe8fe845eb074f42260e50a/platformdirs-2.5.4.tar.gz"
             }
           ],
           "project_name": "platformdirs",
           "requires_dists": [
             "appdirs==1.4.4; extra == \"test\"",
-            "furo>=2021.7.5b38; extra == \"docs\"",
-            "proselint>=0.10.2; extra == \"docs\"",
-            "pytest-cov>=2.7; extra == \"test\"",
-            "pytest-mock>=3.6; extra == \"test\"",
-            "pytest>=6; extra == \"test\"",
-            "sphinx-autodoc-typehints>=1.12; extra == \"docs\"",
-            "sphinx>=4; extra == \"docs\""
+            "furo>=2022.9.29; extra == \"docs\"",
+            "proselint>=0.13; extra == \"docs\"",
+            "pytest-cov>=4; extra == \"test\"",
+            "pytest-mock>=3.10; extra == \"test\"",
+            "pytest>=7.2; extra == \"test\"",
+            "sphinx-autodoc-typehints>=1.19.4; extra == \"docs\"",
+            "sphinx>=5.3; extra == \"docs\""
           ],
           "requires_python": ">=3.7",
-          "version": "2.5.2"
+          "version": "2.5.4"
         },
         {
           "artifacts": [
