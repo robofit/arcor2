@@ -172,7 +172,7 @@ services:
         - "10040:10040"
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.20.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.21.0
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
