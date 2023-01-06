@@ -3,6 +3,7 @@ import zipfile
 from io import BytesIO
 from typing import NamedTuple
 
+from arcor2.clients import asset
 from arcor2.clients import project_service as ps
 from arcor2.data.object_type import Mesh, Models, ObjectType
 from arcor2.exceptions import Arcor2Exception
@@ -73,7 +74,12 @@ def upload_def(
 
             try:
                 with open(file_to_upload, "rb") as f:
-                    ps.upload_file(type_def.mesh_filename, f.read())
+                    asset.create_asset(
+                        type_def.mesh_filename,
+                        f.read(),
+                        directory_path="/meshes",
+                        description=f"mesh for {obj_type.id}",
+                    )
             except OSError as e:
                 raise UploadException(f"Failed to read mesh file. {str(e)}")
 
@@ -82,9 +88,6 @@ def upload_def(
     else:
         if model:
             raise UploadException("Parameter 'model' set for non-CollisionObject.")
-
-    print(f"Storing '{obj_type.id}'...")
-    ps.update_object_type(obj_type)
 
     if urdf:
 
@@ -114,4 +117,12 @@ def upload_def(
                     zf.write(path, os.path.relpath(path, prefix))
 
         mem_zip.seek(0)
-        ps.upload_file(urdf.archive_name, mem_zip.getvalue())
+        asset.create_asset(
+            urdf.archive_name,
+            mem_zip.getvalue(),
+            directory_path="/urdf_packages",
+            description=f"URDF for {obj_type.id}",
+        )
+
+    print(f"Storing '{obj_type.id}'...")
+    ps.update_object_type(obj_type)

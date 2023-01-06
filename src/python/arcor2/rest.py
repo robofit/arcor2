@@ -252,6 +252,7 @@ def call(
 
     try:
         if files:
+            files = humps.camelize(files)
             resp = method.value(url, files=files, timeout=timeout, params=params)
         else:
             resp = method.value(

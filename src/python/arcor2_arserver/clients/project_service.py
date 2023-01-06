@@ -12,7 +12,6 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import aio_project_service as ps
 from arcor2.clients.aio_project_service import (
     delete_model,
-    files_ids,
     get_mesh,
     get_meshes,
     get_model,
@@ -59,7 +58,7 @@ _scenes_list_lock = asyncio.Lock()
 _projects_list_lock = asyncio.Lock()
 _object_type_lock = asyncio.Lock()
 
-# here we can forget least used items
+# here we can forget the least used items
 if TYPE_CHECKING:
     _scenes: dict[str, CachedScene] = {}
     _projects: dict[str, CachedProject] = {}
@@ -321,5 +320,4 @@ __all__ = [
     get_scene_ids.__name__,
     get_project_ids.__name__,
     get_object_type_ids.__name__,
-    files_ids.__name__,
 ]
