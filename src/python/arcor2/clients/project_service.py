@@ -27,45 +27,6 @@ class ProjectServiceException(Arcor2Exception):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Files
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@handle(ProjectServiceException, logger, message="Failed to list files.")
-def files_ids() -> set[str]:
-    """Gets IDs of stored files."""
-
-    ret_list = rest.call(rest.Method.GET, f"{URL}/files", list_return_type=str)
-    ret_set = set(ret_list)
-    assert len(ret_list) == len(ret_set), f"There is a duplicate file ID in {ret_list}."
-    return ret_set
-
-
-@handle(ProjectServiceException, logger, message="Failed to get the file.")
-def save_file(file_id: str, path: str) -> None:
-    """Saves the file to a given path."""
-
-    rest.download(f"{URL}/files/{file_id}", path)
-    assert os.path.isfile(path)
-
-
-@handle(ProjectServiceException, logger, message="Failed to upload the file.")
-def upload_file(file_id: str, file_content: bytes) -> None:
-    """Uploads a file."""
-
-    rest.call(rest.Method.PUT, f"{URL}/files/{file_id}", files={"file": (file_id, file_content)})
-    assert file_id in files_ids()
-
-
-@handle(ProjectServiceException, logger, message="Failed to delete the file.")
-def delete_file(file_id: str) -> None:
-    """Saves the file to a given path."""
-
-    rest.call(rest.Method.DELETE, f"{URL}/files/{file_id}")
-    assert file_id not in files_ids()
-
-
-# ----------------------------------------------------------------------------------------------------------------------
 # Models
 # ----------------------------------------------------------------------------------------------------------------------
 

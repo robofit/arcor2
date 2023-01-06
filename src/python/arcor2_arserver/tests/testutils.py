@@ -9,7 +9,7 @@ from typing import Iterator, TypeVar
 import pytest
 
 from arcor2 import rest
-from arcor2.clients import project_service, scene_service
+from arcor2.clients import asset, project_service, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
 from arcor2.data.rpc import get_id
@@ -61,6 +61,13 @@ def start_processes(request) -> Iterator[None]:
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
         project_service.URL = project_url
         processes.append(sp.Popen("./src.python.arcor2_mocks.scripts/mock_project.pex", **kwargs))  # type: ignore
+
+        asset_port = find_free_port()
+        asset_url = f"http://0.0.0.0:{asset_port}"
+        my_env["ARCOR2_ASSET_SERVICE_URL"] = asset_url
+        my_env["ARCOR2_ASSET_SERVICE_MOCK_PORT"] = str(asset_port)
+        asset.URL = asset_url
+        processes.append(sp.Popen("./src.python.arcor2_mocks.scripts/mock_asset.pex", **kwargs))  # type: ignore
 
         scene_port = find_free_port()
         scene_url = f"http://0.0.0.0:{scene_port}"

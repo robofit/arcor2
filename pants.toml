@@ -84,7 +84,7 @@ extra_requirements.add = [
 ]
 lockfile = "3rdparty/pytest_lockfile.txt"
 
-args = ["--count=3 -x"]
+# args = ["--count=3 -x"]
 
 [test]
 use_coverage = false

@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
+from arcor2.clients import aio_asset as asset
 from arcor2.data.events import Event
 from arcor2.data.object_type import Mesh, ObjectModel
 from arcor2.exceptions import Arcor2Exception
@@ -141,7 +142,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             object_types[obj_id] = ObjectTypeData(meta)
             return
 
-        if isinstance(model, Mesh) and model.data_id not in await storage.files_ids():
+        if isinstance(model, Mesh) and not await asset.asset_exists(model.data_id):
             logger.error(f"Disabling {meta.type} as its mesh file {model.data_id} does not exist.")
             meta.disabled = True
             meta.problem = "Mesh file does not exist."
@@ -284,8 +285,7 @@ async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
         raise Arcor2Exception("Model id must be equal to ObjectType id.")
 
     if isinstance(model, Mesh):
-
-        if model.data_id not in await storage.files_ids():
+        if not await asset.asset_exists(model.data_id):
             raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
 
     # when updating model of an already existing object, the type might be different

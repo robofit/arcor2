@@ -1,5 +1,6 @@
 python_tests(
     runtime_package_dependencies=[
+        "src/python/arcor2_mocks/scripts:mock_asset",
         "src/python/arcor2_mocks/scripts:mock_project",
         "src/python/arcor2_scene/scripts:scene",
         "src/python/arcor2_build/scripts:build",
