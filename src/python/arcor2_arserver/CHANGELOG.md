@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.0.0] - WIP
+
+### Changed
+
+- Dependency on arcor2 1.0.0.
+- Compatibility with the newest version of the Project service.
+- ARServer now also talks to Asset service (checks whether mesh/URDF exists).
+
 ## [0.27.0] - 2022-12-12
 
 ### Changed
