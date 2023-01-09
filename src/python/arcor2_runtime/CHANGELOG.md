@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Marked as a stable version.
+- `ResourcesException` - `__context__` is now set to a first exception occurred during script initialization.
+  - All exceptions that occurred during parallel initialization are still available in the `exceptions` array.
 
 ## [0.5.0] - 2022-12-12
 
