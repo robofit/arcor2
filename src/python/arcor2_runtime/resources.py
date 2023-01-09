@@ -211,7 +211,8 @@ class Resources:
 
         if exceptions:  # if something failed, tear down those that succeeded and stop
             self.cleanup_all_objects()
-            raise ResourcesException(" ".join([str(e) for e in exceptions]), exceptions)
+            # the first exception will be available as __context__
+            raise ResourcesException(" ".join([str(e) for e in exceptions]), exceptions) from exceptions[0]
 
         scene_service.start()
 
