@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Marked as a stable version.
 
+### Added
+
+- Health check end-point `/healthz/ready` to match Project 0.23.0 and Asset 0.6.0. 
+
 ## [0.20.0] - 2022-10-28
 
 ### Changed
