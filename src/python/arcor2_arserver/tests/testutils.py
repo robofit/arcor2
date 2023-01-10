@@ -61,6 +61,7 @@ def start_processes(request) -> Iterator[None]:
         my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
         project_service.URL = project_url
         processes.append(sp.Popen("./src.python.arcor2_mocks.scripts/mock_project.pex", **kwargs))  # type: ignore
+        check_health("Project", project_url)
 
         asset_port = find_free_port()
         asset_url = f"http://0.0.0.0:{asset_port}"
@@ -68,6 +69,7 @@ def start_processes(request) -> Iterator[None]:
         my_env["ARCOR2_ASSET_SERVICE_MOCK_PORT"] = str(asset_port)
         asset.URL = asset_url
         processes.append(sp.Popen("./src.python.arcor2_mocks.scripts/mock_asset.pex", **kwargs))  # type: ignore
+        check_health("Asset", asset_url)
 
         scene_port = find_free_port()
         scene_url = f"http://0.0.0.0:{scene_port}"
@@ -124,7 +126,7 @@ def check_health(service_name: str, service_url: str, timeout: int = 60) -> None
 
     for _ in range(timeout):
         try:
-            rest.call(rest.Method.GET, f"{service_url}/health")  # to check whether the service is running
+            rest.call(rest.Method.GET, f"{service_url}/healthz/ready")  # to check whether the service is running
             break
         except rest.RestException:
             pass
