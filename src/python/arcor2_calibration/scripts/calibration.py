@@ -387,7 +387,7 @@ def get_calibration() -> RespT:
     return jsonify(EstimatedPose(pose, quality)), 200
 
 
-@app.route("/health")
+@app.route("/healthz/ready")
 def health():
     """Healthcheck.
     ---
@@ -396,10 +396,13 @@ def health():
             - Service
         description: Gets service health status.
         responses:
-            204:
+            200:
               description: The service is up and running.
+            503:
+              description: The service is up but not ready to serve requests yet.
+
     """
-    return Response(status=204)
+    return Response(status=200)
 
 
 def main() -> None:

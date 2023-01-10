@@ -217,6 +217,24 @@ def delete_asset(id: str) -> RespT:
     return Response(status=200)
 
 
+@app.route("/healthz/ready")
+def health():
+    """Healthcheck.
+    ---
+    get:
+        tags:
+            - Service
+        description: Gets service health status.
+        responses:
+            200:
+              description: The service is up and running.
+            503:
+              description: The service is up but not ready to serve requests yet.
+    """
+
+    return Response(status=200)
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 
 
