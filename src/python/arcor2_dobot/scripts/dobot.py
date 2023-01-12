@@ -677,7 +677,7 @@ def main() -> None:
         port_from_url(URL),
         [Pose, Joint, WebApiError],
         args.swagger,
-        dependencies={"ARCOR2 Scene": "0.1.0"},
+        dependencies={"ARCOR2 Scene": "1.0.0"},
     )
 
     if _dobot:
