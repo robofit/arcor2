@@ -98,13 +98,13 @@ class Dobot(metaclass=ABCMeta):
         self._dobot.set_hht_trig_output(value)
 
     def _inverse_kinematics(self, pose: Pose) -> list[Joint]:
-        raise Arcor2NotImplemented()
+        raise Arcor2NotImplemented("IK not implemented.")
 
     def inverse_kinematics(self, pose: Pose) -> list[Joint]:
-        raise Arcor2NotImplemented()
+        raise Arcor2NotImplemented("IK not implemented.")
 
     def forward_kinematics(self, joints: list[Joint]) -> Pose:
-        raise Arcor2NotImplemented()
+        raise Arcor2NotImplemented("FK not implemented.")
 
     def _handle_pose_out(self, pose: Pose) -> None:  # noqa:B027
         """This is called (only for a real robot) from `get_end_effector_pose`
