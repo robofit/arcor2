@@ -1,5 +1,6 @@
 import json
 import logging
+import traceback
 from dataclasses import dataclass, field
 from typing import Optional, Type, TypeAlias, Union, cast
 
@@ -18,6 +19,9 @@ from arcor2.exceptions import Arcor2Exception
 
 # TODO mypy likes Union here :-/
 RespT: TypeAlias = Union[Response, tuple[str, int], tuple[Response, int]]  # noqa:NU001
+
+
+debug = env.get_bool("ARCOR2_FLASK_DEBUG")
 
 
 class FlaskException(Arcor2Exception):
@@ -161,10 +165,14 @@ def run_app(
 
     @app.errorhandler(Arcor2Exception)
     def handle_bad_request_general(e: Arcor2Exception) -> tuple[str, int]:
+        if debug:
+            print("".join(traceback.format_exception(None, e, e.__traceback__)))
         return json.dumps(General(str(e)).to_dict()), 500
 
     @app.errorhandler(FlaskException)
     def handle_bad_request_intentional(e: FlaskException) -> tuple[str, int]:
+        if debug:
+            print("".join(traceback.format_exception(None, e, e.__traceback__)))
         return json.dumps(e.to_dict()), 500
 
     SWAGGER_URL = "/swagger"
