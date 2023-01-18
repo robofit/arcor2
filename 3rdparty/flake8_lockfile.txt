@@ -141,13 +141,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "b69a510634f8a9c298dfda2b18a8036455e6b19ecac4fe582e4d7a0abfa50a30",
-              "url": "https://files.pythonhosted.org/packages/23/a1/ed74a6995d908bb89f9ffbe197e5f729c1546dba70d1995e7db70dfaafb5/flake8_bugbear-22.12.6-py3-none-any.whl"
+              "hash": "04a115e5f9c8e87c38bdbbcdf9f58223ffe05469c07c9a7bd8633330bc4d078b",
+              "url": "https://files.pythonhosted.org/packages/da/25/9acab8392ae2a6eba89b6addbbf48be8487b3c352ee43d34dcfdbdffd2fe/flake8_bugbear-23.1.20-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "4cdb2c06e229971104443ae293e75e64c6107798229202fbe4f4091427a30ac0",
-              "url": "https://files.pythonhosted.org/packages/da/b5/83a89114a82a2764ddfe27451df6b69c46513f88a3f66206514265b6f447/flake8-bugbear-22.12.6.tar.gz"
+              "hash": "55902ab5a48c5ea53d8689ecd146eda548e72f2724192b9c1d68f6d975d13c06",
+              "url": "https://files.pythonhosted.org/packages/12/93/02f89d9e3440b1faf44285a7ca752282dc48c3955695c5a480907683ebee/flake8-bugbear-23.1.20.tar.gz"
             }
           ],
           "project_name": "flake8-bugbear",
@@ -158,10 +158,11 @@
             "hypothesis; extra == \"dev\"",
             "hypothesmith>=0.2; extra == \"dev\"",
             "pre-commit; extra == \"dev\"",
+            "pytest; extra == \"dev\"",
             "tox; extra == \"dev\""
           ],
           "requires_python": ">=3.7",
-          "version": "22.12.6"
+          "version": "23.1.20"
         },
         {
           "artifacts": [
@@ -319,13 +320,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "e792e903ccc063ec4873a8979dcf11b51ea3d65a2d3b31c113d47be48f0cdcae",
-              "url": "https://files.pythonhosted.org/packages/5e/9d/3c4df0c704ddb5ecf07fcd92cfe6d4a5dc000b7f5459afcb7e98a2ffea1e/vulture-2.6-py2.py3-none-any.whl"
+              "hash": "bccc51064ed76db15a6b58277cea8885936af047f53d2655fb5de575e93d0bca",
+              "url": "https://files.pythonhosted.org/packages/49/18/effa6c244dc6ee8c6f52e937330f0ee02813e4c478156b2e86acb9191238/vulture-2.7-py2.py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "2515fa848181001dc8a73aba6a01a1a17406f5d372f24ec7f7191866f9f4997e",
-              "url": "https://files.pythonhosted.org/packages/b9/18/e51a6e575047d19dbcd7394f05b2afa6191fe9ce30bd5bcfb3f850501e0c/vulture-2.6.tar.gz"
+              "hash": "67fb80a014ed9fdb599dd44bb96cb54311032a104106fc2e706ef7a6dad88032",
+              "url": "https://files.pythonhosted.org/packages/de/ff/196ca63becc5faf5586202ab6e30102322adeea538bb45549d97ed38225d/vulture-2.7.tar.gz"
             }
           ],
           "project_name": "vulture",
@@ -333,7 +334,7 @@
             "toml"
           ],
           "requires_python": ">=3.6",
-          "version": "2.6"
+          "version": "2.7"
         }
       ],
       "platform_tag": null
