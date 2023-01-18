@@ -548,24 +548,6 @@ def get_started() -> RespT:
     return jsonify(started)
 
 
-@app.route("/healthz/ready")
-def health():
-    """Healthcheck.
-    ---
-    get:
-        tags:
-            - Service
-        description: Gets service health status.
-        responses:
-            200:
-              description: The service is up and running.
-            503:
-              description: The service is up but not ready to serve requests yet.
-    """
-
-    return Response(status=200)
-
-
 def main() -> None:
 
     global inflation
