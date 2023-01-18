@@ -12,3 +12,5 @@ RUN apt-get update \
 
 COPY src/docker/arcor2_calibration/start.sh /root/start.sh
 ENV PYTHONOPTIMIZE=1
+
+HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost:5014/healthz/ready || exit 1

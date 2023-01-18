@@ -9,3 +9,5 @@ COPY src/docker/arcor2_execution_proxy/start.sh /root/start.sh
 
 EXPOSE 5009
 ENV PYTHONOPTIMIZE=1
+
+HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost:5009/healthz/ready || exit 1

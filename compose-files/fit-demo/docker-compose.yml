@@ -53,13 +53,6 @@ services:
       - "5008:5008"
     networks:           
       - fit-demo-project-network
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:5008/healthz/ready" ]
-      interval: 5s
-      retries: 50
-      start_period: 40s
-      timeout: 10s
-
 
   fit-demo-execution:
     image: arcor2/arcor2_execution:1.0.0
@@ -97,12 +90,6 @@ services:
       - ARCOR2_CALIBRATION_MOCK=false
     volumes:
       - ./calibration.yaml:/root/calibration.yaml
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:5014/healthz/ready" ]
-      interval: 5s
-      retries: 50
-      start_period: 40s
-      timeout: 10s
 
   fit-demo-dobot-magician:
     image: arcor2/arcor2_dobot:1.0.0
@@ -119,12 +106,6 @@ services:
       - ARCOR2_DOBOT_MOCK=true
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
       - ARCOR2_DOBOT_MODEL=magician
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:5018/healthz/ready" ]
-      interval: 5s
-      retries: 50
-      start_period: 40s
-      timeout: 10s
 
   fit-demo-dobot-m1:
     image: arcor2/arcor2_dobot:1.0.0
@@ -141,12 +122,6 @@ services:
       - ARCOR2_DOBOT_MOCK=true
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
       - ARCOR2_DOBOT_MODEL=m1
-    healthcheck:
-      test: [ "CMD", "curl", "--fail", "http://localhost:5018/healthz/ready" ]
-      interval: 5s
-      retries: 50
-      start_period: 40s
-      timeout: 10s
 
   fit-demo-scene:
     image: arcor2/arcor2_scene:1.0.0
@@ -155,12 +130,6 @@ services:
           - fit-demo-scene-network
     ports:
       - "5013:5013"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:5013/healthz/ready"]
-      interval: 5s
-      retries: 50
-      start_period: 60s
-      timeout: 10s
 
   fit-demo-asset:
     image: registry.gitlab.com/kinalisoft/test-it-off/asset:0.6.0
@@ -175,7 +144,7 @@ services:
         - "10040"
     ports:
         - "10040:10040"
-    healthcheck:
+    healthcheck:  # TODO can be removed for 0.7.0/1.0.0
       test: [ "CMD", "curl", "--fail", "http://localhost:10040/healthz/ready" ]
       interval: 5s
       retries: 50
@@ -195,7 +164,7 @@ services:
     networks:
       - fit-demo-project-network
       - fit-demo-asset-network
-    healthcheck:
+    healthcheck:  # TODO can be removed for 0.24.0/1.0.0
       test: [ "CMD", "curl", "--fail", "http://localhost:10000/healthz/ready" ]
       interval: 5s
       retries: 50
