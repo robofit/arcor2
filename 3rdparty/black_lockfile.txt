@@ -89,39 +89,37 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d",
-              "url": "https://files.pythonhosted.org/packages/5c/eb/975c7c080f3223a5cdaff09612f3a5221e4ba534f7039db34c35d95fa6a5/mypy_extensions-0.4.3-py2.py3-none-any.whl"
+              "hash": "4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d",
+              "url": "https://files.pythonhosted.org/packages/2a/e2/5d3f6ada4297caebe1a2add3b126fe800c96f56dbe5d1988a2cbe0b267aa/mypy_extensions-1.0.0-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "2d82818f5bb3e369420cb3c4060a7970edba416647068eb4c5343488a6c604a8",
-              "url": "https://files.pythonhosted.org/packages/63/60/0582ce2eaced55f65a4406fc97beba256de4b7a95a0034c6576458c6519f/mypy_extensions-0.4.3.tar.gz"
+              "hash": "75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782",
+              "url": "https://files.pythonhosted.org/packages/98/a4/1ab47638b92648243faf97a5aeb6ea83059cc3624972ab6b8d2316078d3f/mypy_extensions-1.0.0.tar.gz"
             }
           ],
           "project_name": "mypy-extensions",
-          "requires_dists": [
-            "typing>=3.5.3; python_version < \"3.5\""
-          ],
-          "requires_python": null,
-          "version": "0.4.3"
+          "requires_dists": [],
+          "requires_python": ">=3.5",
+          "version": "1"
         },
         {
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "3c95343af8b756205e2aba76e843ba9520a24dd84f68c22b9f93251507509dd6",
-              "url": "https://files.pythonhosted.org/packages/3c/29/c07c3a976dbe37c56e381e058c11e8738cb3a0416fc842a310461f8bb695/pathspec-0.10.3-py3-none-any.whl"
+              "hash": "3a66eb970cbac598f9e5ccb5b2cf58930cd8e3ed86d393d541eaf2d8b1705229",
+              "url": "https://files.pythonhosted.org/packages/e6/be/1a973593d7ce7ac9d1a793b81eb265c152a62f34825169fbd7c4e4548e34/pathspec-0.11.0-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "56200de4077d9d0791465aa9095a01d421861e405b5096955051deefd697d6f6",
-              "url": "https://files.pythonhosted.org/packages/32/1a/6baf904503c3e943cae9605c9c88a43b964dea5b59785cf956091b341b08/pathspec-0.10.3.tar.gz"
+              "hash": "64d338d4e0914e91c1792321e6907b5a593f1ab1851de7fc269557a21b30ebbc",
+              "url": "https://files.pythonhosted.org/packages/f4/8e/f91cffb32740b251cff04cad1e7cdd2c710582c735a01f56307316c148f2/pathspec-0.11.0.tar.gz"
             }
           ],
           "project_name": "pathspec",
           "requires_dists": [],
           "requires_python": ">=3.7",
-          "version": "0.10.3"
+          "version": "0.11"
         },
         {
           "artifacts": [
