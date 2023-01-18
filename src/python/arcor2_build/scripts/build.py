@@ -13,7 +13,7 @@ from typing import TypeVar
 
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
-from flask import Response, request, send_file
+from flask import request, send_file
 
 import arcor2_build
 from arcor2 import env, json
@@ -549,23 +549,6 @@ def project_import() -> RespT:
     )
 
     return ImportResult(scene.id, project.id).to_json(), 200
-
-
-@app.route("/healthz/ready")
-def health():
-    """Healthcheck.
-    ---
-    get:
-        tags:
-            - Service
-        description: Gets service health status.
-        responses:
-            200:
-              description: The service is up and running.
-            503:
-              description: The service is up but not ready to serve requests yet.
-    """
-    return Response(status=200)
 
 
 def main() -> None:

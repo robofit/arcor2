@@ -159,6 +159,10 @@ def run_app(
         print(spec.to_yaml())
         return
 
+    @app.route("/healthz/ready")
+    def health():
+        return Response(status=200)
+
     @app.route("/swagger/api/swagger.json", methods=["GET"])
     def get_swagger() -> RespT:
         return jsonify(spec.to_dict())
