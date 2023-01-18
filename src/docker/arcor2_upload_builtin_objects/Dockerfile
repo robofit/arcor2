@@ -1,4 +1,4 @@
-FROM python:3.10.8-slim-bullseye
+FROM python:3.10.9-slim-bullseye
 
 COPY src.python.arcor2.scripts/upload_builtin_objects.pex /root/upload_objects.pex
 

@@ -1,4 +1,4 @@
-FROM python:3.10.8-slim-bullseye
+FROM python:3.10.9-slim-bullseye
 ENTRYPOINT ["/root/start.sh"]
 
 COPY src.python.arcor2_calibration.scripts/calibration.pex /root/calibration.pex
