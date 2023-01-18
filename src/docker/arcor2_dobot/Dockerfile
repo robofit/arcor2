@@ -10,3 +10,5 @@ RUN apt-get update \
 COPY src.python.arcor2_dobot.scripts/dobot.pex /root/dobot.pex
 COPY src/docker/arcor2_dobot/start.sh /root/start.sh
 ENV PYTHONOPTIMIZE=1
+
+HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost:5018/healthz/ready || exit 1

@@ -13,3 +13,5 @@ COPY src/docker/arcor2_build/start.sh /root/start.sh
 
 EXPOSE 5008
 ENV PYTHONOPTIMIZE=1
+
+HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost:5008/healthz/ready || exit 1
