@@ -1,4 +1,4 @@
-FROM python:3.10.8-slim-bullseye
+FROM python:3.10.9-slim-bullseye
 ENTRYPOINT ["/root/start.sh"]
 
 COPY src.python.arcor2_build.scripts/build.pex /root/build.pex
