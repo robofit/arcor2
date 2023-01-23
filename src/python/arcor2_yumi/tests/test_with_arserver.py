@@ -7,7 +7,7 @@ from arcor2_arserver_data.robot import RobotMeta
 from arcor2_yumi.object_types.yumi import YuMi
 
 
-@pytest.mark.additional_deps(["./src.python.arcor2_yumi.scripts/upload_objects.pex"])
+@pytest.mark.additional_deps([["src.python.arcor2_yumi.scripts/upload_objects.pex"]])
 def test_objects(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
