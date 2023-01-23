@@ -32,7 +32,7 @@ def start_processes(request) -> Iterator[Urls]:
     my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
     my_env["ARCOR2_SCENE_SERVICE_PORT"] = str(scene_port)
     scene_service.URL = scene_url
-    processes.append(sp.Popen("./src.python.arcor2_scene.scripts/scene.pex", **kwargs))  # type: ignore
+    processes.append(sp.Popen(["python", "src.python.arcor2_scene.scripts/scene.pex"], **kwargs))  # type: ignore
     scene_service.wait_for(60)
 
     dobot_url = f"http://0.0.0.0:{find_free_port()}"
@@ -41,7 +41,7 @@ def start_processes(request) -> Iterator[Urls]:
     my_env["ARCOR2_DOBOT_DEBUG"] = "1"
     my_env["ARCOR2_DOBOT_MODEL"] = request.param
 
-    dobot_proc = sp.Popen(["./src.python.arcor2_dobot.scripts/dobot.pex"], **kwargs)  # type: ignore
+    dobot_proc = sp.Popen(["python", "src.python.arcor2_dobot.scripts/dobot.pex"], **kwargs)  # type: ignore
 
     processes.append(dobot_proc)
 

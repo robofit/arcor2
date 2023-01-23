@@ -1,13 +1,25 @@
+FROM python:3.10.9-slim-bullseye as deps
+COPY src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /binary.pex
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=deps --compile /bin/app
+
+FROM python:3.10.9-slim-bullseye as srcs
+COPY src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /binary.pex
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=srcs --compile /bin/app
+
 FROM python:3.10.9-slim-bullseye
-ENTRYPOINT ["/root/start.sh"]
 
 RUN mkdir -p /root/tokens \
 	&& mkdir -p /root/project
 
-COPY src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /root/execution_rest_proxy.pex
-COPY src/docker/arcor2_execution_proxy/start.sh /root/start.sh
+# curl is for healthcheck
+RUN apt-get update \
+        && apt-get install -y -q --no-install-recommends curl=7.74.0-1.3+deb11u3 \
+        && apt-get clean \
+        && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/bin/app/pex"]
+COPY --from=deps /bin/app /bin/app
+COPY --from=srcs /bin/app /bin/app
 
 EXPOSE 5009
-ENV PYTHONOPTIMIZE=1
-
 HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost:5009/healthz/ready || exit 1

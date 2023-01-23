@@ -75,4 +75,13 @@ def arcor2_pex_binary(**kwargs):
     if "entry_point" not in kwargs:
         kwargs["entry_point"] = f"{kwargs['name']}.py:main"
 
+    if "layout" not in kwargs:
+        kwargs["layout"] = "packed"
+
+    if "execution_mode" not in kwargs:
+        kwargs["execution_mode"] = "venv"
+
+    if "include_tools" not in kwargs:
+        kwargs["include_tools"] = True
+
     return pex_binary(**kwargs)
