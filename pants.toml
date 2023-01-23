@@ -100,3 +100,12 @@ first_party_dependency_version_scheme = "compatible"
 [anonymous-telemetry]
 enabled = true
 repo_id = "394a3b7c-1c30-4047-b53e-90e5df3d84a9"
+
+[pex-cli]
+version = "v2.1.120"  # added to get this fix https://github.com/pantsbuild/pex/pull/2002
+known_versions = [
+  "v2.1.120|macos_arm64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055",
+  "v2.1.120|macos_x86_64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055",
+  "v2.1.120|linux_x86_64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055",
+  "v2.1.120|linux_arm64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055"
+]

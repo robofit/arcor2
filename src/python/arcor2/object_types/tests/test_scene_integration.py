@@ -33,7 +33,7 @@ def start_processes() -> Iterator[None]:
 
     processes = []
 
-    for cmd in ("./src.python.arcor2_scene.scripts/scene.pex",):
+    for cmd in (["python", "src.python.arcor2_scene.scripts/scene.pex"],):
         processes.append(subprocess.Popen(cmd, env=my_env, stdout=subprocess.PIPE))
 
     scene_service.wait_for(20)

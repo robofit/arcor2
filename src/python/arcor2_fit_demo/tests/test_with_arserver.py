@@ -8,7 +8,7 @@ from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 
 
-@pytest.mark.additional_deps(["./src.python.arcor2_fit_demo.scripts/upload_objects.pex"])
+@pytest.mark.additional_deps([["src.python.arcor2_fit_demo.scripts/upload_objects.pex"]])
 def test_objects(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)

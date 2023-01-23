@@ -1,7 +1,12 @@
-FROM python:3.10.9-slim-bullseye
-ENTRYPOINT ["/root/start.sh"]
+FROM python:3.10.9-slim-bullseye as deps
+COPY src.python.arcor2_scene.scripts/scene.pex /binary.pex
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=deps --compile /bin/app
 
-COPY src.python.arcor2_scene.scripts/scene.pex /root/scene.pex
+FROM python:3.10.9-slim-bullseye as srcs
+COPY src.python.arcor2_scene.scripts/scene.pex /binary.pex
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=srcs --compile /bin/app
+
+FROM python:3.10.9-slim-bullseye
 
 # libgomp1 and libusb-1.0-0 are because of Open3D
 # curl is for healthcheck
@@ -10,7 +15,8 @@ RUN apt-get update \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
-COPY src/docker/arcor2_scene/start.sh /root/start.sh
-ENV PYTHONOPTIMIZE=1
+ENTRYPOINT ["/bin/app/pex"]
+COPY --from=deps /bin/app /bin/app
+COPY --from=srcs /bin/app /bin/app
 
 HEALTHCHECK --interval=5s --start-period=60s CMD curl -f http://localhost:5013/healthz/ready || exit 1
