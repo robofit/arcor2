@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Updated dependencies.
 - Compatibility with the newest version of the Project service.
 
+### Added
+
+- Method `start` from the Scene service client now allows to specify a timeout. 
+
 ## [0.26.0] - 2022-12-12
 
 ### Changed
