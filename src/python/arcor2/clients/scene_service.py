@@ -110,10 +110,10 @@ def delete_all_collisions() -> None:
 
 
 @handle(SceneServiceException, logger, message="Failed to start the scene.")
-def start() -> None:
+def start(timeout: rest.OptTimeout = None) -> None:
     """To be called after all objects are created."""
 
-    rest.call(rest.Method.PUT, f"{URL}/system/start")
+    rest.call(rest.Method.PUT, f"{URL}/system/start", timeout=timeout)
 
 
 @handle(SceneServiceException, logger, message="Failed to stop the scene.")

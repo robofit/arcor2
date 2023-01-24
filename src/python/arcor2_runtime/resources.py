@@ -9,7 +9,7 @@ from typing import TypeVar
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-from arcor2 import env, json
+from arcor2 import env, json, rest
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import scene_service
@@ -92,7 +92,7 @@ class Resources:
 
     __slots__ = ("project", "scene", "objects", "args", "executor", "_stream_futures")
 
-    def __init__(self, apply_action_mapping: bool = True) -> None:
+    def __init__(self, apply_action_mapping: bool = True, scene_start_timeout: rest.OptTimeout = None) -> None:
 
         models: dict[str, None | Models] = {}
 
@@ -214,7 +214,7 @@ class Resources:
             # the first exception will be available as __context__
             raise ResourcesException(" ".join([str(e) for e in exceptions]), exceptions) from exceptions[0]
 
-        scene_service.start()
+        scene_service.start(scene_start_timeout)
 
         self._stream_futures: list[concurrent.futures.Future] = []
 
