@@ -48,3 +48,9 @@ def test_objects(start_processes: None, ars: ARServer) -> None:
     assert not m1.features.inverse_kinematics
     assert not m1.features.forward_kinematics
     assert not m1.features.stop
+
+    # Check that camera is available
+    res3 = ars.call_rpc(rpc.c.SystemInfo.Request(get_id()), rpc.c.SystemInfo.Response)
+    assert res3.result
+    assert res3.data is not None
+    assert "CalibrateCamera" in res3.data.supported_rpc_requests

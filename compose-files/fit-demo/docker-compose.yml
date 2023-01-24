@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:1.0.0
+    image: arcor2/arcor2_arserver:1.0.1
     container_name: fit-demo-arserver
     depends_on:
       fit-demo-project:
@@ -41,9 +41,10 @@ services:
       - ARCOR2_EXECUTION_URL=ws://fit-demo-execution:6790
       - ARCOR2_BUILD_URL=http://fit-demo-build:5008
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
+      - ARCOR2_KINECT_AZURE_URL=http://192.168.104.100:5017 # Run kinect using pants
 
   fit-demo-build:
-    image: arcor2/arcor2_build:1.0.1
+    image: arcor2/arcor2_build:1.0.3
     container_name: fit-demo-build
     depends_on:
       fit-demo-project:
@@ -53,11 +54,11 @@ services:
       - ARCOR2_PROJECT_PATH=""
     ports:
       - "5008:5008"
-    networks:           
+    networks:
       - fit-demo-project-network
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:1.0.0
+    image: arcor2/arcor2_execution:1.0.1
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
@@ -173,7 +174,7 @@ services:
       - fit-demo-asset
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:1.1.0
+    image: arcor2/arcor2_upload_fit_demo:1.2.0
     container_name: "fit-demo-upload-object-types"
     depends_on:
       fit-demo-project:
