@@ -37,7 +37,7 @@ def start_processes() -> Iterator[None]:
         processes.append(subprocess.Popen(cmd, env=my_env, stdout=subprocess.PIPE))
 
     try:
-        scene_service.wait_for(30)
+        scene_service.wait_for(60)
     except scene_service.SceneServiceException:
         finish_processes(processes)
         raise
