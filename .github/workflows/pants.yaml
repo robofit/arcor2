@@ -17,6 +17,16 @@ jobs:
       matrix:
         python-version: ['3.10']
     steps:
+    - name: Remove unnecessary packages
+      run: | # stolen from https://github.com/easimon/maximize-build-space
+        echo "=== Before pruning ==="
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        echo
+        echo "=== After pruning ==="
+        df -h
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
