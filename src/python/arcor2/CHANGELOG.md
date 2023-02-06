@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Updated dependencies.
 - Compatibility with the newest version of the Project service.
+- Project service client updated to match Project 1.0.0-rc.1.
 
 ### Added
 
