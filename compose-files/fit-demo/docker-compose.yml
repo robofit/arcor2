@@ -132,7 +132,7 @@ services:
       - "5013:5013"
 
   fit-demo-asset:
-    image: registry.gitlab.com/kinalisoft/test-it-off/asset:0.6.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/asset:1.0.0
     container_name: "fit-demo-asset"
     environment:
         - "ASSETS_FOLDER=/tmp/assets"
@@ -144,15 +144,9 @@ services:
         - "10040"
     ports:
         - "10040:10040"
-    healthcheck:  # TODO can be removed for 0.7.0/1.0.0
-      test: [ "CMD", "curl", "--fail", "http://localhost:10040/healthz/ready" ]
-      interval: 5s
-      retries: 50
-      start_period: 40s
-      timeout: 10s
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:0.23.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:1.0.0-rc.4
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
@@ -164,12 +158,6 @@ services:
     networks:
       - fit-demo-project-network
       - fit-demo-asset-network
-    healthcheck:  # TODO can be removed for 0.24.0/1.0.0
-      test: [ "CMD", "curl", "--fail", "http://localhost:10000/healthz/ready" ]
-      interval: 5s
-      retries: 50
-      start_period: 40s
-      timeout: 10s
 
   fit-demo-nginx:
     image: nginx:1.23.3

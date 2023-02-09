@@ -142,8 +142,8 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             object_types[obj_id] = ObjectTypeData(meta)
             return
 
-        if isinstance(model, Mesh) and not await asset.asset_exists(model.data_id):
-            logger.error(f"Disabling {meta.type} as its mesh file {model.data_id} does not exist.")
+        if isinstance(model, Mesh) and not await asset.asset_exists(model.asset_id):
+            logger.error(f"Disabling {meta.type} as its mesh file {model.asset_id} does not exist.")
             meta.disabled = True
             meta.problem = "Mesh file does not exist."
             object_types[obj_id] = ObjectTypeData(meta)
@@ -285,8 +285,8 @@ async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
         raise Arcor2Exception("Model id must be equal to ObjectType id.")
 
     if isinstance(model, Mesh):
-        if not await asset.asset_exists(model.data_id):
-            raise Arcor2Exception(f"File {model.data_id} associated to mesh {model.id} does not exist.")
+        if not await asset.asset_exists(model.asset_id):
+            raise Arcor2Exception(f"File {model.asset_id} associated to mesh {model.id} does not exist.")
 
     # when updating model of an already existing object, the type might be different
     if meta.object_model.type != om.type:
