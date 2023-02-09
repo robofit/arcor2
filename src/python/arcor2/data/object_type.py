@@ -86,7 +86,7 @@ class Sphere(Model):
 @dataclass
 class Mesh(Model):
 
-    data_id: str
+    asset_id: str
     focus_points: Optional[list[Pose]] = None
 
 

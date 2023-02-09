@@ -70,7 +70,7 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: None | MeshPara
 
     if model.type() == Model3dType.MESH:
 
-        params["meshFileId"] = params.pop("data_id")
+        params["meshFileId"] = params.pop("asset_id")
 
         if mesh_parameters:
             params.update(mesh_parameters.to_dict())

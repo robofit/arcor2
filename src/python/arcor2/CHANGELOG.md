@@ -2,13 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [1.0.0rc1] - 2023-02-06
+## [1.0.0] - WIP
 
 ### Changed
 
 - Updated dependencies.
 - Compatibility with the newest version of the Project service.
-- Project service client updated to match Project 1.0.0-rc.1.
+- Project service client updated to match Project 1.0.0-rc.4.
+- `Mesh` dataclass: `data_id` changed to `asset_id`. 
 
 ### Added
 
