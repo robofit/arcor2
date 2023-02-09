@@ -15,7 +15,7 @@ def test_object_aiming(start_processes: None, ars: ARServer) -> None:
 
     mesh = Mesh(Box.__name__, "mesh.dae", [Pose(), Pose(), Pose()])
     assert mesh.focus_points
-    Box.mesh_filename = mesh.data_id
+    Box.mesh_filename = mesh.asset_id
 
     with tempfile.NamedTemporaryFile("wb") as file:
         upload_def(Box, model=mesh, file_to_upload=file.name)
