@@ -27,45 +27,6 @@ class ProjectServiceException(Arcor2Exception):
 
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Files
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@handle(ProjectServiceException, logger, message="Failed to list files.")
-def files_ids() -> set[str]:
-    """Gets IDs of stored files."""
-
-    ret_list = rest.call(rest.Method.GET, f"{URL}/files", list_return_type=str)
-    ret_set = set(ret_list)
-    assert len(ret_list) == len(ret_set), f"There is a duplicate file ID in {ret_list}."
-    return ret_set
-
-
-@handle(ProjectServiceException, logger, message="Failed to get the file.")
-def save_file(file_id: str, path: str) -> None:
-    """Saves the file to a given path."""
-
-    rest.download(f"{URL}/files/{file_id}", path)
-    assert os.path.isfile(path)
-
-
-@handle(ProjectServiceException, logger, message="Failed to upload the file.")
-def upload_file(file_id: str, file_content: bytes) -> None:
-    """Uploads a file."""
-
-    rest.call(rest.Method.PUT, f"{URL}/files/{file_id}", files={"file": (file_id, file_content)})
-    assert file_id in files_ids()
-
-
-@handle(ProjectServiceException, logger, message="Failed to delete the file.")
-def delete_file(file_id: str) -> None:
-    """Saves the file to a given path."""
-
-    rest.call(rest.Method.DELETE, f"{URL}/files/{file_id}")
-    assert file_id not in files_ids()
-
-
-# ----------------------------------------------------------------------------------------------------------------------
 # Models
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -110,13 +71,13 @@ def delete_model(model_id: str) -> None:
 @handle(ProjectServiceException, logger, message="Failed to get project parameters.")
 def get_object_parameters(project_id: str) -> list[SceneObjectOverride]:
     return rest.call(
-        rest.Method.GET, f"{URL}/projects/{project_id}/object_parameters", list_return_type=SceneObjectOverride
+        rest.Method.GET, f"{URL}/projects/{project_id}/object-parameters", list_return_type=SceneObjectOverride
     )
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update project parameters.")
 def update_object_parameters(project_id: str, parameters: list[SceneObjectOverride]) -> None:
-    rest.call(rest.Method.GET, f"{URL}/projects/{project_id}/object_parameters", body=parameters)
+    rest.call(rest.Method.GET, f"{URL}/projects/{project_id}/object-parameters", body=parameters)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -126,26 +87,26 @@ def update_object_parameters(project_id: str, parameters: list[SceneObjectOverri
 
 @handle(ProjectServiceException, logger, message="Failed to get the object type.")
 def get_object_type(object_type_id: str) -> ObjectType:
-    obj_type = rest.call(rest.Method.GET, f"{URL}/object_types/{object_type_id}", return_type=ObjectType)
+    obj_type = rest.call(rest.Method.GET, f"{URL}/object-types/{object_type_id}", return_type=ObjectType)
     assert obj_type.modified, f"Project service returned object without 'modified': {obj_type.id}."
     return obj_type
 
 
 @handle(ProjectServiceException, logger, message="Failed to list object types.")
 def get_object_type_ids() -> list[IdDesc]:
-    return rest.call(rest.Method.GET, f"{URL}/object_types", list_return_type=IdDesc)
+    return rest.call(rest.Method.GET, f"{URL}/object-types", list_return_type=IdDesc)
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the object type.")
 def update_object_type(object_type: ObjectType) -> datetime:
 
     assert object_type.id
-    return parse(rest.call(rest.Method.PUT, f"{URL}/object_type", body=object_type, return_type=str))
+    return parse(rest.call(rest.Method.PUT, f"{URL}/object-types", body=object_type, return_type=str))
 
 
 @handle(ProjectServiceException, logger, message="Failed to delete the object type.")
 def delete_object_type(object_type_id: str) -> None:
-    rest.call(rest.Method.DELETE, f"{URL}/object_types/{object_type_id}")
+    rest.call(rest.Method.DELETE, f"{URL}/object-types/{object_type_id}")
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -189,14 +150,14 @@ def get_project_sources(project_id: str) -> ProjectSources:
 def update_project(project: Project) -> datetime:
 
     assert project.id
-    return parse(rest.call(rest.Method.PUT, f"{URL}/project", return_type=str, body=project))
+    return parse(rest.call(rest.Method.PUT, f"{URL}/projects", return_type=str, body=project))
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the project sources.")
 def update_project_sources(project_sources: ProjectSources) -> None:
 
     assert project_sources.id
-    rest.call(rest.Method.PUT, f"{URL}/sources", body=project_sources)
+    rest.call(rest.Method.PUT, f"{URL}/projects/sources", body=project_sources)
 
 
 @handle(ProjectServiceException, logger, message="Failed to delete the project.")
@@ -221,7 +182,7 @@ def clone_project(
     if new_description:
         params["new_description"] = new_description
 
-    return rest.call(rest.Method.PUT, f"{URL}/projects/close", params=params, return_type=Project)
+    return rest.call(rest.Method.PUT, f"{URL}/projects/clone", params=params, return_type=Project)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -243,7 +204,7 @@ def get_scene(scene_id: str) -> Scene:
 def update_scene(scene: Scene) -> datetime:
 
     assert scene.id
-    return parse(rest.call(rest.Method.PUT, f"{URL}/scene", return_type=str, body=scene))
+    return parse(rest.call(rest.Method.PUT, f"{URL}/scenes", return_type=str, body=scene))
 
 
 @handle(ProjectServiceException, logger, message="Failed to delete the scene.")

@@ -81,14 +81,3 @@ async def delete_scene(scene_id: str) -> None:
 
 async def delete_project(project_id: str) -> None:
     await run_in_executor(project_service.delete_project, project_id)
-
-
-async def save_file(file_id: str, path: str) -> None:
-    """Saves a file to a given path."""
-
-    await run_in_executor(project_service.save_file, file_id, path)
-
-
-async def files_ids() -> set[str]:
-    """Gets IDs of stored files."""
-    return await run_in_executor(project_service.files_ids)

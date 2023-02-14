@@ -11,8 +11,9 @@ from arcor2.exceptions import Arcor2Exception
 
 BLUR_THRESHOLD: float = 150.0
 
-aruco_dict = aruco.Dictionary_get(aruco.DICT_7X7_1000)
-detector_params = aruco.DetectorParameters_create()
+aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_7X7_1000)
+detector_params = aruco.DetectorParameters()
+detector = aruco.ArucoDetector(aruco_dict, detector_params)
 
 
 def detect_corners(
@@ -37,7 +38,7 @@ def detect_corners(
     # it takes 3x longer with aruco.CORNER_REFINE_APRILTAG
     detector_params.cornerRefinementMethod = aruco.CORNER_REFINE_APRILTAG if refine else aruco.CORNER_REFINE_NONE
 
-    corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=detector_params)
+    corners, ids, _ = detector.detectMarkers(gray)
 
     return camera_matrix_arr, dist_matrix_arr, gray, corners, ids
 

@@ -32,6 +32,7 @@ class TestObject(GenericWithPose):
         Short description
         :return:
         """
+        return True
 
     def action_3(self, *, an: None | str = None) -> None:
         pass

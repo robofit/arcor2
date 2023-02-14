@@ -9,7 +9,7 @@ from typing import Iterator, TypeVar
 import pytest
 
 from arcor2 import rest
-from arcor2.clients import project_service, scene_service
+from arcor2.clients import asset, project_service, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
 from arcor2.data.rpc import get_id
@@ -51,41 +51,65 @@ def start_processes(request) -> Iterator[None]:
 
     with tempfile.TemporaryDirectory() as tmp_dir:
 
-        processes = []
-        my_env = os.environ.copy()
-        kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
+        try:
 
-        project_port = find_free_port()
-        project_url = f"http://0.0.0.0:{project_port}"
-        my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
-        my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
-        project_service.URL = project_url
-        processes.append(sp.Popen("./src.python.arcor2_mocks.scripts/mock_project.pex", **kwargs))  # type: ignore
+            processes = []
+            my_env = os.environ.copy()
+            kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
 
-        scene_port = find_free_port()
-        scene_url = f"http://0.0.0.0:{scene_port}"
-        my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
-        my_env["ARCOR2_SCENE_SERVICE_PORT"] = str(scene_port)
-        scene_service.URL = scene_url
-        processes.append(sp.Popen("./src.python.arcor2_scene.scripts/scene.pex", **kwargs))  # type: ignore
-        scene_service.wait_for(60)
+            project_port = find_free_port()
+            project_url = f"http://0.0.0.0:{project_port}"
+            my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
+            my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
+            project_service.URL = project_url
+            processes.append(
+                sp.Popen(["python", "src.python.arcor2_mocks.scripts/mock_project.pex"], **kwargs)  # type: ignore
+            )
+            check_health("Project", project_url)
 
-        my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
-        my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
-        processes.append(
-            sp.Popen(["./src.python.arcor2_execution.scripts/execution.pex", "--debug"], **kwargs)  # type: ignore
-        )
+            asset_port = find_free_port()
+            asset_url = f"http://0.0.0.0:{asset_port}"
+            my_env["ARCOR2_ASSET_SERVICE_URL"] = asset_url
+            my_env["ARCOR2_ASSET_SERVICE_MOCK_PORT"] = str(asset_port)
+            asset.URL = asset_url
+            processes.append(
+                sp.Popen(["python", "src.python.arcor2_mocks.scripts/mock_asset.pex"], **kwargs)  # type: ignore
+            )
+            check_health("Asset", asset_url)
 
-        build_url = f"http://0.0.0.0:{find_free_port()}"
-        my_env["ARCOR2_BUILD_URL"] = build_url
-        processes.append(sp.Popen(["./src.python.arcor2_build.scripts/build.pex", "--debug"], **kwargs))  # type: ignore
+            scene_port = find_free_port()
+            scene_url = f"http://0.0.0.0:{scene_port}"
+            my_env["ARCOR2_SCENE_SERVICE_URL"] = scene_url
+            my_env["ARCOR2_SCENE_SERVICE_PORT"] = str(scene_port)
+            scene_service.URL = scene_url
+            processes.append(
+                sp.Popen(["python", "src.python.arcor2_scene.scripts/scene.pex"], **kwargs)  # type: ignore
+            )
+            scene_service.wait_for(60)
 
-        check_health("Build", build_url)
+            my_env["ARCOR2_EXECUTION_URL"] = f"ws://0.0.0.0:{find_free_port()}"
+            my_env["ARCOR2_PROJECT_PATH"] = os.path.join(tmp_dir, "packages")
+            processes.append(
+                sp.Popen(
+                    ["python", "src.python.arcor2_execution.scripts/execution.pex", "--debug"], **kwargs
+                )  # type: ignore
+            )
+
+            build_url = f"http://0.0.0.0:{find_free_port()}"
+            my_env["ARCOR2_BUILD_URL"] = build_url
+            processes.append(
+                sp.Popen(["python", "src.python.arcor2_build.scripts/build.pex", "--debug"], **kwargs)  # type: ignore
+            )
+
+            check_health("Build", build_url)
+        except CheckHealthException:
+            finish_processes(processes)
+            raise
 
         if additional_deps:
             for dep in additional_deps:
                 LOGGER.info(f"Starting {dep}")
-                add_proc = sp.Popen(dep, **kwargs)  # type: ignore
+                add_proc = sp.Popen(["python"] + dep, **kwargs)  # type: ignore
                 ret = add_proc.communicate()
                 if add_proc.returncode != 0:
                     log_proc_output(ret)
@@ -98,7 +122,7 @@ def start_processes(request) -> Iterator[None]:
         LOGGER.info(f"Starting ARServer listening on port  {_arserver_port}.")
 
         arserver_proc = sp.Popen(
-            ["./src.python.arcor2_arserver.scripts/arserver.pex", "--debug"], **kwargs
+            ["python", "src.python.arcor2_arserver.scripts/arserver.pex", "--debug"], **kwargs
         )  # type: ignore
 
         processes.append(arserver_proc)
@@ -113,17 +137,21 @@ def start_processes(request) -> Iterator[None]:
         finish_processes(processes)
 
 
+class CheckHealthException(Exception):
+    pass
+
+
 def check_health(service_name: str, service_url: str, timeout: int = 60) -> None:
 
     for _ in range(timeout):
         try:
-            rest.call(rest.Method.GET, f"{service_url}/health")  # to check whether the service is running
+            rest.call(rest.Method.GET, f"{service_url}/healthz/ready")  # to check whether the service is running
             break
         except rest.RestException:
             pass
         time.sleep(1)
     else:
-        raise Exception(f"{service_name} service at {service_url} is not responding.")
+        raise CheckHealthException(f"{service_name} service at {service_url} is not responding.")
 
 
 def ars_connection_str() -> str:

@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.0.0] - 2023-02-14
+
+### Changed
+
+- Marked as a stable version.
+- REST API updated to match Project 1.0.0-rc.1.
+
+### Added
+
+- Health check end-point `/healthz/ready` to match Project 0.23.0 and Asset 0.6.0. 
+
 ## [0.20.0] - 2022-10-28
 
 ### Changed

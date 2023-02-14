@@ -7,7 +7,7 @@ from arcor2_logger.object_types.logging_test_object import LoggingTestObject
 from arcor2_logger.object_types.logging_test_robot import LoggingTestRobot
 
 
-@pytest.mark.additional_deps(["./src.python.arcor2_logger.scripts/upload_objects.pex"])
+@pytest.mark.additional_deps([["src.python.arcor2_logger.scripts/upload_objects.pex"]])
 def test_objects(start_processes: None, ars: ARServer) -> None:
 
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)

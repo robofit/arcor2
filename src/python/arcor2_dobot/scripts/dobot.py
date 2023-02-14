@@ -627,21 +627,6 @@ def handle_dobot_exception(e: DobotApiException) -> tuple[str, int]:
     return json.dumps(DobotGeneral(str(e)).to_dict()), 500
 
 
-@app.route("/health")
-def health():
-    """Healthcheck.
-    ---
-    get:
-        tags:
-            - Service
-        description: Gets service health status.
-        responses:
-            204:
-              description: The service is up and running.
-    """
-    return Response(status=204)
-
-
 def main() -> None:
 
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
@@ -675,7 +660,7 @@ def main() -> None:
         port_from_url(URL),
         [Pose, Joint, WebApiError],
         args.swagger,
-        dependencies={"ARCOR2 Scene": "0.1.0"},
+        dependencies={"ARCOR2 Scene": "1.0.0"},
     )
 
     if _dobot:

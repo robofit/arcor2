@@ -16,7 +16,7 @@ def test_execution_proxy_openapi() -> None:
         validate_spec(
             yaml.full_load(
                 check_output(
-                    ["./src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex", "--swagger"],
+                    ["python", "src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex", "--swagger"],
                     env=my_env,
                 )
             )

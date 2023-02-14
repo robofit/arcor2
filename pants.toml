@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.14.0"
+pants_version = "2.14.1"
 colors = true
 process_execution_local_parallelism = 4
 
@@ -46,11 +46,11 @@ search_path = ["<PATH>", "/usr/bin/python3.10"]
 
 [black]
 interpreter_constraints = ["==3.10.*"]
-version = "black==22.10.0"
+version = "black==22.12.0"
 lockfile = "3rdparty/black_lockfile.txt"
 
 [flake8]
-version = "flake8==5.0.4"
+version = "flake8==6.0.0"
 extra_requirements.add = [
   "flake8-tidy-imports",
   "flake8-annotations-coverage",
@@ -65,16 +65,16 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==0.982"
+version = "mypy==0.991"
 interpreter_constraints = ["==3.10.*"]
 extra_requirements.add = [
   "numpy"
 ]
-extra_type_stubs = ["types-PyYAML==6.0.11", "types-aiofiles==22.1.0", "types-orjson==3.6.2", "types-python-dateutil==2.8.19", "types-requests==2.28.11.2",  "types-setuptools==65.5.0.2"]
+extra_type_stubs = ["types-PyYAML==6.0.12.2", "types-aiofiles==22.1.0.4", "types-orjson==3.6.2", "types-python-dateutil==2.8.19.5", "types-requests==2.28.11.8",  "types-setuptools==65.7.0.2"]
 lockfile = "3rdparty/mypy_lockfile.txt"
 
 [pytest]
-version = "pytest==7.2.0"
+version = "pytest==7.2.1"
 extra_requirements.add = [
   "pytest-repeat",
   "pytest-randomly",
@@ -84,7 +84,7 @@ extra_requirements.add = [
 ]
 lockfile = "3rdparty/pytest_lockfile.txt"
 
-args = ["--count=3 -x"]
+# args = ["--count=3 -x"]
 
 [test]
 use_coverage = false
@@ -100,3 +100,12 @@ first_party_dependency_version_scheme = "compatible"
 [anonymous-telemetry]
 enabled = true
 repo_id = "394a3b7c-1c30-4047-b53e-90e5df3d84a9"
+
+[pex-cli]
+version = "v2.1.120"  # added to get this fix https://github.com/pantsbuild/pex/pull/2002
+known_versions = [
+  "v2.1.120|macos_arm64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055",
+  "v2.1.120|macos_x86_64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055",
+  "v2.1.120|linux_x86_64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055",
+  "v2.1.120|linux_arm64|c8f2db310ea3e6dd400689b5993667a877d8540a4d206355fa102fff1d146ec0|4071055"
+]

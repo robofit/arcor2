@@ -16,7 +16,7 @@ def finish_processes(processes) -> None:
     for proc in processes:
         proc.terminate()
         proc.wait()
-        print(proc.communicate())
+        print(proc.communicate()[0].decode("utf-8").strip())
 
 
 @pytest.fixture()
@@ -33,10 +33,14 @@ def start_processes() -> Iterator[None]:
 
     processes = []
 
-    for cmd in ("./src.python.arcor2_scene.scripts/scene.pex",):
+    for cmd in (["python", "src.python.arcor2_scene.scripts/scene.pex"],):
         processes.append(subprocess.Popen(cmd, env=my_env, stdout=subprocess.PIPE))
 
-    scene_service.wait_for(20)
+    try:
+        scene_service.wait_for(60)
+    except scene_service.SceneServiceException:
+        finish_processes(processes)
+        raise
 
     yield None
 

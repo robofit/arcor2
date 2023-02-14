@@ -21,7 +21,12 @@ from arcor2_arserver import notifications as notif
 from arcor2_arserver import settings
 from arcor2_arserver.checks import check_object_parameters
 from arcor2_arserver.clients import project_service as storage
-from arcor2_arserver.common import associated_projects, projects_using_object, remove_object_references_from_projects
+from arcor2_arserver.common import (
+    associated_projects,
+    project_names,
+    projects_using_object,
+    remove_object_references_from_projects,
+)
 from arcor2_arserver.helpers import (
     ctx_read_lock,
     ctx_write_lock,
@@ -104,9 +109,10 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
         if glob.LOCK.scene:
             raise Arcor2Exception("Scene has to be closed first.")
 
-        for scene_id in await storage.get_scenes():
-            if req.args.name == scene_id.name:
-                raise Arcor2Exception("Name already used.")
+        unique_name(req.args.name, (await scene_names()))
+
+        # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+        unique_name(req.args.name, (await project_names()))
 
         if req.dry_run:
             return None
@@ -505,6 +511,9 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
 async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None:
 
     unique_name(req.args.new_name, (await scene_names()))
+
+    # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
+    unique_name(req.args.new_name, (await project_names()))
 
     user_name = glob.USERS.user_name(ui)
     await ensure_write_locked(req.args.id, user_name)

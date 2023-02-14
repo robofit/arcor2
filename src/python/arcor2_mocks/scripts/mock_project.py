@@ -2,10 +2,9 @@
 
 import argparse
 from datetime import datetime, timezone
-from io import BytesIO
 
 import humps
-from flask import jsonify, request, send_file
+from flask import jsonify, request
 
 from arcor2.data import common, object_type
 from arcor2.flask import Response, RespT, create_app, run_app
@@ -24,158 +23,10 @@ CYLINDERS: dict[str, object_type.Cylinder] = {}
 SPHERES: dict[str, object_type.Sphere] = {}
 MESHES: dict[str, object_type.Mesh] = {}
 
-FILES: dict[str, tuple[BytesIO, None | str]] = {}
-
-
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@app.route("/files/<string:id>", methods=["PUT"])
-def put_file(id: str) -> RespT:
-    """Puts file.
-    ---
-    put:
-        description: Puts file.
-        tags:
-           - Files
-        parameters:
-            - name: id
-              in: path
-              description: unique ID
-              required: true
-              schema:
-                type: string
-        requestBody:
-              content:
-                multipart/form-data:
-                  schema:
-                    type: object
-                    required:
-                        - file
-                    properties:
-                      file:
-                        type: string
-                        format: binary
-        responses:
-            200:
-              description: Ok
-            500:
-              description: "Error types: **General**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-
-    buff = BytesIO()
-    fs = request.files["file"]
-    fs.save(buff)
-    FILES[id] = buff, fs.filename
-    return Response(status=200)
-
-
-@app.route("/files/<string:id>", methods=["GET"])
-def get_file(id: str) -> RespT:
-    """Gets file by id.
-    ---
-    get:
-        tags:
-            - Files
-        summary: Gets file by id.
-        parameters:
-            - name: id
-              in: path
-              description: unique ID
-              required: true
-              schema:
-                type: string
-        responses:
-            200:
-              description: Ok
-              content:
-                application/json:
-                    schema:
-                        type: string
-                        format: binary
-            500:
-              description: "Error types: **General**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-
-    file, filename = FILES[id]
-    file.seek(0)
-    return send_file(file, as_attachment=True, max_age=0, download_name=filename)
-
-
-@app.route("/files", methods=["GET"])
-def get_files() -> RespT:
-    """Gets files ids.
-    ---
-    get:
-        tags:
-        - Files
-        summary: Gets files ids.
-        responses:
-            200:
-              description: Success
-              content:
-                application/json:
-                  schema:
-                    type: array
-                    items:
-                      type: string
-            500:
-              description: "Error types: **General**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-
-    return jsonify(list(FILES.keys()))
-
-
-@app.route("/files/<string:id>", methods=["DELETE"])
-def delete_file(id: str) -> RespT:
-    """Deletes file.
-    ---
-    delete:
-        tags:
-            - Files
-        summary: Deletes file.
-        parameters:
-            - name: id
-              in: path
-              description: unique ID
-              required: true
-              schema:
-                type: string
-        responses:
-            200:
-              description: Ok
-            500:
-              description: "Error types: **General**, **NotFound**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-
-    try:
-        del FILES[id]
-    except KeyError:
-        raise NotFound("File not found.")
-
-    return Response(status=200)
-
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-
-@app.route("/project", methods=["PUT"])
+@app.route("/projects", methods=["PUT"])
 def put_project() -> RespT:
     """Add or update project.
     ---
@@ -333,7 +184,7 @@ def get_projects() -> RespT:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@app.route("/scene", methods=["PUT"])
+@app.route("/scenes", methods=["PUT"])
 def put_scene() -> RespT:
     """Add or update scene.
     ---
@@ -495,7 +346,7 @@ def get_scenes() -> RespT:
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-@app.route("/object_type", methods=["PUT"])
+@app.route("/object-types", methods=["PUT"])
 def put_object_type() -> RespT:
     """Add or update object type.
     ---
@@ -539,7 +390,7 @@ def put_object_type() -> RespT:
     return jsonify(obj_type.modified.isoformat()), 200
 
 
-@app.route("/object_types/<string:id>", methods=["GET"])
+@app.route("/object-types/<string:id>", methods=["GET"])
 def get_object_type(id: str) -> RespT:
     """Add or update object_type.
     ---
@@ -575,7 +426,7 @@ def get_object_type(id: str) -> RespT:
         raise NotFound(f"ObjectType {id} was not found.")
 
 
-@app.route("/object_types/<string:id>", methods=["DELETE"])
+@app.route("/object-types/<string:id>", methods=["DELETE"])
 def delete_object_type(id: str) -> RespT:
     """Deletes object type.
     ---
@@ -609,7 +460,7 @@ def delete_object_type(id: str) -> RespT:
     return Response(status=200)
 
 
-@app.route("/object_types", methods=["GET"])
+@app.route("/object-types", methods=["GET"])
 def get_object_types() -> RespT:
     """Add or update ObjectType.
     ---
@@ -1028,7 +879,7 @@ def main() -> None:
             WebApiError,
         ],
         args.swagger,
-        api_version="0.16.0",
+        api_version="1.0.0",
     )
 
 

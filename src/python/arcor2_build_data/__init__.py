@@ -5,9 +5,9 @@ from dataclasses_jsonschema import DEFAULT_SCHEMA_TYPE, FieldMeta, JsonSchemaMix
 
 from arcor2 import package_version
 
-SERVICE_NAME = "Build Web API"
+SERVICE_NAME = "Build"
 URL = os.getenv("ARCOR2_BUILD_URL", "http://0.0.0.0:5008")
-DEPENDENCIES: dict[str, str] = {"Project Web API": "0.18.0"}
+DEPENDENCIES: dict[str, str] = {"Project": "1.0.0"}
 
 
 @dataclass

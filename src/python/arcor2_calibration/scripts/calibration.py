@@ -11,7 +11,7 @@ import numpy as np
 import quaternion
 import yaml
 from dataclasses_jsonschema import ValidationError
-from flask import Response, jsonify, request
+from flask import jsonify, request
 from PIL import Image
 
 import arcor2_calibration
@@ -385,21 +385,6 @@ def get_calibration() -> RespT:
         pose = pose.inversed()
 
     return jsonify(EstimatedPose(pose, quality)), 200
-
-
-@app.route("/health")
-def health():
-    """Healthcheck.
-    ---
-    get:
-        tags:
-            - Service
-        description: Gets service health status.
-        responses:
-            204:
-              description: The service is up and running.
-    """
-    return Response(status=204)
 
 
 def main() -> None:

@@ -2,6 +2,24 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.0.0] - 2023-02-14
+
+### Changed
+
+- Updated dependencies.
+- Compatibility with the Project service 1.0.0.
+  - `Mesh` dataclass: `data_id` changed to `asset_id`.
+  - Updated client (some paths were changed).
+
+### Added
+
+- Method `start` from the Scene service client now allows to specify a timeout. 
+
+## [0.26.0] - 2022-12-12
+
+### Changed
+
+- Optional property `end_effector_id` added to `ProjectRobotJoints`.
 
 ## [0.25.0] - 2022-10-28
 
