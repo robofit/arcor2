@@ -593,20 +593,22 @@ class CachedProject(CachedBase):
 
         self._remove_child(old_parent, obj_id)
         self._upsert_child(new_parent, obj_id)
-    
-    def find_logic_start_end(self, start: str, end: str)->logic_item:
+
+    def find_logic_start_end(self, start: str, end: str) -> cmn.LogicItem:
 
         for logic_item in self.logic:
             if start == logic_item.start and end == logic_item.end:
-                    return logic_item
-        raise Arcor2Exception("Logic item whit START: "+start+" and END: "+end+" in project:"+self.name+"does not exisist")
-    
-    def action_from_name(self, name: str)->action:
+                return logic_item
+        raise Arcor2Exception(
+            "Logic item whit START: " + start + " and END: " + end + " in project:" + self.name + "does not exisist"
+        )
+
+    def action_from_name(self, name: str) -> cmn.Action:
 
         for action in self.actions:
             if name == action.name:
                 return action
-        raise Arcor2Exception("Action whit name:"+name+" in project:"+self.name+"does not exisit")
+        raise Arcor2Exception("Action whit name:" + name + " in project:" + self.name + "does not exisit")
 
 
 class UpdateableCachedProject(UpdateableMixin, CachedProject):
