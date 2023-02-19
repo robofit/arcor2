@@ -1,11 +1,12 @@
 from ast import NameConstant
 from typing import Any
 
+from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
-from arcor2 import json
+
 
 class BooleanPlugin(ParameterPlugin):
 
@@ -43,6 +44,7 @@ class BooleanPlugin(ParameterPlugin):
             return json.dumps(True)
         elif value == "False":
             return json.dumps(False)
+        return ""
 
 
 class BooleanListPlugin(ListParameterPlugin):
