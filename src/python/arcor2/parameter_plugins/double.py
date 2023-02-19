@@ -1,13 +1,13 @@
 import ast
 from typing import Any, Callable
 
+from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.object_type import ParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.integer import get_min_max
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
-from arcor2 import json
 
 
 class DoublePlugin(ParameterPlugin):
