@@ -6,6 +6,7 @@ import tempfile
 import zipfile
 from ast import (
     AST,
+    AnnAssign,
     Assign,
     Attribute,
     Call,
@@ -13,6 +14,7 @@ from ast import (
     Constant,
     Continue,
     Expr,
+    FunctionDef,
     If,
     Module,
     Name,
@@ -32,7 +34,6 @@ from arcor2.data.common import (
     Flow,
     FlowTypes,
     LogicItem,
-    Position,
     Project,
     ProjectLogicIf,
     Scene,
@@ -43,10 +44,11 @@ from arcor2.helpers import save_and_import_type_def
 from arcor2.logging import get_logger
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import prepare_object_types_dir
+from arcor2.parameter_plugins.utils import plugin_from_type_name
+from arcor2.source.utils import find_class_def
 from arcor2.source.utils import parse as Parse
 from arcor2_arserver.object_types.utils import object_actions
 from arcor2_build.scripts.build import get_base_from_imported_package, read_dc_from_zip, read_str_from_zip
-from arcor2_build.source.utils import find_function
 from arcor2_build_data.exceptions import InvalidPackage
 
 #######
@@ -54,6 +56,7 @@ objects: dict[str, ObjectType] = {}  # TODO: temporary solution -> will by added
 object_type: dict[str, type[Generic]] = {}  # TODO: temporary solution -> will by added as parameter
 ######
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
+
 
 # debug function
 def action_print(project: Project):
@@ -160,6 +163,25 @@ def find_Compare(tree: Union[Module, AST]):
     return ff.Compare_node[0]
 
 
+def find_function_or_none(name: str, tree: Module | AST):
+    class FindFunction(NodeVisitor):
+        def __init__(self) -> None:
+            self.function_node: None | FunctionDef = None
+
+        def visit_FunctionDef(self, node: FunctionDef) -> None:
+            if node.name == name:
+                self.function_node = node
+                return
+
+            if not self.function_node:
+                self.generic_visit(node)
+
+    ff = FindFunction()
+    ff.visit(tree)
+
+    return ff.function_node
+
+
 def get_pro_sce_scr(file: str):
     OBJECT_TYPE_MODULE = "arcor2_object_types"
     original_sys_path = list(sys.path)
@@ -171,7 +193,7 @@ def get_pro_sce_scr(file: str):
 
     with zipfile.ZipFile(file + ".zip", "r") as zip_file:
         try:
-            project = read_dc_from_zip(zip_file, f"data/project.json", Project)
+            project = read_dc_from_zip(zip_file, "data/project.json", Project)
         except KeyError:
             print("Could not find project.json.")
 
@@ -234,12 +256,9 @@ def get_parameters(
     file = file_func[:position]
     func = file_func[position + 1 :]
 
-    for from_file in objects:  # TODO: something else then try
-        try:
-            find_function(func, ast.parse(objects[from_file].source))  # where is that function stored
+    for from_file in objects:
+        if find_function_or_none(func, ast.parse(objects[from_file].source)):  # where is that function stored
             break
-        except:
-            pass
 
     tmp = object_actions(object_type[file], ast.parse(objects[from_file].source))
 
@@ -251,38 +270,41 @@ def get_parameters(
         arg = rest_of_node.args[j]
         if isinstance(arg, Constant):  # constant
             f_type = tmp[func].parameters[j].type
-            f_value = ast.unparse(arg)
-            if f_type == "boolean":  # TODO: temporary solution -> plugin
-                if f_value == "True":
-                    f_value = "true"
-                else:
-                    f_value = "false"
+            type = plugin_from_type_name(f_type)
+            f_value = type.from_str_to_json(ast.unparse(arg))
 
         elif isinstance(arg, Attribute):  # class... it can by actionpoint
             f_type = tmp[func].parameters[j].type
+            type = plugin_from_type_name(f_type)
+
             str_arg = ast.unparse(arg)
-            if str_arg.find("aps.") == -1:
-                values = str(tmp[func].parameters[j].extra)
-                if values.find(arg.attr):  # TODO: string?
-                    if f_type == "string_enum":
-                        f_value = '"' + arg.attr + '"'  # TODO: temporary solution -> plugin
-                    else:
-                        f_value = arg.attr
+            if str_arg.find("aps.") == -1 and isinstance(arg.value, Name):
+                class_node = find_class_def(arg.value.id, ast.parse(objects[from_file].source))  # find class
+
+                for class_values in class_node.body:
+                    if (
+                        isinstance(class_values, AnnAssign)
+                        and isinstance(class_values.target, Name)
+                        and isinstance(class_values.annotation, Name)
+                        and isinstance(class_values.value, Constant)
+                    ):  # this conditon must by here becasue python dont know what is the type of these thinks
+                        if arg.attr == class_values.target.id:
+                            f_value = type.from_str_to_json(class_values.value.value)
             else:
-                for i in original_project.action_points:
+                for ap in original_project.action_points:
                     if (
                         isinstance(arg, Attribute)
                         and isinstance(arg.value, Attribute)
                         and isinstance(arg.value.value, Attribute)
                     ):
-                        if i.name == arg.value.value.attr:
-                            action_point = i
+                        if ap.name == arg.value.value.attr:
+                            action_point = ap
                             if arg.value.attr == "poses":
-                                f_value = '"' + i.orientations[0].id + '"'  # TODO: temporary solution -> plugin
+                                f_value = type.from_str_to_json(ap.orientations[0].id)
                             elif arg.value.attr == "joints":
-                                f_value = '"' + i.robot_joints[0].id + '"'
+                                f_value = type.from_str_to_json(ap.robot_joints[0].id)
                             else:
-                                f_value = '"' + i.id + '"'
+                                f_value = type.from_str_to_json(ap.id)
 
         elif isinstance(arg, Name):  # variable definated in script or variable from project parameters
             arg_name = ast.unparse(arg)
@@ -303,10 +325,10 @@ def get_parameters(
 def get_type(rest_of_node: Call, original_scene: Scene):
     file_func = ast.unparse(rest_of_node.func)
     # looking for type of action
-    for i in original_scene.objects:
-        if file_func.find(i.name + ".") != -1:
+    for object in original_scene.objects:
+        if file_func.find(object.name + ".") != -1:
             # raplece name from code to scene definition
-            type = file_func.replace(i.name + ".", (i.id + "/"))
+            type = file_func.replace(object.name + ".", (object.id + "/"))
 
             return type, file_func
 
@@ -334,10 +356,8 @@ def gen_actions(
         parameters, action_point = get_parameters(rest_of_node, variables, object_func, original_project, action_point)
 
     ac1 = Action(name, type, flows=final_flows, parameters=parameters)
-    if action_point.name != "#ap":  # if none one of the first actions
-        action_point.actions.append(ac1)
-    else:
-        original_project.action_points[0].actions.append(ac1)  # add actions to last seen action_point
+
+    action_point.actions.append(ac1)  # add actions to last seen action_point
 
     # if variable was declared, adding it to dict with actions id ['name':'id', 'name':'id', ...]
     if flows != "":
@@ -367,7 +387,7 @@ def gen_logic_for_if(ac_id: str, logic_list: list) -> None:
 # add Logic item after closing "if"(elif,else)
 # looking for empty END and adding ac_id of next action
 def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
-
+    # TODO: more ifs -> logic point from
     for i in range(len(logic_list)):
         if logic_list[i].end == "":
             logic_list[i].end = ac_id
@@ -391,11 +411,8 @@ def evaluate_if(
     what_name = ast.unparse(rest_of_node.left)
     what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"
 
-    value = ast.unparse(rest_of_node.comparators)
-    if value == "True":  # TODO: plugin
-        value = "true"
-    else:
-        value = "false"
+    type = plugin_from_type_name("boolean")
+    value = type.from_str_to_json(ast.unparse(rest_of_node.comparators))
 
     if ac_id:  # node orelse
         gen_logic_for_if(ac_id, logic_list)
@@ -489,7 +506,7 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
         original_project.action_points[i].actions = []
     ########################################
 
-    ap = ActionPoint("#ap", Position())
+    ap = original_project.action_points[0]
     evaluate_nodes(ap, logic_list, while_node, variables, original_scene, original_project)
 
     # adding END in to LogicItem with empty end
@@ -507,6 +524,10 @@ def python_to_json(file: str) -> Project:
 
     original_project, original_scene, script = get_pro_sce_scr(file)
 
+    action_print(original_project)
+
     modified_project = between_step(original_project, original_scene, script)
+
+    # action_print(modified_project)
 
     return modified_project
