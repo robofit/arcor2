@@ -4,25 +4,7 @@ import logging
 import sys
 import tempfile
 import zipfile
-from ast import (
-    AST,
-    AnnAssign,
-    Assign,
-    Attribute,
-    Call,
-    Compare,
-    Constant,
-    Continue,
-    Expr,
-    FunctionDef,
-    If,
-    Module,
-    Name,
-    NodeVisitor,
-    While,
-    keyword,
-)
-from typing import Union
+from ast import AnnAssign, Assign, Attribute, Call, Constant, Continue, Expr, If, Name, While
 
 import humps
 
@@ -49,6 +31,7 @@ from arcor2.source.utils import find_class_def
 from arcor2.source.utils import parse as Parse
 from arcor2_arserver.object_types.utils import object_actions
 from arcor2_build.scripts.build import get_base_from_imported_package, read_dc_from_zip, read_str_from_zip
+from arcor2_build.source.utils import find_Call, find_Compare, find_function_or_none, find_keyword, find_While
 from arcor2_build_data.exceptions import InvalidPackage
 
 #######
@@ -97,89 +80,6 @@ def logic_print(project: Project):
         print("Id:\t" + i.id)
         print()
         count += 1
-
-
-def find_While(tree: Module):
-    if tree.body == []:
-        return tree
-
-    class FindWhile(NodeVisitor):
-        def __init__(self) -> None:
-            self.While_node: While
-
-        def visit_While(self, node: While) -> None:
-            self.While_node = node
-            self.generic_visit(node)
-            return
-
-    ff = FindWhile()
-    ff.visit(tree)
-
-    return ff.While_node
-
-
-def find_Call(tree: Union[Module, AST]) -> Call:
-    class FindCall(NodeVisitor):
-        def __init__(self) -> None:
-            self.Call_node: Call
-
-        def visit_Call(self, node: Call) -> None:
-            self.Call_node = node
-            return
-
-    ff = FindCall()
-    ff.visit(tree)
-
-    return ff.Call_node
-
-
-def find_keyword(tree: Union[Module, AST]) -> keyword:
-    class Findkeyword(NodeVisitor):
-        def __init__(self) -> None:
-            self.keyword_node: keyword
-
-        def visit_keyword(self, node: keyword) -> None:
-            self.keyword_node = node
-            return
-
-    ff = Findkeyword()
-    ff.visit(tree)
-
-    return ff.keyword_node
-
-
-def find_Compare(tree: Union[Module, AST]):
-    class FindCompare(NodeVisitor):
-        def __init__(self) -> None:
-            self.Compare_node: list[Compare] = []
-
-        def visit_Compare(self, node: Compare) -> None:
-            self.Compare_node.append(node)
-            return
-
-    ff = FindCompare()
-    ff.visit(tree)
-
-    return ff.Compare_node[0]
-
-
-def find_function_or_none(name: str, tree: Module | AST):
-    class FindFunction(NodeVisitor):
-        def __init__(self) -> None:
-            self.function_node: None | FunctionDef = None
-
-        def visit_FunctionDef(self, node: FunctionDef) -> None:
-            if node.name == name:
-                self.function_node = node
-                return
-
-            if not self.function_node:
-                self.generic_visit(node)
-
-    ff = FindFunction()
-    ff.visit(tree)
-
-    return ff.function_node
 
 
 def get_pro_sce_scr(file: str):
@@ -497,7 +397,7 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
     logic_list.append(start_item)
 
     # dict of variables with id actions, where variable was declared ['name':'id', 'name':'id', ...]
-    variables: dict[str, str] = {}
+    variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build
     tree = ast.parse(script)
     while_node = find_While(tree)
 
@@ -517,6 +417,8 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
 
         original_project.logic.append(j)
 
+    print(variables)
+
     return original_project
 
 
@@ -524,7 +426,7 @@ def python_to_json(file: str) -> Project:
 
     original_project, original_scene, script = get_pro_sce_scr(file)
 
-    action_print(original_project)
+    # action_print(original_project)
 
     modified_project = between_step(original_project, original_scene, script)
 
