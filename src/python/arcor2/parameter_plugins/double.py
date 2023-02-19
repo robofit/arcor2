@@ -7,6 +7,7 @@ from arcor2.data.object_type import ParameterMeta
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
 from arcor2.parameter_plugins.integer import get_min_max
 from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
+from arcor2 import json
 
 
 class DoublePlugin(ParameterPlugin):
@@ -38,6 +39,10 @@ class DoublePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> ast.Num:
         return ast.Num(n=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None)
+
+    @classmethod
+    def from_str_to_json(cls, value: str) -> str:
+        return json.dumps(float(value))
 
 
 class DoubleListPlugin(ListParameterPlugin):
