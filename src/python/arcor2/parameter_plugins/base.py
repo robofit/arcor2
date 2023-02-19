@@ -123,3 +123,7 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     @classmethod
     def uses_robot_joints(cls, project: CProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
         return False
+
+    @classmethod
+    def from_str_to_json(cls, value: str) -> str:
+        return json.dumps(value)
