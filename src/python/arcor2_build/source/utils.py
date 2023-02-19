@@ -1,5 +1,6 @@
 import copy
 from ast import (
+    AST,
     AnnAssign,
     Assign,
     Attribute,
@@ -16,6 +17,7 @@ from ast import (
     Module,
     Name,
     NameConstant,
+    NodeVisitor,
     Pass,
     Return,
     Store,
@@ -26,9 +28,11 @@ from ast import (
     alias,
     arg,
     arguments,
+    keyword,
     stmt,
     withitem,
 )
+from typing import Union
 
 import humps
 
@@ -515,3 +519,86 @@ def find_last_assign(tree: FunctionDef) -> int:
             return body_idx
 
     raise Arcor2Exception("Assign not found.")
+
+
+def find_While(tree: Module):
+    if tree.body == []:
+        return tree
+
+    class FindWhile(NodeVisitor):
+        def __init__(self) -> None:
+            self.While_node: While
+
+        def visit_While(self, node: While) -> None:
+            self.While_node = node
+            self.generic_visit(node)
+            return
+
+    ff = FindWhile()
+    ff.visit(tree)
+
+    return ff.While_node
+
+
+def find_Call(tree: Union[Module, AST]) -> Call:
+    class FindCall(NodeVisitor):
+        def __init__(self) -> None:
+            self.Call_node: Call
+
+        def visit_Call(self, node: Call) -> None:
+            self.Call_node = node
+            return
+
+    ff = FindCall()
+    ff.visit(tree)
+
+    return ff.Call_node
+
+
+def find_keyword(tree: Union[Module, AST]) -> keyword:
+    class Findkeyword(NodeVisitor):
+        def __init__(self) -> None:
+            self.keyword_node: keyword
+
+        def visit_keyword(self, node: keyword) -> None:
+            self.keyword_node = node
+            return
+
+    ff = Findkeyword()
+    ff.visit(tree)
+
+    return ff.keyword_node
+
+
+def find_Compare(tree: Union[Module, AST]):
+    class FindCompare(NodeVisitor):
+        def __init__(self) -> None:
+            self.Compare_node: list[Compare] = []
+
+        def visit_Compare(self, node: Compare) -> None:
+            self.Compare_node.append(node)
+            return
+
+    ff = FindCompare()
+    ff.visit(tree)
+
+    return ff.Compare_node[0]
+
+
+def find_function_or_none(name: str, tree: Module | AST):
+    class FindFunction(NodeVisitor):
+        def __init__(self) -> None:
+            self.function_node: None | FunctionDef = None
+
+        def visit_FunctionDef(self, node: FunctionDef) -> None:
+            if node.name == name:
+                self.function_node = node
+                return
+
+            if not self.function_node:
+                self.generic_visit(node)
+
+    ff = FindFunction()
+    ff.visit(tree)
+
+    return ff.function_node
