@@ -1,4 +1,5 @@
 import json
+
 import pytest
 
 from arcor2.cached import CachedProject, CachedScene
@@ -15,6 +16,7 @@ from arcor2.data.common import (
     Scene,
     SceneObject,
 )
+from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
@@ -22,6 +24,8 @@ from arcor2_build.source.logic import program_src
 from arcor2_build.source.python_to_json import get_pro_sce_scr, python_to_json
 
 TAB = 4
+
+
 class Test(Generic):
 
     INT = 1234
@@ -60,41 +64,26 @@ def cntsp(a: str) -> int:
 
     return len(a) - len(a.lstrip(" "))
 
+
+def action_from_id(id: str, project: CachedProject) -> Action:  # TODO: replace
+
+    for action in project.actions:
+        if id == action.id:
+            return action
+    raise Arcor2Exception("Action whit name:" + id + " in project:" + project.name + "does not exisit")
+
+
 ###################################
-
-def find_action_from_id(id: str, project: Project):
-
-    for k in range(len(project.action_points)):
-        for i in project.action_points[k].actions:
-            if id == i.id:
-                return i
-    raise "Action whit id:"+id+" in project:"+project.name+"does not exisit"
-
-def find_action_from_name(name: str, project: Project):
-
-    for k in range(len(project.action_points)):
-        for i in project.action_points[k].actions:
-            if name == i.name:
-                return i
-    raise "Action whit name:"+name+" in project:"+project.name+"does not exisit"
-
-def find_logic_item(start: str, end: str, project: Project):
-
-    for i in project.logic:
-        if start == i.start and end == i.end:
-                return i
-    raise "Logic item whit START: "+start+" and END: "+end+" in project:"+project.name+"does not exisist"
-
 def test_python_to_json() -> None:
 
-    test_files = {"test_const","test_prev_result","test_simple_if","test_if"}
-    original_project= None 
+    test_files = {"test_const", "test_prev_result", "test_simple_if", "test_if"}
+    original_project = None
     scene = None
     src = None
-    for i in test_files:
+    for file in test_files:
 
-        original_project, scene, src = get_pro_sce_scr(i)
-        modified_project = python_to_json(i)
+        original_project, scene, src = get_pro_sce_scr(file)
+        modified_project = python_to_json(file)
 
         """modified_project = Project("modified_project", "s1")
         modified_project = between_step(original_project, scene, src)"""
@@ -105,57 +94,58 @@ def test_python_to_json() -> None:
         assert (len(o_p.actions)) == (len(m_p.actions))
         assert (len(o_p.logic)) == (len(m_p.logic))
 
-        start_modified_action = None
-        end_modif_action = None
-        start_orig_action = None
-        start_orig_action_id = None
-        end_orig_action = None
-        end_orig_action_id = None
-        orig_logic_item = None
-        for modif_logic_item in modified_project.logic:
+        start_modified_action: Action
+        end_modif_action: Action
+        start_orig_action: Action
+        start_orig_action_id = ""
+        end_orig_action: Action
+        end_orig_action_id = ""
+        orig_logic_item: LogicItem
+        for modif_logic_item in m_p.logic:
 
             if modif_logic_item.start != LogicItem.START:
-                start_modified_action = find_action_from_id(modif_logic_item.start, modified_project)
-                start_orig_action = find_action_from_name(start_modified_action.name, original_project)
+                start_modified_action = action_from_id(modif_logic_item.start, m_p)
+                start_orig_action = o_p.action_from_name(start_modified_action.name)
                 assert start_modified_action.name == start_orig_action.name
                 assert start_modified_action.type == start_orig_action.type
                 assert start_modified_action.flows == start_orig_action.flows
-                #assert start_modified_action.parameters == start_orig_action.parameters
+                # assert start_modified_action.parameters == start_orig_action.parameters
                 start_orig_action_id = start_orig_action.id
             else:
                 start_orig_action_id = LogicItem.START
 
             if modif_logic_item.end != LogicItem.END:
-                end_modif_action = find_action_from_id(modif_logic_item.end, modified_project)
-                end_orig_action = find_action_from_name(end_modif_action.name, original_project)
+                end_modif_action = action_from_id(modif_logic_item.end, m_p)
+                end_orig_action = o_p.action_from_name(end_modif_action.name)
                 assert end_modif_action.name == end_orig_action.name
                 assert end_modif_action.type == end_orig_action.type
                 assert end_modif_action.flows == end_orig_action.flows
-                #assert end_modif_action.parameters == end_orig_action.parameters
+                # assert end_modif_action.parameters == end_orig_action.parameters
                 end_orig_action_id = end_orig_action.id
             else:
                 end_orig_action_id = LogicItem.END
 
-            orig_logic_item = find_logic_item(start_orig_action_id,end_orig_action_id, original_project)
-            if modif_logic_item.condition == None:
-                assert orig_logic_item.condition == None
-            else:
+            orig_logic_item = o_p.find_logic_start_end(start_orig_action_id, end_orig_action_id)
+            if modif_logic_item.condition and isinstance(orig_logic_item.condition, ProjectLogicIf):
                 assert modif_logic_item.condition.value == orig_logic_item.condition.value
                 tmp1 = modif_logic_item.condition.what
                 tmp2 = orig_logic_item.condition.what
-                try:
+                """try:
                     tmp1 = tmp1.removesuffix("/default/0")
-                except:
-                    raise "what in condition is not variable"
+                except KeyError:
+                    raise ("what in condition is not variable")"""
+                tmp1 = tmp1.removesuffix("/default/0")
                 tmp2 = tmp2.removesuffix("/default/0")
-                
-                modif_con = find_action_from_id(tmp1, modified_project)
-                orig_con = find_action_from_id(tmp2, original_project)
+
+                modif_con = action_from_id(tmp1, m_p)
+                orig_con = action_from_id(tmp2, o_p)
                 assert modif_con.name == orig_con.name
                 assert modif_con.type == orig_con.type
                 assert modif_con.flows == orig_con.flows
 
+
 ############################
+
 
 def test_prev_result() -> None:
 
@@ -196,6 +186,7 @@ def test_prev_result() -> None:
     with pytest.raises(SourceException):
         program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
 
+
 def test_constant() -> None:
 
     scene = Scene("s1")
@@ -225,6 +216,7 @@ def test_constant() -> None:
 
     assert f"{const.name} = {const_value}" in src
     assert f"test_name.{Test.test_par.__name__}({const.name}, an='ac1')" in src
+
 
 @pytest.mark.repeat(10)
 def test_blind_branch() -> None:
@@ -257,7 +249,8 @@ def test_blind_branch() -> None:
     project.logic.append(LogicItem(ac4.id, LogicItem.END))
 
     with pytest.raises(SourceException, match=f"Action {ac3.name} has no outputs."):
-        src= program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+        program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
 
 @pytest.mark.repeat(10)
 def test_branched_output() -> None:
@@ -293,8 +286,6 @@ def test_branched_output() -> None:
     src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
 
     parse(src)
-
-
 
     """
     bool_res = test_name.test(res.ac1)
