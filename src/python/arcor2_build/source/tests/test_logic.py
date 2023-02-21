@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 
@@ -21,7 +22,7 @@ from arcor2.object_types.abstract import Generic
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
-from arcor2_build.source.python_to_json import get_pro_sce_scr, python_to_json
+from arcor2_build.source.python_to_json import get_pro_sce_scr, python_to_json, zip_package
 
 TAB = 4
 
@@ -76,17 +77,19 @@ def action_from_id(id: str, project: CachedProject) -> Action:  # TODO: replace
 ###################################
 def test_python_to_json() -> None:
 
-    test_files = {"test_const", "test_prev_result", "test_simple_if", "test_if"}
-    original_project = None
-    scene = None
-    src = None
-    for file in test_files:
+    test_folders = {
+        "test_fodlers/test_const",
+        "test_fodlers/test_prev_result",
+        "test_fodlers/test_simple_if",
+        "test_fodlers/test_if",
+    }
+    for folder in test_folders:
+        zf = zip_package(folder)
 
-        original_project, scene, src = get_pro_sce_scr(file)
-        modified_project = python_to_json(file)
+        original_project, scene, src = get_pro_sce_scr(zf)
+        modified_project = python_to_json(zf)
 
-        """modified_project = Project("modified_project", "s1")
-        modified_project = between_step(original_project, scene, src)"""
+        zf.close()
 
         o_p = CachedProject(original_project)
         m_p = CachedProject(modified_project)
@@ -130,10 +133,7 @@ def test_python_to_json() -> None:
                 assert modif_logic_item.condition.value == orig_logic_item.condition.value
                 tmp1 = modif_logic_item.condition.what
                 tmp2 = orig_logic_item.condition.what
-                """try:
-                    tmp1 = tmp1.removesuffix("/default/0")
-                except KeyError:
-                    raise ("what in condition is not variable")"""
+
                 tmp1 = tmp1.removesuffix("/default/0")
                 tmp2 = tmp2.removesuffix("/default/0")
 
@@ -142,6 +142,8 @@ def test_python_to_json() -> None:
                 assert modif_con.name == orig_con.name
                 assert modif_con.type == orig_con.type
                 assert modif_con.flows == orig_con.flows
+
+        os.remove(folder + ".zip")
 
 
 ############################
