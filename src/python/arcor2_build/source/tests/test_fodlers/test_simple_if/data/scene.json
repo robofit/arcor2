@@ -1,0 +1,6 @@
+{"name":"test",
+"description":"",
+"id":"scn_94db6c5dfe7040f6b027c3a9b558d937",
+"objects":[
+    {"name":"random_actions","type":"RandomActions","parameters":[],"children":[],"id":"obj_43dfe4677b004fab91b31a48f86fa201"}
+    ]}
