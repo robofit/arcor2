@@ -1,6 +1,7 @@
 import ast
 import json
 import logging
+import os
 import sys
 import tempfile
 import zipfile
@@ -82,7 +83,19 @@ def logic_print(project: Project):
         count += 1
 
 
-def get_pro_sce_scr(file: str):  # TODO: place somewhere else
+def zip_package(folder: str):  # TODO: place somewhere else
+
+    zf = zipfile.ZipFile(folder + ".zip", "w")
+    for dirname, _subdirs, files in os.walk(folder):
+        for filename in files:
+            if dirname.find(folder + "/") != -1:
+                zf.write(os.path.join(dirname, filename), dirname.replace(folder + "/", "") + "/" + filename)
+            else:
+                zf.write(os.path.join(dirname, filename), filename)
+    return zf
+
+
+def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
     OBJECT_TYPE_MODULE = "arcor2_object_types"
     original_sys_path = list(sys.path)
     original_sys_modules = dict(sys.modules)
@@ -91,60 +104,59 @@ def get_pro_sce_scr(file: str):  # TODO: place somewhere else
     scene: Scene
     script = None
 
-    with zipfile.ZipFile(file + ".zip", "r") as zip_file:
-        try:
-            project = read_dc_from_zip(zip_file, "data/project.json", Project)
-        except KeyError:
-            print("Could not find project.json.")
+    try:
+        project = read_dc_from_zip(zip_file, "data/project.json", Project)
+    except KeyError:
+        print("Could not find project.json.")
 
-        try:
-            scene = read_dc_from_zip(zip_file, "data/scene.json", Scene)
-        except KeyError:
-            print("Could not find project.json.")
+    try:
+        scene = read_dc_from_zip(zip_file, "data/scene.json", Scene)
+    except KeyError:
+        print("Could not find scene.json.")
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
+    with tempfile.TemporaryDirectory() as tmp_dir:
 
-            # restore original environment
-            sys.path = list(original_sys_path)
-            sys.modules = dict(original_sys_modules)
+        # restore original environment
+        sys.path = list(original_sys_path)
+        sys.modules = dict(original_sys_modules)
 
-            prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
+        prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
 
-            for scene_obj in scene.objects:
-                obj_type_name = scene_obj.type
+        for scene_obj in scene.objects:
+            obj_type_name = scene_obj.type
 
-                if obj_type_name in objects:  # there might be more instances of the same type
-                    continue
-                logger.debug(f"Importing {obj_type_name}.")
+            if obj_type_name in objects:  # there might be more instances of the same type
+                continue
+            logger.debug(f"Importing {obj_type_name}.")
 
-                obj_type_src = ""
-                try:
-                    obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(obj_type_name)}.py")
-                except KeyError:
-                    print(f"Object type {obj_type_name} is missing in the package.")
+            obj_type_src = ""
+            try:
+                obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(obj_type_name)}.py")
+            except KeyError:
+                print(f"Object type {obj_type_name} is missing in the package.")
 
-                try:
-                    ast = Parse(obj_type_src)
-                except Arcor2Exception:
-                    raise InvalidPackage(f"Invalid code of the {obj_type_name} object type.")
+            try:
+                ast = Parse(obj_type_src)
+            except Arcor2Exception:
+                raise InvalidPackage(f"Invalid code of the {obj_type_name} object type.")
 
-                # TODO fill in OT description (is it used somewhere?)
-                objects[obj_type_name] = ObjectType(obj_type_name, obj_type_src)
-                get_base_from_imported_package(objects[obj_type_name], objects, zip_file, tmp_dir, ast)
-                type_def = save_and_import_type_def(obj_type_src, obj_type_name, Generic, tmp_dir, OBJECT_TYPE_MODULE)
+            # TODO fill in OT description (is it used somewhere?)
+            objects[obj_type_name] = ObjectType(obj_type_name, obj_type_src)
+            get_base_from_imported_package(objects[obj_type_name], objects, zip_file, tmp_dir, ast)
+            type_def = save_and_import_type_def(obj_type_src, obj_type_name, Generic, tmp_dir, OBJECT_TYPE_MODULE)
 
-                object_type[scene_obj.name] = type_def
+            object_type[scene_obj.name] = type_def
 
-                assert obj_type_name == type_def.__name__
-                if type_def.abstract():
-                    raise InvalidPackage(f"Scene contains abstract object type: {obj_type_name}.")
+            assert obj_type_name == type_def.__name__
+            if type_def.abstract():
+                raise InvalidPackage(f"Scene contains abstract object type: {obj_type_name}.")
 
-        try:
-            script = zip_file.read("script.py").decode("UTF-8")
-        except KeyError:
-            print("Could not find script.py.")
+    try:
+        script = zip_file.read("script.py").decode("UTF-8")
+    except KeyError:
+        print("Could not find script.py.")
 
-        return project, scene, script
+    return project, scene, script
 
 
 def get_parameters(
@@ -424,14 +436,14 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
     return original_project
 
 
-def python_to_json(file: str) -> Project:
+def python_to_json(zip_file) -> Project:
 
-    original_project, original_scene, script = get_pro_sce_scr(file)
+    original_project, original_scene, script = get_pro_sce_scr(zip_file)
 
     # action_print(original_project)
 
     modified_project = between_step(original_project, original_scene, script)
 
-    logic_print(modified_project)
+    # logic_print(modified_project)
 
     return modified_project
