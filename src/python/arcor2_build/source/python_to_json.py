@@ -26,7 +26,7 @@ from arcor2.helpers import save_and_import_type_def
 from arcor2.logging import get_logger
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import prepare_object_types_dir
-from arcor2.parameter_plugins.utils import plugin_from_type_name
+from arcor2.parameter_plugins.utils import plugin_from_type, plugin_from_type_name
 from arcor2.source.utils import find_class_def
 from arcor2.source.utils import parse as Parse
 from arcor2_arserver.object_types.utils import object_actions
@@ -82,7 +82,7 @@ def logic_print(project: Project):
         count += 1
 
 
-def get_pro_sce_scr(file: str):
+def get_pro_sce_scr(file: str):  # TODO: place somewhere else
     OBJECT_TYPE_MODULE = "arcor2_object_types"
     original_sys_path = list(sys.path)
     original_sys_modules = dict(sys.modules)
@@ -311,8 +311,10 @@ def evaluate_if(
     what_name = ast.unparse(rest_of_node.left)
     what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"
 
-    type = plugin_from_type_name("boolean")
-    value = type.from_str_to_json(ast.unparse(rest_of_node.comparators))
+    value_type = plugin_from_type(
+        type(rest_of_node.comparators[0].value)
+    )  # take type from condition and transforom it into arcor2 type
+    value = value_type.from_str_to_json(ast.unparse(rest_of_node.comparators))
 
     if ac_id:  # node orelse
         gen_logic_for_if(ac_id, logic_list)
@@ -402,8 +404,8 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
     while_node = find_While(tree)
 
     ########################################
-    for i in range(len(original_project.action_points)):
-        original_project.action_points[i].actions = []
+    for action_points in original_project.action_points:
+        action_points.actions = []
     ########################################
 
     ap = original_project.action_points[0]
@@ -417,7 +419,7 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
 
         original_project.logic.append(j)
 
-    print(variables)
+    # print(variables)
 
     return original_project
 
@@ -430,6 +432,6 @@ def python_to_json(file: str) -> Project:
 
     modified_project = between_step(original_project, original_scene, script)
 
-    # action_print(modified_project)
+    logic_print(modified_project)
 
     return modified_project
