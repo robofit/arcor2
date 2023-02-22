@@ -182,12 +182,12 @@ def get_parameters(
         arg = rest_of_node.args[j]
         if isinstance(arg, Constant):  # constant
             f_type = tmp[func].parameters[j].type
-            type = plugin_from_type_name(f_type)
-            f_value = type.from_str_to_json(ast.unparse(arg))
+            value_type = plugin_from_type_name(f_type)
+            f_value = value_type.value_to_json(arg.value)
 
         elif isinstance(arg, Attribute):  # class... it can by actionpoint
             f_type = tmp[func].parameters[j].type
-            type = plugin_from_type_name(f_type)
+            value_type = plugin_from_type_name(f_type)
 
             str_arg = ast.unparse(arg)
             if str_arg.find("aps.") == -1 and isinstance(arg.value, Name):
@@ -201,7 +201,7 @@ def get_parameters(
                         and isinstance(class_values.value, Constant)
                     ):  # this conditon must by here becasue python dont know what is the type of these thinks
                         if arg.attr == class_values.target.id:
-                            f_value = type.from_str_to_json(class_values.value.value)
+                            f_value = value_type.value_to_json(class_values.value.value)
             else:
                 for ap in original_project.action_points:
                     if (
@@ -212,11 +212,11 @@ def get_parameters(
                         if ap.name == arg.value.value.attr:
                             action_point = ap
                             if arg.value.attr == "poses":
-                                f_value = type.from_str_to_json(ap.orientations[0].id)
+                                f_value = json.dumps(ap.orientations[0].id)
                             elif arg.value.attr == "joints":
-                                f_value = type.from_str_to_json(ap.robot_joints[0].id)
+                                f_value = json.dumps(ap.robot_joints[0].id)
                             else:
-                                f_value = type.from_str_to_json(ap.id)
+                                f_value = json.dumps(ap.id)
 
         elif isinstance(arg, Name):  # variable definated in script or variable from project parameters
             arg_name = ast.unparse(arg)
@@ -326,7 +326,7 @@ def evaluate_if(
     value_type = plugin_from_type(
         type(rest_of_node.comparators[0].value)
     )  # take type from condition and transforom it into arcor2 type
-    value = value_type.from_str_to_json(ast.unparse(rest_of_node.comparators))
+    value = value_type.value_to_json(rest_of_node.comparators[0].value)
 
     if ac_id:  # node orelse
         gen_logic_for_if(ac_id, logic_list)
@@ -444,6 +444,6 @@ def python_to_json(zip_file) -> Project:
 
     modified_project = between_step(original_project, original_scene, script)
 
-    # logic_print(modified_project)
+    # action_print(modified_project)
 
     return modified_project

@@ -78,15 +78,15 @@ def action_from_id(id: str, project: CachedProject) -> Action:  # TODO: replace
 def test_python_to_json() -> None:
 
     test_folders = {
-        "test_fodlers/test_const",
-        "test_fodlers/test_prev_result",
-        "test_fodlers/test_simple_if",
-        "test_fodlers/test_if",
+        "test_folders/test_const",
+        "test_folders/test_prev_result",
+        "test_folders/test_simple_if",
+        "test_folders/test_if",
     }
     for folder in test_folders:
         zf = zip_package(folder)
 
-        original_project, scene, src = get_pro_sce_scr(zf)
+        original_project, _scene, _src = get_pro_sce_scr(zf)
         modified_project = python_to_json(zf)
 
         zf.close()

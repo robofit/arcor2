@@ -1,7 +1,6 @@
 from ast import NameConstant
 from typing import Any
 
-from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.parameter_plugins.base import ParameterPlugin, TypesDict
@@ -37,14 +36,6 @@ class BooleanPlugin(ParameterPlugin):
         return NameConstant(
             value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None
         )
-
-    @classmethod
-    def from_str_to_json(cls, value: str) -> str:
-        if value == "True":
-            return json.dumps(True)
-        elif value == "False":
-            return json.dumps(False)
-        return ""
 
 
 class BooleanListPlugin(ListParameterPlugin):

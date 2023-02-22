@@ -1,7 +1,6 @@
 import ast
 from typing import Any, Callable
 
-from arcor2 import json
 from arcor2.cached import CachedProject as CProject
 from arcor2.cached import CachedScene as CScene
 from arcor2.data.object_type import ParameterMeta
@@ -39,10 +38,6 @@ class DoublePlugin(ParameterPlugin):
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> ast.Num:
         return ast.Num(n=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None)
-
-    @classmethod
-    def from_str_to_json(cls, value: str) -> str:
-        return json.dumps(float(value))
 
 
 class DoubleListPlugin(ListParameterPlugin):
