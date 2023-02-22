@@ -599,16 +599,14 @@ class CachedProject(CachedBase):
         for logic_item in self.logic:
             if start == logic_item.start and end == logic_item.end:
                 return logic_item
-        raise Arcor2Exception(
-            "Logic item whit START: " + start + " and END: " + end + " in project:" + self.name + "does not exisist"
-        )
+        raise Arcor2Exception(f"LogicItem in project {self.name} not found.")
 
     def action_from_name(self, name: str) -> cmn.Action:
 
         for action in self.actions:
             if name == action.name:
                 return action
-        raise Arcor2Exception("Action whit name:" + name + " in project:" + self.name + "does not exisit")
+        raise Arcor2Exception(f"Action {name} in project {self.name} not found.")
 
 
 class UpdateableCachedProject(UpdateableMixin, CachedProject):
