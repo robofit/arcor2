@@ -1,11 +1,12 @@
 import ast
+import inspect
 import json
 import logging
 import os
 import sys
 import tempfile
 import zipfile
-from ast import AnnAssign, Assign, Attribute, Call, Constant, Continue, Expr, If, Name, While
+from ast import Assign, Attribute, Call, Constant, Continue, Expr, If, Name, While
 
 import humps
 
@@ -27,12 +28,10 @@ from arcor2.helpers import save_and_import_type_def
 from arcor2.logging import get_logger
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import prepare_object_types_dir
-from arcor2.parameter_plugins.utils import plugin_from_type, plugin_from_type_name
-from arcor2.source.utils import find_class_def
+from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import parse as Parse
-from arcor2_arserver.object_types.utils import object_actions
 from arcor2_build.scripts.build import get_base_from_imported_package, read_dc_from_zip, read_str_from_zip
-from arcor2_build.source.utils import find_Call, find_Compare, find_function_or_none, find_keyword, find_While
+from arcor2_build.source.utils import find_Call, find_Compare, find_keyword, find_While
 from arcor2_build_data.exceptions import InvalidPackage
 
 #######
@@ -159,51 +158,39 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
     return project, scene, script
 
 
-def get_parameters(
-    rest_of_node: Call, variables: dict, file_func: str, original_project: Project, action_point: ActionPoint
-):
+def get_parameters(rest_of_node: Call, variables: dict, file_func: str, project: Project, action_point: ActionPoint):
     parameters = []
 
-    position = file_func.find(".")  # split file.function(...) to file and function
-    file = file_func[:position]
-    func = file_func[position + 1 :]
+    dot_position = file_func.find(".")  # split object.method(...) to object and method
+    object = file_func[:dot_position]
+    method_name = file_func[dot_position + 1 :]
 
-    for from_file in objects:
-        if find_function_or_none(func, ast.parse(objects[from_file].source)):  # where is that function stored
-            break
-
-    tmp = object_actions(object_type[file], ast.parse(objects[from_file].source))
+    method = inspect.getfullargspec(getattr(object_type[object], method_name))  # get infomation about object
 
     for j in range(len(rest_of_node.args)):
-        f_name = tmp[func].parameters[j].name
-        f_type = ""
-        f_value = ""
+        param_name = method.args[j + 1]  # +1 to skip self parameter
+        param_type = ""
+        param_value = ""
 
         arg = rest_of_node.args[j]
         if isinstance(arg, Constant):  # constant
-            f_type = tmp[func].parameters[j].type
-            value_type = plugin_from_type_name(f_type)
-            f_value = value_type.value_to_json(arg.value)
+            value_type = plugin_from_type(method.annotations[param_name])
+            param_type = value_type.type_name()
+            param_value = value_type.value_to_json(arg.value)
 
         elif isinstance(arg, Attribute):  # class... it can by actionpoint
-            f_type = tmp[func].parameters[j].type
-            value_type = plugin_from_type_name(f_type)
+            value_type = plugin_from_type(method.annotations[param_name])
+            param_type = value_type.type_name()
 
             str_arg = ast.unparse(arg)
-            if str_arg.find("aps.") == -1 and isinstance(arg.value, Name):
-                class_node = find_class_def(arg.value.id, ast.parse(objects[from_file].source))  # find class
+            if str_arg.find("aps.") == -1 and isinstance(arg.value, Name):  # class value
 
-                for class_values in class_node.body:
-                    if (
-                        isinstance(class_values, AnnAssign)
-                        and isinstance(class_values.target, Name)
-                        and isinstance(class_values.annotation, Name)
-                        and isinstance(class_values.value, Constant)
-                    ):  # this conditon must by here becasue python dont know what is the type of these thinks
-                        if arg.attr == class_values.target.id:
-                            f_value = value_type.value_to_json(class_values.value.value)
+                value = (getattr(method.annotations[param_name], arg.attr)).value
+                param_value = value_type.value_to_json(value)
+
             else:
-                for ap in original_project.action_points:
+
+                for ap in project.action_points:  # action_point value
                     if (
                         isinstance(arg, Attribute)
                         and isinstance(arg.value, Attribute)
@@ -212,32 +199,33 @@ def get_parameters(
                         if ap.name == arg.value.value.attr:
                             action_point = ap
                             if arg.value.attr == "poses":
-                                f_value = json.dumps(ap.orientations[0].id)
+                                param_value = json.dumps(ap.orientations[0].id)
                             elif arg.value.attr == "joints":
-                                f_value = json.dumps(ap.robot_joints[0].id)
+                                param_value = json.dumps(ap.robot_joints[0].id)
                             else:
-                                f_value = json.dumps(ap.id)
+                                param_value = json.dumps(ap.id)
 
         elif isinstance(arg, Name):  # variable definated in script or variable from project parameters
             arg_name = ast.unparse(arg)
             if arg_name in variables:
-                f_type = ActionParameter.TypeEnum.LINK
-                f_value = json.dumps(f"{variables[arg_name]}/default/0")
+                param_type = ActionParameter.TypeEnum.LINK
+                param_value = json.dumps(f"{variables[arg_name]}/default/0")
             else:
-                for param in original_project.parameters:
+                for param in project.parameters:
                     if arg.id == param.name:
-                        f_type = ActionParameter.TypeEnum.PROJECT_PARAMETER
-                        f_value = json.dumps(param.id)
-
-        parameters += [ActionParameter(f_name, f_type, f_value)]
+                        param_type = ActionParameter.TypeEnum.PROJECT_PARAMETER
+                        param_value = json.dumps(param.id)
+        else:
+            raise Arcor2Exception("Unsupported operation.")
+        parameters += [ActionParameter(param_name, param_type, param_value)]
 
     return parameters, action_point
 
 
-def get_type(rest_of_node: Call, original_scene: Scene):
+def get_type(rest_of_node: Call, scene: Scene):
     file_func = ast.unparse(rest_of_node.func)
     # looking for type of action
-    for object in original_scene.objects:
+    for object in scene.objects:
         if file_func.find(object.name + ".") != -1:
             # raplece name from code to scene definition
             type = file_func.replace(object.name + ".", (object.id + "/"))
@@ -249,8 +237,8 @@ def gen_actions(
     action_point: ActionPoint,
     node: Expr | Assign,
     variables: dict,
-    original_scene: Scene,
-    original_project: Project,
+    scene: Scene,
+    project: Project,
     flows: str = "",
 ):
     rest_of_node = find_Call(node)
@@ -262,10 +250,10 @@ def gen_actions(
 
     name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
 
-    type, object_func = get_type(rest_of_node, original_scene)
+    type, object_func = get_type(rest_of_node, scene)
 
     if rest_of_node.args != []:  # no args -> no parameters in fuction
-        parameters, action_point = get_parameters(rest_of_node, variables, object_func, original_project, action_point)
+        parameters, action_point = get_parameters(rest_of_node, variables, object_func, project, action_point)
 
     ac1 = Action(name, type, flows=final_flows, parameters=parameters)
 
@@ -314,8 +302,8 @@ def evaluate_if(
     node: If,
     variables: dict,
     ac_id: str,
-    original_scene: Scene,
-    original_project: Project,
+    scene: Scene,
+    project: Project,
 ) -> dict:
 
     rest_of_node = find_Compare(node)
@@ -323,10 +311,12 @@ def evaluate_if(
     what_name = ast.unparse(rest_of_node.left)
     what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"
 
-    value_type = plugin_from_type(
-        type(rest_of_node.comparators[0].value)
-    )  # take type from condition and transforom it into arcor2 type
-    value = value_type.value_to_json(rest_of_node.comparators[0].value)
+    try:
+        # take type from condition and transforom it into arcor2 type
+        value_type = plugin_from_type(type(rest_of_node.comparators[0].value))
+        value = value_type.value_to_json(rest_of_node.comparators[0].value)
+    except KeyError:
+        raise Arcor2Exception("Unsupported operation.")
 
     if ac_id:  # node orelse
         gen_logic_for_if(ac_id, logic_list)
@@ -335,15 +325,13 @@ def evaluate_if(
         ac_id = logic_list[len(logic_list) - 1].start
 
     logic_list[len(logic_list) - 1].condition = ProjectLogicIf(f"{what}", value)
-    variables = evaluate_nodes(action_point, logic_list, node, variables, original_scene, original_project)
+    variables = evaluate_nodes(action_point, logic_list, node, variables, scene, project)
 
     if node.orelse:
         # if node orelse contains "if" or "else" and not only "elif" this will find and evaluate all of them
         for else_or_if_node in node.orelse:
             if isinstance(else_or_if_node, If):
-                variables = evaluate_if(
-                    action_point, logic_list, else_or_if_node, variables, ac_id, original_scene, original_project
-                )
+                variables = evaluate_if(action_point, logic_list, else_or_if_node, variables, ac_id, scene, project)
 
     return variables
 
@@ -353,8 +341,8 @@ def evaluate_nodes(
     logic_list: list,
     tree: If | While,
     variables: dict,
-    original_scene: Scene,
-    original_project: Project,
+    scene: Scene,
+    project: Project,
 ) -> dict:
 
     # if condition is on, then in future when should by generated new LogicItem,
@@ -367,9 +355,7 @@ def evaluate_nodes(
     for node in tree.body:
 
         if isinstance(node, Expr):
-            ac_id, variables, action_point = gen_actions(
-                action_point, node, variables, original_scene, original_project
-            )
+            ac_id, variables, action_point = gen_actions(action_point, node, variables, scene, project)
 
             if condition:
                 gen_logic_after_if(ac_id, logic_list)
@@ -379,9 +365,7 @@ def evaluate_nodes(
 
         elif isinstance(node, Assign):
             flows = ast.unparse(node.targets[0])
-            ac_id, variables, action_point = gen_actions(
-                action_point, node, variables, original_scene, original_project, flows
-            )
+            ac_id, variables, action_point = gen_actions(action_point, node, variables, scene, project, flows)
 
             if condition:
                 gen_logic_after_if(ac_id, logic_list)
@@ -391,21 +375,21 @@ def evaluate_nodes(
 
         elif isinstance(node, If):
             if condition:
-                variables = evaluate_if(
-                    action_point, logic_list, node, variables, ac_id, original_scene, original_project
-                )
+                variables = evaluate_if(action_point, logic_list, node, variables, ac_id, scene, project)
             else:
                 ac_id = logic_list[len(logic_list) - 1].start
-                variables = evaluate_if(action_point, logic_list, node, variables, "", original_scene, original_project)
+                variables = evaluate_if(action_point, logic_list, node, variables, "", scene, project)
                 condition = True
 
         elif isinstance(node, Continue):
             logic_list[len(logic_list) - 1].end = LogicItem.END
 
+        else:
+            raise Arcor2Exception("Unsupported operation.")
     return variables
 
 
-def between_step(original_project: Project, original_scene: Scene, script: str):
+def between_step(project: Project, scene: Scene, script: str):
     logic_list = list()
     start_item = LogicItem(LogicItem.START, "")
     logic_list.append(start_item)
@@ -416,33 +400,33 @@ def between_step(original_project: Project, original_scene: Scene, script: str):
     while_node = find_While(tree)
 
     ########################################
-    for action_points in original_project.action_points:
+    for action_points in project.action_points:
         action_points.actions = []
     ########################################
 
-    ap = original_project.action_points[0]
-    evaluate_nodes(ap, logic_list, while_node, variables, original_scene, original_project)
+    ap = project.action_points[0]
+    evaluate_nodes(ap, logic_list, while_node, variables, scene, project)
 
     # adding END in to LogicItem with empty end
-    original_project.logic = []
+    project.logic = []
     for j in logic_list:
         if j.end == "":
             j.end = LogicItem.END
 
-        original_project.logic.append(j)
+        project.logic.append(j)
 
     # print(variables)
 
-    return original_project
+    return project
 
 
 def python_to_json(zip_file) -> Project:
 
-    original_project, original_scene, script = get_pro_sce_scr(zip_file)
+    original_project, scene, script = get_pro_sce_scr(zip_file)
 
     # action_print(original_project)
 
-    modified_project = between_step(original_project, original_scene, script)
+    modified_project = between_step(original_project, scene, script)
 
     # action_print(modified_project)
 
