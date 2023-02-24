@@ -583,22 +583,3 @@ def find_Compare(tree: Union[Module, AST]):
     ff.visit(tree)
 
     return ff.Compare_node[0]
-
-
-def find_function_or_none(name: str, tree: Module | AST):
-    class FindFunction(NodeVisitor):
-        def __init__(self) -> None:
-            self.function_node: None | FunctionDef = None
-
-        def visit_FunctionDef(self, node: FunctionDef) -> None:
-            if node.name == name:
-                self.function_node = node
-                return
-
-            if not self.function_node:
-                self.generic_visit(node)
-
-    ff = FindFunction()
-    ff.visit(tree)
-
-    return ff.function_node
