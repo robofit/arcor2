@@ -34,10 +34,6 @@ from arcor2_build.scripts.build import get_base_from_imported_package, read_dc_f
 from arcor2_build.source.utils import find_Call, find_Compare, find_keyword, find_While
 from arcor2_build_data.exceptions import InvalidPackage
 
-#######
-objects: dict[str, ObjectType] = {}  # TODO: temporary solution -> will by added as parameter
-object_type: dict[str, type[Generic]] = {}  # TODO: temporary solution -> will by added as parameter
-######
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
 
@@ -102,6 +98,8 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
     project: Project
     scene: Scene
     script = None
+    object_type: dict[str, type[Generic]] = {}
+    objects: dict[str, ObjectType] = {}
 
     try:
         project = read_dc_from_zip(zip_file, "data/project.json", Project)
@@ -155,24 +153,18 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
     except KeyError:
         print("Could not find script.py.")
 
-    return project, scene, script
+    return project, scene, script, object_type
 
 
-def get_parameters(rest_of_node: Call, variables: dict, file_func: str, project: Project, action_point: ActionPoint):
+def get_parameters(rest_of_node: Call, variables: dict, project: Project, action_point: ActionPoint, method):
     parameters = []
 
-    dot_position = file_func.find(".")  # split object.method(...) to object and method
-    object = file_func[:dot_position]
-    method_name = file_func[dot_position + 1 :]
-
-    method = inspect.getfullargspec(getattr(object_type[object], method_name))  # get infomation about object
-
-    for j in range(len(rest_of_node.args)):
-        param_name = method.args[j + 1]  # +1 to skip self parameter
+    for i in range(len(rest_of_node.args)):
+        param_name = method.args[i + 1]  # +1 to skip self parameter
         param_type = ""
         param_value = ""
 
-        arg = rest_of_node.args[j]
+        arg = rest_of_node.args[i]
         if isinstance(arg, Constant):  # constant
             value_type = plugin_from_type(method.annotations[param_name])
             param_type = value_type.type_name()
@@ -223,14 +215,14 @@ def get_parameters(rest_of_node: Call, variables: dict, file_func: str, project:
 
 
 def get_type(rest_of_node: Call, scene: Scene):
-    file_func = ast.unparse(rest_of_node.func)
+    object_method = ast.unparse(rest_of_node.func)
     # looking for type of action
     for object in scene.objects:
-        if file_func.find(object.name + ".") != -1:
+        if object_method.find(object.name + ".") != -1:
             # raplece name from code to scene definition
-            type = file_func.replace(object.name + ".", (object.id + "/"))
+            type = object_method.replace(object.name + ".", (object.id + "/"))
 
-            return type, file_func
+            return type, object_method
 
 
 def gen_actions(
@@ -239,6 +231,7 @@ def gen_actions(
     variables: dict,
     scene: Scene,
     project: Project,
+    object_type: dict,
     flows: str = "",
 ):
     rest_of_node = find_Call(node)
@@ -250,10 +243,16 @@ def gen_actions(
 
     name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
 
-    type, object_func = get_type(rest_of_node, scene)
+    type, object_method = get_type(rest_of_node, scene)
 
-    if rest_of_node.args != []:  # no args -> no parameters in fuction
-        parameters, action_point = get_parameters(rest_of_node, variables, object_func, project, action_point)
+    if rest_of_node.args != []:  # no args -> no parameters in method
+
+        dot_position = object_method.find(".")  # split object.method(...) to object and method
+        object = object_method[:dot_position]
+        method_name = object_method[dot_position + 1 :]
+        method = inspect.getfullargspec(getattr(object_type[object], method_name))  # get infomation about object
+
+        parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
 
     ac1 = Action(name, type, flows=final_flows, parameters=parameters)
 
@@ -297,13 +296,7 @@ def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
 
 
 def evaluate_if(
-    action_point: ActionPoint,
-    logic_list: list,
-    node: If,
-    variables: dict,
-    ac_id: str,
-    scene: Scene,
-    project: Project,
+    action_point: ActionPoint, node: If, variables: dict, ac_id: str, scene: Scene, project: Project, object_type: dict
 ) -> dict:
 
     rest_of_node = find_Compare(node)
@@ -319,34 +312,29 @@ def evaluate_if(
         raise Arcor2Exception("Unsupported operation.")
 
     if ac_id:  # node orelse
-        gen_logic_for_if(ac_id, logic_list)
+        gen_logic_for_if(ac_id, project.logic)
 
     else:  # node first if
-        ac_id = logic_list[len(logic_list) - 1].start
+        ac_id = project.logic[len(project.logic) - 1].start
 
-    logic_list[len(logic_list) - 1].condition = ProjectLogicIf(f"{what}", value)
-    variables = evaluate_nodes(action_point, logic_list, node, variables, scene, project)
+    project.logic[len(project.logic) - 1].condition = ProjectLogicIf(f"{what}", value)
+    variables = evaluate_nodes(action_point, node, variables, scene, project, object_type)
 
     if node.orelse:
         # if node orelse contains "if" or "else" and not only "elif" this will find and evaluate all of them
         for else_or_if_node in node.orelse:
             if isinstance(else_or_if_node, If):
-                variables = evaluate_if(action_point, logic_list, else_or_if_node, variables, ac_id, scene, project)
+                variables = evaluate_if(action_point, else_or_if_node, variables, ac_id, scene, project, object_type)
 
     return variables
 
 
 def evaluate_nodes(
-    action_point: ActionPoint,
-    logic_list: list,
-    tree: If | While,
-    variables: dict,
-    scene: Scene,
-    project: Project,
+    action_point: ActionPoint, tree: If | While, variables: dict, scene: Scene, project: Project, object_type: dict
 ) -> dict:
 
     # if condition is on, then in future when should by generated new LogicItem,
-    # will be chcek all nodes in logic_list and added id of next action as end of LogicItems
+    # will be chcek all nodes in project.logic and added id of next action as end of LogicItems
     # in case the condition is active and another node is "if"
     # that node will by processed as "elif" inside "evaluate_if"
     condition = False
@@ -355,44 +343,43 @@ def evaluate_nodes(
     for node in tree.body:
 
         if isinstance(node, Expr):
-            ac_id, variables, action_point = gen_actions(action_point, node, variables, scene, project)
+            ac_id, variables, action_point = gen_actions(action_point, node, variables, scene, project, object_type)
 
             if condition:
-                gen_logic_after_if(ac_id, logic_list)
+                gen_logic_after_if(ac_id, project.logic)
                 condition = False
             else:
-                gen_logic(ac_id, logic_list)
+                gen_logic(ac_id, project.logic)
 
         elif isinstance(node, Assign):
             flows = ast.unparse(node.targets[0])
-            ac_id, variables, action_point = gen_actions(action_point, node, variables, scene, project, flows)
+            ac_id, variables, action_point = gen_actions(
+                action_point, node, variables, scene, project, object_type, flows
+            )
 
             if condition:
-                gen_logic_after_if(ac_id, logic_list)
+                gen_logic_after_if(ac_id, project.logic)
                 condition = False
             else:
-                gen_logic(ac_id, logic_list)
+                gen_logic(ac_id, project.logic)
 
         elif isinstance(node, If):
             if condition:
-                variables = evaluate_if(action_point, logic_list, node, variables, ac_id, scene, project)
+                variables = evaluate_if(action_point, node, variables, ac_id, scene, project, object_type)
             else:
-                ac_id = logic_list[len(logic_list) - 1].start
-                variables = evaluate_if(action_point, logic_list, node, variables, "", scene, project)
+                ac_id = project.logic[len(project.logic) - 1].start
+                variables = evaluate_if(action_point, node, variables, "", scene, project, object_type)
                 condition = True
 
         elif isinstance(node, Continue):
-            logic_list[len(logic_list) - 1].end = LogicItem.END
+            project.logic[len(project.logic) - 1].end = LogicItem.END
 
         else:
             raise Arcor2Exception("Unsupported operation.")
     return variables
 
 
-def between_step(project: Project, scene: Scene, script: str):
-    logic_list = list()
-    start_item = LogicItem(LogicItem.START, "")
-    logic_list.append(start_item)
+def between_step(project: Project, scene: Scene, script: str, object_type: dict):
 
     # dict of variables with id actions, where variable was declared ['name':'id', 'name':'id', ...]
     variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build
@@ -402,18 +389,18 @@ def between_step(project: Project, scene: Scene, script: str):
     ########################################
     for action_points in project.action_points:
         action_points.actions = []
+    project.logic = []
+    start_item = LogicItem(LogicItem.START, "")
+    project.logic.append(start_item)
     ########################################
 
     ap = project.action_points[0]
-    evaluate_nodes(ap, logic_list, while_node, variables, scene, project)
+    evaluate_nodes(ap, while_node, variables, scene, project, object_type)
 
     # adding END in to LogicItem with empty end
-    project.logic = []
-    for j in logic_list:
-        if j.end == "":
-            j.end = LogicItem.END
-
-        project.logic.append(j)
+    for logic_item in project.logic:
+        if logic_item.end == "":
+            logic_item.end = LogicItem.END
 
     # print(variables)
 
@@ -422,11 +409,11 @@ def between_step(project: Project, scene: Scene, script: str):
 
 def python_to_json(zip_file) -> Project:
 
-    original_project, scene, script = get_pro_sce_scr(zip_file)
+    original_project, scene, script, object_type = get_pro_sce_scr(zip_file)
 
     # action_print(original_project)
 
-    modified_project = between_step(original_project, scene, script)
+    modified_project = between_step(original_project, scene, script, object_type)
 
     # action_print(modified_project)
 
