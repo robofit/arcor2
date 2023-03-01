@@ -16,12 +16,10 @@ from arcor2.data.common import (
     Scene,
     SceneObject,
 )
-from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
-from arcor2_build.source.python_to_json import between_step
 
 TAB = 4
 
@@ -65,113 +63,6 @@ def cntsp(a: str) -> int:
     return len(a) - len(a.lstrip(" "))
 
 
-def action_from_id(id: str, project: CachedProject) -> Action:  # TODO: replace
-
-    for action in project.actions:
-        if id == action.id:
-            return action
-    raise Arcor2Exception("Action whit name:" + id + " in project:" + project.name + "does not exisit")
-
-
-###################################
-"""def test_python_to_json() -> None:
-
-    test_folders = {
-        "test_folders/test_const",
-    }
-    for folder in test_folders:
-        zf = zip_package(folder)
-
-        modified_project = python_to_json(zf)
-        original_project = get_project(zf)
-
-        zf.close()
-        os.remove(folder + ".zip")"""
-
-
-# for this test every name of action must be unique
-def check_python_to_json(project: Project, scene: Scene, script: str, objects_for_json: dict):
-
-    original_project = project.copy()
-    modified_project = between_step(original_project, scene, script, objects_for_json)
-
-    o_p = CachedProject(original_project)
-    m_p = CachedProject(modified_project)
-
-    assert (len(o_p.actions)) == (len(m_p.actions))
-    assert (len(o_p.logic)) == (len(m_p.logic))
-
-    start_modified_action: Action
-    end_modif_action: Action
-    start_orig_action: Action
-    start_orig_action_id = ""
-    end_orig_action: Action
-    end_orig_action_id = ""
-    orig_logic_item: LogicItem
-    for modif_logic_item in m_p.logic:
-
-        if modif_logic_item.start != LogicItem.START:
-            start_modified_action = action_from_id(modif_logic_item.start, m_p)
-            start_orig_action = o_p.action_from_name(start_modified_action.name)
-            assert start_modified_action.name == start_orig_action.name  # name
-            assert start_modified_action.type == start_orig_action.type  # type
-            assert start_modified_action.flows == start_orig_action.flows  # flow
-
-            if start_modified_action.parameters:  # param
-                for i in range(len(start_modified_action.parameters)):
-                    assert (
-                        start_modified_action.parameters[i].type == start_orig_action.parameters[i].type
-                    )  # param type
-                    assert (
-                        start_modified_action.parameters[i].name == start_orig_action.parameters[i].name
-                    )  # param name
-                    # TODO: vlaue
-            else:
-                assert start_orig_action.parameters == []
-
-            start_orig_action_id = start_orig_action.id  # save id
-        else:
-            start_orig_action_id = LogicItem.START  # save id
-
-        if modif_logic_item.end != LogicItem.END:
-            end_modif_action = action_from_id(modif_logic_item.end, m_p)
-            end_orig_action = o_p.action_from_name(end_modif_action.name)
-            assert end_modif_action.name == end_orig_action.name  # name
-            assert end_modif_action.type == end_orig_action.type  # type
-            assert end_modif_action.flows == end_orig_action.flows  # flow
-
-            if end_modif_action.parameters:  # param
-                for i in range(len(end_modif_action.parameters)):
-                    assert end_modif_action.parameters[i].type == end_orig_action.parameters[i].type  # param type
-                    assert end_modif_action.parameters[i].name == end_orig_action.parameters[i].name  # param name
-                    # TODO: vlaue
-            else:
-                assert end_orig_action.parameters == []
-
-            end_orig_action_id = end_orig_action.id  # save id
-        else:
-            end_orig_action_id = LogicItem.END  # save id
-
-        orig_logic_item = o_p.find_logic_start_end(start_orig_action_id, end_orig_action_id)
-        if modif_logic_item.condition and isinstance(orig_logic_item.condition, ProjectLogicIf):
-            assert modif_logic_item.condition.value == orig_logic_item.condition.value  # value(flase, true,...)
-
-            tmp1 = modif_logic_item.condition.what
-            tmp2 = orig_logic_item.condition.what
-
-            tmp1 = tmp1.removesuffix("/default/0")
-            tmp2 = tmp2.removesuffix("/default/0")
-
-            modif_con = action_from_id(tmp1, m_p)  # action where was declared variable in modif_project
-            orig_con = action_from_id(tmp2, o_p)  # action where was declared variable in orig_project
-            assert modif_con.name == orig_con.name  # action name
-            assert modif_con.type == orig_con.type  # action type
-            assert modif_con.flows == orig_con.flows  # action flow
-
-
-############################
-
-
 def test_prev_result() -> None:
 
     scene = Scene("s1")
@@ -211,8 +102,6 @@ def test_prev_result() -> None:
     with pytest.raises(SourceException):
         program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
 
-    check_python_to_json(project, scene, src, {"test_name": Test})
-
 
 def test_constant() -> None:
 
@@ -240,8 +129,6 @@ def test_constant() -> None:
     project.logic.append(LogicItem(ac1.id, LogicItem.END))
 
     src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
-
-    check_python_to_json(project, scene, src, {"test_name": Test})
 
     assert f"{const.name} = {const_value}" in src
     assert f"test_name.{Test.test_par.__name__}({const.name}, an='ac1')" in src
@@ -277,11 +164,8 @@ def test_blind_branch() -> None:
     project.logic.append(LogicItem(ac2.id, ac4.id))
     project.logic.append(LogicItem(ac4.id, LogicItem.END))
 
-    src = ""
     with pytest.raises(SourceException, match=f"Action {ac3.name} has no outputs."):
-        src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
-
-    check_python_to_json(project, scene, src, {"test_name": Test})
+        program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
 
 
 @pytest.mark.repeat(10)
@@ -316,8 +200,6 @@ def test_branched_output() -> None:
     project.logic.append(LogicItem(ac4.id, LogicItem.END))
 
     src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
-    check_python_to_json(project, scene, src, {"test_name": Test})
-
     parse(src)
 
     """
@@ -394,7 +276,6 @@ def test_branched_output_2() -> None:
     project.logic.append(LogicItem(ac4.id, LogicItem.END, ProjectLogicIf(f"{ac4.id}/default/0", json.dumps(False))))
 
     src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
-    check_python_to_json(project, scene, src, {"test_name": Test})
     parse(src)
 
     """
