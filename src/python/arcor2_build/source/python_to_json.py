@@ -32,9 +32,13 @@ from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2.source.utils import parse as Parse
 from arcor2_build.scripts.build import get_base_from_imported_package, read_dc_from_zip, read_str_from_zip
 from arcor2_build.source.utils import find_Call, find_Compare, find_keyword, find_While
-from arcor2_build_data.exceptions import InvalidPackage
+from arcor2_build_data.exceptions import InvalidPackage, NotFound
 
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
+
+# https://github.com/robofit/arcor2/blob/master/src/python/arcor2_build/source/utils.py#L394.
+POSES = "poses"  # TODO: place somewhere else as constants
+JOINTS = "joints"
 
 
 # debug function
@@ -98,18 +102,18 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
     project: Project
     scene: Scene
     script = None
-    object_type: dict[str, type[Generic]] = {}
     objects: dict[str, ObjectType] = {}
+    object_type: dict[str, type[Generic]] = {}
 
     try:
         project = read_dc_from_zip(zip_file, "data/project.json", Project)
     except KeyError:
-        print("Could not find project.json.")
+        raise NotFound("Could not find project.json.")
 
     try:
         scene = read_dc_from_zip(zip_file, "data/scene.json", Scene)
     except KeyError:
-        print("Could not find scene.json.")
+        raise NotFound("Could not find scene.json.")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
 
@@ -130,7 +134,7 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
             try:
                 obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(obj_type_name)}.py")
             except KeyError:
-                print(f"Object type {obj_type_name} is missing in the package.")
+                raise NotFound(f"Object type {obj_type_name} is missing in the package.")
 
             try:
                 ast = Parse(obj_type_src)
@@ -151,12 +155,14 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
     try:
         script = zip_file.read("script.py").decode("UTF-8")
     except KeyError:
-        print("Could not find script.py.")
+        raise NotFound("Could not find script.py.")
 
     return project, scene, script, object_type
 
 
-def get_parameters(rest_of_node: Call, variables: dict, project: Project, action_point: ActionPoint, method):
+def get_parameters(
+    rest_of_node: Call, variables: dict, project: Project, action_point: ActionPoint, method: inspect.FullArgSpec
+):
     parameters = []
 
     for i in range(len(rest_of_node.args)):
@@ -180,9 +186,8 @@ def get_parameters(rest_of_node: Call, variables: dict, project: Project, action
                 value = (getattr(method.annotations[param_name], arg.attr)).value
                 param_value = value_type.value_to_json(value)
 
-            else:
-
-                for ap in project.action_points:  # action_point value
+            else:  # action_point value
+                for ap in project.action_points:
                     if (
                         isinstance(arg, Attribute)
                         and isinstance(arg.value, Attribute)
@@ -190,9 +195,9 @@ def get_parameters(rest_of_node: Call, variables: dict, project: Project, action
                     ):
                         if ap.name == arg.value.value.attr:
                             action_point = ap
-                            if arg.value.attr == "poses":
+                            if arg.value.attr == POSES:
                                 param_value = json.dumps(ap.orientations[0].id)
-                            elif arg.value.attr == "joints":
+                            elif arg.value.attr == JOINTS:
                                 param_value = json.dumps(ap.robot_joints[0].id)
                             else:
                                 param_value = json.dumps(ap.id)
@@ -214,15 +219,18 @@ def get_parameters(rest_of_node: Call, variables: dict, project: Project, action
     return parameters, action_point
 
 
-def get_type(rest_of_node: Call, scene: Scene):
+# try find object from scene by name and return object id with method
+def get_object_by_name(rest_of_node: Call, scene: Scene):  # TODO: function cachedscene
     object_method = ast.unparse(rest_of_node.func)
-    # looking for type of action
-    for object in scene.objects:
-        if object_method.find(object.name + ".") != -1:
+    # looking for object
+    for scene_object in scene.objects:
+        if object_method.find(scene_object.name + ".") != -1:
             # raplece name from code to scene definition
-            type = object_method.replace(object.name + ".", (object.id + "/"))
+            object_type = object_method.replace(scene_object.name + ".", (scene_object.id + "/"))
 
-            return type, object_method
+            return object_type, object_method
+
+    raise Arcor2Exception(f"Object {object_method} wasn't found")
 
 
 def gen_actions(
@@ -243,19 +251,18 @@ def gen_actions(
 
     name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
 
-    type, object_method = get_type(rest_of_node, scene)
+    type, object_method = get_object_by_name(rest_of_node, scene)
 
     if rest_of_node.args != []:  # no args -> no parameters in method
 
-        dot_position = object_method.find(".")  # split object.method(...) to object and method
+        dot_position = object_method.find(".")  # split object.method() to object and method
         object = object_method[:dot_position]
         method_name = object_method[dot_position + 1 :]
-        method = inspect.getfullargspec(getattr(object_type[object], method_name))  # get infomation about object
+        method = inspect.getfullargspec(getattr(object_type[object], method_name))  # get infomation about method
 
         parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
 
     ac1 = Action(name, type, flows=final_flows, parameters=parameters)
-
     action_point.actions.append(ac1)  # add actions to last seen action_point
 
     # if variable was declared, adding it to dict with actions id ['name':'id', 'name':'id', ...]
@@ -265,11 +272,14 @@ def gen_actions(
     return ac1.id, variables, action_point
 
 
-# add logic item for common case (calling function...)
-# logic item on last position get END of last ac_id and
+""" add logic item for common case (calling method...)
+logic item on last position get END of last ac_id and
+new logic item get ac_id on START"""
+
+
 def gen_logic(ac_id: str, logic_list: list) -> None:
 
-    logic_list[len(logic_list) - 1].end = ac_id
+    logic_list[-1].end = ac_id
     item = LogicItem(ac_id, "")
     logic_list.append(item)
     return
@@ -286,10 +296,10 @@ def gen_logic_for_if(ac_id: str, logic_list: list) -> None:
 # add Logic item after closing "if"(elif,else)
 # looking for empty END and adding ac_id of next action
 def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
-    # TODO: more ifs -> logic point from
-    for i in range(len(logic_list)):
-        if logic_list[i].end == "":
-            logic_list[i].end = ac_id
+
+    for logic_item in logic_list:
+        if logic_item.end == "":
+            logic_item.end = ac_id
     item = LogicItem(ac_id, "")
     logic_list.append(item)
     return
@@ -302,7 +312,7 @@ def evaluate_if(
     rest_of_node = find_Compare(node)
 
     what_name = ast.unparse(rest_of_node.left)
-    what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"
+    what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"  # TODO: other variables?
 
     try:
         # take type from condition and transforom it into arcor2 type
@@ -315,9 +325,9 @@ def evaluate_if(
         gen_logic_for_if(ac_id, project.logic)
 
     else:  # node first if
-        ac_id = project.logic[len(project.logic) - 1].start
+        ac_id = project.logic[-1].start
 
-    project.logic[len(project.logic) - 1].condition = ProjectLogicIf(f"{what}", value)
+    project.logic[-1].condition = ProjectLogicIf(f"{what}", value)
     variables = evaluate_nodes(action_point, node, variables, scene, project, object_type)
 
     if node.orelse:
@@ -333,10 +343,10 @@ def evaluate_nodes(
     action_point: ActionPoint, tree: If | While, variables: dict, scene: Scene, project: Project, object_type: dict
 ) -> dict:
 
-    # if condition is on, then in future when should by generated new LogicItem,
-    # will be chcek all nodes in project.logic and added id of next action as end of LogicItems
-    # in case the condition is active and another node is "if"
-    # that node will by processed as "elif" inside "evaluate_if"
+    """if condition is on, then in future when should by generated new
+    LogicItem, will be chcek all nodes in project.logic and added id of next
+    action as end of LogicItems in case the condition is active and another
+    node is "if" that node will by processed as "elif" inside "evaluate_if"."""
     condition = False
     ac_id = ""
 
@@ -367,26 +377,27 @@ def evaluate_nodes(
             if condition:
                 variables = evaluate_if(action_point, node, variables, ac_id, scene, project, object_type)
             else:
-                ac_id = project.logic[len(project.logic) - 1].start
+                ac_id = project.logic[-1].start
                 variables = evaluate_if(action_point, node, variables, "", scene, project, object_type)
                 condition = True
 
         elif isinstance(node, Continue):
-            project.logic[len(project.logic) - 1].end = LogicItem.END
+            project.logic[-1].end = LogicItem.END
 
         else:
             raise Arcor2Exception("Unsupported operation.")
     return variables
 
 
-def between_step(project: Project, scene: Scene, script: str, object_type: dict):
+def python_to_json(project: Project, scene: Scene, script: str, object_type: dict):
 
     # dict of variables with id actions, where variable was declared ['name':'id', 'name':'id', ...]
-    variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build
+    variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build funkcia
     tree = ast.parse(script)
     while_node = find_While(tree)
 
     ########################################
+    # cleaning project
     for action_points in project.action_points:
         action_points.actions = []
     project.logic = []
@@ -402,18 +413,17 @@ def between_step(project: Project, scene: Scene, script: str, object_type: dict)
         if logic_item.end == "":
             logic_item.end = LogicItem.END
 
-    # print(variables)
-
     return project
 
 
-def python_to_json(zip_file) -> Project:
+# function just connecting reading information from execution package and compiler
+def between_step(zip_file) -> Project:
 
     original_project, scene, script, object_type = get_pro_sce_scr(zip_file)
 
     # action_print(original_project)
 
-    modified_project = between_step(original_project, scene, script, object_type)
+    modified_project = python_to_json(original_project, scene, script, object_type)
 
     # action_print(modified_project)
 
