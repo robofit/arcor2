@@ -12,11 +12,8 @@ from arcor2.data.rpc.common import RPC
 
 
 def _rename_childs(obj: type[JsonSchemaMixin] | type[Enum]) -> None:
-
     for _, child_obj in inspect.getmembers(obj, inspect.isclass):
-
         if issubclass(child_obj, (JsonSchemaMixin, Enum)):
-
             if hasattr(child_obj, "__renamed__"):
                 continue
 
@@ -28,7 +25,6 @@ def _rename_childs(obj: type[JsonSchemaMixin] | type[Enum]) -> None:
 
 
 def _add_to_spec(spec, obj) -> None:
-
     try:
         spec.components.schema(obj.__name__, schema=obj)
     except DuplicateComponentNameError:
@@ -50,19 +46,16 @@ def generate_openapi(service_name: str, version: str, rpcs: list[type[RPC]], eve
     )
 
     for obj in events:
-
         if obj is Event:
             continue
 
         _rename_childs(obj)
 
     for rpc in rpcs:
-
         if rpc is RPC:
             continue
 
         for cls in (rpc.Request, rpc.Response):
-
             cls.__name__ = rpc.__name__ + cls.__name__
             _rename_childs(cls)
 

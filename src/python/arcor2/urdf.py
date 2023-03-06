@@ -29,13 +29,11 @@ class Arcor2UrdfException(Arcor2Exception):
 
 
 def is_urdf_file(fname: str) -> bool:
-
     _, ext = os.path.splitext(fname)
     return ext in (".urdf", ".xml")
 
 
 def urdf_from_path(path_to_urdf: str) -> URDF:
-
     for file in os.listdir(path_to_urdf):
         if is_urdf_file(file):
             with open(os.path.join(path_to_urdf, file)) as f:
@@ -56,7 +54,6 @@ def urdf_from_path(path_to_urdf: str) -> URDF:
 
 
 def urdf_from_url(url_of_zipped_package: str) -> URDF:
-
     with tempfile.TemporaryDirectory() as tmp_dir:
         path_to_zip = os.path.join(tmp_dir, "urdf.zip")
         rest.download(url_of_zipped_package, path_to_zip)

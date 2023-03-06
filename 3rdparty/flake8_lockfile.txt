@@ -78,7 +78,7 @@
             "zope.interface; extra == \"tests\""
           ],
           "requires_python": ">=3.6",
-          "version": "22.2"
+          "version": "22.2.0"
         },
         {
           "artifacts": [
@@ -100,7 +100,7 @@
             "pyflakes<3.1.0,>=3.0.0"
           ],
           "requires_python": ">=3.8.1",
-          "version": "6"
+          "version": "6.0.0"
         },
         {
           "artifacts": [
@@ -141,13 +141,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "04a115e5f9c8e87c38bdbbcdf9f58223ffe05469c07c9a7bd8633330bc4d078b",
-              "url": "https://files.pythonhosted.org/packages/da/25/9acab8392ae2a6eba89b6addbbf48be8487b3c352ee43d34dcfdbdffd2fe/flake8_bugbear-23.1.20-py3-none-any.whl"
+              "hash": "f136bd0ca2684f101168bba2310dec541e11aa6b252260c17dcf58d18069a740",
+              "url": "https://files.pythonhosted.org/packages/12/19/6e85e230588b98c37a9cb5c2248e6621d05650e7ba02fc9564fa23e996af/flake8_bugbear-23.2.13-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "55902ab5a48c5ea53d8689ecd146eda548e72f2724192b9c1d68f6d975d13c06",
-              "url": "https://files.pythonhosted.org/packages/12/93/02f89d9e3440b1faf44285a7ca752282dc48c3955695c5a480907683ebee/flake8-bugbear-23.1.20.tar.gz"
+              "hash": "39259814a83f33c8409417ee12dd4050c9c0bb4c8707c12fc18ae62b2f3ddee1",
+              "url": "https://files.pythonhosted.org/packages/03/7e/27fae4d9e4c3c336f3cbae0ee64b55ba1f8101cc169b3c57c1be9fcab93e/flake8-bugbear-23.2.13.tar.gz"
             }
           ],
           "project_name": "flake8-bugbear",
@@ -162,7 +162,7 @@
             "tox; extra == \"dev\""
           ],
           "requires_python": ">=3.7",
-          "version": "23.1.20"
+          "version": "23.2.13"
         },
         {
           "artifacts": [
@@ -183,7 +183,7 @@
             "importlib_metadata>=1.3.0; python_version < \"3.8\""
           ],
           "requires_python": ">=3.6",
-          "version": "2"
+          "version": "2.0.0"
         },
         {
           "artifacts": [
@@ -207,21 +207,21 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "5fedb371a950e9fe0e0e6bfc854be7d99151271208f34cd2cc517681ece27780",
-              "url": "https://files.pythonhosted.org/packages/28/61/d34536f69eb02e22de92501a50ddc50d37b6939281d67651173f1bd0619f/flake8_pytest_style-1.6.0-py3-none-any.whl"
+              "hash": "f5d2aa3219163a052dd92226589d45fab8ea027a3269922f0c4029f548ea5cd1",
+              "url": "https://files.pythonhosted.org/packages/93/15/5913a4648be760cac5e7e7b135cce1be836a2e7cea564915f1a62ec19b3a/flake8_pytest_style-1.7.2-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "c1175713e9e11b78cd1a035ed0bca0d1e41d09c4af329a952750b61d4194ddac",
-              "url": "https://files.pythonhosted.org/packages/c8/b5/c4671b1f4d2bc217cfa613ad0dd355d3aa3151c5d27a3b96fa71b6d1b66d/flake8-pytest-style-1.6.0.tar.gz"
+              "hash": "b924197c99b951315949920b0e5547f34900b1844348432e67a44ab191582109",
+              "url": "https://files.pythonhosted.org/packages/c0/6b/12c40bbb136b0423485f5b4ac5939fb984ddbe85f38e6ed484472a89692d/flake8_pytest_style-1.7.2.tar.gz"
             }
           ],
           "project_name": "flake8-pytest-style",
           "requires_dists": [
             "flake8-plugin-utils<2.0.0,>=1.3.2"
           ],
-          "requires_python": "<4.0.0,>=3.6.2",
-          "version": "1.6"
+          "requires_python": "<4.0.0,>=3.7.2",
+          "version": "1.7.2"
         },
         {
           "artifacts": [
@@ -242,7 +242,7 @@
             "importlib-metadata; python_version < \"3.8\""
           ],
           "requires_python": ">=3.7",
-          "version": "4.8"
+          "version": "4.8.0"
         },
         {
           "artifacts": [
@@ -260,7 +260,7 @@
           "project_name": "mccabe",
           "requires_dists": [],
           "requires_python": ">=3.6",
-          "version": "0.7"
+          "version": "0.7.0"
         },
         {
           "artifacts": [
@@ -278,7 +278,7 @@
           "project_name": "pycodestyle",
           "requires_dists": [],
           "requires_python": ">=3.6",
-          "version": "2.10"
+          "version": "2.10.0"
         },
         {
           "artifacts": [
@@ -341,7 +341,7 @@
     }
   ],
   "path_mappings": {},
-  "pex_version": "2.1.108",
+  "pex_version": "2.1.120",
   "pip_version": "20.3.4-patched",
   "prefer_older_binary": false,
   "requirements": [

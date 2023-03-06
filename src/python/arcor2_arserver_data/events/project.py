@@ -8,7 +8,6 @@ from arcor2.data.events import Event
 
 @dataclass
 class ProjectChanged(Event):
-
     data: common.BareProject
 
 

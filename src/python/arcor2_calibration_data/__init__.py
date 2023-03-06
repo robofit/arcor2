@@ -16,20 +16,17 @@ def version() -> str:
 
 @dataclass
 class Corner(JsonSchemaMixin):
-
     x: float
     y: float
 
 
 @dataclass
 class MarkerCorners(JsonSchemaMixin):
-
     marker_id: int
     corners: list[Corner]
 
 
 @dataclass
 class EstimatedPose(JsonSchemaMixin):
-
     pose: Pose
     quality: float

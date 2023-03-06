@@ -7,7 +7,6 @@ from arcor2.object_types.abstract import Settings as SettingsBase
 
 @dataclass
 class Settings(SettingsBase):
-
     str_param: str
     float_param: float
     bool_param: bool

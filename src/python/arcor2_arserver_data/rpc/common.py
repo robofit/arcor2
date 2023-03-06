@@ -43,7 +43,6 @@ class GetCameraPose(RPC):
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[EstimatedPose] = None
 
 
@@ -62,5 +61,4 @@ class MarkersCorners(RPC):
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[list[MarkerCorners]] = None

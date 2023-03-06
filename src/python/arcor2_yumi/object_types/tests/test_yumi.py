@@ -11,7 +11,6 @@ def test_docstrings() -> None:
 
 
 def test_signatures() -> None:
-
     assert inspect.signature(MultiArmRobot.move_to_pose) == inspect.signature(YuMi.move_to_pose)
     assert inspect.signature(MultiArmRobot.move_to_joints) == inspect.signature(YuMi.move_to_joints)
     assert inspect.signature(MultiArmRobot.inverse_kinematics) == inspect.signature(YuMi.inverse_kinematics)

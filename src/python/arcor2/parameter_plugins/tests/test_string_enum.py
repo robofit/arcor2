@@ -16,7 +16,6 @@ from arcor2.source.utils import find_function, parse_def
 
 
 class TestEnum(StrEnum):
-
     FIRST = "first"
     SECOND = "second"
 
@@ -35,12 +34,10 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(TestEnum) is StringEnumPlugin
 
 
 def test_meta() -> None:
-
     meta = ParameterMeta(param_name, StringEnumPlugin.type_name())
     StringEnumPlugin.meta(meta, TestObject.action, find_function(TestObject.action.__name__, parse_def(TestObject)))
     assert meta.extra
@@ -56,15 +53,12 @@ def test_meta() -> None:
 )
 class TestParametrized:
     def test_plugin_from_instance(self, val: TestEnum) -> None:
-
         assert plugin_from_instance(val) is StringEnumPlugin
 
     def test_value_to_json(self, val: TestEnum) -> None:
-
         assert StringEnumPlugin.value_to_json(val) == json.dumps(val)
 
     def test_get_value(self, val: TestEnum) -> None:
-
         scene = Scene("s1")
         obj = SceneObject("test_name", TestObject.__name__)
         scene.objects.append(obj)

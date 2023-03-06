@@ -10,7 +10,6 @@ from arcor2.data.rpc.common import RPC, IdArgs
 
 @dataclass
 class RenameArgs(JsonSchemaMixin):
-
     id: str
     new_name: str
 
@@ -92,7 +91,6 @@ class RemoveFromScene(RPC):
 class SaveScene(RPC):
     @dataclass
     class Request(RPC.Request):
-
         dry_run: bool = False
 
     @dataclass
@@ -106,7 +104,6 @@ class SaveScene(RPC):
 class OpenScene(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
 
     @dataclass
@@ -137,12 +134,10 @@ class ListScenes(RPC):
 class GetScene(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[Scene] = None
 
 
@@ -208,7 +203,6 @@ class UpdateObjectPose(RPC):
 class RenameObject(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: RenameArgs
         dry_run: bool = False
 
@@ -223,7 +217,6 @@ class RenameObject(RPC):
 class RenameScene(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: RenameArgs
         dry_run: bool = False
 
@@ -238,13 +231,11 @@ class RenameScene(RPC):
 class DeleteScene(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
         dry_run: bool = False
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[set[str]] = None
 
 
@@ -254,12 +245,10 @@ class DeleteScene(RPC):
 class ProjectsWithScene(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[set[str]] = None
 
 
@@ -296,7 +285,6 @@ class CopyScene(RPC):
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[str] = None
 
 

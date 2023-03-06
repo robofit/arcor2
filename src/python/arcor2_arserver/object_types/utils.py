@@ -28,7 +28,6 @@ class ObjectTypeException(Arcor2Exception):
 
 
 async def remove_object_type(obj_type_id: str) -> None:
-
     path = os.path.join(settings.OBJECT_TYPE_PATH, settings.OBJECT_TYPE_MODULE, f"{humps.depascalize(obj_type_id)}.py")
     logger.debug(f"Deleting {path}.")
 
@@ -39,7 +38,6 @@ async def remove_object_type(obj_type_id: str) -> None:
 
 
 def obj_description_from_base(data: ObjectTypeDict, obj_type: ObjectTypeMeta) -> str:
-
     try:
         obj = data[obj_type.base]
     except KeyError:
@@ -93,7 +91,6 @@ def get_dataclass_params(type_def: type[JsonSchemaMixin]) -> list[ParameterMeta]
 
 
 def meta_from_def(type_def: type[Generic], built_in: bool = False) -> ObjectTypeMeta:
-
     obj = ObjectTypeMeta(
         type_def.__name__,
         type_def.description(),
@@ -113,12 +110,10 @@ def meta_from_def(type_def: type[Generic], built_in: bool = False) -> ObjectType
 
 
 def built_in_types_data() -> ObjectTypeDict:
-
     ret: ObjectTypeDict = {}
 
     # built-in object types / services
     for _, type_def in built_in_types():
-
         assert issubclass(type_def, Generic)
 
         ast = parse_def(type_def)
@@ -135,12 +130,10 @@ class IgnoreActionException(Arcor2Exception):
 
 
 def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction]:
-
     ret: dict[str, ObjectAction] = {}
 
     # ...inspect.ismethod does not work on un-initialized classes
     for method_name, method_def in iterate_over_actions(type_def):
-
         meta: ActionMetadata = method_def.__action__  # type: ignore
 
         if meta.hidden:
@@ -153,7 +146,6 @@ def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction
             meta.cancellable = True
 
         try:
-
             docstring = parse_docstring(method_def.__doc__)
             data.description = docstring.short_description
 
@@ -189,7 +181,6 @@ def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction
 
             # ...just ignore NoneType for returns
             if return_ttype != type(None):  # noqa: E721
-
                 if typing_inspect.is_tuple_type(return_ttype):
                     for arg in typing_inspect.get_args(return_ttype):
                         resolved_param = plugin_from_type(arg)
@@ -201,7 +192,6 @@ def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction
                     data.returns = [plugin_from_type(return_ttype).type_name()]
 
             for name in parameter_names_without_self[:-1]:  # omit also an
-
                 try:
                     ttype = hints[name]
                 except KeyError:
@@ -241,7 +231,6 @@ def object_actions(type_def: type[Generic], tree: AST) -> dict[str, ObjectAction
 
 
 def add_ancestor_actions(obj_type_name: str, object_types: ObjectTypeDict) -> None:
-
     base_name = object_types[obj_type_name].meta.base
 
     if not base_name:
@@ -255,7 +244,6 @@ def add_ancestor_actions(obj_type_name: str, object_types: ObjectTypeDict) -> No
     for base_action in object_types[base_name].actions.values():
         for obj_action in object_types[obj_type_name].actions.values():
             if base_action.name == obj_action.name:
-
                 # built-in object has no "origins" yet
                 if not obj_action.origins:
                     obj_action.origins = base_name

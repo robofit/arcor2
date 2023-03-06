@@ -33,7 +33,6 @@ from arcor2_arserver_data.objects import ObjectTypeMeta
 
 
 def get_types_dict() -> TypesDict:
-
     return {k: v.type_def for k, v in glob.OBJECT_TYPES.items() if v.type_def is not None}
 
 
@@ -51,7 +50,6 @@ def valid_object_types() -> ObjectTypeDict:
 
 
 async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
-
     logger.debug(f"Processing {obj_id}.")
 
     if obj_id in object_types:
@@ -61,7 +59,6 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
     obj_iddesc = await storage.get_object_type_iddesc(obj_id)
 
     if obj_id in glob.OBJECT_TYPES:
-
         assert obj_iddesc.modified
         assert glob.OBJECT_TYPES[obj_id].meta.modified, f"Object {obj_id} does not have 'modified' in its meta."
 
@@ -159,7 +156,6 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
 
 
 class UpdatedObjectTypes(NamedTuple):
-
     new: set[str]
     updated: set[str]
     removed: set[str]
@@ -208,7 +204,6 @@ async def get_object_types() -> UpdatedObjectTypes:
     logger.debug(f"New ids: {new_object_ids}")
 
     if not initialization and removed_object_ids:
-
         # TODO remove it from sys.modules
 
         remove_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in removed_object_ids])
@@ -225,10 +220,8 @@ async def get_object_types() -> UpdatedObjectTypes:
     logger.debug(f"All known ids: {glob.OBJECT_TYPES.keys()}")
 
     for obj_type in updated_object_types.values():
-
         # if description is missing, try to get it from ancestor(s)
         if not obj_type.meta.description:
-
             try:
                 obj_type.meta.description = obj_description_from_base(glob.OBJECT_TYPES, obj_type.meta)
             except otu.DataError as e:
@@ -238,7 +231,6 @@ async def get_object_types() -> UpdatedObjectTypes:
             add_ancestor_actions(obj_type.meta.type, glob.OBJECT_TYPES)
 
     if not initialization:
-
         if updated_object_ids:
             update_evt = ChangedObjectTypes([v.meta for k, v in glob.OBJECT_TYPES.items() if k in updated_object_ids])
             update_evt.change_type = Event.Type.UPDATE
@@ -250,18 +242,15 @@ async def get_object_types() -> UpdatedObjectTypes:
             asyncio.ensure_future(notif.broadcast_event(add_evt))
 
     for obj_type in updated_object_types.values():
-
         if obj_type.type_def and issubclass(obj_type.type_def, Robot) and not obj_type.type_def.abstract():
             await get_robot_meta(obj_type)
 
     # if object does not change but its base has changed, it has to be reloaded
     for obj_id, obj in glob.OBJECT_TYPES.items():
-
         if obj_id in updated_object_ids:
             continue
 
         if obj.type_def and obj.meta.base in updated_object_ids:
-
             logger.debug(f"Re-importing {obj.meta.type} because its base {obj.meta.base} type has changed.")
             obj.type_def = await hlp.run_in_executor(
                 hlp.import_type_def,
@@ -275,7 +264,6 @@ async def get_object_types() -> UpdatedObjectTypes:
 
 
 async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
-
     if not meta.object_model:
         return
 

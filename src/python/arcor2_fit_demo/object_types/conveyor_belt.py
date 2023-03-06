@@ -11,19 +11,16 @@ from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class Direction(StrEnum):
-
     FORWARD: str = "forward"
     BACKWARDS: str = "backwards"
 
 
 @dataclass
 class ConveyorBeltSettings(UrlSettings):
-
     url: str = "http://fit-demo-dobot-magician:5018"
 
 
 class ConveyorBelt(FitCommonMixin, CollisionObject):
-
     mesh_filename = "conveyor_belt.fbx"
     _ABSTRACT = False
 
@@ -35,7 +32,6 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
         collision_model: Models,
         settings: ConveyorBeltSettings,
     ) -> None:
-
         super(ConveyorBelt, self).__init__(obj_id, name, pose, collision_model, settings)
 
         iter: int = 0

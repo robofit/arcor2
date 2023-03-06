@@ -7,7 +7,6 @@ from dataclasses_jsonschema import JsonSchemaMixin
 
 @dataclass
 class PackageMeta(JsonSchemaMixin):
-
     name: str
     built: datetime
     executed: Optional[datetime] = None

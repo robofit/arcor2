@@ -16,7 +16,6 @@ class DataException(Arcor2Exception):
 
 
 if not TYPE_CHECKING:
-
     # monkey-patch dataclasses_jsonschema to use orjson instead of json
 
     @classmethod
@@ -33,9 +32,7 @@ if not TYPE_CHECKING:
 
 
 def resolve_schema_refs(self, data: dict) -> None:
-
     if "schema" in data:
-
         if "$ref" in data["schema"]:
             data["schema"]["$ref"] = _schema_reference(data["schema"]["$ref"], self._schema_type)
         elif "items" in data["schema"] and "$ref" in data["schema"]["items"]:
@@ -59,11 +56,9 @@ def compile_json_schemas() -> None:
     from arcor2 import data
 
     for _, module_name, _ in pkgutil.iter_modules(data.__path__):
-
         module = importlib.import_module(f"{data.__name__}.{module_name}")
 
         for _, obj in inspect.getmembers(module, inspect.isclass):
-
             if not issubclass(obj, JsonSchemaMixin) or obj is JsonSchemaMixin or inspect.isabstract(obj):
                 continue
 

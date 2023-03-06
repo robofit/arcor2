@@ -12,7 +12,6 @@ URL = os.getenv("ARCOR2_ASSET_SERVICE_URL", "http://0.0.0.0:10040")
 
 @dataclass
 class AssetInfo(JsonSchemaMixin):
-
     id: str
     type: str
     created: datetime
@@ -28,7 +27,6 @@ class AssetInfo(JsonSchemaMixin):
 
 
 def asset_info() -> list[AssetInfo]:
-
     return rest.call(rest.Method.GET, f"{URL}/assets/info", list_return_type=AssetInfo)
 
 
@@ -69,10 +67,8 @@ def create_asset(
 
 
 def delete_asset(id: str, remove_dependers: bool = False) -> None:
-
     rest.call(rest.Method.DELETE, f"{URL}/assets/{id}", params={"remove_dependers": remove_dependers})
 
 
 def asset_exists(id: str) -> bool:
-
     return rest.call(rest.Method.GET, f"{URL}/assets/{id}/exists", return_type=bool)

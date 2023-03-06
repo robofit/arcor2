@@ -18,7 +18,6 @@ class ListParameterPlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> list[Any]:
-
         val = super(ListParameterPlugin, cls).parameter_value(type_defs, scene, project, action_id, parameter_id)
 
         if not isinstance(val, list):
@@ -30,7 +29,6 @@ class ListParameterPlugin(ParameterPlugin):
 
     @classmethod
     def _param_value_list(cls, param: ActionParameter) -> list[str]:
-
         lst = json.loads(param.value)
 
         if not isinstance(lst, list):

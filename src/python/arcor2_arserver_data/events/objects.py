@@ -7,7 +7,6 @@ from arcor2_arserver_data.objects import ObjectTypeMeta
 
 @dataclass
 class ChangedObjectTypes(Event):
-
     data: list[ObjectTypeMeta]
 
 

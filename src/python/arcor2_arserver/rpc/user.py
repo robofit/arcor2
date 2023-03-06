@@ -10,7 +10,6 @@ from arcor2_arserver_data import rpc as srpc
 
 
 async def register_user_cb(req: srpc.u.RegisterUser.Request, ui: WsClient) -> None:
-
     await glob.USERS.login(req.args.user_name, ui)
     logger.debug(f"User {req.args.user_name} just logged in. Known user names are: {glob.USERS.user_names}")
 

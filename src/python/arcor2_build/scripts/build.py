@@ -55,9 +55,7 @@ def get_base_from_project_service(
     ot_path: str,
     ast: ast.AST,
 ) -> None:
-
     for idx, base in enumerate(base_from_source(ast, obj_type.id)):
-
         if base in types_dict.keys() | built_in_types_names() | scene_object_types:
             continue
 
@@ -87,9 +85,7 @@ def get_base_from_project_service(
 def get_base_from_imported_package(
     obj_type: ObjectType, types_dict: dict[str, ObjectType], zip_file: zipfile.ZipFile, tmp_dir: str, ast: ast.AST
 ) -> None:
-
     for idx, base in enumerate(base_from_source(ast, obj_type.id)):
-
         if base in types_dict.keys() | built_in_types_names():
             continue
 
@@ -119,7 +115,6 @@ def get_base_from_imported_package(
 
 
 def _publish(project_id: str, package_name: str) -> RespT:
-
     mem_zip = BytesIO()
 
     logger.debug(f"Generating package {package_name} for project_id: {project_id}.")
@@ -131,11 +126,9 @@ def _publish(project_id: str, package_name: str) -> RespT:
     sys.modules = dict(original_sys_modules)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-
         prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
 
         with zipfile.ZipFile(mem_zip, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-
             try:
                 logger.debug("Getting scene and project.")
                 project = ps.get_project(project_id)
@@ -162,7 +155,6 @@ def _publish(project_id: str, package_name: str) -> RespT:
                     random.shuffle(scene.objects)
 
                 for scene_obj in scene.objects:
-
                     if scene_obj.type in types_dict:
                         continue
 
@@ -200,7 +192,6 @@ def _publish(project_id: str, package_name: str) -> RespT:
             script_path = "script.py"
 
             try:
-
                 if project.has_logic:
                     logger.debug("Generating script from project logic.")
                     zf.writestr(script_path, program_src(types_dict, cached_project, cached_scene, True))
@@ -219,7 +210,6 @@ def _publish(project_id: str, package_name: str) -> RespT:
                         zf.writestr(script_path, script)
 
                     except ps.ProjectServiceException:
-
                         logger.info("Script not found on project service, creating one from scratch.")
 
                         # write script without the main loop
@@ -288,12 +278,10 @@ T = TypeVar("T", bound=JsonSchemaMixin)
 
 
 def read_str_from_zip(zip_file: zipfile.ZipFile, file_name: str) -> str:
-
     return zip_file.read(file_name).decode("UTF-8")
 
 
 def read_dc_from_zip(zip_file: zipfile.ZipFile, file_name: str, cls: type[T]) -> T:
-
     return cls.from_dict(humps.decamelize(json.loads_type(read_str_from_zip(zip_file, file_name), dict)))
 
 
@@ -380,7 +368,6 @@ def project_import() -> RespT:
     """
     # BytesIO + stream.read() = workaround for a Python bug (SpooledTemporaryFile not seekable)
     with zipfile.ZipFile(BytesIO(file.stream.read())) as zip_file:
-
         try:
             project = read_dc_from_zip(zip_file, "data/project.json", Project)
         except KeyError:
@@ -399,7 +386,6 @@ def project_import() -> RespT:
             raise InvalidPackage("Project assigned to different scene id.")
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-
             # restore original environment
             sys.path = list(original_sys_path)
             sys.modules = dict(original_sys_modules)
@@ -407,7 +393,6 @@ def project_import() -> RespT:
             prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
 
             for scene_obj in scene.objects:
-
                 obj_type_name = scene_obj.type
 
                 if obj_type_name in objects:  # there might be more instances of the same type
@@ -437,7 +422,6 @@ def project_import() -> RespT:
                     raise InvalidPackage(f"Scene contains abstract object type: {obj_type_name}.")
 
         for obj_type in objects.values():  # handle models
-
             # TODO rather iterate on content of data/models?
             try:
                 model = read_dc_from_zip(
@@ -472,13 +456,11 @@ def project_import() -> RespT:
 
     # check that we are not going to overwrite something
     if not overwrite_scene:
-
         try:
             ps_scene = ps.get_scene(scene.id)
         except ps.ProjectServiceException:
             pass
         else:
-
             # do not take created / modified into account
             ps_scene.created = scene.created = None
             ps_scene.modified = scene.modified = None
@@ -487,13 +469,11 @@ def project_import() -> RespT:
                 raise Conflict("Scene difference detected. Overwrite needed.")
 
     if not overwrite_project:
-
         try:
             ps_project = ps.get_project(project.id)
         except ps.ProjectServiceException:
             pass
         else:
-
             # do not take created / modified into account
             ps_project.created = project.created = None
             ps_project.modified = project.modified = None
@@ -502,11 +482,8 @@ def project_import() -> RespT:
                 raise Conflict("Project difference detected. Overwrite needed.")
 
     if not overwrite_object_types:
-
         for obj_type in objects.values():
-
             try:
-
                 ot = ps.get_object_type(obj_type.id)
 
                 # ignore changes in description (no one cares)
@@ -516,7 +493,6 @@ def project_import() -> RespT:
                 pass
 
     if not overwrite_project_sources and not project.has_logic:
-
         try:
             if ps.get_project_sources(project.id).script != script:
                 raise Conflict("Script difference detected. Overwrite needed.")
@@ -524,7 +500,6 @@ def project_import() -> RespT:
             pass
 
     if not overwrite_collision_models:
-
         for model in models.values():
             try:
                 if model != ps.get_model(model.id, model.type()):
@@ -552,7 +527,6 @@ def project_import() -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     parser.add_argument(

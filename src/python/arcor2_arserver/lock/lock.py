@@ -176,7 +176,6 @@ class Lock:
 
         locked: list[str] = []
         for i, obj_id in enumerate(obj_ids):
-
             if self._get_lock_record(roots[i]).read_lock(obj_id, owner):
                 locked.append(obj_id)
             else:
@@ -248,7 +247,6 @@ class Lock:
 
         locked: list[str] = []
         for i, obj_id in enumerate(obj_ids):
-
             if self._get_lock_record(roots[i]).write_lock(obj_id, owner, lock_tree):
                 locked.append(obj_id)
             else:
@@ -321,7 +319,6 @@ class Lock:
         assert self._lock.locked()
 
         if lock_record := self._locked_objects.get(root_id):
-
             if obj_id in lock_record.write and owner == lock_record.write[obj_id]:
                 if check_tree_locked:
                     return lock_record.tree
@@ -596,7 +593,6 @@ class Lock:
 
         async with self._lock:
             if lock_record := self._locked_objects.get(root_id):
-
                 if lock_record.tree and owner != next(iter(lock_record.write.values())):
                     return False
 
@@ -686,7 +682,6 @@ class Lock:
 
         async with self._lock:
             if lock_record := self._locked_objects.get(root_id):
-
                 for lock in children.intersection(lock_record.write):
                     if owner != lock_record.write[lock]:
                         raise CannotLock(self.ErrMessages.SOMETHING_LOCKED_IN_TREE.value)

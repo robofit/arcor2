@@ -81,7 +81,6 @@ async def run_in_executor(
     except Arcor2Exception:
         raise
     except Exception as e:
-
         if propagate:
             for etp in propagate:
                 if isinstance(e, etp):
@@ -165,7 +164,6 @@ def import_type_def(type_name: str, output_type: type[T], path: str, module_name
 
 
 def check_compatibility(my_version: str, their_version: str) -> None:
-
     try:
         mv = parse(my_version)
         tv = parse(their_version)
@@ -210,7 +208,6 @@ class NonBlockingLock:
 
 
 def port_from_url(url: str) -> int:
-
     return int(url.strip().split(":")[-1])
 
 

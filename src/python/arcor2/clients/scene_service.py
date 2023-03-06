@@ -24,7 +24,6 @@ class SceneServiceException(Arcor2Exception):
 
 @dataclass
 class MeshParameters(JsonSchemaMixin):
-
     mesh_scale_x: float = 1.0
     mesh_scale_y: float = 1.0
     mesh_scale_z: float = 1.0
@@ -32,7 +31,6 @@ class MeshParameters(JsonSchemaMixin):
 
 
 def wait_for(timeout: float = 10.0) -> None:
-
     start_time = time.monotonic()
     while time.monotonic() < start_time + timeout:
         try:
@@ -69,7 +67,6 @@ def upsert_collision(model: Models, pose: Pose, mesh_parameters: None | MeshPara
     del params["id"]
 
     if model.type() == Model3dType.MESH:
-
         params["meshFileId"] = params.pop("asset_id")
 
         if mesh_parameters:
@@ -104,7 +101,6 @@ def line_check(lc: LineCheck) -> LineCheckResult:
 
 
 def delete_all_collisions() -> None:
-
     for cid in collision_ids():
         delete_collision_id(cid)
 

@@ -21,7 +21,6 @@ from arcor2_arserver_data.objects import ObjectAction
 
 
 def find_object_action(obj_types: ObjectTypeDict, scene: CachedScene, action: Action) -> ObjectAction:
-
     obj_id, action_type = action.parse_type()
     obj = scene.object(obj_id)
     obj_type = obj_types[obj.type]
@@ -54,7 +53,6 @@ def check_logic_item(
         raise Arcor2Exception("This does not make sense.")
 
     if logic_item.start != LogicItem.START:
-
         start_action_id, start_flow = logic_item.parse_start()
 
         if start_action_id == logic_item.end:
@@ -67,12 +65,10 @@ def check_logic_item(
             raise Arcor2Exception("Only flow 'default' is supported so far.'")
 
     if logic_item.end != LogicItem.END:
-
         if logic_item.end not in action_ids:
             raise Arcor2Exception("Logic item has unknown end.")
 
     if logic_item.condition is not None:
-
         what = logic_item.condition.parse_what()
         action = parent.action(what.action_id)  # action that produced the result which we depend on here
         flow = action.flow(what.flow_name)
@@ -105,7 +101,6 @@ def check_logic_item(
             raise Arcor2Exception("Invalid condition value.")
 
     for existing_item in parent.logic:
-
         if existing_item.id == logic_item.id:  # item is updated
             continue
 
@@ -113,7 +108,6 @@ def check_logic_item(
             raise Arcor2Exception("START already defined.")
 
         if logic_item.start == existing_item.start:
-
             if None in (logic_item.condition, existing_item.condition):
                 raise Arcor2Exception("Two junctions has the same start action without condition.")
 
@@ -127,7 +121,6 @@ def check_logic_item(
 
 
 def check_parameter(parameter: Parameter) -> None:
-
     # TODO check using (some) plugin
     from arcor2 import json
 
@@ -139,14 +132,12 @@ def check_parameter(parameter: Parameter) -> None:
 
 
 def check_object_parameters(obj_type: ObjectTypeData, parameters: list[Parameter]) -> None:
-
     if {s.name for s in obj_type.meta.settings if s.default_value is None} > {s.name for s in parameters}:
         raise Arcor2Exception("Some required parameter is missing.")
 
     param_dict = obj_type.meta.parameters_dict()
 
     for param in parameters:
-
         if param_dict[param.name].type != param.type:
             raise Arcor2Exception(f"Type mismatch for parameter {param}.")
 
@@ -154,11 +145,9 @@ def check_object_parameters(obj_type: ObjectTypeData, parameters: list[Parameter
 
 
 def check_project_parameter(proj: CachedProject, parameter: ProjectParameter) -> None:
-
     hlp.is_valid_identifier(parameter.name)
 
     for pparam in proj.parameters:
-
         if parameter.id == pparam.id:
             continue
 
@@ -195,7 +184,6 @@ def check_object(obj_types: ObjectTypeDict, scene: CachedScene, obj: SceneObject
         raise Arcor2Exception(f"ObjectType {obj.type} is abstract.")
 
     if new_one:
-
         if obj.id in scene.object_ids:
             raise Arcor2Exception(f"Object {obj.name} has duplicate id.")
 
@@ -208,7 +196,6 @@ def check_object(obj_types: ObjectTypeDict, scene: CachedScene, obj: SceneObject
 def check_action_params(
     obj_types: ObjectTypeDict, scene: CachedScene, project: CachedProject, action: Action, object_action: ObjectAction
 ) -> None:
-
     _, action_type = action.parse_type()
 
     assert action_type == object_action.name
@@ -217,11 +204,9 @@ def check_action_params(
         raise Arcor2Exception("Unexpected number of parameters.")
 
     for req_param in object_action.parameters:
-
         param = action.parameter(req_param.name)
 
         if param.type == ActionParameter.TypeEnum.PROJECT_PARAMETER:
-
             pparam = project.parameter(param.str_from_value())
 
             param_meta = object_action.parameter(param.name)
@@ -229,7 +214,6 @@ def check_action_params(
                 raise Arcor2Exception("Action parameter type does not match project parameter type.")
 
         elif param.type == ActionParameter.TypeEnum.LINK:
-
             parsed_link = param.parse_link()
 
             if parsed_link.action_id == action.id:
@@ -257,7 +241,6 @@ def check_action_params(
                 )
 
         else:
-
             if param.type not in known_parameter_types():
                 raise Arcor2Exception(f"Parameter {param.name} of action {action.name} has unknown type: {param.type}.")
 
@@ -302,7 +285,6 @@ def check_flows(parent: CachedProject | ProjectFunction, action: Action, action_
 
 
 def scene_problems(obj_types: ObjectTypeDict, scene: CachedScene) -> list[str]:
-
     problems: list[str] = []
 
     for scene_obj in scene.objects:
@@ -315,7 +297,6 @@ def scene_problems(obj_types: ObjectTypeDict, scene: CachedScene) -> list[str]:
 
 
 def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: None | str) -> None:
-
     if not parent:
         return
 
@@ -327,7 +308,6 @@ def check_ap_parent(scene: CachedScene, proj: CachedProject, parent: None | str)
 
 
 def project_problems(obj_types: ObjectTypeDict, scene: CachedScene, project: CachedProject) -> list[str]:
-
     if project.scene_id != scene.id:
         return ["Project/scene mismatch."]
 
@@ -340,7 +320,6 @@ def project_problems(obj_types: ObjectTypeDict, scene: CachedScene, project: Cac
             problems.append(str(e))
 
     for ap in project.action_points:
-
         try:
             check_ap_parent(scene, project, ap.parent)
         except Arcor2Exception:
@@ -353,7 +332,6 @@ def project_problems(obj_types: ObjectTypeDict, scene: CachedScene, project: Cac
                 )
 
         for action in project.actions:
-
             # check if objects have used actions
             obj_id, action_type = action.parse_type()
 

@@ -50,7 +50,6 @@ def lock() -> Lock:
 
 @pytest.mark.asyncio()
 async def test_ctx_read_lock() -> None:
-
     test = "test"
     user = "user"
 
@@ -89,7 +88,6 @@ async def test_ctx_read_lock() -> None:
 
 @pytest.mark.asyncio()
 async def test_base_logic(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -109,7 +107,6 @@ async def test_base_logic(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_locking_unknown_id(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -125,7 +122,6 @@ async def test_locking_unknown_id(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_locking_special_names(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -153,7 +149,6 @@ async def test_locking_special_names(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_unlocking_unknown_or_unlocked(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -184,7 +179,6 @@ async def test_unlocking_unknown_or_unlocked(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_whole_lock_yield(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -207,7 +201,6 @@ async def test_whole_lock_yield(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_recursive_locking(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -238,7 +231,6 @@ async def test_recursive_locking(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_count_methods(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -254,7 +246,6 @@ async def test_count_methods(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_notification_queue(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -276,7 +267,6 @@ async def test_notification_queue(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_possibility_of_locking_tree(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -300,7 +290,6 @@ async def test_possibility_of_locking_tree(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_updating_lock(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -334,7 +323,6 @@ async def test_updating_lock(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_root_getter(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -355,7 +343,6 @@ async def test_root_getter(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_auto_release(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -394,7 +381,6 @@ async def test_auto_release(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -420,7 +406,6 @@ async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_update_parent(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -439,7 +424,6 @@ async def test_update_parent(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_check_remove(lock: Lock) -> None:
-
     assert lock.project
 
     test = "test"
@@ -482,7 +466,6 @@ async def test_check_remove(lock: Lock) -> None:
 
 @pytest.mark.asyncio()
 async def test_getters(lock: Lock) -> None:
-
     assert lock.scene
     assert lock.project
 
@@ -524,7 +507,6 @@ async def check_notification_content(
 
 
 def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, project: cmn.Project) -> None:
-
     assert ars.call_rpc(rpc.p.OpenProject.Request(get_id(), IdArgs(project.id)), rpc.p.OpenProject.Response).result
     prj_evt = event(ars, events.p.OpenProject)
 

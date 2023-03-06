@@ -16,7 +16,6 @@ from arcor2_execution_data import rpc as erpc
 
 @pytest.mark.additional_deps([["src.python.arcor2.scripts/upload_builtin_objects.pex"]])
 def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
-
     event(ars, events.c.ShowMainScreen)
 
     assert ars.call_rpc(

@@ -34,7 +34,6 @@ def patch_object_actions(type_def: type[Generic]) -> None:
 
 
 def patch_with_action_mapping(type_def: type[Generic], scene: CachedScene, project: CachedProject) -> None:
-
     setattr(
         type_def,
         ACTION_NAME_ID_MAPPING_ATTR,
@@ -52,11 +51,9 @@ try:
     import time
 
     def read_stdin(timeout: float = 0.0) -> str | None:
-
         time_to_end = time.monotonic() + timeout
 
         while True:
-
             if msvcrt.kbhit():  # type: ignore
                 return msvcrt.getch().decode()  # type: ignore
 
@@ -66,10 +63,8 @@ try:
             time.sleep(timeout / 100.0)
 
 except ImportError:
-
     # Linux solution
     def read_stdin(timeout: float = 0.0) -> str | None:
-
         if select.select([sys.stdin], [], [], timeout)[0]:
             return sys.stdin.readline().strip()
         return None
@@ -92,7 +87,6 @@ def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
         start_paused = False
         print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
         while True:
-
             cmd = read_stdin(0.1)
 
             if cmd not in ("s", "r"):
@@ -155,7 +149,6 @@ def action(f: F) -> F:
 
     @wraps(f)
     def wrapper(obj: Generic, *action_args: Any, an: None | str = None, **kwargs: Any) -> Any:
-
         # remembers the outermost action
         # when set, serves as a flag, that we are inside an action
         # ...then when another action is executed, we know that it is a nested one (and the outer one is composite)

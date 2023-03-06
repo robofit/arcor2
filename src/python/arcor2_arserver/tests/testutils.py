@@ -25,13 +25,11 @@ _arserver_port: int = 0
 
 
 def log_proc_output(out: tuple[bytes, bytes]) -> None:
-
     for line in out[0].decode().splitlines():
         LOGGER.error(line)
 
 
 def finish_processes(processes) -> None:
-
     for proc in processes:
         proc.terminate()
         proc.wait()
@@ -50,9 +48,7 @@ def start_processes(request) -> Iterator[None]:
         additional_deps = m.args[0]
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-
         try:
-
             processes = []
             my_env = os.environ.copy()
             kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
@@ -142,7 +138,6 @@ class CheckHealthException(Exception):
 
 
 def check_health(service_name: str, service_url: str, timeout: int = 60) -> None:
-
     for _ in range(timeout):
         try:
             rest.call(rest.Method.GET, f"{service_url}/healthz/ready")  # to check whether the service is running
@@ -174,7 +169,6 @@ for mod in modules:
 
 @pytest.fixture()
 def ars() -> Iterator[ARServer]:
-
     with ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping) as ws:
         test_username = "testUser"
         assert ws.call_rpc(
@@ -188,7 +182,6 @@ E = TypeVar("E", bound=Event)
 
 
 def event(ars: ARServer, evt_type: type[E]) -> E:
-
     evt = ars.get_event()
     assert isinstance(evt, evt_type)
     assert evt.event == evt_type.__name__
@@ -196,7 +189,6 @@ def event(ars: ARServer, evt_type: type[E]) -> E:
 
 
 def wait_for_event(ars: ARServer, evt_type: type[E]) -> E:
-
     evt = ars.get_event(drop_everything_until=evt_type)
     assert isinstance(evt, evt_type)
     assert evt.event == evt_type.__name__
@@ -206,7 +198,6 @@ def wait_for_event(ars: ARServer, evt_type: type[E]) -> E:
 def add_logic_item(
     ars: ARServer, start: str, end: str, condition: None | common.ProjectLogicIf = None
 ) -> common.LogicItem:
-
     assert ars.call_rpc(
         rpc.p.AddLogicItem.Request(get_id(), rpc.p.AddLogicItem.Request.Args(start, end, condition)),
         rpc.p.AddLogicItem.Response,
@@ -218,19 +209,16 @@ def add_logic_item(
 
 
 def save_project(ars: ARServer) -> None:
-
     assert ars.call_rpc(rpc.p.SaveProject.Request(get_id()), rpc.p.SaveProject.Response).result
     event(ars, events.p.ProjectSaved)
 
 
 def close_project(ars: ARServer) -> None:
-
     assert ars.call_rpc(rpc.p.CloseProject.Request(get_id()), rpc.p.CloseProject.Response).result
     event(ars, events.p.ProjectClosed)
 
 
 def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
-
     assert ars.call_rpc(
         rpc.lock.WriteLock.Request(get_id(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
         rpc.lock.WriteLock.Response,
@@ -240,7 +228,6 @@ def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
 
 
 def unlock_object(ars: ARServer, obj_id: str) -> None:
-
     assert ars.call_rpc(
         rpc.lock.WriteUnlock.Request(get_id(), rpc.lock.WriteUnlock.Request.Args(obj_id)), rpc.lock.WriteUnlock.Response
     )

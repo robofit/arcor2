@@ -21,7 +21,6 @@ class Level(IntEnum):
 
     @classmethod
     def from_string(cls, value: str) -> Level:
-
         if value == "info":
             return cls.INFO
         elif value == "warning":
@@ -43,14 +42,12 @@ class Register(JsonSchemaMixin):
 
 @dataclass
 class LogMessage(JsonSchemaMixin):
-
     message: str
     level: Level
 
 
 class Logger:
     def __init__(self, obj: GenericProtocol) -> None:
-
         self._ws = websocket.WebSocket()
         self._ws.connect(os.getenv("ARCOR2_LOGGER_URL", "ws://0.0.0.0:8765"))
         self._executor = cf.ThreadPoolExecutor(max_workers=1)
@@ -76,7 +73,6 @@ class Logger:
         self.close()
 
     def close(self) -> None:
-
         if self._last_task:
             try:
                 cf.wait([self._last_task], 1.0)

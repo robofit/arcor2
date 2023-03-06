@@ -27,20 +27,17 @@ from arcor2.object_types.abstract import MultiArmRobot, Settings
 
 
 class RawResponse(NamedTuple):
-
     mirror_code: int
     res_code: int
     message: str
 
 
 class Response(NamedTuple):
-
     raw_res: RawResponse
     data: str
 
 
 class RequestPacket(NamedTuple):
-
     req: str
     timeout: float
     return_res: bool
@@ -60,13 +57,11 @@ logger = get_logger("YuMi")
 
 @dataclass
 class YumiSettings(Settings):
-
     ip: str = "192.168.104.101"
     max_tcp_speed: float = MAX_TCP_SPEED
     home_on_start: bool = False
 
     def __post_init__(self) -> None:
-
         if not 0 < self.max_tcp_speed <= MAX_TCP_SPEED:
             raise YumiException("Invalid speed.")
 
@@ -80,13 +75,11 @@ class ProgramStopped(RwsException):
 
 
 class ExecutionState(StrEnum):
-
     running: str = "running"
     stopped: str = "stopped"
 
 
 class ControllerState(StrEnum):
-
     init: str = "init"
     motoron: str = "motoron"
     motoroff: str = "motoroff"
@@ -110,7 +103,6 @@ class RWS:
         self._headers: dict[str, str] = {"Content-Type": "application/x-www-form-urlencoded"}
 
     def _post(self, url: str, data: None | dict = None, params: None | dict = None) -> requests.Response:
-
         if params is None:
             params = {}
 
@@ -121,7 +113,6 @@ class RWS:
         return self._session.post(f"{self._base_url}/{url}", data=data, params=params, headers=self._headers)
 
     def _get(self, url: str, params: None | dict = None) -> requests.Response:
-
         if params is None:
             params = {}
 
@@ -132,7 +123,6 @@ class RWS:
         return self._session.get(f"{self._base_url}/{url}", params=params, headers=self._headers)
 
     def _handle_response(self, resp: requests.Response, expected_code: int, error_message: str) -> None:
-
         if resp.status_code != expected_code:
             try:
                 msg = json.loads_type(resp.text, dict)["_embedded"]["status"]["msg"]
@@ -141,7 +131,6 @@ class RWS:
             raise RwsException(f"{error_message}. {msg}")
 
     def register_remote_user(self) -> None:
-
         resp = self._post(
             "users",
             {"username": "ARCOR2 User", "application": "Arcor2Studio", "location": "Earth", "ulocale": "remote"},
@@ -149,7 +138,6 @@ class RWS:
         self._handle_response(resp, 201, "Could not register remote user.")
 
     def login_as_local_user(self) -> None:
-
         resp = self._post("users", {"type": "local"}, {"action": "set-locale"})
         self._handle_response(resp, 204, "Could not login as local user.")
 
@@ -207,19 +195,16 @@ class RWS:
         return json.loads_type(resp.text, dict)["_embedded"]["_state"]
 
     def all_tasks_running(self) -> bool:
-
         for task in self.tasks():
             if task["excstate"] != "star":
                 return False
         return True
 
     def activate_task(self, task: str) -> None:
-
         resp = self._post(f"rw/rapid/tasks/{task}", params={"action": "activate"})
         self._handle_response(resp, 204, f"Failed to activate task {task}.")
 
     def activate_all_tasks(self) -> None:
-
         for task in self.tasks():
             self.activate_task(task["name"])
 
@@ -312,7 +297,6 @@ class RWS:
         return ControllerState(json.loads_type(resp.text, dict)["_embedded"]["_state"][0]["ctrlstate"])
 
     def block_while_running(self, cancel_event: Event) -> None:
-
         # is_running is not enough - "Motion supervision" stops only one task
         while self.all_tasks_running() and not cancel_event.is_set():  # TODO use websockets callback
             time.sleep(0.1)
@@ -368,13 +352,11 @@ class CmdCodes(IntEnum):
 
 
 class ResCodes(IntEnum):
-
     failure = 0
     success = 1
 
 
 class SubCodes(IntEnum):
-
     pose = 0
     state = 1
 
@@ -424,7 +406,6 @@ def message_to_pose(message: str) -> Pose:
 
 class YumiSocket:
     def __init__(self, ip: str, port: int, bufsize, timeout: float) -> None:
-
         self._ip = ip
         self._port = port
         self._timeout = timeout
@@ -432,7 +413,6 @@ class YumiSocket:
         self._lock = Lock()
 
         with self._lock:
-
             self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
             self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
@@ -454,11 +434,9 @@ class YumiSocket:
                 self._socket.close()
 
     def send_request(self, req_packet: RequestPacket) -> RawResponse:
-
         logger.debug("Sending: {0}".format(req_packet))
 
         with self._lock:
-
             if not self._socket:
                 raise YumiException()
 
@@ -541,7 +519,6 @@ class YuMiArm:
         self._sockets = (self._main_socket, self._poses_socket, self._joints_socket)
 
     def reconnect(self) -> None:
-
         self.terminate()
         self._main_socket = YumiSocket(self._ip, self._port, self._bufsize, self._comm_timeout)
         self._poses_socket = YumiSocket(self._ip, self._port + 2, self._bufsize, self._comm_timeout)
@@ -557,7 +534,6 @@ class YuMiArm:
             s.close()
 
     def _request(self, req: str, timeout: None | float = None, socket: None | YumiSocket = None) -> RawResponse:
-
         if timeout is None:
             timeout = self._comm_timeout
 
@@ -589,7 +565,6 @@ class YuMiArm:
 
     @classmethod
     def _get_pose_body(cls, pose: Pose) -> str:
-
         pose = copy.deepcopy(pose)
         pose.position *= METERS_TO_MM
         body = "{0}{1}".format(
@@ -608,7 +583,6 @@ class YuMiArm:
         return {f"yumi_joint_{i + 1}_{self.name[0]}" for i in range(self.JOINTS)}
 
     def _response_to_joints(self, res: RawResponse) -> list[Joint]:
-
         tokens = res.message.split()
 
         if len(tokens) != self.JOINTS:
@@ -634,32 +608,27 @@ class YuMiArm:
         return joints
 
     def get_pose(self) -> Pose:
-
         res = self._request(self._construct_req(CmdCodes.get_pose), socket=self._poses_socket)
         return message_to_pose(res.message)
 
     @property
     def lead_through(self) -> bool:
-
         req = self._construct_req(CmdCodes.is_lead_through)
         res = self._request(req)
         return bool(int(res.message))
 
     @lead_through.setter
     def lead_through(self, enabled: bool) -> None:
-
         req = self._construct_req(CmdCodes.set_lead_through, f"{int(enabled)} ")
         self._request(req)
 
     def is_pose_reachable(self, pose: Pose) -> bool:
-
         body = self._get_pose_body(pose)
         req = self._construct_req(CmdCodes.is_pose_reachable, body)
         res = self._request(req)
         return bool(int(res.message))
 
     def is_gripper_calibrated(self) -> bool:
-
         req = self._construct_req(CmdCodes.is_gripper_calibrated)
         res = self._request(req)
         return bool(int(res.message))
@@ -671,7 +640,6 @@ class YuMiArm:
             raise MultiArmRobot.KinematicsException(str(e))
 
     def fk(self, joints: list[Joint]) -> Pose:
-
         self._check_and_sort_joints(joints)
         try:
             return message_to_pose(self._request(self._construct_req(CmdCodes.fk, self._joints_to_str(joints))).message)
@@ -679,12 +647,10 @@ class YuMiArm:
             raise MultiArmRobot.KinematicsException(str(e))
 
     def _check_and_sort_joints(self, joints: list[Joint]) -> None:
-
         if len(joints) != self.JOINTS:
             raise YumiException("Invalid number of joints.")
 
         for j in joints:
-
             arr = j.name.split("_")
 
             try:
@@ -709,7 +675,6 @@ class YuMiArm:
         )
 
     def goto_joints_sync(self, joints: list[Joint]) -> None:
-
         self._check_and_sort_joints(joints)
         self._request(
             self._construct_req(CmdCodes.goto_joints_sync, self._joints_to_str(joints)), timeout=self._motion_timeout
@@ -1012,7 +977,6 @@ class YuMiArm:
 
 
 class YumiArms(StrEnum):
-
     LEFT: str = "left"
     RIGHT: str = "right"
 
@@ -1027,7 +991,6 @@ class YuMi(MultiArmRobot):
     urdf_package_name = "yumi.zip"
 
     def __init__(self, obj_id: str, name: str, pose: Pose, settings: YumiSettings) -> None:
-
         super().__init__(obj_id, name, pose, settings)
 
         self._executor = cf.ThreadPoolExecutor()
@@ -1081,7 +1044,6 @@ class YuMi(MultiArmRobot):
             self._right.reset_home()
 
     def default_configuration(self) -> None:
-
         # TODO set according to the used gripper
         # https://github.com/galou/yumipy/blob/robotware6_06/yumipy/yumi_constants.py#L117
         self.set_tool(Pose())
@@ -1125,7 +1087,6 @@ class YuMi(MultiArmRobot):
         return cast(YumiSettings, super().settings)
 
     def _arm_by_name(self, name: None | str) -> YuMiArm:
-
         if name is None:
             raise YumiException("Arm has to be specified.")
 
@@ -1140,19 +1101,15 @@ class YuMi(MultiArmRobot):
         return set(self._mapping)
 
     def get_end_effectors_ids(self, arm_id: None | str = None) -> set[str]:
-
         self._arm_by_name(arm_id)
         return {"default"}
 
     def get_end_effector_pose(self, end_effector: str, arm_id: None | str = None) -> Pose:
-
         arm = self._arm_by_name(arm_id)
         return tr.make_pose_abs(self.pose, arm.get_pose())
 
     def robot_joints(self, include_gripper: bool = False, arm_id: None | str = None) -> list[Joint]:
-
         if arm_id is None:
-
             ret: list[Joint] = []
             futures: list[cf.Future] = [
                 self._executor.submit(self._left.joints, include_gripper),
@@ -1198,7 +1155,6 @@ class YuMi(MultiArmRobot):
         assert 0.0 <= speed <= 1.0
 
         with self._move_lock:
-
             self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
 
             evt = Event()
@@ -1211,7 +1167,6 @@ class YuMi(MultiArmRobot):
             ]
 
             for f in cf.as_completed(futures):
-
                 try:
                     f.result()
                 except YumiException:
@@ -1240,11 +1195,9 @@ class YuMi(MultiArmRobot):
         assert 0.0 <= speed <= 1.0
 
         with self._move_lock:
-
             self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
 
             if arm_id is None:
-
                 left = [j for j in target_joints if j.name.endswith("_l")]
                 right = [j for j in target_joints if j.name.endswith("_r")]
 
@@ -1288,7 +1241,6 @@ class YuMi(MultiArmRobot):
         self._arm_by_name(arm_id).lead_through = enabled
 
     def cleanup(self) -> None:
-
         self.wait_for_all(
             [self._executor.submit(arm.terminate) for arm in self.arms],
             self._comm_timeout,
@@ -1431,7 +1383,6 @@ class YuMi(MultiArmRobot):
         self.set_v(int(speed * self.settings.max_tcp_speed * METERS_TO_MM))
 
         with self._move_lock:
-
             evt = Event()
 
             futures: list[cf.Future] = [
@@ -1467,7 +1418,6 @@ class YuMi(MultiArmRobot):
         self._right.open_gripper()
 
     def wait_for_all(self, futures: list[cf.Future], timeout: float, timeout_error_message: str) -> None:
-
         try:
             for f in cf.as_completed(futures, timeout):
                 f.result()

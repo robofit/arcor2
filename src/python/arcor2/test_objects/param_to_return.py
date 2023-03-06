@@ -3,7 +3,6 @@ from arcor2.object_types.abstract import Generic
 
 
 class ParamToReturn(Generic):
-
     _ABSTRACT = False
 
     def bool_param(self, param: bool, *, an: None | str = None) -> bool:

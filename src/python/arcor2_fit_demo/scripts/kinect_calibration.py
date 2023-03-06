@@ -7,7 +7,6 @@ from arcor2_fit_demo.object_types.kinect_azure import KinectAzure, UrlSettings
 
 
 def main() -> None:
-
     kinect = KinectAzure("", "", Pose(), Box("", 0.1, 0.1, 0.1), UrlSettings("http://localhost:5016"))
     # print(kinect.color_camera_params)
     assert kinect.color_camera_params

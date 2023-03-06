@@ -117,7 +117,6 @@ class PackageInfo(Event):
 class ActionStateBefore(Event):
     @dataclass
     class Data(JsonSchemaMixin):
-
         # required for projects with logic (where actions are defined in the project)
         # might be also filled for projects without logic
         action_id: Optional[str] = None
@@ -137,7 +136,6 @@ class ActionStateBefore(Event):
 class ActionStateAfter(Event):
     @dataclass
     class Data(JsonSchemaMixin):
-
         action_id: str
         results: Optional[list[str]] = None
 

@@ -3,7 +3,6 @@ from arcor2.object_types.abstract import CollisionObject
 
 
 class Box(CollisionObject):
-
     _ABSTRACT = False
 
     def test(self, *, an: None | str = None) -> None:

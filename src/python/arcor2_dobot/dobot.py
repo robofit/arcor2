@@ -19,7 +19,6 @@ class DobotException(RobotException):
 
 
 class MoveType(StrEnum):
-
     JUMP: str = "JUMP"
     JOINTS: str = "JOINTS"
     LINEAR: str = "LINEAR"
@@ -33,18 +32,15 @@ MOVE_TYPE_MAPPING = {
 
 
 class Dobot(metaclass=ABCMeta):
-
     ROTATE_EEF = Orientation.from_rotation_vector(y=math.pi)
     UNROTATE_EEF = ROTATE_EEF.inversed()
 
     def __init__(self, pose: Pose, port: str = "/dev/dobot", simulator: bool = False) -> None:
-
         self.pose = pose
         self.simulator = simulator
         self._move_lock = NonBlockingLock()
 
         if not self.simulator:
-
             try:
                 self._dobot = DobotApi(port)
             except DobotApiException as e:
@@ -55,7 +51,6 @@ class Dobot(metaclass=ABCMeta):
             self._hand_teaching = False
 
     def alarms_to_exception(self) -> None:
-
         try:
             alarms = self._dobot.get_alarms()
         except DobotApiException as e:
@@ -65,7 +60,6 @@ class Dobot(metaclass=ABCMeta):
             raise DobotApiException(f"Alarm(s): {','.join([alarm.name for alarm in alarms])}.")
 
     def cleanup(self) -> None:
-
         self.conveyor_speed(0)
         self.release()
 
@@ -73,7 +67,6 @@ class Dobot(metaclass=ABCMeta):
             self._dobot.close()
 
     def conveyor_speed(self, speed: float, direction: int = 1) -> None:
-
         if not self.simulator:
             self._dobot.conveyor_belt(speed, direction)
 
@@ -82,7 +75,6 @@ class Dobot(metaclass=ABCMeta):
 
     @property
     def hand_teaching_mode(self) -> bool:
-
         if self.simulator:
             return self._hand_teaching
 
@@ -90,7 +82,6 @@ class Dobot(metaclass=ABCMeta):
 
     @hand_teaching_mode.setter
     def hand_teaching_mode(self, value: bool) -> None:
-
         if self.simulator:
             self._hand_teaching = value
             return
@@ -127,7 +118,6 @@ class Dobot(metaclass=ABCMeta):
         pass
 
     def _check_orientation(self, pose: Pose) -> None:
-
         unrotated = self.UNROTATE_EEF * pose.orientation
 
         eps = 1e-6
@@ -136,7 +126,6 @@ class Dobot(metaclass=ABCMeta):
             raise DobotApiException("Impossible orientation.")
 
     def get_end_effector_pose(self) -> Pose:
-
         if self.simulator:
             return self.forward_kinematics(self.robot_joints())
 
@@ -158,7 +147,6 @@ class Dobot(metaclass=ABCMeta):
         """Run the homing procedure."""
 
         with self._move_lock:
-
             if self.simulator:
                 time.sleep(2.0)
                 return
@@ -188,7 +176,6 @@ class Dobot(metaclass=ABCMeta):
             raise DobotException("Invalid acceleration.")
 
         with self._move_lock:
-
             rp = tr.make_pose_rel(self.pose, pose)
 
             # prevent Dobot from moving when given an unreachable goal

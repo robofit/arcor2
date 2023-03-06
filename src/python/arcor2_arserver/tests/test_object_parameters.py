@@ -10,7 +10,6 @@ from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -> None:
-
     upload_def(ObjectWithSettings)
 
     assert ars.call_rpc(rpc.s.OpenScene.Request(get_id(), IdArgs(scene.id)), rpc.s.OpenScene.Response).result
