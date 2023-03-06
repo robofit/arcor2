@@ -7,11 +7,12 @@ import zipfile
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from flask import jsonify, request, send_file
+from flask import Response, jsonify, request, send_file
 from PIL import Image
 
 from arcor2 import env
 from arcor2.data.camera import CameraParameters
+from arcor2.data.common import Pose
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.image import image_to_bytes_io
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
 _kinect: "None | KinectAzure" = None
 _mock: bool = False
 _mock_started: bool = False
+_pose = Pose()
 
 
 def started() -> bool:
@@ -67,8 +69,13 @@ def put_start() -> RespT:
         description: Start the sensor.
         tags:
            - State
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: Pose
         responses:
-            200:
+            204:
               description: Ok
             500:
               description: "Error types: **General**, **StartError**."
@@ -81,6 +88,12 @@ def put_start() -> RespT:
     if started():
         raise StartError("Already started.")
 
+    if not isinstance(request.json, dict):
+        raise StartError("Body should be a JSON dict containing Pose.")
+
+    global _pose
+    _pose = Pose.from_dict(request.json)
+
     if _mock:
         global _mock_started
         _mock_started = True
@@ -92,7 +105,7 @@ def put_start() -> RespT:
         assert _kinect is None
         _kinect = KinectAzure()
 
-    return "ok", 200
+    return Response(status=204)
 
 
 @app.route("/state/stop", methods=["PUT"])
@@ -105,7 +118,7 @@ def put_stop() -> RespT:
         tags:
            - State
         responses:
-            200:
+            204:
               description: Ok
             500:
               description: "Error types: **General**, **StartError**."
@@ -123,7 +136,68 @@ def put_stop() -> RespT:
         assert _kinect is not None
         _kinect.cleanup()
         _kinect = None
-    return "ok", 200
+    return Response(status=204)
+
+
+@app.route("/state/pose", methods=["GET"])
+@requires_started
+def get_pose() -> RespT:
+    """Returns the pose configured during startup.
+    ---
+    get:
+        description: Returns the pose configured during startup.
+        tags:
+           - State
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    $ref: Pose
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    return jsonify(_pose.to_dict()), 200
+
+
+@app.route("/state/pose", methods=["PUT"])
+@requires_started
+def put_pose() -> RespT:
+    """Sets sensor pose in runtime.
+    ---
+    put:
+        description: Sets sensor pose in runtime.
+        tags:
+           - State
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: Pose
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    if not isinstance(request.json, dict):
+        raise StartError("Body should be a JSON dict containing Pose.")
+
+    global _pose
+    _pose = Pose.from_dict(request.json)
+
+    return Response(status=204)
 
 
 @app.route("/state/started", methods=["GET"])
@@ -326,7 +400,7 @@ def main() -> None:
     if _mock:
         logger.info("Starting as a mock!")
 
-    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [CameraParameters, WebApiError], args.swagger)
+    run_app(app, SERVICE_NAME, version(), port_from_url(URL), [CameraParameters, WebApiError, Pose], args.swagger)
 
     if _kinect:
         _kinect.cleanup()
