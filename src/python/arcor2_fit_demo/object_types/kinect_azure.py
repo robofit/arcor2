@@ -12,7 +12,6 @@ from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class KinectAzure(FitCommonMixin, Camera):
-
     _ABSTRACT = False
     mesh_filename = "kinect_azure.dae"
 
@@ -24,7 +23,6 @@ class KinectAzure(FitCommonMixin, Camera):
         collision_model: Models,
         settings: UrlSettings,
     ) -> None:
-
         super(KinectAzure, self).__init__(obj_id, name, pose, collision_model, settings)
 
         if self._started():
@@ -59,7 +57,6 @@ class KinectAzure(FitCommonMixin, Camera):
         pass
 
     def cleanup(self) -> None:
-
         super(KinectAzure, self).cleanup()
         self._stop()
 

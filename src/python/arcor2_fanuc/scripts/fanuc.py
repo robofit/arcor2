@@ -41,7 +41,6 @@ app = create_app(__name__)
 
 class ThreadSafeRobot(Robot):
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
         self._socket_lock = Lock()
         self._session = requests.session()
@@ -55,7 +54,6 @@ class ThreadSafeRobot(Robot):
         self._cur_joints: list[float] = [0] * 6
 
     def connect(self) -> None:
-
         try:
             res = self._session.get(f"http://{ROBOT_HOST}/MD/PRGSTATE.DG")
         except requests.RequestException:
@@ -63,7 +61,6 @@ class ThreadSafeRobot(Robot):
             raise Arcor2Exception("Failed to contact robot.")
 
         for line in res.text.splitlines():
-
             # MAPPDK_SERVER RUNNING @ 49 in OPEN_COMM of MAPPDK_SERVER
             # MAPPDK_SERVER RUNNING @ 61 in MAPPDK_SERVER of MAPPDK_SERVER
             # MAPPDK_SERVER status = ABORTED
@@ -84,12 +81,10 @@ class ThreadSafeRobot(Robot):
         self._pos_joints_thread.start()
 
     def _pos_joints_thread_run(self) -> None:
-
         last = time.monotonic()
         logger.info("Position/joints thread started.")
 
         while self._running:
-
             pos: list[float] = []
             joints: list[float] = []
             found = False
@@ -97,12 +92,10 @@ class ThreadSafeRobot(Robot):
             r = self._session.get(f"http://{ROBOT_HOST}/MD/CURPOS.DG")
 
             for line in r.text.splitlines():
-
                 if len(joints) < 6 and line.startswith("Joint"):
                     joints.append(float(line.split(" ")[-1]))
 
                 if len(pos) < 6:
-
                     if line.startswith("CURRENT WORLD POSITION"):
                         found = True
                     if not found:
@@ -142,7 +135,6 @@ class ThreadSafeRobot(Robot):
             return self._cur_joints.copy()
 
     def send_cmd(self, cmd):
-
         try:
             with self._socket_lock:
                 return super().send_cmd(cmd)
@@ -153,7 +145,6 @@ class ThreadSafeRobot(Robot):
             logger.exception("Socket broken?")
             raise Arcor2Exception("Connection with the robot broken.")
         except Exception as e:
-
             if str(e).strip() == "position-is-not-reachable":
                 raise Arcor2Exception("Position not reachable.")
 
@@ -164,7 +155,6 @@ class ThreadSafeRobot(Robot):
 
 @dataclass
 class Globals:
-
     robot: None | ThreadSafeRobot = None
     pose: Pose = Pose()
 
@@ -173,7 +163,6 @@ gl = Globals()
 
 
 def vals_to_pose(vals: list[float]) -> Pose:
-
     assert len(vals) == 6
 
     # https://doc.rc-cube.com/v21.10/en/pose_format_fanuc.html
@@ -192,7 +181,6 @@ def vals_to_pose(vals: list[float]) -> Pose:
 
 
 def pose_to_vals(pose: Pose) -> list[float]:
-
     # https://doc.rc-cube.com/v21.10/en/pose_format_fanuc.html
     # ...P and W are swapped!
     w = math.degrees(
@@ -218,7 +206,6 @@ def pose_to_vals(pose: Pose) -> list[float]:
 
 
 def started() -> bool:
-
     return gl.robot is not None
 
 
@@ -567,7 +554,6 @@ def get_gripper() -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
 

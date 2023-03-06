@@ -7,7 +7,6 @@ from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_project_basic_rpcs(start_processes: None, ars: ARServer, scene: common.Scene) -> None:
-
     # first, there are no projects
     projects = ars.call_rpc(rpc.p.ListProjects.Request(get_id()), rpc.p.ListProjects.Response)
     assert projects.result

@@ -16,13 +16,11 @@ class UploadException(Arcor2Exception):
 
 
 class Urdf(NamedTuple):
-
     path_to_directory: str  # path to a URDF package directory
     archive_name: str  # resulting archive name
 
 
 def upload_whatever(type_def: type[object]) -> None:
-
     obj_type = ObjectType(id=type_def.__name__, source=get_containing_module_sources(type_def))
     print(f"Storing '{obj_type.id}'...")
     ps.update_object_type(obj_type)
@@ -65,7 +63,6 @@ def upload_def(
         obj_type.model = model.metamodel()
 
         if isinstance(model, Mesh):
-
             if not type_def.mesh_filename:
                 raise UploadException("Mesh filename not set.")
 
@@ -90,7 +87,6 @@ def upload_def(
             raise UploadException("Parameter 'model' set for non-CollisionObject.")
 
     if urdf:
-
         if not os.path.isdir(urdf.path_to_directory):
             print(f"{urdf.path_to_directory} is not a directory.")
             return

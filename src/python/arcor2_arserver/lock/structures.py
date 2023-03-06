@@ -20,7 +20,6 @@ class LockedObject:
     __slots__ = "read", "write", "tree"
 
     def __init__(self) -> None:
-
         # object id: owners
         self.read: dict[str, list[str]] = {}
         self.write: dict[str, str] = {}

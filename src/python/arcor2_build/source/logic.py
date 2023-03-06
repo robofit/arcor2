@@ -39,7 +39,6 @@ logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG"
 
 
 def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logic: bool = True) -> str:
-
     tree = empty_script_tree(project.id, add_main_loop=add_logic)
 
     # get object instances from resources object
@@ -87,11 +86,9 @@ Container = FunctionDef | If | While  # TODO remove While
 
 
 def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project: CProject) -> None:
-
     added_actions: set[str] = set()
 
     def _blocks_to_start(action: Action, depth: int = 0) -> int:
-
         inputs, outputs = project.action_io(action.id)
 
         for inp in inputs:
@@ -109,7 +106,6 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
         return depth
 
     def _add_logic(container: Container, current_action: Action, super_container: None | Container = None) -> None:
-
         # more paths could lead  to the same action, so it might be already added
         # ...this is easier than searching the tree
         if current_action.id in added_actions:
@@ -126,9 +122,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
 
         # TODO make sure that the order of parameters is correct / re-order
         for param in current_action.parameters:
-
             if param.type == ActionParameter.TypeEnum.LINK:
-
                 parsed_link = param.parse_link()
                 parent_action = project.action(parsed_link.action_id)
 
@@ -150,7 +144,6 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
             elif param.type == ActionParameter.TypeEnum.PROJECT_PARAMETER:
                 args.append(Name(id=project.parameter(param.str_from_value()).name, ctx=Load()))
             else:
-
                 plugin = plugin_from_type_name(param.type)
 
                 args.append(plugin.parameter_ast(type_defs, scene, project, current_action.id, param.name))
@@ -186,7 +179,6 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
             seq_act = project.action(output.end)
             seq_act_inputs, _ = project.action_io(seq_act.id)
             if len(seq_act_inputs) > 1:  # the action belongs to a different block
-
                 if seq_act.id in added_actions:
                     return
 
@@ -214,7 +206,6 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
             _add_logic(container, seq_act, super_container)
 
         else:
-
             root_if: None | If = None
 
             # action has more outputs - each output should have condition

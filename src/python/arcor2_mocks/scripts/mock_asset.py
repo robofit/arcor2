@@ -29,6 +29,7 @@ ASSETS: dict[str, Asset] = {}
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+
 # TODO dependencies and tags parameters omitted as not really needed at the moment
 @app.route("/assets", methods=["POST"])
 def post_asset() -> RespT:
@@ -221,7 +222,6 @@ def delete_asset(id: str) -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=ASSET_SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     args = parser.parse_args()

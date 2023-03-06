@@ -14,7 +14,6 @@ class TimeActions(Generic):
         self._last_time: None | float = None
 
     def sleep(self, seconds: float = 1.0, *, an: None | str = None) -> None:
-
         assert 0.0 <= seconds <= 10.0e6
 
         time.sleep(seconds)
@@ -32,7 +31,6 @@ class TimeActions(Generic):
         now = time.monotonic()
 
         if self._last_time is not None:
-
             dif = self._last_time + period - now
 
             if dif > 0:

@@ -30,7 +30,6 @@ from arcor2.source import SourceException
 
 
 def parse(source: str) -> AST:
-
     try:
         return ast.parse(source, feature_version=sys.version_info[0:2])
     except (AssertionError, NotImplementedError, SyntaxError, ValueError) as e:
@@ -123,7 +122,6 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
 
         def visit_ImportFrom(self, node: ImportFrom) -> ImportFrom:
             if node.module == self.module:
-
                 for aliass in node.names:
                     if aliass.name == self.cls:
                         self.done = True
@@ -135,7 +133,6 @@ def add_import(node: Module, module: str, cls: str, try_to_import: bool = True) 
             return node
 
     if try_to_import:
-
         try:
             imported_mod = importlib.import_module(module)
         except ModuleNotFoundError as e:
@@ -196,7 +193,6 @@ def get_name_attr(name: str, attr: str, ctx: type[Load] | type[Store] = Load) ->
 
 
 def tree_to_str(tree: AST) -> str:
-
     fix_missing_locations(tree)
     return autopep8.fix_code(ast.unparse(tree), options={"aggressive": 1, "max_line_length": 120})
 

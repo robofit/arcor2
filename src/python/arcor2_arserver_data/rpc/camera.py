@@ -18,7 +18,6 @@ class CameraColorImage(RPC):
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[str] = field(default=None, repr=False)
 
 
@@ -33,7 +32,6 @@ class CameraColorParameters(RPC):
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[CameraParameters] = None
 
 

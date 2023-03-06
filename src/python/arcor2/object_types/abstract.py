@@ -36,7 +36,6 @@ class Generic(metaclass=abc.ABCMeta):
     _ABSTRACT = True
 
     def __init__(self, obj_id: str, name: str, settings: None | Settings = None) -> None:
-
         self.id = obj_id
         self.name = name
 
@@ -86,7 +85,6 @@ class GenericWithPose(Generic):
         pose: Pose,
         settings: None | Settings = None,
     ) -> None:
-
         super(GenericWithPose, self).__init__(obj_id, name, settings)
         self._pose = pose
 
@@ -119,7 +117,6 @@ class GenericWithPose(Generic):
 
 
 class CollisionObject(GenericWithPose):
-
     # name of the file that should be uploaded to the Project service together with this ObjectType
     mesh_filename: None | str = None
 
@@ -131,7 +128,6 @@ class CollisionObject(GenericWithPose):
         collision_model: Models,
         settings: None | Settings = None,
     ) -> None:
-
         super().__init__(obj_id, name, pose, settings)
 
         self.collision_model = copy.deepcopy(collision_model)
@@ -165,7 +161,6 @@ class CollisionObject(GenericWithPose):
 
     @enabled.setter
     def enabled(self, enabled: bool) -> None:
-
         if not self._enabled and enabled:
             assert self.id not in scene_service.collision_ids()
             scene_service.upsert_collision(self.collision_model, self.pose)
@@ -196,7 +191,6 @@ class VirtualCollisionObject(CollisionObject):
         collision_model: PrimitiveModels,
         settings: None | Settings = None,
     ) -> None:
-
         if settings and not isinstance(settings, Settings):
             # TODO rather remove settings from __init__ (requires non-trivial changes in ARServer/Resources)
             raise Arcor2Exception(f"Settings are not supported for {VirtualCollisionObject.__name__}.")  # noqa:PB10
@@ -390,7 +384,6 @@ class MultiArmRobot(Robot, metaclass=abc.ABCMeta):
 
         # hand-teaching mode is arm specific
         for arm_id in self.get_arm_ids():
-
             try:
                 if self.get_hand_teaching_mode(arm_id):
                     raise RobotException("Can't move in hand teaching mode.")

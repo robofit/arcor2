@@ -44,21 +44,17 @@ from arcor2_runtime import events as runtime_events
 
 
 async def handle_manager_incoming_messages(manager_client) -> None:
-
     event_mapping: dict[str, type[events.Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
     rpc_mapping: dict[str, type[rpc.common.RPC]] = {r.__name__: r for r in EXE_RPCS}
 
     try:
-
         async for message in manager_client:
-
             msg = json.loads(message)
 
             if not isinstance(msg, dict):
                 continue
 
             if "event" in msg:
-
                 if glob.USERS.interfaces:
                     await asyncio.gather(
                         *[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces]
@@ -76,7 +72,6 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     glob.PACKAGE_STATE = evt.data
 
                     if evt.data.state == events.PackageState.Data.StateEnum.STOPPED:
-
                         if not glob.TEMPORARY_PACKAGE:
                             # after (ordinary) package is finished, show list of packages
                             glob.MAIN_SCREEN = evts.c.ShowMainScreen.Data(
@@ -105,7 +100,6 @@ async def handle_manager_incoming_messages(manager_client) -> None:
                     glob.ACTION_STATE_BEFORE = evt.data
 
             elif "response" in msg:
-
                 # TODO handle potential errors
                 rpc_cls = rpc_mapping[msg["response"]]
                 resp = rpc_cls.Response.from_dict(msg)
@@ -116,7 +110,6 @@ async def handle_manager_incoming_messages(manager_client) -> None:
 
 
 async def _initialize_server() -> None:
-
     exe_version = await exe.manager_request(rpc.common.Version.Request(exe.get_id()))
     assert isinstance(exe_version, rpc.common.Version.Response)
     if not exe_version.result:
@@ -176,7 +169,6 @@ async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_r
 
 
 async def register(websocket: WsClient) -> None:
-
     logger.info("Registering new ui")
     glob.USERS.add_interface(websocket)
 
@@ -188,7 +180,6 @@ async def register(websocket: WsClient) -> None:
     elif glob.LOCK.scene:
         await notif.event(websocket, evts.s.OpenScene(evts.s.OpenScene.Data(glob.LOCK.scene.scene)))
     elif glob.PACKAGE_INFO:
-
         # this can't be done in parallel - ui expects this order of events
         await websocket.send(events.PackageState(glob.PACKAGE_STATE).to_json())
         await websocket.send(events.PackageInfo(glob.PACKAGE_INFO).to_json())
@@ -204,7 +195,6 @@ async def register(websocket: WsClient) -> None:
 
 
 async def unregister(websocket: WsClient) -> None:
-
     try:
         user_name = glob.USERS.user_name(websocket)
     except Arcor2Exception:
@@ -226,7 +216,6 @@ async def unregister(websocket: WsClient) -> None:
 
 
 async def system_info_cb(req: srpc.c.SystemInfo.Request, ui: WsClient) -> srpc.c.SystemInfo.Response:
-
     resp = srpc.c.SystemInfo.Response()
     resp.data = resp.Data(
         arcor2_arserver.version(),
@@ -243,7 +232,6 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {srpc.c.SystemInfo.__name__: (srpc.c.SystemI
 # TODO refactor it into arcor2 package (to be used by arcor2_execution)
 for _, rpc_module in inspect.getmembers(srpc_callbacks, inspect.ismodule):
     for rpc_cb_name, rpc_cb in inspect.getmembers(rpc_module):
-
         if not rpc_cb_name.endswith("_cb"):
             continue
 
@@ -264,12 +252,10 @@ EVENT_DICT: ws_server.EVENT_DICT_TYPE = {}
 
 
 async def aio_main() -> None:
-
     await asyncio.gather(exe.project_manager_client(handle_manager_incoming_messages), _initialize_server())
 
 
 def print_openapi_models() -> None:
-
     modules = [arcor2_execution_data.events, events, runtime_events]
 
     for _, mod in inspect.getmembers(evts, inspect.ismodule):
@@ -290,7 +276,6 @@ def print_openapi_models() -> None:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-v", "--verbose", help="Increase verbosity.", action="store_const", const=True, default=False)

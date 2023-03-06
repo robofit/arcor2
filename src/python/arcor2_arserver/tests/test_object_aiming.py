@@ -12,7 +12,6 @@ from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_object_aiming(start_processes: None, ars: ARServer) -> None:
-
     mesh = Mesh(Box.__name__, "mesh.dae", [Pose(), Pose(), Pose()])
     assert mesh.focus_points
     Box.mesh_filename = mesh.asset_id
@@ -116,7 +115,6 @@ def test_object_aiming(start_processes: None, ars: ARServer) -> None:
     ).result
 
     for idx in range(len(mesh.focus_points)):
-
         assert ars.call_rpc(
             rpc.o.ObjectAimingAddPoint.Request(get_id(), rpc.o.ObjectAimingAddPoint.Request.Args(idx)),
             rpc.o.ObjectAimingAddPoint.Response,

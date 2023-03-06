@@ -33,7 +33,6 @@ class ListPackages(RPC):
 
     @dataclass
     class ModifiedFile(JsonSchemaMixin):
-
         filename: str
         modified: datetime
 

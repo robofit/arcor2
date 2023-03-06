@@ -16,14 +16,12 @@ class KinectAzureException(Arcor2Exception):
 
 
 class ColorAndDepthImage(NamedTuple):
-
     color: Image.Image
     depth: Image.Image
 
 
 class KinectAzure:
     def __init__(self) -> None:
-
         self._lock = Lock()
 
         self._k4a = PyK4A(
@@ -57,7 +55,6 @@ class KinectAzure:
 
         try:
             for camera in c["CalibrationInformation"]["Cameras"]:
-
                 params = camera["Intrinsics"]["ModelParameters"]
 
                 cx = params[0]
@@ -79,7 +76,6 @@ class KinectAzure:
                 cp = CameraParameters(fx, fy, cx, cy, [k1, k2, p1, p2, k3, k4, k5, k6])
 
                 if camera["Location"] == "CALIBRATION_CameraLocationPV0":
-
                     h = img.width / 4 * 3
 
                     # un-normalize values
@@ -103,20 +99,16 @@ class KinectAzure:
             raise KinectAzureException("Failed to get camera calibration.")
 
     def _bgra_to_rgba(self, arr: np.ndarray) -> None:
-
         arr[:, :, [0, 1, 2, 3]] = arr[:, :, [2, 1, 0, 3]]
 
     def _capture(self) -> PyK4ACapture:
-
         with self._lock:
-
             try:
                 return self._k4a.get_capture(timeout=1000)
             except K4AException as e:
                 raise KinectAzureException("Failed to get capture.") from e
 
     def color_image(self) -> Image.Image:
-
         capture = self._capture()
 
         if capture.color is None:
@@ -126,7 +118,6 @@ class KinectAzure:
         return Image.fromarray(capture.color, mode="RGBA")
 
     def _depth_image(self) -> np.ndarray:
-
         capture = self._capture()
 
         if capture.transformed_depth is None:
@@ -135,7 +126,6 @@ class KinectAzure:
         return capture.transformed_depth
 
     def depth_image(self, averaged_frames: int = 1) -> Image.Image:
-
         img = self._depth_image()
         array = img.astype(np.float32)
 
@@ -145,7 +135,6 @@ class KinectAzure:
         return Image.fromarray((array / averaged_frames).astype(img.dtype))
 
     def sync_images(self) -> ColorAndDepthImage:
-
         capture = self._capture()
 
         if not capture.color or not capture.depth:

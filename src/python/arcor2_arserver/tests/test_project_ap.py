@@ -18,7 +18,6 @@ class ActionChanged(Event):
 
 
 def test_project_ap_rpcs(start_processes: None, ars: ARServer) -> None:
-
     upload_def(Box, BoxModel(Box.__name__, 1, 2, 3))
 
     event(ars, events.c.ShowMainScreen)

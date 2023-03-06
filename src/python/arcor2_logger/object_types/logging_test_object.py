@@ -4,11 +4,9 @@ from .logging_mixin import LoggingMixin  # noqa:ABS101
 
 
 class LoggingTestObject(LoggingMixin, Generic):
-
     _ABSTRACT = False
 
     def __init__(self, obj_id: str, name: str, settings: None | Settings = None) -> None:
-
         super().__init__(obj_id, name, settings)
         self.logger = self.get_logger()
         self.logger.info("Initialized.")

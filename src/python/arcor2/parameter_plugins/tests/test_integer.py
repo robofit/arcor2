@@ -16,7 +16,6 @@ from arcor2.source.utils import find_function, parse_def
 
 class TestObject(Generic):
     def action(self, arbitrary_type_param: str, int_param: int, some_other_param: int) -> None:
-
         assert 0 <= int_param <= 10
 
 
@@ -28,12 +27,10 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(int) is IntegerPlugin
 
 
 def test_meta() -> None:
-
     meta = ParameterMeta(param_name, IntegerPlugin.type_name())
     IntegerPlugin.meta(meta, TestObject.action, find_function(TestObject.action.__name__, parse_def(TestObject)))
     assert meta.extra
@@ -50,15 +47,12 @@ def test_meta() -> None:
 )
 class TestParametrized:
     def test_plugin_from_instance(self, val: float) -> None:
-
         assert plugin_from_instance(val) is IntegerPlugin
 
     def test_value_to_json(self, val: float) -> None:
-
         assert IntegerPlugin.value_to_json(val) == json.dumps(val)
 
     def test_get_value(self, val: float) -> None:
-
         scene = Scene("s1")
         obj = SceneObject("test_name", TestObject.__name__)
         scene.objects.append(obj)

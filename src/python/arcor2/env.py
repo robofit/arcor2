@@ -12,7 +12,6 @@ def get_bool(variable_name: str, default: bool = False) -> bool:
 
 
 def get_int(variable_name: str, default: None | int = None) -> int:
-
     val = os.getenv(variable_name, default)
 
     if val is None:
@@ -25,7 +24,6 @@ def get_int(variable_name: str, default: None | int = None) -> int:
 
 
 def get_float(variable_name: str, default: None | float = None) -> float:
-
     val = os.getenv(variable_name, default)
 
     if val is None:

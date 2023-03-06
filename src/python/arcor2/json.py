@@ -16,7 +16,6 @@ T = TypeVar("T")
 
 
 def loads(value: str) -> JsonType:
-
     try:
         return orjson.loads(value)
     except (ValueError, TypeError) as e:
@@ -24,7 +23,6 @@ def loads(value: str) -> JsonType:
 
 
 def loads_type(value: str, output_type: type[T]) -> T:
-
     val = loads(value)
 
     if not isinstance(val, output_type):
@@ -34,7 +32,6 @@ def loads_type(value: str, output_type: type[T]) -> T:
 
 
 def dumps(value: JsonType) -> str:
-
     try:
         return orjson.dumps(value).decode()
     except (ValueError, TypeError) as e:

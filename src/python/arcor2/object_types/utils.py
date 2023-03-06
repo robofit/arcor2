@@ -53,7 +53,6 @@ def built_in_types() -> Iterator[tuple[str, type[Generic]]]:
     """Yields class name and class definition tuple."""
 
     for cls_name, cls_type in inspect.getmembers(arcor2.object_types.abstract, predicate=inspect.isclass):
-
         try:
             if not issubclass(cls_type, Generic):
                 continue
@@ -66,7 +65,6 @@ def built_in_types() -> Iterator[tuple[str, type[Generic]]]:
 
 
 def get_built_in_type(name: str) -> type[Generic]:
-
     for bname, cls in built_in_types():
         if name == bname:
             return cls
@@ -116,7 +114,6 @@ def settings_from_params(
     settings_def_type_hints = get_type_hints(settings_def.__init__)
 
     for s in final.values():
-
         try:
             setting_def = settings_def_type_hints[s.name]
         except KeyError as e:
@@ -157,7 +154,6 @@ def get_settings_def(type_def: type[Generic]) -> type[Settings]:
     if typing_inspect.is_optional_type(param.annotation) or (
         typing_inspect.is_union_type(param.annotation) and None in args
     ):
-
         for arg in args:
             if arg != type(None):  # noqa: E721
                 settings_cls = arg
@@ -199,7 +195,6 @@ def base_from_source(source: str | ast.AST, cls_name: str) -> list[str]:
     ret: list[str] = []
 
     for base in reversed(cls_def.bases):
-
         assert isinstance(base, ast.Name)
         ret.append(base.id)
 
@@ -209,9 +204,7 @@ def base_from_source(source: str | ast.AST, cls_name: str) -> list[str]:
 def iterate_over_actions(
     type_def: type[Generic],
 ) -> Iterator[tuple[str, Callable[[Any,], Any]]]:
-
     for method_name, method in inspect.getmembers(type_def, inspect.isroutine):
-
         try:
             if not isinstance(method.__action__, ActionMetadata):
                 continue

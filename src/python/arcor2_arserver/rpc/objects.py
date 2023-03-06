@@ -39,7 +39,6 @@ from arcor2_arserver_data import rpc as srpc
 
 @dataclass
 class AimedObject:
-
     obj_id: str
     robot: rpc.common.RobotArg
     poses: dict[int, Pose] = field(default_factory=dict)
@@ -117,7 +116,6 @@ async def object_aiming_prune() -> None:
 
     # users in db but not holding a lock for the object should be deleted
     for un, fo in _objects_being_aimed.items():
-
         if not await glob.LOCK.is_write_locked(fo.obj_id, un):
             logger.info(f"Object aiming cancelled for {un}.")
             to_delete.append(un)
@@ -167,7 +165,6 @@ async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: Ws
 async def object_aiming_add_point_cb(
     req: srpc.o.ObjectAimingAddPoint.Request, ui: WsClient
 ) -> srpc.o.ObjectAimingAddPoint.Response:
-
     scene = glob.LOCK.scene_or_exception()
     fo, user_name = await object_aiming_check(ui)
 
@@ -240,7 +237,6 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     rp: list[Position] = []
 
     for idx, pose in fo.poses.items():
-
         fp.append(focus_points[idx].position)
         rp.append(pose.position)
 
@@ -262,7 +258,6 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
 
 
 async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) -> None:
-
     async with ctx_write_lock(glob.LOCK.SpecialValues.ADDING_OBJECT, glob.USERS.user_name(ui)):
         meta = req.args
 
@@ -328,7 +323,6 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
 
 
 async def update_object_model_cb(req: srpc.o.UpdateObjectModel.Request, ui: WsClient) -> None:
-
     can_modify_scene()
     glob.LOCK.scene_or_exception(True)  # only allow while editing scene
 
@@ -373,7 +367,6 @@ async def get_object_types_cb(req: srpc.o.GetObjectTypes.Request, ui: WsClient) 
 
 
 def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
-
     if object_type in scene.object_types:
         raise Arcor2Exception(f"Used in scene {scene.name}.")
 
@@ -382,7 +375,6 @@ async def delete_object_type_cb(
     req: srpc.o.DeleteObjectTypes.Request, ui: WsClient
 ) -> srpc.o.DeleteObjectTypes.Response:
     async def _delete_model(obj_type: ObjectTypeData) -> None:
-
         # do not care so much if delete_model fails
         if not obj_type.meta.object_model:
             return
@@ -393,7 +385,6 @@ async def delete_object_type_cb(
             logger.error(str(e))
 
     async def _delete_ot(ot: str) -> None:
-
         obj_type = glob.OBJECT_TYPES[ot]
 
         if obj_type.meta.built_in:
@@ -433,7 +424,6 @@ async def delete_object_type_cb(
     response.data = []
 
     async with ctx_write_lock(obj_types_to_delete, user_name, auto_unlock=False, dry_run=req.dry_run):
-
         res = await asyncio.gather(*[_delete_ot(ot) for ot in obj_types_to_delete], return_exceptions=True)
 
         for idx, r in enumerate(res):
@@ -456,7 +446,6 @@ async def delete_object_type_cb(
 def check_override(
     scene: CachedScene, project: CachedProject, obj_id: str, override: Parameter, add_new_one: bool = False
 ) -> SceneObject:
-
     obj = scene.object(obj_id)
 
     for par in glob.OBJECT_TYPES[obj.type].meta.settings:
@@ -488,7 +477,6 @@ def check_override(
 
 
 async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None:
-
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -512,7 +500,6 @@ async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None
 
 
 async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -> None:
-
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -535,7 +522,6 @@ async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -
 
 
 async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -> None:
-
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -560,7 +546,6 @@ async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -
 
 
 async def object_type_usage_cb(req: srpc.o.ObjectTypeUsage.Request, ui: WsClient) -> srpc.o.ObjectTypeUsage.Response:
-
     resp = srpc.o.ObjectTypeUsage.Response()
     resp.data = set()  # mypy does not recognize it correctly with Response(data=set())
 

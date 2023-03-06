@@ -9,7 +9,6 @@ from arcor2_arserver import logger
 
 
 async def broadcast_event(event: events.Event) -> None:
-
     logger.debug(event)
 
     if glob.USERS.interfaces:

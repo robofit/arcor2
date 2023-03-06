@@ -37,23 +37,19 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(Pose) is PosePlugin
 
 
 def test_plugin_from_instance() -> None:
-
     assert plugin_from_instance(Pose()) is PosePlugin
 
 
 def test_value_to_json() -> None:
-
     p = Pose()
     assert PosePlugin.value_to_json(p) == p.to_json()
 
 
 def test_get_value() -> None:
-
     p = Pose(Position(1, 2, 3), Orientation(1, 0, 0, 0))
 
     scene = Scene("s1")

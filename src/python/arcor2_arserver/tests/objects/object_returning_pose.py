@@ -5,7 +5,6 @@ from arcor2.object_types.abstract import Generic
 
 
 class ObjectReturningPose(Generic):
-
     _ABSTRACT = False
 
     def action_returning_pose(self, *, an: None | str = None) -> Pose:

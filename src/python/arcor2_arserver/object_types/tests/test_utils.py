@@ -48,7 +48,6 @@ patch_object_actions(TestObject)
 
 
 def test_meta_from_def() -> None:
-
     meta = meta_from_def(TestObject)
     assert meta.type == TestObject.__name__
     assert meta.description == "TestObject description."
@@ -64,14 +63,11 @@ def test_meta_from_def() -> None:
 
 
 def test_object_actions() -> None:
-
     actions = object_actions(TestObject, parse_def(TestObject))
     assert len(actions) == 2
 
     for act in actions.values():
-
         if act.name == TestObject.action_1.__name__:
-
             expected_meta = ActionMetadata()
             expected_meta.cancellable = True
             assert act.meta == expected_meta
@@ -92,7 +88,6 @@ def test_object_actions() -> None:
                     pytest.fail(f"Unknown parameter: {param.name} of action {act.name}.")
 
         elif act.name == TestObject.action_2.__name__:
-
             assert act.meta == ActionMetadata()
             assert len(act.returns) == 1
             assert act.description == "Short description"
@@ -104,7 +99,6 @@ def test_object_actions() -> None:
 
 
 def test_settings() -> None:
-
     meta = meta_from_def(TestObjectWithSettings)
     assert len(meta.settings) == 6
 

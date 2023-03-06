@@ -193,7 +193,6 @@ def tokens_db():
 
 
 def ws_thread() -> None:  # TODO use (refactored) arserver client
-
     global package_info
     global package_state
     global action_state_before
@@ -204,14 +203,12 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
     rpc_mapping: dict[str, type[arcor2_rpc.common.RPC]] = {rpc.__name__: rpc for rpc in EXPOSED_RPCS}
 
     while True:
-
         data = json.loads(ws.recv())  # TODO handle WebSocketConnectionClosedException
 
         if not isinstance(data, dict):
             continue
 
         if "event" in data:
-
             evt = event_mapping[data["event"]].from_dict(data)
 
             if isinstance(evt, PackageInfo):
@@ -238,7 +235,6 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
 
 
 def call_rpc(req: arcor2_rpc.common.RPC.Request) -> arcor2_rpc.common.RPC.Response:
-
     assert req.id not in rpc_responses
     assert ws
 
@@ -994,7 +990,6 @@ def packages_state() -> RespT:
     ):
         ret = ExecutionInfo(ExecutionState.Pending, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.STOPPED:
-
         if exception_messages:
             ret = ExecutionInfo(ExecutionState.Faulted, package_state.package_id, " ".join(exception_messages))
         else:
@@ -1009,7 +1004,6 @@ def packages_state() -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     args = parser.parse_args()

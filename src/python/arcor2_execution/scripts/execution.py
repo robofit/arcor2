@@ -52,18 +52,15 @@ EVENT_MAPPING = {evt.__name__: evt for evt in EVENTS}
 
 
 def process_running() -> bool:
-
     return PROCESS is not None and PROCESS.returncode is None
 
 
 async def package_state(event: PackageState) -> None:
-
     PACKAGE_STATE_EVENT.data = event.data
     await send_to_clients(event)
 
 
 async def read_proc_stdout() -> None:
-
     global PACKAGE_INFO_EVENT
     global RUNNING_PACKAGE_ID
 
@@ -115,9 +112,7 @@ async def read_proc_stdout() -> None:
     await PROCESS.communicate()  # otherwise returncode might be still None
 
     if PROCESS.returncode:
-
         if printed_out:
-
             # TODO remember this (until another package is started) and send it to new clients?
             last_line = printed_out[-1].strip()
 
@@ -132,7 +127,6 @@ async def read_proc_stdout() -> None:
                 await tb_file.write("".join(printed_out))
 
         else:
-
             await send_to_clients(
                 ProjectException(
                     ProjectException.Data(f"Process ended with non-zero return code ({PROCESS.returncode}).", "unknown")
@@ -150,14 +144,12 @@ async def read_proc_stdout() -> None:
 
 
 async def check_script(script_path: str) -> None:
-
     if not await run_in_executor(os.path.exists, script_path):
         raise Arcor2Exception("Main script not found.")
 
 
 async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     async def _update_executed(package_id: str) -> None:
-
         meta = await run_in_executor(read_package_meta, package_id)
         meta.executed = datetime.now(tz=timezone.utc)
         await run_in_executor(write_package_meta, package_id, meta)
@@ -219,7 +211,6 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
 
 async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
     async def _terminate_task() -> None:
-
         global PACKAGE_INFO_EVENT
         global RUNNING_PACKAGE_ID
 
@@ -245,7 +236,6 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
 
 async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
     async def _pause() -> None:
-
         assert PROCESS is not None
         assert PROCESS.stdin is not None
 
@@ -263,7 +253,6 @@ async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
 
 async def step_action_cb(req: rpc.StepAction.Request, ui: WsClient) -> None:
     async def _step() -> None:
-
         assert PROCESS is not None
         assert PROCESS.stdin is not None
 
@@ -281,7 +270,6 @@ async def step_action_cb(req: rpc.StepAction.Request, ui: WsClient) -> None:
 
 async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> None:
     async def _resume() -> None:
-
         assert PROCESS is not None
         assert PROCESS.stdin is not None
 
@@ -300,7 +288,6 @@ async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> Non
 
 async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> None:
     async def _upload_event(path_to_package: str) -> None:
-
         summary = await get_summary(path_to_package)
         evt = events.PackageChanged(summary)
         evt.change_type = Event.Type.ADD
@@ -312,7 +299,6 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
     # TODO do not allow if there are manual changes?
 
     async with tempfile.TemporaryDirectory() as tmpdirname:
-
         zip_path = os.path.join(tmpdirname, "publish.zip")
 
         b64_bytes = req.args.data.encode()
@@ -343,7 +329,6 @@ async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> No
 
 
 async def get_summary(path: str) -> PackageSummary:
-
     if summary := await get_opt_summary(path):
         return summary
 
@@ -351,7 +336,6 @@ async def get_summary(path: str) -> PackageSummary:
 
 
 async def get_opt_summary(path: str) -> None | PackageSummary:
-
     if not os.path.isfile(os.path.join(path, MAIN_SCRIPT_NAME)):
         logger.warn(f"Package at {path} does not contain main script.")
         return None
@@ -371,7 +355,6 @@ async def get_opt_summary(path: str) -> None | PackageSummary:
 
 
 async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.ListPackages.Response:
-
     resp = rpc.ListPackages.Response()
     subfolders = [f.path for f in os.scandir(PROJECT_PATH) if f.is_dir()]
     resp.data = [
@@ -383,7 +366,6 @@ async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.L
 
 
 async def delete_package_cb(req: rpc.DeletePackage.Request, ui: WsClient) -> None:
-
     if RUNNING_PACKAGE_ID and RUNNING_PACKAGE_ID == req.args.id:
         raise Arcor2Exception("Package is being executed.")
 
@@ -403,7 +385,6 @@ async def delete_package_cb(req: rpc.DeletePackage.Request, ui: WsClient) -> Non
 
 
 async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> None:
-
     target_path = os.path.join(PROJECT_PATH, req.args.package_id, "package.json")
 
     pm = read_package_meta(req.args.package_id)
@@ -427,7 +408,6 @@ async def _version_cb(req: arcor2_rpc.common.Version.Request, ui: WsClient) -> a
 
 
 async def send_to_clients(event: events.Event) -> None:
-
     if isinstance(event, ProjectException):
         logger.error(f"Script raised {event.data.type}. {event.data.message}")
 
@@ -437,7 +417,6 @@ async def send_to_clients(event: events.Event) -> None:
 
 
 async def register(websocket: WsClient) -> None:
-
     logger.info("Registering new client")
     CLIENTS.add(websocket)
 
@@ -469,7 +448,6 @@ RPC_DICT: ws_server.RPC_DICT_TYPE = {
 
 
 async def aio_main() -> None:
-
     if __debug__:
         logger.warn("Development mode. The service will shutdown on any unhandled exception.")
 
@@ -485,7 +463,6 @@ async def aio_main() -> None:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument(

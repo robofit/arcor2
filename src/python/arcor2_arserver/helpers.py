@@ -9,7 +9,6 @@ from arcor2_arserver.lock.exceptions import CannotLock, LockingException
 
 
 def unique_name(name: str, existing_names: set[str]) -> None:
-
     if not name:
         raise Arcor2Exception("Name has to be set.")
 
@@ -18,7 +17,6 @@ def unique_name(name: str, existing_names: set[str]) -> None:
 
 
 def make_name_unique(orig_name: str, names: set[str]) -> str:
-
     cnt = 1
     name = orig_name
 
@@ -66,7 +64,6 @@ async def ctx_read_lock(
 
     @retry(exc=CannotLock, tries=glob.LOCK._lock_retries, delay=glob.LOCK._retry_wait)
     async def lock() -> None:
-
         if not await glob.LOCK.read_lock(obj_ids, owner):
             raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)
 

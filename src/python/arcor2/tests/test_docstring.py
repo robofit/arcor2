@@ -18,7 +18,6 @@ class TestType:
 
 
 def test_class_docstring() -> None:
-
     d = docstring.parse_docstring(TestType.__doc__)
 
     assert d.short_description == "Short description."
@@ -27,7 +26,6 @@ def test_class_docstring() -> None:
 
 
 def test_method_docstring() -> None:
-
     d = docstring.parse_docstring(TestType.method.__doc__)
 
     assert d.short_description == "Method."

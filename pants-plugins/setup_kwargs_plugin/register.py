@@ -36,7 +36,7 @@ async def setup_kwargs_plugin(request: CustomSetupKwargsRequest) -> SetupKwargs:
     )
     version = version_digest_contents[0].content.decode().strip()
 
-    package_name = request.target[PythonProvidesField].value.name
+    package_name = request.target[PythonProvidesField].value.kwargs["name"]
 
     local_version = parse(version)
     if isinstance(local_version, LegacyVersion):

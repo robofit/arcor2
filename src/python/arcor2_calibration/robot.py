@@ -23,7 +23,6 @@ def depth_image_to_np(depth: Image.Image) -> np.ndarray:
 
 
 def draw_registration_result(obj, scene, initial_tr, icp_tr) -> None:
-
     initial_temp = copy.deepcopy(obj)
     aligned_temp = copy.deepcopy(obj)
     scene_temp = copy.deepcopy(scene)
@@ -49,7 +48,6 @@ def calibrate_robot(
     depth_image: Image,
     draw_results: bool = False,
 ) -> Pose:
-
     logger.info("Creating robot model...")
 
     fk = robot.visual_trimesh_fk(cfg={joint.name: joint.value for joint in robot_joints})

@@ -19,7 +19,6 @@ This was originally https://github.com/luismesas/pydobot
 
 class Message:
     def __init__(self, b: None | bytes = None) -> None:
-
         self.header: bytes = bytes([0xAA, 0xAA])
         self.len: int = 0x00
         self.ctrl: int = 0x00
@@ -67,7 +66,6 @@ class Message:
 
 
 class MODE_PTP(IntEnum):
-
     JUMP_XYZ = 0x00
     MOVJ_XYZ = 0x01
     MOVL_XYZ = 0x02
@@ -90,7 +88,6 @@ class DobotApiException(Exception):
 
 
 class Position(NamedTuple):
-
     x: float
     y: float
     z: float
@@ -98,7 +95,6 @@ class Position(NamedTuple):
 
 
 class Joints(NamedTuple):
-
     j1: float
     j2: float
     j3: float
@@ -109,13 +105,11 @@ class Joints(NamedTuple):
 
 
 class Pose(NamedTuple):
-
     position: Position
     joints: Joints
 
 
 class Alarm(IntEnum):
-
     COMMON_RESETTING = (0x00,)
     COMMON_UNDEFINED_INSTRUCTION = (0x01,)
     COMMON_FILE_SYSTEM = (0x02,)
@@ -244,7 +238,6 @@ class Alarm(IntEnum):
 
 class DobotApi:
     def __init__(self, port: None | str = None) -> None:
-
         self.logger = logging.Logger(__name__)
         self._lock = RLock()
 
@@ -300,13 +293,11 @@ class DobotApi:
         return msg
 
     def _send_message(self, msg) -> None:
-
         self.logger.debug(msg)
         with self._lock:
             self._ser.write(msg.bytes())
 
     def _read_message(self) -> None | Message:
-
         # Search for begin
         begin_found = False
         last_byte = None
@@ -354,7 +345,6 @@ class DobotApi:
         )
 
     def get_alarms(self) -> set[Alarm]:
-
         msg = Message()
         msg.id = 20
         response = self._send_command(msg)  # 32 bytes
@@ -368,7 +358,6 @@ class DobotApi:
         return ret
 
     def clear_alarms(self) -> None:
-
         msg = Message()
         msg.id = 20
         msg.ctrl = 0x01
@@ -594,7 +583,6 @@ class DobotApi:
         return self._send_command(msg)
 
     def jog_x(self, v: float) -> None:
-
         self._set_jog_coordinate_params(
             abs(v),
             0,
@@ -611,7 +599,6 @@ class DobotApi:
         self.wait_for_cmd(self._extract_cmd_index(self._set_jog_command(cmd)))
 
     def jog_y(self, v: float) -> None:
-
         self._set_jog_coordinate_params(0, abs(v), 0, 0)
         if v > 0:
             cmd = 3
@@ -623,7 +610,6 @@ class DobotApi:
         self.wait_for_cmd(self._extract_cmd_index(self._set_jog_command(cmd)))
 
     def jog_z(self, v: float) -> None:
-
         self._set_jog_coordinate_params(0, 0, abs(v), 0)
         if v > 0:
             cmd = 5
@@ -635,7 +621,6 @@ class DobotApi:
         self.wait_for_cmd(self._extract_cmd_index(self._set_jog_command(cmd)))
 
     def jog_r(self, v: float) -> None:
-
         self._set_jog_coordinate_params(0, 0, 0, abs(v))
         if v > 0:
             cmd = 7
@@ -647,7 +632,6 @@ class DobotApi:
         self.wait_for_cmd(self._extract_cmd_index(self._set_jog_command(cmd)))
 
     def set_io(self, address: int, state: bool) -> None:
-
         if not 1 <= address <= 22:
             raise DobotApiException("Invalid address range.")
 
@@ -661,7 +645,6 @@ class DobotApi:
         self.wait_for_cmd(self._extract_cmd_index(self._send_command(msg)))
 
     def set_hht_trig_output(self, state: bool) -> None:
-
         msg = Message()
         msg.id = 41
         msg.ctrl = 0x01
@@ -671,7 +654,6 @@ class DobotApi:
         self._send_command(msg)
 
     def get_hht_trig_output(self) -> bool:
-
         msg = Message()
         msg.id = 41
         msg.ctrl = 0
@@ -757,7 +739,6 @@ class DobotApi:
         return self._send_command(msg)
 
     def _set_cp_params(self, velocity: float, acceleration: float, period: float) -> Message:
-
         msg = Message()
         msg.id = 90
         msg.ctrl = 0x3
@@ -769,7 +750,6 @@ class DobotApi:
         return self._send_command(msg)
 
     def _set_cple_cmd(self, x: float, y: float, z: float, power: float, absolute: bool = False) -> Message:
-
         assert 0 <= power <= 100
 
         msg = Message()
@@ -834,7 +814,6 @@ class DobotApi:
         indexes: deque[int] = deque()
 
         for row_idx, row in enumerate(image):
-
             # first feed the queue to be almost full
             if stopped and len(indexes) > MAX_QUEUE_LEN - 2:
                 self._set_queued_cmd_start_exec()
@@ -848,7 +827,6 @@ class DobotApi:
                 rev = False
 
             for col_idx, ld in enumerate(data):
-
                 if not rev:
                     y_ofs = col_idx * pixel_size
                 else:

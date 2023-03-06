@@ -9,7 +9,6 @@ from arcor2_yumi.object_types.yumi import YuMi
 
 @pytest.mark.additional_deps([["src.python.arcor2_yumi.scripts/upload_objects.pex"]])
 def test_objects(start_processes: None, ars: ARServer) -> None:
-
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
     res = ars.call_rpc(rpc.o.GetObjectTypes.Request(get_id()), rpc.o.GetObjectTypes.Response)

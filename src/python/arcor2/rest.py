@@ -73,7 +73,6 @@ logger = get_logger(__name__, logging.DEBUG if debug else logging.INFO)
 
 
 def dataclass_from_json(resp_json: dict[str, Any], return_type: type[DataClass]) -> DataClass:
-
     try:
         return return_type.from_dict(resp_json)
     except ValidationError as e:
@@ -82,7 +81,6 @@ def dataclass_from_json(resp_json: dict[str, Any], return_type: type[DataClass])
 
 
 def primitive_from_json(resp_json: Primitive, return_type: type[Primitive]) -> Primitive:
-
     try:
         return return_type(resp_json)
     except ValueError as e:
@@ -275,7 +273,6 @@ def call(
         return None
 
     if issubclass(return_type, BytesIO):
-
         if list_return_type:
             raise NotImplementedError
 
@@ -299,7 +296,6 @@ def call(
         raise RestException("Response is not a list.")
 
     if issubclass(return_type, JsonSchemaMixin):
-
         if list_return_type:
             return [dataclass_from_json(item, return_type) for item in resp_json]
 
@@ -308,7 +304,6 @@ def call(
             return dataclass_from_json(resp_json, return_type)
 
     else:  # probably a primitive
-
         if list_return_type:
             return [primitive_from_json(item, return_type) for item in resp_json]
         else:
@@ -338,7 +333,6 @@ def _handle_response(resp: requests.Response) -> None:
     if isinstance(cont, str):  # just plain text
         raise RestException(cont)
     elif isinstance(cont, dict):  # this could be WebApiError
-
         try:
             raise WebApiError.from_dict(cont)
         except ValidationError:

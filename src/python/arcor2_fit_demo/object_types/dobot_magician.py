@@ -8,7 +8,6 @@ from .fit_common_mixin import UrlSettings  # noqa:ABS101
 
 
 class Joints(StrEnum):
-
     J1: str = "magician_joint_1"
     J2: str = "magician_joint_2"
     J3: str = "magician_joint_3"
@@ -18,12 +17,10 @@ class Joints(StrEnum):
 
 @dataclass
 class MagicianSettings(UrlSettings):
-
     url: str = "http://fit-demo-dobot-magician:5018"
 
 
 class DobotMagician(AbstractDobot):
-
     _ABSTRACT = False
     urdf_package_name = "dobot-magician.zip"
 
@@ -32,7 +29,6 @@ class DobotMagician(AbstractDobot):
         self._start()
 
     def move_to_calibration_pose(self) -> None:
-
         joint_values = [  # TODO define as pose
             Joint(Joints.J1, -0.0115),
             Joint(Joints.J2, 0.638),

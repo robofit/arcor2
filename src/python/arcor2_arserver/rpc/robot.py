@@ -47,10 +47,8 @@ if EVENT_PERIOD <= 0:
 
 
 async def robot_joints_event(robot_inst: Robot) -> None:
-
     logger.info(f"Sending joints for {robot_inst.name} started.")
     while scene_started() and glob.ROBOT_JOINTS_REGISTERED_UIS[robot_inst.id]:
-
         start = time.monotonic()
 
         try:
@@ -77,12 +75,10 @@ async def robot_joints_event(robot_inst: Robot) -> None:
 
 
 async def eef_pose(robot_inst: Robot, eef_id: str, arm_id: None | str = None) -> RobotEef.Data.EefPose:
-
     return RobotEef.Data.EefPose(eef_id, (await robot.get_end_effector_pose(robot_inst, eef_id, arm_id)), arm_id)
 
 
 async def robot_eef_pose_event(robot_inst: Robot) -> None:
-
     eefs: dict[None | str, set[str]] = {}
 
     try:
@@ -94,11 +90,9 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
     except Arcor2Exception as e:
         logger.error(f"Failed to start sending poses for {robot_inst.name}. {str(e)}")
     else:
-
         logger.info(f"Sending poses for {robot_inst.name} started. Arms/EEFs: {eefs}.")
 
         while scene_started() and glob.ROBOT_EEF_REGISTERED_UIS[robot_inst.id]:
-
             start = time.monotonic()
 
             evt = RobotEef(RobotEef.Data(robot_inst.id))
@@ -129,14 +123,12 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
 
 
 async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: WsClient) -> srpc.r.GetRobotMeta.Response:
-
     return srpc.r.GetRobotMeta.Response(
         data=[obj.robot_meta for obj in glob.OBJECT_TYPES.values() if obj.robot_meta is not None]
     )
 
 
 async def get_robot_joints_cb(req: srpc.r.GetRobotJoints.Request, ui: WsClient) -> srpc.r.GetRobotJoints.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -149,7 +141,6 @@ async def get_robot_joints_cb(req: srpc.r.GetRobotJoints.Request, ui: WsClient) 
 async def get_end_effector_pose_cb(
     req: srpc.r.GetEndEffectorPose.Request, ui: WsClient
 ) -> srpc.r.GetEndEffectorPose.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -162,7 +153,6 @@ async def get_end_effector_pose_cb(
 
 
 async def get_end_effectors_cb(req: srpc.r.GetEndEffectors.Request, ui: WsClient) -> srpc.r.GetEndEffectors.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -173,7 +163,6 @@ async def get_end_effectors_cb(req: srpc.r.GetEndEffectors.Request, ui: WsClient
 
 
 async def get_robot_arms_cb(req: srpc.r.GetRobotArms.Request, ui: WsClient) -> srpc.r.GetRobotArms.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -182,7 +171,6 @@ async def get_robot_arms_cb(req: srpc.r.GetRobotArms.Request, ui: WsClient) -> s
 
 
 async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: WsClient) -> srpc.r.GetGrippers.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -193,7 +181,6 @@ async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: WsClient) -> srpc
 
 
 async def get_suctions_cb(req: srpc.r.GetSuctions.Request, ui: WsClient) -> srpc.r.GetSuctions.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -211,9 +198,7 @@ async def register(
     reg_uis: glob.RegisteredUiDict,
     coro: Callable[[Robot], Awaitable[None]],
 ) -> None:
-
     if req.args.send:
-
         reg_uis[req.args.robot_id].add(ui)
 
         if req.args.robot_id not in tasks:
@@ -237,7 +222,6 @@ async def register(
 
 
 async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -251,7 +235,6 @@ async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request,
                 req, robot_inst, ui, ROBOT_JOINTS_TASKS, glob.ROBOT_JOINTS_REGISTERED_UIS, robot_joints_event
             )
         elif req.args.what == req.args.RegisterEnum.EEF_POSE:
-
             if isinstance(robot_inst, MultiArmRobot):
                 for arm_id in await robot.get_arms(robot_inst):
                     if await robot.get_end_effectors(robot_inst, arm_id):
@@ -270,7 +253,6 @@ async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request,
 
 
 async def check_feature(robot_inst: Robot, feature_name: str) -> None:
-
     obj_type = glob.OBJECT_TYPES[robot_inst.__class__.__name__]
 
     if obj_type.robot_meta is None:
@@ -284,7 +266,6 @@ async def check_feature(robot_inst: Robot, feature_name: str) -> None:
 
 
 async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
@@ -298,7 +279,6 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
         await robot.check_robot_before_move(robot_inst)
 
         if (req.args.position is None) != (req.args.orientation is None):
-
             target_pose = await robot.get_end_effector_pose(robot_inst, req.args.end_effector_id, req.args.arm_id)
 
             if req.args.position:
@@ -327,12 +307,10 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
 
 
 async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
     async with ctx_write_lock(req.args.robot_id, user_name, auto_unlock=False):
-
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.move_to_joints.__name__)
@@ -344,7 +322,6 @@ async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> N
 
 
 async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
 
     # Stop robot cannot use lock, because robot is locked when action is called. Stop will also release lock.
@@ -355,12 +332,10 @@ async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
 
 
 async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsClient) -> None:
-
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
     async with ctx_write_lock(req.args.robot_id, glob.USERS.user_name(ui)):
-
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
 
@@ -370,7 +345,6 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
             raise Arcor2Exception("Set orientation or joints. Not both.")
 
         if req.args.orientation_id:
-
             await check_feature(robot_inst, Robot.move_to_pose.__name__)
 
             if req.args.end_effector_id is None:
@@ -393,7 +367,6 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
             )
 
         elif req.args.joints_id:
-
             await check_feature(robot_inst, Robot.move_to_joints.__name__)
 
             # TODO add arm_id to ProjectRobotJoints and use it as a parameter for move_to_ap_joints
@@ -408,11 +381,9 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
 
 
 async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.InverseKinematics.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock([req.args.robot_id, req.args.end_effector_id], glob.USERS.user_name(ui)):
-
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.inverse_kinematics.__name__)
@@ -431,11 +402,9 @@ async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.I
 
 
 async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.ForwardKinematics.Response:
-
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock([req.args.robot_id, req.args.end_effector_id], glob.USERS.user_name(ui)):
-
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.forward_kinematics.__name__)
@@ -449,7 +418,6 @@ async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.F
 async def calibrate_robot(
     robot_inst: Robot, camera_inst: Camera, move_to_calibration_pose: bool, user_name: str
 ) -> None:
-
     try:
         scene = glob.LOCK.scene_or_exception()
 
@@ -458,7 +426,6 @@ async def calibrate_robot(
         await notif.broadcast_event(ProcessState(ProcessState.Data(RBT_CALIB, ProcessState.Data.StateEnum.Started)))
 
         try:
-
             if move_to_calibration_pose:
                 await run_in_executor(robot_inst.move_to_calibration_pose)
             robot_joints = await run_in_executor(robot_inst.robot_joints)
@@ -488,7 +455,6 @@ async def calibrate_robot(
 
 
 async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
@@ -503,7 +469,6 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
             raise Arcor2Exception("No camera found.")
 
     async with ctx_write_lock(req.args.camera_id, user_name, auto_unlock=False):
-
         robot_inst = get_robot_instance(req.args.robot_id)
 
         if not robot_inst.urdf_package_name:
@@ -522,7 +487,6 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
 
 
 async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
 
     ensure_scene_started()
@@ -559,7 +523,6 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
 
 
 async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> None:
-
     scene = glob.LOCK.scene_or_exception()
 
     ensure_scene_started()
@@ -615,7 +578,6 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
 
 
 async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWorld.Request, ui: WsClient) -> None:
-
     glob.LOCK.scene_or_exception()
 
     ensure_scene_started()
@@ -652,7 +614,6 @@ async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWor
 
     # order of results from gather corresponds to order of tasks
     for idx, res in enumerate(await asyncio.gather(*tasks, return_exceptions=True)):
-
         if not isinstance(res, list):
             continue
 

@@ -11,17 +11,14 @@ class UsersException(Arcor2Exception):
 
 
 class Users:
-
     __slots__ = ("_interfaces", "_users_ui", "_ui_users")
 
     def __init__(self) -> None:
-
         self._interfaces: set[WsClient] = set()
         self._users_ui: dict[str, WsClient] = {}
         self._ui_users: dict[WsClient, str] = {}
 
     def _assert_consistency(self) -> None:
-
         assert list(self._ui_users.keys()) == list(self._users_ui.values())
         assert list(self._ui_users.values()) == list(self._users_ui.keys())
         assert set(self._ui_users).issubset(self._interfaces)
@@ -34,7 +31,6 @@ class Users:
         self._interfaces.add(ui)
 
     async def login(self, user_name: str, ui: WsClient) -> None:
-
         self._assert_consistency()
 
         if not user_name:
@@ -44,7 +40,6 @@ class Users:
             raise UsersException("Unknown ui.")
 
         if user_name in self._users_ui:
-
             old_ui = self._users_ui[user_name]
 
             try:
@@ -85,7 +80,6 @@ class Users:
         return set(self._users_ui)
 
     def user_name(self, ui: WsClient) -> str:
-
         self._assert_consistency()
 
         try:
