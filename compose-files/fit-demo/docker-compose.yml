@@ -13,7 +13,8 @@ services:
         condition: service_healthy
       fit-demo-execution:
         condition: service_started
-      # - fit-demo-kinect
+      fit-demo-kinect:
+        condition: service_healthy
       fit-demo-scene:
         condition: service_healthy
       fit-demo-calibration:
@@ -26,7 +27,7 @@ services:
       - "6789:6789"
       - "6799:6799"
     networks:
-          # - fit-demo-kinect-network
+          - fit-demo-kinect-network
           - fit-demo-scene-network
           - fit-demo-project-network
           - fit-demo-asset-network
@@ -68,16 +69,15 @@ services:
     volumes:
         - fit-demo-execution:/root/project
 
-# not used at the moment
-#  fit-demo-kinect:
-#    image: arcor2/arcor2_kinect_azure:0.4.0
-#    container_name: fit-demo-kinect
-#    networks:
-#      - fit-demo-kinect-network
-#    ports:
-#        - "5016:5016"
-#    environment:
-#      - ARCOR2_KINECT_AZURE_MOCK=true
+  fit-demo-kinect:
+    image: arcor2/arcor2_kinect_azure:0.6.0
+    container_name: fit-demo-kinect
+    networks:
+      - fit-demo-kinect-network
+    ports:
+        - "5016:5016"
+    environment:
+      - ARCOR2_KINECT_AZURE_MOCK=true
 
   fit-demo-calibration:
     image: arcor2/arcor2_calibration:1.0.0
@@ -172,7 +172,7 @@ services:
       - fit-demo-asset
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:1.0.0
+    image: arcor2/arcor2_upload_fit_demo:1.1.0
     container_name: "fit-demo-upload-object-types"
     depends_on:
       fit-demo-project:
@@ -211,7 +211,7 @@ networks:
   fit-demo-execution-network:
   fit-demo-project-network:
   fit-demo-asset-network:
-#  fit-demo-kinect-network:
+  fit-demo-kinect-network:
   fit-demo-dobot-magician-network:
   fit-demo-dobot-m1-network:
   fit-demo-calibration-network:
