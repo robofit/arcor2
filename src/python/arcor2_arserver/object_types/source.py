@@ -12,7 +12,6 @@ from arcor2_arserver_data.objects import ObjectTypeMeta
 
 # TODO could this be done like this https://stackoverflow.com/a/9269964/3142796 ??
 def new_object_type(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> AST:
-
     assert parent.type == child.base
 
     tree = Module(body=[], type_ignores=[])

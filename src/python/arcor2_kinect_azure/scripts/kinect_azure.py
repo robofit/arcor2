@@ -35,7 +35,6 @@ _mock_started: bool = False
 
 
 def started() -> bool:
-
     if _mock:
         return _mock_started
 
@@ -53,12 +52,10 @@ def requires_started(f):
 
 
 def color_image() -> Image.Image:
-
     return Image.open(get_data("rgb.jpg"))
 
 
 def depth_image() -> Image.Image:
-
     return Image.open(get_data("depth.png"))
 
 
@@ -88,7 +85,6 @@ def put_start() -> RespT:
         global _mock_started
         _mock_started = True
     else:
-
         # lazy import so mock mode can work without pyk4a installed
         from arcor2_kinect_azure.kinect_azure import KinectAzure
 
@@ -320,7 +316,6 @@ def get_image_both() -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_KINECT_AZURE_MOCK"))

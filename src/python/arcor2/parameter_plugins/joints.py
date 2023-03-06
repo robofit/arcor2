@@ -21,7 +21,6 @@ class JointsPlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> ProjectRobotJoints:
-
         try:
             ap, action = project.action_point_and_action(action_id)
             param = action.parameter(parameter_id)
@@ -44,7 +43,6 @@ class JointsPlugin(ParameterPlugin):
 
     @classmethod
     def uses_robot_joints(cls, project: CProject, action_id: str, parameter_id: str, robot_joints_id: str) -> bool:
-
         value_id = cls._id_from_value(project.action(action_id).parameter(parameter_id).value)
 
         return value_id == robot_joints_id
@@ -53,7 +51,6 @@ class JointsPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Attribute:
-
         ap, action = project.action_point_and_action(action_id)
         joints = project.joints(cls._id_from_value(action.parameter(parameter_id).value))
 

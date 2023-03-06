@@ -6,5 +6,4 @@ from arcor2_execution_data.common import PackageSummary
 
 @dataclass
 class PackageChanged(Event):
-
     data: PackageSummary

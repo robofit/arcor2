@@ -21,9 +21,7 @@ class MarkerNotFound(CalibrationException):
 
 
 def markers_corners(camera: CameraParameters, image: Image) -> list[MarkerCorners]:
-
     with BytesIO() as buff:
-
         image.save(buff, format="PNG")
 
         return rest.call(
@@ -45,7 +43,6 @@ def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool =
     """
 
     with BytesIO() as buff:
-
         image.save(buff, format="PNG")
 
         params = camera.to_dict()
@@ -68,7 +65,6 @@ def estimate_camera_pose(camera: CameraParameters, image: Image, inverse: bool =
 
 @dataclass
 class CalibrateRobotArgs(JsonSchemaMixin):
-
     robot_joints: list[Joint]
     robot_pose: Pose
     camera_pose: Pose
@@ -77,7 +73,6 @@ class CalibrateRobotArgs(JsonSchemaMixin):
 
 
 def calibrate_robot(args: CalibrateRobotArgs, depth_image: Image) -> Pose:
-
     with BytesIO() as buff:
         depth_image.save(buff, format="PNG")
 

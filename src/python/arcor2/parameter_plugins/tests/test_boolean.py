@@ -22,7 +22,6 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(bool) is BooleanPlugin
 
 
@@ -32,15 +31,12 @@ def test_plugin_from_type() -> None:
 )
 class TestParametrized:
     def test_plugin_from_instance(self, val: bool) -> None:
-
         assert plugin_from_instance(val) is BooleanPlugin
 
     def test_value_to_json(self, val: bool) -> None:
-
         assert BooleanPlugin.value_to_json(val) == json.dumps(val)
 
     def test_get_value(self, val: bool) -> None:
-
         scene = Scene("s1")
         obj = SceneObject("test_name", TestObject.__name__)
         scene.objects.append(obj)

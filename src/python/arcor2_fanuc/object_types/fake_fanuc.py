@@ -3,7 +3,6 @@ from arcor2.object_types.abstract import Robot
 
 
 class FakeFanuc(Robot):
-
     _ABSTRACT = False
     urdf_package_name = "fanuc_lrmate200id7l.zip"
 

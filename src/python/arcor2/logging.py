@@ -21,7 +21,6 @@ DEFAULT_LOG_FORMAT = "%(asctime)s %(log_color)s%(levelname)-8s%(reset)s %(messag
 
 
 def logger_formatter(log_format=DEFAULT_LOG_FORMAT, date_format=DEFAULT_DATE_FORMAT) -> logging.Formatter:
-
     return colorlog.ColoredFormatter(log_format, date_format)
 
 
@@ -30,7 +29,6 @@ def get_aiologger(
     level: aiologger.levels.LogLevel = aiologger.levels.LogLevel.INFO,
     formatter: None | logging.Formatter = None,
 ) -> aiologger.Logger:
-
     if formatter is None:
         formatter = logger_formatter()
 
@@ -38,7 +36,6 @@ def get_aiologger(
 
 
 def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
-
     logger = logging.getLogger(name)
 
     ch = logging.StreamHandler()

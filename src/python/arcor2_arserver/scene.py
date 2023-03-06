@@ -57,7 +57,6 @@ async def scheduled_to_be_auto_removed() -> set[str]:
 
 
 async def unschedule_auto_remove(obj_type: str) -> None:
-
     try:
         _objects_to_auto_remove.remove(obj_type)
     except KeyError:
@@ -67,7 +66,6 @@ async def unschedule_auto_remove(obj_type: str) -> None:
 
 
 async def remove_scheduled() -> None:
-
     logger.debug(f"Going to auto-remove following types: {_objects_to_auto_remove}")
     for ot_id in _objects_to_auto_remove:
         if ot_id in glob.OBJECT_TYPES:
@@ -76,7 +74,6 @@ async def remove_scheduled() -> None:
 
 
 async def delete_if_not_used(meta: ObjectTypeMeta) -> None:
-
     if meta.base != VirtualCollisionObject.__name__:
         logger.debug(f"{meta.type} is not a VCO!")
         return
@@ -110,7 +107,6 @@ async def delete_if_not_used(meta: ObjectTypeMeta) -> None:
 
 
 async def save_scene(scene: None | UpdateableCachedScene = None) -> None:
-
     if not scene:
         scene = glob.LOCK.scene_or_exception()
 
@@ -141,7 +137,6 @@ async def get_scene_problems(scene: CachedScene) -> None | list[str]:
         or _scene_problems[scene.id].scene_modified < scene.modified
         or _scene_problems[scene.id].ot_modified != ot_modified
     ):
-
         logger.debug(f"Updating scene_problems for {scene.name}.")
 
         _scene_problems[scene.id] = SceneProblems(
@@ -192,7 +187,6 @@ async def update_scene_object_pose(
     glob.OBJECTS_WITH_UPDATED_POSE.add(obj.id)
 
     if scene_started():
-
         if obj_inst is None:
             obj_inst = get_instance(obj.id, GenericWithPose)
 
@@ -206,7 +200,6 @@ async def update_scene_object_pose(
 
 
 async def set_scene_state(state: SceneState.Data.StateEnum, message: None | str = None) -> None:
-
     global _scene_state
     _scene_state = SceneState(SceneState.Data(state, message))
     asyncio.create_task(notif.broadcast_event(_scene_state))
@@ -235,7 +228,6 @@ def ensure_scene_started() -> None:
 
 
 async def notify_scene_opened(evt: OpenScene) -> None:
-
     await notif.broadcast_event(evt)
     ss = get_scene_state()
     assert ss.data.state == ss.Data.StateEnum.Stopped
@@ -243,7 +235,6 @@ async def notify_scene_opened(evt: OpenScene) -> None:
 
 
 async def scenes() -> AsyncIterator[CachedScene]:
-
     for scene_id in await storage.get_scene_ids():
         yield await storage.get_scene(scene_id)
 
@@ -253,7 +244,6 @@ async def scene_names() -> set[str]:
 
 
 async def notify_scene_closed(scene_id: str) -> None:
-
     assert get_scene_state().data.state == SceneState.Data.StateEnum.Stopped
 
     await notif.broadcast_event(SceneClosed())
@@ -281,7 +271,6 @@ async def add_object_to_scene(scene: UpdateableCachedScene, obj: SceneObject, dr
 
 
 async def create_object_instance(obj: SceneObject, overrides: None | list[Parameter] = None) -> None:
-
     obj_type = glob.OBJECT_TYPES[obj.type]
 
     # settings -> dataclass
@@ -295,9 +284,7 @@ async def create_object_instance(obj: SceneObject, overrides: None | list[Parame
     assert obj_type.type_def is not None
 
     try:
-
         try:
-
             # the order must be from specific to the generic types
             if issubclass(obj_type.type_def, Robot):
                 assert obj.pose is not None
@@ -339,7 +326,6 @@ async def create_object_instance(obj: SceneObject, overrides: None | list[Parame
 
 
 async def open_scene(scene_id: str) -> None:
-
     scene = await storage.get_scene(scene_id)
 
     if sp := await get_scene_problems(scene):  # this also refreshes ObjectTypes / calls get_object_types()
@@ -352,7 +338,6 @@ async def open_scene(scene_id: str) -> None:
 
 
 def get_robot_instance(obj_id: str) -> Robot:  # TODO remove once https://github.com/python/mypy/issues/5374 is solved
-
     robot_inst = get_instance(obj_id, Robot)  # type: ignore
     assert isinstance(robot_inst, Robot)
     return robot_inst
@@ -363,7 +348,6 @@ T = TypeVar("T", bound=Generic)
 
 # TODO "thanks" to https://github.com/python/mypy/issues/3737, `expected_type: type[T] = Generic` can't be used
 def get_instance(obj_id: str, expected_type: type[T]) -> T:
-
     assert scene_started()
 
     try:
@@ -378,7 +362,6 @@ def get_instance(obj_id: str, expected_type: type[T]) -> T:
 
 
 async def cleanup_object(obj: Generic) -> None:
-
     try:
         await hlp.run_in_executor(obj.cleanup)
     except Arcor2Exception as e:
@@ -390,7 +373,6 @@ async def stop_scene(scene: CachedScene, message: None | str = None, already_loc
     """Destroys scene object instances."""
 
     async def _stop_scene() -> None:
-
         await set_scene_state(SceneState.Data.StateEnum.Stopping, message)
 
         try:
@@ -412,7 +394,6 @@ async def stop_scene(scene: CachedScene, message: None | str = None, already_loc
         glob.PREV_RESULTS.clear()
 
     if already_locked:
-
         logger.info(f"Stopping the {scene.name} scene after unsuccessful start.")
 
         assert await glob.LOCK.is_write_locked(glob.LOCK.SpecialValues.SCENE, glob.LOCK.Owners.SERVER)
@@ -422,7 +403,6 @@ async def stop_scene(scene: CachedScene, message: None | str = None, already_loc
 
         await _stop_scene()
     else:
-
         to_lock = [glob.LOCK.SpecialValues.SCENE]
 
         if glob.LOCK.project:
@@ -449,7 +429,6 @@ async def start_scene(scene: CachedScene) -> None:
     """Creates instances of scene objects."""
 
     async def _start_scene() -> bool:
-
         logger.info(f"Starting the {scene.name} scene.")
 
         await set_scene_state(SceneState.Data.StateEnum.Starting)

@@ -47,7 +47,6 @@ PREV_RESULTS: dict[str, tuple[Any] | Any] = {}
 
 
 def remove_prev_result(action_id: str) -> None:
-
     try:
         del PREV_RESULTS[action_id]
     except KeyError:

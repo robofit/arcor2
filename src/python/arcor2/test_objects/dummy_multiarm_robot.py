@@ -43,7 +43,6 @@ class DummyMultiArmRobot(MultiArmRobot):
 
     @staticmethod
     def _get_from_dict(d: dict[str, set[str]], arm_id: None | str = None) -> set[str]:
-
         if arm_id is None:
             raise Arcor2Exception("Arm has to be specified.")
 
@@ -56,7 +55,6 @@ class DummyMultiArmRobot(MultiArmRobot):
         return self._get_from_dict(self.EEF, arm_id)
 
     def get_end_effector_pose(self, end_effector: str, arm_id: None | str = None) -> Pose:
-
         if end_effector not in self.get_end_effectors_ids(arm_id):
             raise Arcor2Exception("Unknown end effector.")
 
@@ -192,7 +190,6 @@ class DummyMultiArmRobot(MultiArmRobot):
             raise Arcor2Exception("Unknown arm.")
 
     def set_hand_teaching_mode(self, enabled: bool, arm_id: None | str = None) -> None:
-
         if arm_id is None:
             raise Arcor2Exception("Arm has to be specified.")
 

@@ -12,7 +12,6 @@ pytest_plugins = ["arcor2_arserver.tests.testutils"]
 
 @pytest.fixture()
 def scene(ars: ARServer) -> common.Scene:
-
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
     test = "Test scene"

@@ -6,7 +6,6 @@ from arcor2_dobot.dobot_api import DobotApiException
 
 
 class Joints(StrEnum):
-
     J1: str = "dobot_m1_axis_2_joint"
     J2: str = "dobot_m1_axis_3_joint"
     J3: str = "dobot_m1_z_axis_joint"
@@ -21,19 +20,16 @@ class DobotM1(Dobot):
             self._joint_values = [Joint(Joints.J1, 0), Joint(Joints.J2, 0), Joint(Joints.J3, 0), Joint(Joints.J4, 0)]
 
     def _handle_pose_in(self, pose: Pose) -> None:
-
         pose.position.x -= 0.11
         pose.position.y -= 0.0
         pose.position.z += 0.01
 
     def _handle_pose_out(self, pose: Pose) -> None:
-
         pose.position.x += 0.11
         pose.position.y += 0.0
         pose.position.z -= 0.01
 
     def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
-
         if self.simulator:
             return self._joint_values
 
@@ -47,7 +43,6 @@ class DobotM1(Dobot):
         ]
 
     def suck(self) -> None:
-
         if self.simulator:
             return
 
@@ -58,7 +53,6 @@ class DobotM1(Dobot):
             raise DobotException("Suck failed.") from e
 
     def release(self, blow_out_sec: float = 0.1) -> None:
-
         if self.simulator:
             time.sleep(blow_out_sec)
             return

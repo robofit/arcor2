@@ -24,7 +24,6 @@ logging_level = Level.from_string(os.getenv("ARCOR2_LOGGER_LEVEL", "info"))
 
 
 async def handle_requests(websocket: WsClient, path: str) -> None:
-
     assert not sys.stdout.closed  # closed stdout was problem when creating and shutting down logger for each client
 
     try:
@@ -44,7 +43,6 @@ async def handle_requests(websocket: WsClient, path: str) -> None:
 
     try:
         async for message in websocket:
-
             assert isinstance(message, str)
 
             try:
@@ -77,7 +75,6 @@ async def handle_requests(websocket: WsClient, path: str) -> None:
 
 
 async def aio_main() -> None:
-
     await websockets.server.serve(
         handle_requests, "localhost", port_from_url(os.getenv("ARCOR2_LOGGER_URL", "ws://0.0.0.0:8765"))
     )

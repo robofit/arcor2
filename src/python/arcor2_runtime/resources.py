@@ -41,7 +41,6 @@ _streaming_period = env.get_float("ARCOR2_STREAMING_PERIOD", 0.1)
 
 
 def stream_pose(robot_inst: Robot) -> None:
-
     arm_eef: dict[None | str, set[str]] = {}
 
     try:
@@ -72,7 +71,6 @@ def stream_pose(robot_inst: Robot) -> None:
 
 
 def stream_joints(robot_inst: Robot) -> None:
-
     try:
         while not _shutting_down.is_set():
             start = time.monotonic()
@@ -89,11 +87,9 @@ T = TypeVar("T", bound=JsonSchemaMixin)
 
 
 class Resources:
-
     __slots__ = ("project", "scene", "objects", "args", "executor", "_stream_futures")
 
     def __init__(self, apply_action_mapping: bool = True, scene_start_timeout: rest.OptTimeout = None) -> None:
-
         models: dict[str, None | Models] = {}
 
         scene = self.read_project_data(Scene.__name__.lower(), Scene)
@@ -111,7 +107,6 @@ class Resources:
             tr.make_relative_ap_global(self.scene, self.project, aps)
 
         for obj_type in self.scene.object_types:
-
             try:
                 models[obj_type] = self.read_project_data("models/" + humps.depascalize(obj_type), ObjectModel).model()
             except IOError:
@@ -120,7 +115,6 @@ class Resources:
         type_defs: TypesDict = {}
 
         for scene_obj_type in self.scene.object_types:  # get all type-defs
-
             assert scene_obj_type not in type_defs
             assert scene_obj_type not in built_in_types_names()
 
@@ -143,7 +137,6 @@ class Resources:
 
         # orientations / joints have to be monkey-patched with AP's ID in order to make breakpoints work in @action
         for ap in self.project.action_points:
-
             setattr(ap.position, AP_ID_ATTR, ap.id)
 
             for joints in self.project.ap_joints(ap.id):
@@ -154,7 +147,6 @@ class Resources:
         package_info_event = PackageInfo(PackageInfo.Data(package_id, package_meta.name, scene, project))
 
         for model in models.values():
-
             if not model:
                 continue
 
@@ -177,7 +169,6 @@ class Resources:
         futures: list[concurrent.futures.Future] = []
 
         for scene_obj in self.scene.objects:
-
             cls = type_defs[scene_obj.type]
             settings = settings_from_params(cls, scene_obj.parameters, self.project.overrides.get(scene_obj.id, None))
 
@@ -220,7 +211,6 @@ class Resources:
 
     def read_project_data(self, file_name: str, cls: type[T]) -> T:
         try:
-
             with open(os.path.join("data", file_name + ".json")) as scene_file:
                 return cls.from_dict(humps.decamelize(json.loads_type(scene_file.read(), dict)))
 
@@ -244,10 +234,8 @@ class Resources:
                     print_exception(e)
 
     def __enter__(self: R) -> R:
-
         if _streaming_period > 0:  # TODO could be also controlled by script argument (RunPackage flag)
             for inst in self.objects.values():
-
                 if not isinstance(inst, Robot):
                     continue
 
@@ -262,7 +250,6 @@ class Resources:
         ex_value: None | BaseException,
         traceback: None | TracebackType,
     ) -> bool:
-
         _shutting_down.set()
 
         try:

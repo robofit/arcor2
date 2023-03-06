@@ -4,7 +4,6 @@ from typing import NamedTuple
 
 
 class DynamicParamTuple(NamedTuple):
-
     method_name: str
     parent_parameters: set[str]
 
@@ -21,7 +20,6 @@ if __debug__:
 
 
 def package_version(package: str, file: str = "VERSION") -> str:
-
     if res := pkgutil.get_data(package, file):
         return res.decode().strip()
     return "unknown"

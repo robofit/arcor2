@@ -9,7 +9,6 @@ BROADCAST_PORT: int = 6006
 
 
 def get_ip() -> str:
-
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # doesn't even have to be reachable
@@ -23,7 +22,6 @@ def get_ip() -> str:
 
 
 def get_broadcast() -> str:
-
     ip = get_ip()
     ip_arr = ip.split(".")
     ip_arr[-1] = "255"
@@ -54,7 +52,6 @@ class BroadcastProtocol(asyncio.DatagramProtocol):
 
 
 def main() -> None:
-
     loop = asyncio.get_event_loop()
 
     broadcast_coro = loop.create_datagram_endpoint(

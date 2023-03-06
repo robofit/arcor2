@@ -24,7 +24,6 @@ class PositionPlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Position:
-
         try:
             ap = project.bare_action_point(cls.ap_id(project, action_id, parameter_id))
         except Arcor2Exception as e:
@@ -35,7 +34,6 @@ class PositionPlugin(ParameterPlugin):
     def parameter_execution_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Position:
-
         # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
         return copy.deepcopy(tr.abs_position_from_ap(scene, project, cls.ap_id(project, action_id, parameter_id)))
 
@@ -47,7 +45,6 @@ class PositionPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Attribute:
-
         ap = project.bare_action_point(cls.ap_id(project, action_id, parameter_id))
 
         return Attribute(

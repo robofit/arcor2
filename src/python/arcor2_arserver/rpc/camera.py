@@ -18,7 +18,6 @@ from arcor2_calibration_data import client as calib_client
 
 
 async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> CameraColorImage.Response:
-
     glob.LOCK.scene_or_exception()
 
     await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
@@ -33,7 +32,6 @@ async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> 
 async def camera_color_parameters_cb(
     req: CameraColorParameters.Request, ui: WsClient
 ) -> CameraColorParameters.Response:
-
     glob.LOCK.scene_or_exception()
 
     await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
@@ -49,7 +47,6 @@ CAMERA_CALIB = "CameraCalibration"
 
 
 async def calibrate_camera(scene: UpdateableCachedScene, camera: Camera) -> None:
-
     assert camera.color_camera_params
 
     await notif.broadcast_event(ProcessState(ProcessState.Data(CAMERA_CALIB, ProcessState.Data.StateEnum.Started)))
@@ -68,7 +65,6 @@ async def calibrate_camera(scene: UpdateableCachedScene, camera: Camera) -> None
 
 
 async def calibrate_camera_cb(req: CalibrateCamera.Request, ui: WsClient) -> None:
-
     scene = glob.LOCK.scene_or_exception()
 
     ensure_scene_started()

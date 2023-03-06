@@ -27,7 +27,6 @@ class SingleArmRobotException(Arcor2Exception):
 
 
 def prepare_args(robot_inst: Robot, args: list[Any], arm_id: None | str) -> list[Any]:
-
     if isinstance(robot_inst, MultiArmRobot):
         args.append(arm_id)
     elif arm_id:
@@ -78,7 +77,6 @@ async def get_suctions(robot_inst: Robot, arm_id: None | str) -> set[str]:
 async def get_pose_and_joints(
     robot_inst: Robot, end_effector: str, arm_id: None | str
 ) -> tuple[common.Pose, list[common.Joint]]:
-
     return await asyncio.gather(
         hlp.run_in_executor(robot_inst.get_end_effector_pose, *prepare_args(robot_inst, [end_effector], arm_id)),
         hlp.run_in_executor(robot_inst.robot_joints, *prepare_args(robot_inst, [False], arm_id)),
@@ -107,7 +105,6 @@ async def get_robot_joints(robot_inst: Robot, arm_id: None | str, include_grippe
 
 
 def _feature(type_def: type[Robot], method_name: str, base_class: type[Robot]) -> bool:
-
     assert glob.OBJECT_TYPES
 
     method = getattr(type_def, method_name)
@@ -141,7 +138,6 @@ def _feature(type_def: type[Robot], method_name: str, base_class: type[Robot]) -
 
 
 async def get_robot_meta(obj_type: ObjectTypeData) -> None:
-
     if obj_type.meta.disabled:
         raise Arcor2Exception("Disabled object type.")
 
@@ -172,7 +168,6 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
     )
 
     if urdf_name := obj_type.type_def.urdf_package_name:
-
         if not await asset.asset_exists(urdf_name):
             logger.error(f"URDF package {urdf_name} for {obj_type.meta.type} does not exist.")
         else:
@@ -183,7 +178,6 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
 
 
 async def stop(robot_inst: Robot) -> None:
-
     if not robot_inst.move_in_progress:
         raise Arcor2Exception("Robot is not moving.")
 
@@ -198,7 +192,6 @@ async def ik(
     start_joints: None | list[common.Joint] = None,
     avoid_collisions: bool = True,
 ) -> list[common.Joint]:
-
     return await hlp.run_in_executor(
         robot_inst.inverse_kinematics,
         *prepare_args(robot_inst, [end_effector_id, pose, start_joints, avoid_collisions], arm_id),
@@ -206,7 +199,6 @@ async def ik(
 
 
 async def fk(robot_inst: Robot, end_effector_id: str, arm_id: None | str, joints: list[common.Joint]) -> common.Pose:
-
     return await hlp.run_in_executor(
         robot_inst.forward_kinematics, *prepare_args(robot_inst, [end_effector_id, joints], arm_id)
     )
@@ -220,7 +212,6 @@ async def check_reachability(
     pose: common.Pose,
     safe: bool = True,
 ) -> None:
-
     otd = osa.get_obj_type_data(scene, robot_inst.id)
     if otd.robot_meta and otd.robot_meta.features.inverse_kinematics:
         try:
@@ -233,11 +224,9 @@ async def check_reachability(
 
 
 async def check_robot_before_move(robot_inst: Robot) -> None:
-
     robot_inst.check_if_ready_to_move()
 
     if glob.RUNNING_ACTION:
-
         assert glob.LOCK.project
         action = glob.LOCK.project.action(glob.RUNNING_ACTION)
         obj_id_str, _ = action.parse_type()
@@ -276,7 +265,6 @@ async def move_to_pose(
     linear: bool,
     lock_owner: None | str = None,
 ) -> None:
-
     try:
         Data = sevts.r.RobotMoveToPose.Data
 
@@ -317,7 +305,6 @@ async def move_to_ap_orientation(
     safe: bool,
     linear: bool,
 ) -> None:
-
     Data = sevts.r.RobotMoveToActionPointOrientation.Data
 
     await notif.broadcast_event(
@@ -356,7 +343,6 @@ async def move_to_ap_orientation(
 async def _move_to_joints(
     robot_inst: Robot, joints: list[common.Joint], speed: float, safe: bool, arm_id: None | str
 ) -> None:
-
     # TODO newly connected interface should be notified somehow (general solution for such cases would be great!)
 
     try:
@@ -374,7 +360,6 @@ async def move_to_joints(
     arm_id: None | str,
     lock_owner: None | str = None,
 ) -> None:
-
     try:
         Data = sevts.r.RobotMoveToJoints.Data
 
@@ -383,11 +368,9 @@ async def move_to_joints(
         )
 
         try:
-
             await _move_to_joints(robot_inst, joints, speed, safe, arm_id)
 
         except Arcor2Exception as e:
-
             await notif.broadcast_event(
                 sevts.r.RobotMoveToJoints(
                     Data(Data.MoveEventType.FAILED, robot_inst.id, joints, safe, str(e), arm_id=arm_id)
@@ -412,7 +395,6 @@ async def move_to_ap_joints(
     safe: bool,
     arm_id: None | str,
 ) -> None:
-
     Data = sevts.r.RobotMoveToActionPointJoints.Data
 
     await notif.broadcast_event(
@@ -422,11 +404,9 @@ async def move_to_ap_joints(
     )
 
     try:
-
         await _move_to_joints(robot_inst, joints, speed, safe, arm_id)
 
     except Arcor2Exception as e:
-
         await notif.broadcast_event(
             sevts.r.RobotMoveToActionPointJoints(
                 Data(Data.MoveEventType.FAILED, robot_inst.id, joints_id, safe, str(e), arm_id)
@@ -443,7 +423,6 @@ async def move_to_ap_joints(
 
 
 async def check_eef_arm(robot_inst: Robot, arm_id: None | str, eef_id: None | str = None) -> None:
-
     if isinstance(robot_inst, MultiArmRobot):
         if not arm_id:
             raise Arcor2Exception("Arm has to be specified.")

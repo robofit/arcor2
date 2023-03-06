@@ -27,7 +27,6 @@ from arcor2.exceptions import Arcor2Exception
 
 @dataclass
 class CachedListing:
-
     __slots__ = "listing", "ts"
 
     listing: dict[str, IdDesc]
@@ -72,7 +71,6 @@ else:
 async def _update_list(
     getter: Callable[..., Awaitable[list[IdDesc]]], cached_listing: CachedListing, cache: dict[str, Any]
 ) -> None:
-
     if not cached_listing.time_to_update():
         return
 
@@ -84,7 +82,6 @@ async def _update_list(
 
 
 async def initialize_module() -> None:
-
     await asyncio.gather(
         _update_list(ps.get_projects, _projects_list, _projects),
         _update_list(ps.get_scenes, _scenes_list, _scenes),
@@ -97,49 +94,42 @@ async def initialize_module() -> None:
 
 
 async def get_project_ids() -> set[str]:
-
     async with _projects_list_lock:
         await _update_list(ps.get_projects, _projects_list, _projects)
     return set(_projects_list.listing)
 
 
 async def get_projects() -> list[IdDesc]:
-
     async with _projects_list_lock:
         await _update_list(ps.get_projects, _projects_list, _projects)
     return list(_projects_list.listing.values())
 
 
 async def get_scene_ids() -> set[str]:
-
     async with _scenes_list_lock:
         await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return set(_scenes_list.listing)
 
 
 async def get_scenes() -> list[IdDesc]:
-
     async with _scenes_list_lock:
         await _update_list(ps.get_scenes, _scenes_list, _scenes)
     return list(_scenes_list.listing.values())
 
 
 async def get_object_type_ids() -> set[str]:
-
     async with _object_type_lock:
         await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     return set(_object_type_list.listing)
 
 
 async def get_object_types() -> list[IdDesc]:
-
     async with _object_type_lock:
         await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     return list(_object_type_list.listing.values())
 
 
 async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
-
     async with _object_type_lock:
         await _update_list(ps.get_object_type_ids, _object_type_list, _object_types)
     try:
@@ -149,7 +139,6 @@ async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
 
 
 async def get_project(project_id: str) -> CachedProject:
-
     async with _projects_list_lock:
         try:
             project = _projects[project_id]
@@ -173,7 +162,6 @@ async def get_project(project_id: str) -> CachedProject:
 
 
 async def get_scene(scene_id: str) -> CachedScene:
-
     async with _scenes_list_lock:
         try:
             scene = _scenes[scene_id]
@@ -197,7 +185,6 @@ async def get_scene(scene_id: str) -> CachedScene:
 
 
 async def get_object_type(object_type_id: str) -> ObjectType:
-
     async with _object_type_lock:
         try:
             ot = _object_types[object_type_id]
@@ -221,7 +208,6 @@ async def get_object_type(object_type_id: str) -> ObjectType:
 
 
 async def update_project(project: CachedProject) -> datetime:
-
     assert project.id
 
     ret = await ps.update_project(project.project)
@@ -240,7 +226,6 @@ async def update_project(project: CachedProject) -> datetime:
 
 
 async def update_scene(scene: CachedScene) -> datetime:
-
     assert scene.id
 
     ret = await ps.update_scene(scene.scene)
@@ -257,7 +242,6 @@ async def update_scene(scene: CachedScene) -> datetime:
 
 
 async def update_object_type(object_type: ObjectType) -> datetime:
-
     assert object_type.id
 
     ret = await ps.update_object_type(object_type)
@@ -275,21 +259,18 @@ async def update_object_type(object_type: ObjectType) -> datetime:
 
 
 async def delete_scene(scene_id: str) -> None:
-
     await ps.delete_scene(scene_id)
     _scenes_list.listing.pop(scene_id, None)
     _scenes.pop(scene_id, None)
 
 
 async def delete_project(project_id: str) -> None:
-
     await ps.delete_project(project_id)
     _projects_list.listing.pop(project_id, None)
     _projects.pop(project_id, None)
 
 
 async def delete_object_type(object_type_id: str) -> None:
-
     await ps.delete_object_type(object_type_id)
     _object_type_list.listing.pop(object_type_id, None)
     _object_types.pop(object_type_id, None)

@@ -27,7 +27,6 @@ EVENT_DICT_TYPE = dict[str, tuple[type[EventT], Callable[[EventT, WsClient], Cor
 
 
 def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
-
     # it is also possible to use aiorun.run with stop_on_unhandled_errors=True but this prints much more useful info
     loop.default_exception_handler(context)
 
@@ -36,7 +35,6 @@ def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str,
 
 
 async def send_json_to_client(client: WsClient, data: str) -> None:
-
     try:
         await client.send(data)
     except websockets.exceptions.ConnectionClosed:
@@ -53,7 +51,6 @@ async def server(
     verbose: bool = False,
 ) -> None:
     async def handle_message(msg: str) -> None:
-
         try:
             data = json.loads(msg)
         except json.JsonException as e:
@@ -66,7 +63,6 @@ async def server(
             return
 
         if "request" in data:  # ...then it is RPC
-
             req_type = data["request"]
 
             try:
@@ -92,7 +88,6 @@ async def server(
                 return
 
             else:
-
                 try:
                     rpc_start = time.monotonic()
                     resp = await rpc_cb(req, client)
@@ -116,7 +111,6 @@ async def server(
                 return
 
             if logger.level == LogLevel.DEBUG:
-
                 # Silencing of repetitive log messages
                 # ...maybe this could be done better and in a more general way using logging.Filter?
 
@@ -145,7 +139,6 @@ async def server(
                     logger.debug(f"RPC request: {req}, result: {resp}")
 
         elif "event" in data:  # ...event from UI
-
             assert event_dict
 
             try:
@@ -172,7 +165,6 @@ async def server(
     ignored_reqs: set[str] = set()
 
     try:
-
         await register(client)
 
         loop = asyncio.get_event_loop()

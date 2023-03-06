@@ -192,7 +192,6 @@ def global_action_points_class(project: CachedProject) -> str:
     aps_init_body: list[Assign | Pass] = []
 
     for ap in project.action_points:
-
         ap_cls_body: list[Assign] = [
             Assign(
                 targets=[Attribute(value=Name(id="self", ctx=Load()), attr="_position", ctx=Store())],
@@ -235,7 +234,6 @@ def global_action_points_class(project: CachedProject) -> str:
             )
 
         if ap_joints_init_body:
-
             ap_joints_cls_def = ClassDef(
                 name=f"{ap_type_name}Joints",
                 bases=[],
@@ -328,7 +326,6 @@ def global_action_points_class(project: CachedProject) -> str:
             )
 
         if ap_orientations_init_body:
-
             ap_orientations_cls_def = ClassDef(
                 name=f"{ap_type_name}Poses",
                 bases=[],

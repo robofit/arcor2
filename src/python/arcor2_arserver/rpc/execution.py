@@ -26,9 +26,7 @@ async def build_project_cb(req: rpc.b.BuildProject.Request, ui: WsClient) -> rpc
 
 
 async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: WsClient) -> None:
-
     async with glob.LOCK.get_lock():
-
         project = glob.LOCK.project_or_exception()
 
         if project.has_changes:

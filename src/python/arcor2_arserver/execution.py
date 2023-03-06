@@ -36,7 +36,6 @@ MANAGER_RPC_RESPONSES: dict[int, RespQueue] = {}
 
 
 async def run_temp_package(package_id: str, start_paused: bool = False, breakpoints: None | set[str] = None) -> None:
-
     # TODO lock scene and project?
 
     assert glob.LOCK.scene
@@ -120,7 +119,6 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
 
 
 async def manager_request(req: rpc.common.RPC.Request, ui: None | WsClient = None) -> rpc.common.RPC.Response:
-
     assert req.id not in MANAGER_RPC_RESPONSES
 
     MANAGER_RPC_RESPONSES[req.id] = RespQueue(maxsize=1)
@@ -131,21 +129,16 @@ async def manager_request(req: rpc.common.RPC.Request, ui: None | WsClient = Non
 
 
 async def project_manager_client(handle_manager_incoming_messages) -> None:
-
     while True:
-
         logger.info("Attempting connection to manager...")
 
         try:
-
             async with websockets.connect(EXE_URL) as manager_client:  # type: ignore  # TODO not sure what is wrong
-
                 logger.info("Connected to manager.")
 
                 future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
 
                 while True:
-
                     if future.done():
                         break
 

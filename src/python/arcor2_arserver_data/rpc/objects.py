@@ -22,7 +22,6 @@ class ActionParamValues(RPC):
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[set[str]] = None  # TODO what about other (possible) types than 'str'?
 
 
@@ -45,7 +44,6 @@ class GetObjectTypes(RPC):
 class DeleteObjectTypes(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: Optional[set[str]] = None  # None means all of them
         dry_run: bool = False
 
@@ -65,12 +63,10 @@ class DeleteObjectTypes(RPC):
 class GetActions(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: TypeArgs
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[ObjectActions] = None
 
 
@@ -80,7 +76,6 @@ class GetActions(RPC):
 class NewObjectType(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: ObjectTypeMeta
         dry_run: bool = False
 

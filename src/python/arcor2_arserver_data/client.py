@@ -34,7 +34,6 @@ class ARServer:
         timeout: float = 3.0,
         event_mapping: None | dict[str, type[events.Event]] = None,
     ):
-
         self._ws = websocket.WebSocket()
         self._logger = get_logger(__name__)
         self._event_queue: Queue[events.Event] = Queue()
@@ -66,14 +65,12 @@ class ARServer:
         self._supported_rpcs = system_info.supported_rpc_requests
 
     def call_rpc(self, req: rpc.common.RPC.Request, resp_type: type[RR]) -> RR:
-
         if req.request not in self._supported_rpcs:
             raise ARServerClientException(f"{req.request} RPC not supported by the server.")
 
         return self._call_rpc(req, resp_type)
 
     def _call_rpc(self, req: rpc.common.RPC.Request, resp_type: type[RR]) -> RR:
-
         self._ws.send(req.to_json())
 
         # wait for RPC response, put any incoming event into the queue
@@ -110,7 +107,6 @@ class ARServer:
         """
 
         while True:
-
             try:
                 evt = self._event_queue.get_nowait()
             except Empty:

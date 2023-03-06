@@ -9,12 +9,10 @@ from .fit_common_mixin import UrlSettings  # noqa:ABS101
 
 @dataclass
 class M1Settings(UrlSettings):
-
     url: str = "http://fit-demo-dobot-m1:5018"
 
 
 class DobotM1(AbstractDobot):
-
     _ABSTRACT = False
     urdf_package_name = "dobot-m1.zip"
 

@@ -34,7 +34,6 @@ def make_pose_abs(parent: Pose, child: Pose) -> Pose:
 
 
 class Parent(NamedTuple):
-
     pose: Pose
     parent_id: None | str = None  # parent of the parent
 
@@ -76,9 +75,7 @@ def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoin
     updated_aps: set[str] = set()
 
     def _update_childs(parent: Parent, ap_id: str) -> None:
-
         for child_id in project.childs(ap_id):
-
             try:
                 child_ap = project.bare_action_point(child_id)
             except CachedProjectException:
@@ -95,7 +92,6 @@ def make_relative_ap_global(scene: CScene, project: CProject, ap: BareActionPoin
             _update_childs(parent, child_ap.id)
 
     def _make_relative_ap_global(_ap: BareActionPoint) -> None:
-
         if not _ap.parent:
             return
 
@@ -135,9 +131,7 @@ def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoin
     updated_orientations: set[str] = set()
 
     def _update_childs(parent: Parent, ap_id: str) -> None:
-
         for child_id in project.childs(ap_id):
-
             try:
                 child_ap = project.bare_action_point(child_id)
             except CachedProjectException:
@@ -156,7 +150,6 @@ def make_global_ap_relative(scene: CScene, project: CProject, ap: BareActionPoin
             _update_childs(parent, child_ap.id)
 
     def _make_global_ap_relative(parent_id: str) -> None:
-
         parent = get_parent_pose(scene, project, parent_id)
 
         if parent.parent_id:

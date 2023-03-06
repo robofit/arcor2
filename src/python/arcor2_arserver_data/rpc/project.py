@@ -49,7 +49,6 @@ class CloseProject(RPC):
 class SaveProject(RPC):
     @dataclass
     class Request(RPC.Request):
-
         dry_run: bool = False
 
     @dataclass
@@ -93,12 +92,10 @@ class ListProjects(RPC):
 class GetProject(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
 
     @dataclass
     class Response(RPC.Response):
-
         data: Optional[Project] = None
 
 
@@ -159,7 +156,6 @@ class AddActionPoint(RPC):
 class RemoveActionPoint(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
         dry_run: bool = False
 
@@ -447,7 +443,6 @@ class UpdateAction(RPC):
 class RemoveAction(RPC):
     @dataclass
     class Request(RPC.Request):
-
         args: IdArgs
         dry_run: bool = False
 

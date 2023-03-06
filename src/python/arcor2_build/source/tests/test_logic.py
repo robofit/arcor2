@@ -25,7 +25,6 @@ TAB = 4
 
 
 class Test(Generic):
-
     INT = 1234
 
     def get_int(self, *, an: None | str = None) -> int:
@@ -64,7 +63,6 @@ def cntsp(a: str) -> int:
 
 
 def test_prev_result() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -104,7 +102,6 @@ def test_prev_result() -> None:
 
 
 def test_constant() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -136,7 +133,6 @@ def test_constant() -> None:
 
 @pytest.mark.repeat(10)
 def test_blind_branch() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -170,7 +166,6 @@ def test_blind_branch() -> None:
 
 @pytest.mark.repeat(10)
 def test_branched_output() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", "Test")
     scene.objects.append(obj)
@@ -235,7 +230,6 @@ def test_branched_output() -> None:
 
 @pytest.mark.repeat(10)
 def test_branched_output_2() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)

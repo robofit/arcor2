@@ -32,7 +32,6 @@ class Docstring:
     returns: None | str = None
 
     def param(self, name: str) -> None | str:
-
         if not self.params:
             return None
 

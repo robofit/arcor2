@@ -48,7 +48,6 @@ app = create_app(__name__)
 
 
 def camera_matrix_from_request() -> list[list[float]]:
-
     return [
         [float(request.args["fx"]), 0.00000, float(request.args["cx"])],
         [0.00000, float(request.args["fy"]), float(request.args["cy"])],
@@ -61,7 +60,6 @@ def dist_matrix_from_request() -> list[float]:
 
 
 def normalize(val: float, min_val: float, max_val: float) -> float:
-
     assert max_val > min_val
     res = (min(max(abs(val), min_val), max_val) - min_val) / (max_val - min_val)
     assert 0 <= res <= 1
@@ -388,7 +386,6 @@ def get_calibration() -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
 
     parser.add_argument(
@@ -405,7 +402,6 @@ def main() -> None:
     # argparse has not support for env vars so this is kind of workaround
     # TODO maybe it could be solved using a custom action like https://gist.github.com/orls/51525c86ee77a56ad396
     if not run_as_mock:
-
         group = parser.add_mutually_exclusive_group(required=True)
 
         group.add_argument(
@@ -430,7 +426,6 @@ def main() -> None:
     logger.setLevel(args.debug)
 
     if not (run_as_mock or args.swagger or args.mock):
-
         data = args.config_file.read()
 
         global MARKER_SIZE
@@ -438,7 +433,6 @@ def main() -> None:
         global MAX_DIST
 
         try:
-
             config = yaml.safe_load(data)
 
             MARKER_SIZE = float(config.get("marker_size", MARKER_SIZE))

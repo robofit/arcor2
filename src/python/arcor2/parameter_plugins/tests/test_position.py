@@ -26,23 +26,19 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(Position) is PositionPlugin
 
 
 def test_plugin_from_instance() -> None:
-
     assert plugin_from_instance(Position()) is PositionPlugin
 
 
 def test_value_to_json() -> None:
-
     p = Position()
     assert PositionPlugin.value_to_json(p) == p.to_json()
 
 
 def test_get_value() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", TestObject.__name__)
     scene.objects.append(obj)

@@ -5,7 +5,6 @@ from arcor2_arserver_data.objects import ObjectTypeMeta
 
 
 def test_meta_to_source() -> None:
-
     parent = ObjectTypeMeta(type="Generic")
     child = ObjectTypeMeta(type="NewType", description="blabla bla", base="Generic")
 
@@ -31,7 +30,6 @@ class TestType:
         raise Arcor2NotImplemented("This function is not implemented.")
 
     def func_3(self) -> None:
-
         var = 1 + 2
         raise Arcor2NotImplemented(f"{var}")
 
@@ -57,7 +55,6 @@ module_tree = parse_def(TestType)
 
 
 def test_function_implemented():
-
     assert function_implemented(module_tree, TestType.func_1.__name__)
     assert not function_implemented(module_tree, TestType.func_2.__name__)
     assert not function_implemented(module_tree, TestType.func_3.__name__)

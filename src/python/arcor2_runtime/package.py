@@ -19,12 +19,10 @@ except KeyError:
 
 
 def get_package_meta_path(package_id: str) -> str:
-
     return os.path.join(PROJECT_PATH, package_id, "package.json")
 
 
 def read_package_meta(package_id: str) -> PackageMeta:
-
     try:
         with open(get_package_meta_path(package_id)) as pkg_file:
             return PackageMeta.from_json(pkg_file.read())
@@ -33,6 +31,5 @@ def read_package_meta(package_id: str) -> PackageMeta:
 
 
 def write_package_meta(package_id: str, meta: PackageMeta) -> None:
-
     with open(get_package_meta_path(package_id), "w") as pkg_file:
         pkg_file.write(meta.to_json())

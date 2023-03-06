@@ -6,11 +6,9 @@ from arcor2_yumi.object_types.yumi import YuMi, YumiSettings
 
 
 def main() -> None:
-
     yumi = YuMi("", "", Pose(), YumiSettings("192.168.104.107"))
 
     try:
-
         yumi._left.reset_home()
         yumi._right.reset_home()
 

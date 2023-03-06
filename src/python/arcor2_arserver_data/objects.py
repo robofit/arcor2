@@ -27,7 +27,6 @@ class ObjectTypeMeta(JsonSchemaMixin):
     modified: Optional[datetime] = None
 
     def to_object_type(self, source: str = "") -> ObjectType:
-
         ot = ObjectType(self.type, source, self.description)
 
         if self.object_model:
@@ -39,14 +38,12 @@ class ObjectTypeMeta(JsonSchemaMixin):
         return {param.name: param for param in self.settings}
 
     def __post_init__(self) -> None:
-
         if self.object_model and (model := self.object_model.model()).id != self.type:
             raise Arcor2Exception(f"Object model id ({model.id}) must be equal to the ObjectType id ({self.type}).")
 
 
 @dataclass
 class ObjectAction(JsonSchemaMixin):
-
     name: str
     description: Optional[str] = None
     parameters: list[ParameterMeta] = field(default_factory=list)
@@ -57,7 +54,6 @@ class ObjectAction(JsonSchemaMixin):
     problem: Optional[str] = None
 
     def parameter(self, param_name: str) -> ParameterMeta:
-
         for param in self.parameters:
             if param.name == param_name:
                 return param

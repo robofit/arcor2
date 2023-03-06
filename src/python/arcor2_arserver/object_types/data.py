@@ -9,7 +9,6 @@ from arcor2_arserver_data.robot import RobotMeta
 
 @dataclass
 class ObjectTypeData:
-
     meta: ObjectTypeMeta
     type_def: None | type[Generic] = None
     actions: dict[str, ObjectAction] = field(default_factory=dict)

@@ -26,7 +26,6 @@ logger.propagate = False
 
 
 class CollisionObject(NamedTuple):
-
     model: object_type.Models
     pose: common.Pose
 
@@ -421,9 +420,7 @@ def put_line_safe() -> RespT:
     unity      x Right,   y Up,   z Forward
     """
     for obj_id, (model, pose) in collision_objects.items():
-
         if isinstance(model, object_type.Box):
-
             # The left bottom corner on the front will be placed at (0, 0, 0)
             sx = model.size_x + inflation
             sy = model.size_y + inflation
@@ -549,7 +546,6 @@ def get_started() -> RespT:
 
 
 def main() -> None:
-
     global inflation
 
     parser = argparse.ArgumentParser(description=SCENE_SERVICE_NAME)

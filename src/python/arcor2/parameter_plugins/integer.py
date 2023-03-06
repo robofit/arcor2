@@ -15,7 +15,6 @@ from arcor2.source.utils import find_asserts
 
 @dataclass
 class IntegerParameterExtra(JsonSchemaMixin):
-
     minimum: Any
     maximum: Any
 
@@ -25,11 +24,9 @@ class AssertNotFound(ParameterPluginException):
 
 
 def get_assert_minimum_maximum(asserts: list[ast.Assert], param_name: str) -> tuple[Any, Any]:
-
     # Assert(test=Compare(left=Num(n=0), ops=[LtE(), LtE()], comparators=[Name(id='speed', ctx=Load()), Num(n=100)]))
 
     for ass in asserts:
-
         if not isinstance(ass.test, ast.Compare):
             continue
 
@@ -59,7 +56,6 @@ def get_assert_minimum_maximum(asserts: list[ast.Assert], param_name: str) -> tu
 def get_min_max(
     cls: type[ParameterPlugin], param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef
 ) -> None:
-
     try:
         minimum, maximum = get_assert_minimum_maximum(find_asserts(action_node), param_meta.name)
     except AssertNotFound:
@@ -83,7 +79,6 @@ class IntegerPlugin(ParameterPlugin):
 
     @classmethod
     def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
-
         super(IntegerPlugin, cls).meta(param_meta, action_method, action_node)
         get_min_max(cls, param_meta, action_method, action_node)
 

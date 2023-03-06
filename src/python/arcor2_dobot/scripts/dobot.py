@@ -48,7 +48,6 @@ _mock = False
 
 
 def started() -> bool:
-
     return _dobot is not None
 
 
@@ -628,7 +627,6 @@ def handle_dobot_exception(e: DobotApiException) -> tuple[str, int]:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     parser.add_argument("-m", "--mock", action="store_true", default=env.get_bool("ARCOR2_DOBOT_MOCK"))

@@ -8,7 +8,6 @@ from arcor2.object_types.abstract import Robot, RobotException, Settings
 
 @dataclass
 class FanucSettings(Settings):
-
     url: str = "http://fanuc-demo-robot:5027"
 
 
@@ -24,7 +23,6 @@ class Fanuc(Robot):
         rest.call(rest.Method.PUT, f"{self.settings.url}/state/stop")
 
     def _start(self) -> None:
-
         if self._started():
             self._stop()
 

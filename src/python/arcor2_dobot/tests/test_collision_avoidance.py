@@ -9,7 +9,6 @@ from arcor2_dobot.tests.conftest import Urls
 
 
 def test_collision_avoidance(start_processes: Urls) -> None:
-
     robot_pose = Pose(Position(10, 10, 10))
 
     rest.call(

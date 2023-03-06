@@ -22,7 +22,6 @@ class SimResources:
 
 
 def test_global_aps_cls() -> None:
-
     proj = Project("test", "scene_id")
 
     pos = Position(1, 2, 3)

@@ -7,12 +7,10 @@ from arcor2.object_types.abstract import Settings
 
 @dataclass
 class UrlSettings(Settings):
-
     url: str = "http://"
 
 
 class FitCommonMixin:
-
     if TYPE_CHECKING:
         settings = UrlSettings("")
 

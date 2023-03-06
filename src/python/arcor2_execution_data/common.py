@@ -30,7 +30,6 @@ class ProjectMeta(JsonSchemaMixin):
 
 @dataclass
 class PackageSummary(JsonSchemaMixin):
-
     id: str
     package_meta: PackageMeta = field(metadata=dict(description="Content of 'package.json'."))
     project_meta: None | ProjectMeta = None
