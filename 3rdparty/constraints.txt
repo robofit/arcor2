@@ -22,10 +22,13 @@
 //     "ciso8601~=2.3.0",
 //     "colorlog~=6.7.0",
 //     "dataclasses-jsonschema[apispec,fast-dateparsing,fast-uuid,fast-validation]~=2.16.0",
+//     "easyhid~=0.0.10",
 //     "fanucpy~=0.1.7",
 //     "fastuuid~=0.8.0",
 //     "flask-swagger-ui~=4.11.1",
 //     "flask_cors~=3.0.10",
+//     "gTTS~=2.3.1",
+//     "hidapi~=0.9.0.post3",
 //     "lru-dict~=1.1.8",
 //     "numpy-quaternion[numba,scipy]~=2022.4.3",
 //     "numpy~=1.23.5",
@@ -34,9 +37,11 @@
 //     "opencv-contrib-python~=4.7.0.72",
 //     "orjson~=3.8.8",
 //     "packaging~=21.3",
+//     "pydub~=0.25.1",
 //     "pyhumps==3.8.0",
 //     "pyk4a@ git+https://github.com/Jakub-Dv/pyk4a.git@feature/body-tracking",
 //     "pyserial~=3.5",
+//     "pyspacemouse~=1.0.8",
 //     "pytest-asyncio~=0.21.0",
 //     "pytest-randomly~=3.12.0",
 //     "pytest-repeat~=0.9.1",
@@ -45,6 +50,7 @@
 //     "requests~=2.28.2",
 //     "setuptools~=66.0.0",
 //     "sqlitedict~=2.1.0",
+//     "types-playsound~=1.3.1.2",
 //     "typing-inspect~=0.8.0",
 //     "urdfpy~=0.0.22",
 //     "websocket-client~=1.5.1",
@@ -990,6 +996,21 @@
           "artifacts": [
             {
               "algorithm": "sha256",
+              "hash": "95a05dcc0288832760745b83445e4a7c7ba64587baff1380b63e984d9b66c609",
+              "url": "https://files.pythonhosted.org/packages/52/ec/8bafbd3cd967acda78a108793fe0b7a6afb0678e7a2496a83d8c6fb065f2/easyhid-0.0.10.tar.gz"
+            }
+          ],
+          "project_name": "easyhid",
+          "requires_dists": [
+            "cffi"
+          ],
+          "requires_python": null,
+          "version": "0.0.10"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
               "hash": "232c37c63e4f682982c8b6459f33a8981039e5fb8756b2074364e5055c498c9e",
               "url": "https://files.pythonhosted.org/packages/61/97/17ed81b7a8d24d8f69b62c0db37abbd8c0042d4b3fc429c73dab986e7483/exceptiongroup-1.1.1-py3-none-any.whl"
             },
@@ -1252,6 +1273,50 @@
           "requires_dists": [],
           "requires_python": ">=3.7",
           "version": "2.4.0"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
+              "hash": "9132e409603f34d5023458e3e10ce2f5df55498d7a2ee781c9adbe616fbd4152",
+              "url": "https://files.pythonhosted.org/packages/98/da/4b8bb016aca4abebe5b582ce1b17604a1d9bc91499ac2214e1fa250f69b6/gTTS-2.3.2-py3-none-any.whl"
+            },
+            {
+              "algorithm": "sha256",
+              "hash": "5314f7dedb4230889ff4773edd37e101408497e166982027b8d9582a4585eb4f",
+              "url": "https://files.pythonhosted.org/packages/8b/63/fd0d51530696af71b17d3d3d8aacf181ae2040065dd8fe54e85c32ca28ec/gTTS-2.3.2.tar.gz"
+            }
+          ],
+          "project_name": "gtts",
+          "requires_dists": [
+            "click<8.2,>=7.1",
+            "pytest-cov; extra == \"tests\"",
+            "pytest~=7.1.3; extra == \"tests\"",
+            "requests<3,>=2.27",
+            "sphinx-autobuild; extra == \"docs\"",
+            "sphinx-click; extra == \"docs\"",
+            "sphinx-mdinclude; extra == \"docs\"",
+            "sphinx-rtd-theme; extra == \"docs\"",
+            "sphinx; extra == \"docs\"",
+            "testfixtures; extra == \"tests\""
+          ],
+          "requires_python": ">=3.7",
+          "version": "2.3.2"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
+              "hash": "5a2442928f17ba742d9c53073f48b152051c5747d758d2fefd937543da5ab2e5",
+              "url": "https://files.pythonhosted.org/packages/ee/e9/b2ec08690c280a0eaa4777bf829db6b5d269903d4e8e9ce82f079c837d5a/hidapi-0.9.0.post3.tar.gz"
+            }
+          ],
+          "project_name": "hidapi",
+          "requires_dists": [
+            "setuptools>=19.0"
+          ],
+          "requires_python": null,
+          "version": "0.9.0.post3"
         },
         {
           "artifacts": [
@@ -3091,6 +3156,24 @@
           "artifacts": [
             {
               "algorithm": "sha256",
+              "hash": "65617e33033874b59d87db603aa1ed450633288aefead953b30bded59cb599a6",
+              "url": "https://files.pythonhosted.org/packages/a6/53/d78dc063216e62fc55f6b2eebb447f6a4b0a59f55c8406376f76bf959b08/pydub-0.25.1-py2.py3-none-any.whl"
+            },
+            {
+              "algorithm": "sha256",
+              "hash": "980a33ce9949cab2a569606b65674d748ecbca4f0796887fd6f46173a7b0d30f",
+              "url": "https://files.pythonhosted.org/packages/fe/9a/e6bca0eed82db26562c73b5076539a4a08d3cffd19c3cc5913a3e61145fd/pydub-0.25.1.tar.gz"
+            }
+          ],
+          "project_name": "pydub",
+          "requires_dists": [],
+          "requires_python": null,
+          "version": "0.25.1"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
               "hash": "c4df16436c6656a5120e49162012314c29696dc0ede9b89b36072c57a2a9ff93",
               "url": "https://files.pythonhosted.org/packages/da/dd/f6bb363bbb412ff506bd111eec235a4c88ee97a4770cfff3adc23ac4a2da/pyglet-2.0.6-py3-none-any.whl"
             },
@@ -3308,6 +3391,26 @@
           ],
           "requires_python": null,
           "version": "3.5"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
+              "hash": "10f00f58f44fa73c3e9537f148d0d651354d07b92fc46c3a168a980c2e9e4dbc",
+              "url": "https://files.pythonhosted.org/packages/6f/88/355993489c0cad085c3af2fe6f736806443d1c640db428f0e48f156ea38f/pyspacemouse-1.0.8-py3-none-any.whl"
+            },
+            {
+              "algorithm": "sha256",
+              "hash": "1419af304f5cc89603cb4d7502c546a6041791d0c6422bb5ed97b073b2ce44f3",
+              "url": "https://files.pythonhosted.org/packages/6f/60/2cb6fffdd6f937276d4cc3face8d51f5b96f1edaaa7ed7d09f52df52171f/pyspacemouse-1.0.8.tar.gz"
+            }
+          ],
+          "project_name": "pyspacemouse",
+          "requires_dists": [
+            "easyhid"
+          ],
+          "requires_python": ">=3.8",
+          "version": "1.0.8"
         },
         {
           "artifacts": [
@@ -4077,6 +4180,24 @@
           "artifacts": [
             {
               "algorithm": "sha256",
+              "hash": "329054c0555017bfd17cfb558fabbcd7143e6ecc7d5dad6fd74408dddc9cc9ef",
+              "url": "https://files.pythonhosted.org/packages/a7/30/48766de259626c9089b62d25e3c009e6b9bd9187d2fd72943d3a333192a0/types_playsound-1.3.1.2-py3-none-any.whl"
+            },
+            {
+              "algorithm": "sha256",
+              "hash": "fddb259735a9f7e7d3f77148a5caf182cfe0616b6eaa74d776fd98b806521d09",
+              "url": "https://files.pythonhosted.org/packages/f1/b2/443981fd1375f5d05feb7be00415e31d423243fdf654beaadfcec4b3e4ed/types-playsound-1.3.1.2.tar.gz"
+            }
+          ],
+          "project_name": "types-playsound",
+          "requires_dists": [],
+          "requires_python": null,
+          "version": "1.3.1.2"
+        },
+        {
+          "artifacts": [
+            {
+              "algorithm": "sha256",
               "hash": "fb33085c39dd998ac16d1431ebc293a8b3eedd00fd4a32de0ff79002c19511b4",
               "url": "https://files.pythonhosted.org/packages/31/25/5abcd82372d3d4a3932e1fa8c3dbf9efac10cc7c0d16e78467460571b404/typing_extensions-4.5.0-py3-none-any.whl"
             },
@@ -4359,10 +4480,13 @@
     "ciso8601~=2.3.0",
     "colorlog~=6.7.0",
     "dataclasses-jsonschema[apispec,fast-dateparsing,fast-uuid,fast-validation]~=2.16.0",
+    "easyhid~=0.0.10",
     "fanucpy~=0.1.7",
     "fastuuid~=0.8.0",
     "flask-swagger-ui~=4.11.1",
     "flask_cors~=3.0.10",
+    "gTTS~=2.3.1",
+    "hidapi~=0.9.0.post3",
     "lru-dict~=1.1.8",
     "numpy-quaternion[numba,scipy]~=2022.4.3",
     "numpy~=1.23.5",
@@ -4371,9 +4495,11 @@
     "opencv-contrib-python~=4.7.0.72",
     "orjson~=3.8.8",
     "packaging~=21.3",
+    "pydub~=0.25.1",
     "pyhumps==3.8.0",
     "pyk4a",
     "pyserial~=3.5",
+    "pyspacemouse~=1.0.8",
     "pytest-asyncio~=0.21.0",
     "pytest-randomly~=3.12.0",
     "pytest-repeat~=0.9.1",
@@ -4382,6 +4508,7 @@
     "requests~=2.28.2",
     "setuptools~=66.0.0",
     "sqlitedict~=2.1.0",
+    "types-playsound~=1.3.1.2",
     "typing-inspect~=0.8.0",
     "urdfpy~=0.0.22",
     "websocket-client~=1.5.1",
