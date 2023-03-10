@@ -6,17 +6,24 @@ from arcor2.data.common import (
     ActionParameter,
     ActionPoint,
     Flow,
+    Joint,
     LogicItem,
+    NamedOrientation,
+    Orientation,
+    Pose,
     Position,
     Project,
     ProjectLogicIf,
     ProjectParameter,
+    ProjectRobotJoints,
     Scene,
     SceneObject,
+    StrEnum,
 )
 from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types.abstract import Generic
+from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2_build.source.python_to_json import python_to_json
-from arcor2_build.source.tests.test_logic import Test
 
 head = """#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -26,9 +33,9 @@ from action_points import ActionPoints
 from arcor2_runtime.resources import Resources
 from arcor2_runtime.exceptions import print_exception"""
 
-main = """def main(res: Resources) -> None:
+main_body = """def main(res: Resources) -> None:
     aps = ActionPoints(res)
-    test_name: Test = res.objects['obj_392f80383d41481ab910dfebcee813c6']"""
+    test_name: Test = res.objects['obj_test']"""
 
 call_main = """if __name__ == '__main__':
     try:
@@ -38,20 +45,48 @@ call_main = """if __name__ == '__main__':
         print_exception(e)"""
 
 
-def action_from_id(id: str, project: CachedProject) -> Action:  # TODO: replace
+class Test_class(StrEnum):
+
+    CLASS1: str = "1"
+    CLASS2: str = "2"
+
+
+class Test(Generic):
+
+    INT = 1234
+
+    def get_int(self, an: None | str = None) -> int:
+        return self.INT
+
+    def test(self, an: None | str = None) -> bool:
+        return True
+
+    def test_par(self, param: int, an: None | str = None) -> None:
+        pass
+
+    def test_pose(self, param: Pose, an: None | str = None) -> None:
+        pass
+
+    def test_joints(self, param: ProjectRobotJoints, an: None | str = None) -> None:
+        pass
+
+    def tests_class_value(self, param: Test_class, an: None | str = None):
+        pass
+
+
+def action_from_id(action_id: str, project: CachedProject) -> Action:  # TODO: replace
 
     for action in project.actions:
-        if id == action.id:
+        if action_id == action.id:
             return action
-    raise Arcor2Exception("Action whit name:" + id + " in project:" + project.name + "does not exisit")
+    raise Arcor2Exception("Action whit name:" + action_id + " in project:" + project.name + "does not exisit")
 
 
 def check_python_to_json(project: Project, scene: Scene, script: str, objects_for_json: dict):
 
     o_p = CachedProject(project)
-    original_project = project.copy()
 
-    modified_project = python_to_json(original_project, scene, script, objects_for_json)
+    modified_project = python_to_json(project, scene, script, objects_for_json)
     m_p = CachedProject(modified_project)
 
     assert (len(o_p.actions)) == (len(m_p.actions))
@@ -81,7 +116,12 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
                     assert (
                         start_modified_action.parameters[i].name == start_orig_action.parameters[i].name
                     )  # param name
-                    # TODO: vlaue
+                    if start_orig_action.parameters[i].type != ActionParameter.TypeEnum.LINK:
+                        assert (
+                            start_orig_action.parameters[i].value == start_orig_action.parameters[i].value
+                        )  # param value
+                    else:
+                        pass  # TODO: variable
             else:
                 assert start_orig_action.parameters == []
 
@@ -100,7 +140,10 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
                 for i in range(len(end_modif_action.parameters)):
                     assert end_modif_action.parameters[i].type == end_orig_action.parameters[i].type  # param type
                     assert end_modif_action.parameters[i].name == end_orig_action.parameters[i].name  # param name
-                    # TODO: vlaue
+                    if end_orig_action.parameters[i].type != ActionParameter.TypeEnum.LINK:
+                        assert end_orig_action.parameters[i].value == end_orig_action.parameters[i].value  # param value
+                    else:
+                        pass  # TODO: variable
             else:
                 assert end_orig_action.parameters == []
 
@@ -125,7 +168,7 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
             assert modif_con.flows == orig_con.flows  # action flow
 
 
-def test_little() -> None:
+def test_continue() -> None:
 
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
@@ -140,7 +183,7 @@ def test_little() -> None:
 {head}
 
 
-{main}
+{main_body}
     while True:
         continue
 
@@ -178,7 +221,7 @@ def test_prev_result() -> None:
 {head}
 
 
-{main}
+{main_body}
     while True:
         res = test_name.get_int(an='ac1')
         test_name.test_par(res, an='ac2')
@@ -189,7 +232,7 @@ def test_prev_result() -> None:
     check_python_to_json(project, scene, script, {"test_name": Test})
 
 
-def test_constant() -> None:
+def test_project_parameter() -> None:
 
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
@@ -218,7 +261,7 @@ def test_constant() -> None:
 {head}
 
 
-{main}
+{main_body}
     int_const = 1234
     while True:
         test_name.test_par(int_const, an='ac1')
@@ -229,7 +272,175 @@ def test_constant() -> None:
     check_python_to_json(project, scene, script, {"test_name": Test})
 
 
-def test_branched_output1() -> None:
+def test_constant() -> None:
+
+    scene = Scene("s1")
+    obj = SceneObject("test_name", Test.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    ac1 = Action(
+        "ac1",
+        f"{obj.id}/test_par",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", plugin_from_type(type(5)).type_name(), json.dumps(5))],
+    )
+
+    ap1.actions.append(ac1)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, LogicItem.END))
+
+    script = f"""
+{head}
+
+
+{main_body}
+    while True:
+        test_name.test_par(5, an='ac1')
+
+
+{call_main}"""
+
+    check_python_to_json(project, scene, script, {"test_name": Test})
+
+
+def test_pose() -> None:
+
+    scene = Scene("s1")
+    obj = SceneObject("test_name", Test.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint(
+        "ap1",
+        Position(1.1, 0.0, -1.1),
+        None,
+        None,
+        None,
+        "",
+        orientations=([NamedOrientation("default", Orientation(2.2, 0.0, -2.2))]),
+    )
+    project.action_points.append(ap1)
+
+    pose_type = plugin_from_type(Pose)
+    ac1 = Action(
+        "ac1",
+        f"{obj.id}/test_pose",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", pose_type.type_name(), json.dumps(ap1.orientations[0].id))],
+    )
+    ap1.actions.append(ac1)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, LogicItem.END))
+
+    script = f"""
+{head}
+
+
+{main_body}
+    while True:
+        test_name.test_pose(aps.ap1.poses.default, an='ac1')
+
+{call_main}"""
+
+    check_python_to_json(project, scene, script, {"test_name": Test})
+
+
+def test_joints() -> None:
+
+    scene = Scene("s1")
+    obj = SceneObject("test_name", Test.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint(
+        "ap1",
+        Position(1.1, 0.0, -1.1),
+        None,
+        None,
+        None,
+        "",
+        robot_joints=(
+            [ProjectRobotJoints("default", "", [Joint("Joint1", 3.3), Joint("Joint2", 0.0), Joint("Joint3", -3.3)])]
+        ),
+    )
+    project.action_points.append(ap1)
+
+    joints_type = plugin_from_type(ProjectRobotJoints)
+    ac1 = Action(
+        "ac1",
+        f"{obj.id}/test_joints",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", joints_type.type_name(), json.dumps(ap1.robot_joints[0].id))],
+    )
+    ap1.actions.append(ac1)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, LogicItem.END))
+
+    script = f"""
+{head}
+
+
+{main_body}
+    while True:
+        test_name.test_joints(aps.ap1.joints.default, an='ac1')
+
+
+{call_main}"""
+
+    check_python_to_json(project, scene, script, {"test_name": Test})
+
+
+def tests_class_value() -> None:
+
+    scene = Scene("s1")
+    obj = SceneObject("test_name", Test.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    StrEnum_type = plugin_from_type(StrEnum)
+    ac1 = Action(
+        "ac1",
+        f"{obj.id}/tests_class_value",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", StrEnum_type.type_name(), json.dumps(Test_class.CLASS1))],
+    )
+    ap1.actions.append(ac1)
+
+    StrEnum_type = plugin_from_type(StrEnum)
+    ac2 = Action(
+        "ac2",
+        f"{obj.id}/tests_class_value",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", StrEnum_type.type_name(), json.dumps(Test_class.CLASS2))],
+    )
+    ap1.actions.append(ac2)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, ac2.id))
+    project.logic.append(LogicItem(ac2.id, LogicItem.END))
+
+    script = f"""
+{head}
+
+
+{main_body}
+    while True:
+        test_name.tests_class_value(Test_class.CLASS1, an='ac1')
+        test_name.tests_class_value(Test_class.CLASS2, an='ac2')
+
+
+{call_main}"""
+
+    check_python_to_json(project, scene, script, {"test_name": Test})
+
+
+def test_branched_output_1() -> None:
 
     scene = Scene("s1")
     obj = SceneObject("test_name", "Test")
@@ -263,7 +474,7 @@ def test_branched_output1() -> None:
 {head}
 
 
-{main}
+{main_body}
     while True:
         bool_res = test_name.test(an='ac1')
         if bool_res == True:
@@ -323,7 +534,7 @@ def test_branched_output_2() -> None:
 {head}
 
 
-{main}
+{main_body}
     while True:
         bool_res = test_name.test(an='ac1')
         if bool_res == True:
@@ -408,7 +619,7 @@ def test_branched_output_3() -> None:
 {head}
 
 
-{main}
+{main_body}
     while True:
         bool1_res = test_name.test(an='ac1')
         if bool1_res == True:
@@ -486,7 +697,7 @@ def test_branched_output_4() -> None:
 {head}
 
 
-{main}
+{main_body}
     while True:
         bool1_res = test_name.test(an='ac1')
         if bool1_res == True:
