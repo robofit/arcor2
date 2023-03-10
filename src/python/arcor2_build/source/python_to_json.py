@@ -37,7 +37,7 @@ from arcor2_build_data.exceptions import InvalidPackage, NotFound
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
 # https://github.com/robofit/arcor2/blob/master/src/python/arcor2_build/source/utils.py#L394.
-POSES = "poses"  # TODO: place somewhere else as constants
+POSES = "poses"  # TODO: place arcor2_build/source/__init__.py
 JOINTS = "joints"
 
 
@@ -164,7 +164,6 @@ def get_parameters(
     rest_of_node: Call, variables: dict, project: Project, action_point: ActionPoint, method: inspect.FullArgSpec
 ):
     parameters = []
-
     for i in range(len(rest_of_node.args)):
         param_name = method.args[i + 1]  # +1 to skip self parameter
         param_type = ""
@@ -173,6 +172,10 @@ def get_parameters(
         arg = rest_of_node.args[i]
         if isinstance(arg, Constant):  # constant
             value_type = plugin_from_type(method.annotations[param_name])
+
+            if plugin_from_type(type(arg.value)) != value_type:
+                raise Arcor2Exception("Value type in method is not equal required value type")
+
             param_type = value_type.type_name()
             param_value = value_type.value_to_json(arg.value)
 
@@ -182,7 +185,6 @@ def get_parameters(
 
             str_arg = ast.unparse(arg)
             if str_arg.find("aps.") == -1 and isinstance(arg.value, Name):  # class value
-
                 value = (getattr(method.annotations[param_name], arg.attr)).value
                 param_value = value_type.value_to_json(value)
 
@@ -212,6 +214,9 @@ def get_parameters(
                     if arg.id == param.name:
                         param_type = ActionParameter.TypeEnum.PROJECT_PARAMETER
                         param_value = json.dumps(param.id)
+                        break
+            if param_type == "" and param_value == "":
+                raise Arcor2Exception(f"Variable {arg_name} was't found")
         else:
             raise Arcor2Exception("Unsupported operation.")
         parameters += [ActionParameter(param_name, param_type, param_value)]
@@ -219,16 +224,16 @@ def get_parameters(
     return parameters, action_point
 
 
-# try find object from scene by name and return object id with method
-def get_object_by_name(rest_of_node: Call, scene: Scene):  # TODO: function cachedscene
-    object_method = ast.unparse(rest_of_node.func)
+def get_object_by_name(object_method: str, scene: Scene):  # TODO: function cachedscene
+    """find object from scene by name and return object id."""
+
     # looking for object
     for scene_object in scene.objects:
         if object_method.find(scene_object.name + ".") != -1:
             # raplece name from code to scene definition
             object_type = object_method.replace(scene_object.name + ".", (scene_object.id + "/"))
 
-            return object_type, object_method
+            return object_type
 
     raise Arcor2Exception(f"Object {object_method} wasn't found")
 
@@ -251,18 +256,19 @@ def gen_actions(
 
     name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
 
-    type, object_method = get_object_by_name(rest_of_node, scene)
+    object_method = ast.unparse(rest_of_node.func)
+    scene_object = get_object_by_name(object_method, scene)
 
     if rest_of_node.args != []:  # no args -> no parameters in method
 
         dot_position = object_method.find(".")  # split object.method() to object and method
-        object = object_method[:dot_position]
+        object_name = object_method[:dot_position]
         method_name = object_method[dot_position + 1 :]
-        method = inspect.getfullargspec(getattr(object_type[object], method_name))  # get infomation about method
+        method = inspect.getfullargspec(getattr(object_type[object_name], method_name))  # get infomation about method
 
         parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
 
-    ac1 = Action(name, type, flows=final_flows, parameters=parameters)
+    ac1 = Action(name, scene_object, flows=final_flows, parameters=parameters)
     action_point.actions.append(ac1)  # add actions to last seen action_point
 
     # if variable was declared, adding it to dict with actions id ['name':'id', 'name':'id', ...]
@@ -272,12 +278,9 @@ def gen_actions(
     return ac1.id, variables, action_point
 
 
-""" add logic item for common case (calling method...)
-logic item on last position get END of last ac_id and
-new logic item get ac_id on START"""
-
-
 def gen_logic(ac_id: str, logic_list: list) -> None:
+    """add logic item for common case (calling method...) logic item on last
+    position get END of last ac_id and new logic item get ac_id on START."""
 
     logic_list[-1].end = ac_id
     item = LogicItem(ac_id, "")
@@ -285,17 +288,17 @@ def gen_logic(ac_id: str, logic_list: list) -> None:
     return
 
 
-# add Logic item in case that before was "if"
 def gen_logic_for_if(ac_id: str, logic_list: list) -> None:
+    """add Logic item in case that before was "if"."""
 
     item = LogicItem(ac_id, "")
     logic_list.append(item)
     return
 
 
-# add Logic item after closing "if"(elif,else)
-# looking for empty END and adding ac_id of next action
 def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
+    """add Logic item after closing "if"(elif,else) looking for empty END and
+    adding ac_id of next action."""
 
     for logic_item in logic_list:
         if logic_item.end == "":
@@ -312,7 +315,10 @@ def evaluate_if(
     rest_of_node = find_Compare(node)
 
     what_name = ast.unparse(rest_of_node.left)
-    what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"  # TODO: other variables?
+    try:
+        what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"  # TODO: other variables?
+    except KeyError:
+        raise Arcor2Exception(f"Variable {what_name} does not exist")
 
     try:
         # take type from condition and transforom it into arcor2 type
@@ -363,6 +369,10 @@ def evaluate_nodes(
 
         elif isinstance(node, Assign):
             flows = ast.unparse(node.targets[0])
+
+            if len(node.targets) > 1:
+                raise Arcor2Exception("Method can have only one output")
+
             ac_id, variables, action_point = gen_actions(
                 action_point, node, variables, scene, project, object_type, flows
             )
@@ -389,11 +399,15 @@ def evaluate_nodes(
     return variables
 
 
-def python_to_json(project: Project, scene: Scene, script: str, object_type: dict):
+def python_to_json(project: Project, scene: Scene, script: str, object_type: dict) -> Project:
 
     # dict of variables with id actions, where variable was declared ['name':'id', 'name':'id', ...]
-    variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build funkcia
-    tree = ast.parse(script)
+    variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build /function
+
+    try:
+        tree = ast.parse(script)
+    except SyntaxError:
+        raise Arcor2Exception("script.py contains syntax error")
     while_node = find_While(tree)
 
     ########################################
@@ -405,8 +419,7 @@ def python_to_json(project: Project, scene: Scene, script: str, object_type: dic
     project.logic.append(start_item)
     ########################################
 
-    ap = project.action_points[0]
-    evaluate_nodes(ap, while_node, variables, scene, project, object_type)
+    evaluate_nodes(project.action_points[0], while_node, variables, scene, project, object_type)
 
     # adding END in to LogicItem with empty end
     for logic_item in project.logic:
@@ -416,8 +429,9 @@ def python_to_json(project: Project, scene: Scene, script: str, object_type: dic
     return project
 
 
-# function just connecting reading information from execution package and compiler
 def between_step(zip_file) -> Project:
+    """function just connecting reading information from execution package and
+    compiler."""
 
     original_project, scene, script, object_type = get_pro_sce_scr(zip_file)
 

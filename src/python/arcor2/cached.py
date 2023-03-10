@@ -594,8 +594,8 @@ class CachedProject(CachedBase):
         self._remove_child(old_parent, obj_id)
         self._upsert_child(new_parent, obj_id)
 
-    # find specific LogicItem whit start parameter and end parameter
     def find_logic_start_end(self, start: str, end: str) -> cmn.LogicItem:
+        """find specific LogicItem whit start parameter and end parameter."""
 
         for logic_item in self.logic:
             if start == logic_item.start and end == logic_item.end:
