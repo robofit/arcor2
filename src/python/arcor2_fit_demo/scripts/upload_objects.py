@@ -5,6 +5,7 @@ from arcor2.object_types.upload import Urdf, upload_def, upload_whatever
 from arcor2_fit_demo import get_data
 from arcor2_fit_demo.object_types.abstract_dobot import AbstractDobot
 from arcor2_fit_demo.object_types.conveyor_belt import ConveyorBelt
+from arcor2_fit_demo.object_types.cube_tracker import CubeTracker
 from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 from arcor2_fit_demo.object_types.fit_common_mixin import FitCommonMixin
@@ -25,6 +26,7 @@ def main() -> None:
         Mesh(ConveyorBelt.__name__, ConveyorBelt.mesh_filename),
         file_to_upload=get_data(ConveyorBelt.mesh_filename),
     )
+    upload_whatever(CubeTracker)
     upload_whatever(FitCommonMixin)
 
 

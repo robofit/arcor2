@@ -1,0 +1,9 @@
+python_tests(
+    runtime_package_dependencies=[
+        "src/python/arcor2_cube_detector/scripts:cube_detector",
+    ],
+    dependencies=[
+        "src/python/arcor2_cube_detector/data/dataset:dataset",
+        "src/python/arcor2_cube_detector/data/tests:tests",
+    ],
+)

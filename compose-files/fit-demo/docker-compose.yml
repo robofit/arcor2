@@ -15,6 +15,10 @@ services:
         condition: service_started
       fit-demo-kinect:
         condition: service_healthy
+      fit-demo-cube-detector:
+        condition: service_healthy
+      fit-demo-cube-tracker:
+        condition: service_healthy
       fit-demo-scene:
         condition: service_healthy
       fit-demo-calibration:
@@ -28,6 +32,8 @@ services:
       - "6799:6799"
     networks:
           - fit-demo-kinect-network
+          - fit-demo-cube-detector-network
+          - fit-demo-cube-tracker-network
           - fit-demo-scene-network
           - fit-demo-project-network
           - fit-demo-asset-network
@@ -42,6 +48,8 @@ services:
       - ARCOR2_BUILD_URL=http://fit-demo-build:5008
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
       - ARCOR2_KINECT_AZURE_URL=http://192.168.104.100:5017 # Run kinect using pants
+      - ARCOR2_CUBE_DETECTOR_URL=http://fit-demo-cube-detector:5020
+      - ARCOR2_CUBE_TRACKER_URL=http://fit-demo-cube-tracker:5021
 
   fit-demo-build:
     image: arcor2/arcor2_build:1.1.0
@@ -65,6 +73,7 @@ services:
       - fit-demo-scene-network
       - fit-demo-dobot-magician-network
       - fit-demo-dobot-m1-network
+      - fit-demo-cube-tracker-network
     environment:
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
       - ARCOR2_PROJECT_PATH=/root/project
@@ -80,6 +89,31 @@ services:
         - "5016:5016"
     environment:
       - ARCOR2_KINECT_AZURE_MOCK=true
+
+  fit-demo-cube-detector:
+    image: arcor2/arcor2_cube_detector:0.1.0
+    container_name: fit-demo-cube-detector
+    networks:
+      - fit-demo-kinect-network
+      - fit-demo-cube-detector-network
+    ports:
+        - "5020:5020"
+    environment:
+      - ARCOR2_KINECT_AZURE_URL=http://192.168.104.100:5017
+      - ARCOR2_CUBE_DETECTOR_URL=http://fit-demo-cube-detector:5020
+
+  fit-demo-cube-tracker:
+    image: arcor2/arcor2_cube_tracker:0.1.0
+    container_name: fit-demo-cube-tracker
+    networks:
+      - fit-demo-cube-tracker-network
+      - fit-demo-cube-detector-network
+      - fit-demo-execution-network
+    ports:
+        - "5021:5021"
+    environment:
+      - ARCOR2_CUBE_TRACKER_URL=http://fit-demo-cube-tracker:5021
+      - ARCOR2_CUBE_DETECTOR_URL=http://fit-demo-cube-detector:5020
 
   fit-demo-calibration:
     image: arcor2/arcor2_calibration:1.0.0
@@ -229,6 +263,8 @@ networks:
   fit-demo-project-network:
   fit-demo-asset-network:
   fit-demo-kinect-network:
+  fit-demo-cube-detector-network:
+  fit-demo-cube-tracker-network:
   fit-demo-dobot-magician-network:
   fit-demo-dobot-m1-network:
   fit-demo-calibration-network:
