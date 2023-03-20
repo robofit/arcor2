@@ -2,6 +2,7 @@ import time
 from queue import Empty, Queue
 from typing import TypeVar
 
+import pandas as pd
 import websocket
 from dataclasses_jsonschema import ValidationError
 
@@ -12,17 +13,17 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 from arcor2_arserver_data import rpc as srpc
 
-import pandas as pd
 
 class ARServerClientException(Arcor2Exception):
     pass
 
 
-
 RR = TypeVar("RR", bound=rpc.common.RPC.Response)
+
 
 class ARServer:
     """Really simple client for ARServer.
+
     Instead of having a separate method for each RPC, it has one method
     (call_rpc) which takes instance of Request and returns instance of
     Response.
@@ -34,7 +35,6 @@ class ARServer:
         timeout: float = 3.0,
         event_mapping: None | dict[str, type[events.Event]] = None,
     ):
-
         self._ws = websocket.WebSocket()
         self._logger = get_logger(__name__)
         self._event_queue: Queue[events.Event] = Queue()
@@ -66,14 +66,12 @@ class ARServer:
         self._supported_rpcs = system_info.supported_rpc_requests
 
     def call_rpc(self, req: rpc.common.RPC.Request, resp_type: type[RR]) -> RR:
-
         if req.request not in self._supported_rpcs:
             raise ARServerClientException(f"{req.request} RPC not supported by the server.")
 
         return self._call_rpc(req, resp_type)
 
     def _call_rpc(self, req: rpc.common.RPC.Request, resp_type: type[RR]) -> RR:
-
         self._ws.send(req.to_json())
 
         # wait for RPC response, put any incoming event into the queue
@@ -90,6 +88,10 @@ class ARServer:
             if "response" in recv_dict:
                 break
             elif "event" in recv_dict:
+                # self._event_queue.put(self.event_mapping[recv_dict["event"]].from_dict(recv_dict))
+                print(type(self.event_mapping))
+                print(self.event_mapping)
+                print(recv_dict["event"])
                 tempp = pd.DataFrame.from_dict(recv_dict)
                 self.event_mapping[recv_dict["event"]] = tempp
                 self._event_queue.put(self.event_mapping[recv_dict["event"]])
@@ -106,12 +108,12 @@ class ARServer:
 
     def get_event(self, drop_everything_until: None | type[events.Event] = None) -> events.Event:
         """Returns queued events (if any) or wait until some event arrives.
+
         :param drop_everything_until: Drop any event until there is one of required type.
         :return:
         """
 
         while True:
-
             try:
                 evt = self._event_queue.get_nowait()
             except Empty:

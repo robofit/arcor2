@@ -1,2 +1,0 @@
-pip install gTTS
-pip install playsound
