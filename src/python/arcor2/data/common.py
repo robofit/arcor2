@@ -36,7 +36,7 @@ class StrEnum(str, Enum):
 class IntEnum(int, Enum):
     @classmethod
     def set(cls) -> set[int]:
-        return set(map(lambda c: c.value, cls))  # type: ignore
+        return set(map(lambda c: c.value, cls))
 
 
 class FlowTypes(StrEnum):

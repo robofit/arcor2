@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.16.0.dev7"  # in order to get newer pex (https://github.com/pantsbuild/pex/pull/2002)
+pants_version = "2.16.0a0"  # in order to get newer pex (https://github.com/pantsbuild/pex/pull/2002)
 colors = true
 process_execution_local_parallelism = 4
 
@@ -65,12 +65,12 @@ lockfile = "3rdparty/flake8_lockfile.txt"
 
 
 [mypy]
-version = "mypy==1.0.1"
+version = "mypy==1.1.1"
 interpreter_constraints = ["==3.10.*"]
 extra_requirements.add = [
   "numpy"
 ]
-extra_type_stubs = ["types-PyYAML==6.0.12.8", "types-aiofiles==22.1.0.9", "types-orjson==3.6.2", "types-python-dateutil==2.8.19.10", "types-requests==2.28.11.15",  "types-setuptools==65.7.0.2"]
+extra_type_stubs = ["types-PyYAML==6.0.12.8", "types-aiofiles==23.1.0.0", "types-orjson==3.6.2", "types-python-dateutil==2.8.19.10", "types-requests==2.28.11.16",  "types-setuptools==65.7.0.2"]
 lockfile = "3rdparty/mypy_lockfile.txt"
 
 [pytest]
