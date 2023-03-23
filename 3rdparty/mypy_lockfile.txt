@@ -9,7 +9,7 @@
 //     "CPython==3.10.*"
 //   ],
 //   "generated_with_requirements": [
-//     "mypy==1.0.1",
+//     "mypy==1.1.1",
 //     "numpy"
 //   ],
 //   "manylinux": "manylinux2014",
@@ -32,39 +32,39 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "eda5c8b9949ed411ff752b9a01adda31afe7eae1e53e946dbdf9db23865e66c4",
-              "url": "https://files.pythonhosted.org/packages/d1/95/fa68816abbbc48f0ef213490cc4445e30365831576fb9427fd99fa771e6e/mypy-1.0.1-py3-none-any.whl"
+              "hash": "4e4e8b362cdf99ba00c2b218036002bdcdf1e0de085cdb296a49df03fb31dfc4",
+              "url": "https://files.pythonhosted.org/packages/a4/0b/3a30f50287e42a4230320fa2eac25eb3017d38a7c31f083d407ab627607c/mypy-1.1.1-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "71a808334d3f41ef011faa5a5cd8153606df5fc0b56de5b2e89566c8093a0c9a",
-              "url": "https://files.pythonhosted.org/packages/0b/57/a81b17ef5cdc120f58d85ae36c01c8e2ad8e0aa5e7bf8d9f05f328f88fe7/mypy-1.0.1-cp310-cp310-macosx_10_9_x86_64.whl"
+              "hash": "39c7119335be05630611ee798cc982623b9e8f0cff04a0b48dfc26100e0b97af",
+              "url": "https://files.pythonhosted.org/packages/44/9d/d23fa5d12bacbe7beea5fb6315b3325beabbe438e7e14d38c82b71609818/mypy-1.1.1-cp310-cp310-macosx_10_9_x86_64.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "28cea5a6392bb43d266782983b5a4216c25544cd7d80be681a155ddcdafd152d",
-              "url": "https://files.pythonhosted.org/packages/52/56/afddb0a1654cf7f192419fbd9e46e01bceb11b1a6778a9d4257387f71dd8/mypy-1.0.1.tar.gz"
+              "hash": "dbb19c9f662e41e474e0cff502b7064a7edc6764f5262b6cd91d698163196799",
+              "url": "https://files.pythonhosted.org/packages/61/99/4a844dcacbc4990a8312236bf74a55910ee9a05db69dee7d6fb7a7ffe6c2/mypy-1.1.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "27a0f74a298769d9fdc8498fcb4f2beb86f0564bcdb1a37b58cbbe78e55cf8c0",
-              "url": "https://files.pythonhosted.org/packages/88/aa/94e45af5f45418eb4038d0264ac085c7426ea80b329f93df5e5b7485a0b5/mypy-1.0.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+              "hash": "ae9ceae0f5b9059f33dbc62dea087e942c0ccab4b7a003719cb70f9b8abfa32f",
+              "url": "https://files.pythonhosted.org/packages/62/54/be80f8d01f5cf72f774a77f9f750527a6fa733f09f78b1da30e8fa3914e6/mypy-1.1.1.tar.gz"
             },
             {
               "algorithm": "sha256",
-              "hash": "920169f0184215eef19294fa86ea49ffd4635dedfdea2b57e45cb4ee85d5ccaf",
-              "url": "https://files.pythonhosted.org/packages/b1/06/e851fb58910b71cca74eec7fe41d6812a17893eaefd9c35ddcaadbccd177/mypy-1.0.1-cp310-cp310-macosx_11_0_arm64.whl"
+              "hash": "61bf08362e93b6b12fad3eab68c4ea903a077b87c90ac06c11e3d7a09b56b9c1",
+              "url": "https://files.pythonhosted.org/packages/8a/fd/b610256224e01da4c4f315d11f62d39d815e97439a58d49d60aa4f55a60b/mypy-1.1.1-cp310-cp310-macosx_11_0_arm64.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "65b122a993d9c81ea0bfde7689b3365318a88bde952e4dfa1b3a8b4ac05d168b",
-              "url": "https://files.pythonhosted.org/packages/ea/5b/39221b3e2eb104529867617a993a842e39aa240b43bc39f3a48302915f5f/mypy-1.0.1-cp310-cp310-musllinux_1_1_x86_64.whl"
+              "hash": "315ac73cc1cce4771c27d426b7ea558fb4e2836f89cb0296cbe056894e3a1f78",
+              "url": "https://files.pythonhosted.org/packages/c0/d6/17ba6f8749722b8f61c6ab680769658f0bc63c293556149e2bf400b1f1a2/mypy-1.1.1-cp310-cp310-musllinux_1_1_x86_64.whl"
             }
           ],
           "project_name": "mypy",
           "requires_dists": [
             "lxml; extra == \"reports\"",
-            "mypy-extensions>=0.4.3",
+            "mypy-extensions>=1.0.0",
             "pip; extra == \"install-types\"",
             "psutil>=4.0; extra == \"dmypy\"",
             "tomli>=1.1.0; python_version < \"3.11\"",
@@ -73,7 +73,7 @@
             "typing-extensions>=3.10"
           ],
           "requires_python": ">=3.7",
-          "version": "1.0.1"
+          "version": "1.1.1"
         },
         {
           "artifacts": [
@@ -167,11 +167,11 @@
     }
   ],
   "path_mappings": {},
-  "pex_version": "2.1.120",
+  "pex_version": "2.1.126",
   "pip_version": "20.3.4-patched",
   "prefer_older_binary": false,
   "requirements": [
-    "mypy==1.0.1",
+    "mypy==1.1.1",
     "numpy"
   ],
   "requires_python": [
