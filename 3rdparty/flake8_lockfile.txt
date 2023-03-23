@@ -141,13 +141,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "f136bd0ca2684f101168bba2310dec541e11aa6b252260c17dcf58d18069a740",
-              "url": "https://files.pythonhosted.org/packages/12/19/6e85e230588b98c37a9cb5c2248e6621d05650e7ba02fc9564fa23e996af/flake8_bugbear-23.2.13-py3-none-any.whl"
+              "hash": "beb5c7efcd7ccc2039ef66a77bb8db925e7be3531ff1cb4d0b7030d0e2113d72",
+              "url": "https://files.pythonhosted.org/packages/04/fe/396210faefa7cfef7cac25cba7f4aa9c6b5f51fb9c098bcfb8a263154a34/flake8_bugbear-23.3.12-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "39259814a83f33c8409417ee12dd4050c9c0bb4c8707c12fc18ae62b2f3ddee1",
-              "url": "https://files.pythonhosted.org/packages/03/7e/27fae4d9e4c3c336f3cbae0ee64b55ba1f8101cc169b3c57c1be9fcab93e/flake8-bugbear-23.2.13.tar.gz"
+              "hash": "e3e7f74c8a49ad3794a7183353026dabd68c74030d5f46571f84c1fb0eb79363",
+              "url": "https://files.pythonhosted.org/packages/bb/02/16ef289b4790ff92dd368f3e58f8b9511731c53081521b6486684f87459a/flake8-bugbear-23.3.12.tar.gz"
             }
           ],
           "project_name": "flake8-bugbear",
@@ -162,7 +162,7 @@
             "tox; extra == \"dev\""
           ],
           "requires_python": ">=3.7",
-          "version": "23.2.13"
+          "version": "23.3.12"
         },
         {
           "artifacts": [
@@ -341,7 +341,7 @@
     }
   ],
   "path_mappings": {},
-  "pex_version": "2.1.120",
+  "pex_version": "2.1.126",
   "pip_version": "20.3.4-patched",
   "prefer_older_binary": false,
   "requirements": [
