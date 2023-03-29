@@ -27,18 +27,15 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(Image.Image) is ImagePlugin
 
 
 def test_plugin_from_instance() -> None:
-
     assert plugin_from_instance(Image.new("RGB", (320, 240))) is ImagePlugin
 
 
 @pytest.mark.xfail(reason="Image plugin is currently broken.")
 def test_get_value() -> None:
-
     img = Image.new("RGB", (320, 240))
 
     scene = Scene("s1", "s1")

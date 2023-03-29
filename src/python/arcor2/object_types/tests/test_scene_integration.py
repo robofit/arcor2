@@ -12,7 +12,6 @@ from arcor2.object_types.abstract import CollisionObject
 
 
 def finish_processes(processes) -> None:
-
     for proc in processes:
         proc.terminate()
         proc.wait()
@@ -21,7 +20,6 @@ def finish_processes(processes) -> None:
 
 @pytest.fixture()
 def start_processes() -> Iterator[None]:
-
     my_env = os.environ.copy()
 
     scene_port = find_free_port()
@@ -48,7 +46,6 @@ def start_processes() -> Iterator[None]:
 
 
 def test_generic_with_pose(start_processes: None) -> None:
-
     obj = CollisionObject("id", "name", Pose(), Box("boxId", 0.1, 0.1, 0.1))
     assert obj.id in scene_service.collision_ids()
 

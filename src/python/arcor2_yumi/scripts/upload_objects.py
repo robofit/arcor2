@@ -4,7 +4,6 @@ from arcor2_yumi.object_types.yumi import YuMi
 
 
 def main() -> None:
-
     upload_def(YuMi, urdf=Urdf(get_data("yumi"), YuMi.urdf_package_name))
 
 

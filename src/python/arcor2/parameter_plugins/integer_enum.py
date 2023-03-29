@@ -19,12 +19,10 @@ from arcor2.parameter_plugins.base import ImportTuple, ParameterPlugin, Paramete
 
 @dataclass
 class IntegerEnumExtra(JsonSchemaMixin):
-
     allowed_values: Optional[set[Any]] = None
 
 
 class IntegerEnumPlugin(ParameterPlugin):
-
     EXACT_TYPE = False
     COUNTABLE = True
 
@@ -50,7 +48,6 @@ class IntegerEnumPlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Enum:
-
         action = project.action(action_id)
         param = action.parameter(parameter_id)
         obj_id, action_type = action.parse_type()
@@ -82,7 +79,6 @@ class IntegerEnumPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Attribute:
-
         val = cls.parameter_value(type_defs, scene, project, action_id, parameter_id)
 
         return Attribute(value=Name(id=val.__class__.__name__, ctx=Load()), attr=val.name, ctx=Load())
@@ -91,7 +87,6 @@ class IntegerEnumPlugin(ParameterPlugin):
     def need_to_be_imported(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> None | list[ImportTuple]:
-
         enum_cls = cls.parameter_value(type_defs, scene, project, action_id, parameter_id).__class__
         # TODO does this work as expected in all cases?
         module = inspect.getmodule(enum_cls)

@@ -17,7 +17,6 @@ def check_for_loops(parent: LogicContainer, first_action_id: None | str = None) 
     """
 
     def _check_for_loops(action: Action, visited_actions: set[str]) -> None:
-
         if action.id in visited_actions:
             raise Arcor2Exception("Loop detected!")
 
@@ -26,7 +25,6 @@ def check_for_loops(parent: LogicContainer, first_action_id: None | str = None) 
         _, outputs = parent.action_io(action.id)
 
         for output in outputs:
-
             if output.end == output.END:
                 continue
 
@@ -34,7 +32,6 @@ def check_for_loops(parent: LogicContainer, first_action_id: None | str = None) 
             _check_for_loops(parent.action(output.end), visited_actions.copy())
 
     if first_action_id is None:
-
         try:
             first_action_id = parent.first_action_id()
         except CachedProjectException as e:

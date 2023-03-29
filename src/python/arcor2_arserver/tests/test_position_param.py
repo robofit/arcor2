@@ -22,7 +22,6 @@ from arcor2_execution_data import rpc as erpc
 
 
 def test_position_param(start_processes: None, ars: ARServer) -> None:
-
     upload_def(PositionParam)
 
     event(ars, events.c.ShowMainScreen)

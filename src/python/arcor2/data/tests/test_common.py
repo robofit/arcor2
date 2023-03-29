@@ -5,7 +5,6 @@ from arcor2.exceptions import Arcor2Exception
 
 
 def test_valid_orientation() -> None:
-
     o1 = Orientation(0, 0, 0, 1)
     o2 = Orientation()
     o2.set_from_quaternion(o1.as_quaternion())
@@ -13,7 +12,6 @@ def test_valid_orientation() -> None:
 
 
 def test_invalid_orientation() -> None:
-
     with pytest.raises(Arcor2Exception):
         Orientation(0, 0, 0, 0)
 
@@ -25,7 +23,6 @@ def test_invalid_orientation() -> None:
 
 
 def test_id_stuff() -> None:
-
     no = NamedOrientation("name", Orientation())
     assert no.id
 
@@ -36,7 +33,6 @@ def test_id_stuff() -> None:
 
 
 def test_pose_inv() -> None:
-
     p = Pose(Position(1, 1, 1), Orientation(0.707, 0, 0, 0.707))
     pi = p.inversed()
     assert pi == Pose(Position(-1, -1, 1), Orientation(-0.707, 0, 0, 0.707))

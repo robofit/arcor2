@@ -857,7 +857,6 @@ def delete_model(id: str) -> RespT:
 
 
 def main() -> None:
-
     parser = argparse.ArgumentParser(description=PROJECT_SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
     args = parser.parse_args()

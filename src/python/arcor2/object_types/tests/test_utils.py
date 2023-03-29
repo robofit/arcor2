@@ -7,7 +7,6 @@ from arcor2.object_types.utils import settings_from_params
 
 
 class MyEnum(StrEnum):
-
     OPT1: str = "opt1"
     OPT2: str = "opt2"
     OPT3: str = "opt3"
@@ -15,13 +14,11 @@ class MyEnum(StrEnum):
 
 @dataclass
 class NestedSettings(Settings):
-
     boolean: bool
 
 
 @dataclass
 class TestObjectSettings(Settings):
-
     string: str
     integer: int
     boolean: bool
@@ -36,7 +33,6 @@ class TestObjectWithSettings(Generic):
 
 
 def test_settings_from_params() -> None:
-
     settings = settings_from_params(
         TestObjectWithSettings,
         [

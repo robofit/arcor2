@@ -8,7 +8,6 @@ from arcor2.parameter_plugins.list import ListParameterPlugin, get_type_name
 
 
 class BooleanPlugin(ParameterPlugin):
-
     COUNTABLE = True
 
     @classmethod

@@ -19,7 +19,6 @@ from arcor2.exceptions import Arcor2Exception
 
 
 def uid(prefix: str) -> str:
-
     if not (prefix and prefix[0].isalpha() and prefix[-1] != "_"):
         raise Arcor2Exception(f"{prefix} is a invalid uid prefix.")
 
@@ -37,11 +36,10 @@ class StrEnum(str, Enum):
 class IntEnum(int, Enum):
     @classmethod
     def set(cls) -> set[int]:
-        return set(map(lambda c: c.value, cls))  # type: ignore
+        return set(map(lambda c: c.value, cls))
 
 
 class FlowTypes(StrEnum):
-
     DEFAULT: str = "default"
 
 
@@ -52,7 +50,6 @@ class LinkToActionOutput(NamedTuple):
 
 
 def parse_link(val: str) -> LinkToActionOutput:
-
     try:
         action_id, flow_name, output_idx_str = val.split("/")
         return LinkToActionOutput(action_id, FlowTypes(flow_name), int(output_idx_str))
@@ -62,7 +59,6 @@ def parse_link(val: str) -> LinkToActionOutput:
 
 class DataClassEncoder(JSONEncoder):
     def default(self, o: Any) -> Any:
-
         if isinstance(o, JsonSchemaMixin):
             return o.to_dict()
 
@@ -72,13 +68,11 @@ class DataClassEncoder(JSONEncoder):
 @dataclass
 class IterableIndexable(JsonSchemaMixin):
     def __getitem__(self, item: int) -> float:
-
         attr = getattr(self, tuple(self.__dict__.keys())[item])
         assert isinstance(attr, (float, int))
         return attr
 
     def __iter__(self) -> Iterator[float]:
-
         # filtering items starting with _ is necessary to allow runtime monkey-patching
         # ...otherwise those patched attributes will appear in e.g. list(Position(1,2,3))
         yield from [v for k, v in self.__dict__.items() if not k.startswith("_")]
@@ -86,13 +80,11 @@ class IterableIndexable(JsonSchemaMixin):
 
 @dataclass
 class Position(IterableIndexable):
-
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
 
     def rotated(self, ori: Orientation, inverse: bool = False) -> Position:
-
         q = ori.as_quaternion()
 
         if inverse:
@@ -103,21 +95,18 @@ class Position(IterableIndexable):
         return Position(rotated_vector[0], rotated_vector[1], rotated_vector[2])
 
     def __eq__(self, other: object) -> bool:
-
         if not isinstance(other, Position):
             return False
 
         return np.allclose(list(self), list(other), rtol=1.0e-6)
 
     def __add__(self, other: object) -> Position:
-
         if not isinstance(other, Position):
             raise Arcor2Exception("Not a position.")
 
         return Position(self.x + other.x, self.y + other.y, self.z + other.z)
 
     def __iadd__(self, other: object) -> Position:
-
         if not isinstance(other, Position):
             raise ValueError
 
@@ -127,21 +116,18 @@ class Position(IterableIndexable):
         return self
 
     def __sub__(self, other) -> Position:
-
         if not isinstance(other, Position):
             raise Arcor2Exception("Not a position.")
 
         return Position(self.x - other.x, self.y - other.y, self.z - other.z)
 
     def __mul__(self, other: object) -> Position:
-
         if not isinstance(other, (float, int)):
             raise ValueError
 
         return Position(self.x * other, self.y * other, self.z * other)
 
     def __imul__(self, other: object) -> Position:
-
         if not isinstance(other, (float, int)):
             raise ValueError
 
@@ -158,14 +144,12 @@ class Position(IterableIndexable):
         validate_enums: bool = True,
         schema_type: SchemaType = DEFAULT_SCHEMA_TYPE,
     ) -> JsonDict:
-
         # orjson does not like numpy.float64
         return {"x": float(self.x), "y": float(self.y), "z": float(self.z)}
 
 
 @dataclass
 class Orientation(IterableIndexable):
-
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -181,7 +165,6 @@ class Orientation(IterableIndexable):
 
     @staticmethod
     def _normalized(q: quaternion.quaternion) -> quaternion.quaternion:
-
         nq = q.normalized()
 
         if nq.isnan():
@@ -199,7 +182,6 @@ class Orientation(IterableIndexable):
         return self._normalized(quaternion.quaternion(self.w, self.x, self.y, self.z))
 
     def set_from_quaternion(self, q: quaternion.quaternion) -> None:
-
         nq = self._normalized(q)
 
         self.x = nq.x
@@ -219,21 +201,18 @@ class Orientation(IterableIndexable):
         return arr
 
     def __eq__(self, other: object) -> bool:
-
         if not isinstance(other, Orientation):
             return False
 
         return cast(bool, quaternion.isclose(self.as_quaternion(), other.as_quaternion(), rtol=1.0e-6)[0])
 
     def __mul__(self, other: object) -> Orientation:
-
         if not isinstance(other, Orientation):
             raise ValueError
 
         return self.from_quaternion(self.as_quaternion() * other.as_quaternion())
 
     def __imul__(self, other: object) -> Orientation:
-
         if not isinstance(other, Orientation):
             raise ValueError
 
@@ -241,7 +220,6 @@ class Orientation(IterableIndexable):
         return self
 
     def __post_init__(self):
-
         nq = self.as_quaternion()  # in order to get normalized quaternion
 
         self.x = nq.x
@@ -256,7 +234,6 @@ class Orientation(IterableIndexable):
         validate_enums: bool = True,
         schema_type: SchemaType = DEFAULT_SCHEMA_TYPE,
     ) -> JsonDict:
-
         # orjson does not like numpy.float64
         return {"x": float(self.x), "y": float(self.y), "z": float(self.z), "w": float(self.w)}
 
@@ -286,7 +263,6 @@ class ModelMixin(abc.ABC):
 
 @dataclass
 class NamedOrientation(JsonSchemaMixin, ModelMixin):
-
     name: str
     orientation: Orientation
     id: str = ""
@@ -303,12 +279,10 @@ class NamedOrientation(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class Pose(JsonSchemaMixin):
-
     position: Position = field(default_factory=Position)
     orientation: Orientation = field(default_factory=Orientation)
 
     def as_tr_matrix(self) -> np.ndarray:
-
         arr = np.empty((4, 4))
         arr[:3, :3] = quaternion.as_rotation_matrix(self.orientation.as_quaternion())
         arr[:3, 3] = list(self.position)
@@ -317,7 +291,6 @@ class Pose(JsonSchemaMixin):
 
     @staticmethod
     def from_tr_matrix(matrix: np.ndarray) -> Pose:
-
         tvec = matrix[:3, 3]
         return Pose(
             Position(tvec[0], tvec[1], tvec[2]),
@@ -325,14 +298,12 @@ class Pose(JsonSchemaMixin):
         )
 
     def inversed(self) -> Pose:
-
         inv = self.orientation.inversed()
         return Pose((self.position * -1).rotated(inv), inv)
 
 
 @dataclass
 class ActionMetadata(JsonSchemaMixin):
-
     composite: bool = field(metadata=dict(description="Should be set for nested actions."), default=False)
     hidden: bool = field(metadata=dict(description="When set, action will be hidden in UIs."), default=False)
     cancellable: bool = field(
@@ -342,14 +313,12 @@ class ActionMetadata(JsonSchemaMixin):
 
 @dataclass
 class Joint(JsonSchemaMixin):
-
     name: str
     value: float
 
 
 @dataclass
 class ProjectRobotJoints(JsonSchemaMixin, ModelMixin):
-
     name: str
     robot_id: str
     joints: list[Joint]
@@ -370,7 +339,6 @@ class ProjectRobotJoints(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class Parameter(JsonSchemaMixin):
-
     name: str
     type: str
     value: str
@@ -378,7 +346,6 @@ class Parameter(JsonSchemaMixin):
 
 @dataclass
 class SceneObject(JsonSchemaMixin, ModelMixin):
-
     name: str
     type: str
     pose: Optional[Pose] = None
@@ -397,7 +364,6 @@ class SceneObject(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class BareScene(JsonSchemaMixin, ModelMixin):
-
     name: str
     description: str = field(default_factory=str)
     created: Optional[datetime] = None
@@ -419,7 +385,6 @@ class BareScene(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class Scene(BareScene):
-
     objects: list[SceneObject] = field(default_factory=list)
 
     @staticmethod
@@ -429,7 +394,6 @@ class Scene(BareScene):
 
 @dataclass
 class IdValue(JsonSchemaMixin):
-
     id: str
     value: str
 
@@ -441,12 +405,10 @@ class ActionParameterException(Arcor2Exception):
 @dataclass
 class ActionParameter(Parameter):
     class TypeEnum(StrEnum):
-
         PROJECT_PARAMETER: str = "project_parameter"
         LINK: str = "link"
 
     def str_from_value(self) -> str:
-
         val = json.loads(self.value)
 
         if not isinstance(val, str):
@@ -466,19 +428,16 @@ class ActionParameter(Parameter):
 
 @dataclass
 class Flow(JsonSchemaMixin):
-
     type: FlowTypes = FlowTypes.DEFAULT
     outputs: list[str] = field(default_factory=list)  # can't be set as it is unordered
 
     def __post_init__(self) -> None:
-
         if len(self.outputs) > len(set(self.outputs)):
             raise Arcor2Exception("Outputs have to be unique.")
 
 
 @dataclass
 class BareAction(JsonSchemaMixin, ModelMixin):
-
     name: str
     type: str
     id: str = ""
@@ -498,7 +457,6 @@ class BareAction(JsonSchemaMixin, ModelMixin):
 @dataclass
 class Action(BareAction):
     class ParsedType(NamedTuple):
-
         obj_id: str
         action_type: str
 
@@ -506,7 +464,6 @@ class Action(BareAction):
     flows: list[Flow] = field(default_factory=list)
 
     def parse_type(self) -> ParsedType:
-
         try:
             obj_id_str, action = self.type.split("/")
         except ValueError:
@@ -514,7 +471,6 @@ class Action(BareAction):
         return self.ParsedType(obj_id_str, action)
 
     def parameter(self, parameter_id: str) -> ActionParameter:
-
         for param in self.parameters:
             if parameter_id == param.name:
                 return param
@@ -526,7 +482,6 @@ class Action(BareAction):
         return BareAction(self.name, self.type, id=self.id)
 
     def flow(self, flow_type: FlowTypes = FlowTypes.DEFAULT) -> Flow:
-
         for flow in self.flows:
             if flow.type == flow_type:
                 return flow
@@ -535,7 +490,6 @@ class Action(BareAction):
 
 @dataclass
 class BareActionPoint(JsonSchemaMixin, ModelMixin):
-
     name: str
     position: Position
     parent: Optional[str] = None
@@ -557,7 +511,6 @@ class BareActionPoint(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class ActionPoint(BareActionPoint):
-
     orientations: list[NamedOrientation] = field(default_factory=list)
     robot_joints: list[ProjectRobotJoints] = field(default_factory=list)
     actions: list[Action] = field(default_factory=list)
@@ -569,7 +522,6 @@ class ActionPoint(BareActionPoint):
 
 @dataclass
 class ProjectLogicIf(JsonSchemaMixin):
-
     what: str
     value: str
 
@@ -580,7 +532,6 @@ class ProjectLogicIf(JsonSchemaMixin):
 @dataclass
 class LogicItem(JsonSchemaMixin, ModelMixin):
     class ParsedStart(NamedTuple):
-
         start_action_id: str
         start_flow: str
 
@@ -594,7 +545,6 @@ class LogicItem(JsonSchemaMixin, ModelMixin):
     id: str = ""
 
     def parse_start(self) -> ParsedStart:
-
         try:
             start_action_id, start_flow = self.start.split("/")
         except ValueError:
@@ -622,7 +572,6 @@ class Range(JsonSchemaMixin):
 
 @dataclass
 class ProjectParameter(Parameter, ModelMixin):
-
     range: Optional[Range] = None  # TODO use it in parameter plugins?
     display_name: Optional[str] = None
     description: Optional[str] = None
@@ -635,14 +584,12 @@ class ProjectParameter(Parameter, ModelMixin):
 
 @dataclass
 class FunctionReturns(JsonSchemaMixin):
-
     type: str
     link: str
 
 
 @dataclass
 class ProjectFunction(JsonSchemaMixin, ModelMixin):
-
     name: str
     actions: list[Action] = field(default_factory=list)
     logic: list[LogicItem] = field(default_factory=list)
@@ -654,7 +601,6 @@ class ProjectFunction(JsonSchemaMixin, ModelMixin):
         return {act.id for act in self.actions}
 
     def action(self, action_id: str) -> Action:
-
         for ac in self.actions:
             if ac.id == action_id:
                 return ac
@@ -673,14 +619,12 @@ class ProjectFunction(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class SceneObjectOverride(JsonSchemaMixin):
-
     id: str  # object id
     parameters: list[Parameter]
 
 
 @dataclass
 class BareProject(JsonSchemaMixin, ModelMixin):
-
     name: str
     scene_id: str
     description: str = field(default_factory=str)
@@ -704,7 +648,6 @@ class BareProject(JsonSchemaMixin, ModelMixin):
 
 @dataclass
 class Project(BareProject):
-
     action_points: list[ActionPoint] = field(default_factory=list)
     parameters: list[ProjectParameter] = field(default_factory=list)
     functions: list[ProjectFunction] = field(default_factory=list)
@@ -728,7 +671,6 @@ class Project(BareProject):
 
 @dataclass
 class ProjectSources(JsonSchemaMixin):
-
     id: str  # project_id
     script: str
 
@@ -744,7 +686,6 @@ class IdDesc(JsonSchemaMixin):
 
 @dataclass
 class BroadcastInfo(JsonSchemaMixin):
-
     host: str
     port: int
 

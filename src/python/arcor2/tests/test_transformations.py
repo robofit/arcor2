@@ -26,7 +26,6 @@ def random_position() -> Position:
 
 
 def random_orientation() -> Orientation:
-
     r1, r2, r3 = np.random.random(3)
 
     q1 = sqrt(1.0 - r1) * (sin(2 * pi * r2))
@@ -38,42 +37,36 @@ def random_orientation() -> Orientation:
 
 
 def test_make_pose_rel() -> None:
-
     parent = Pose(Position(1, 2, 3), Orientation(0, 0, 1, 0))
     child_to_be = copy.deepcopy(parent)
     assert make_pose_rel(parent, child_to_be) == Pose()
 
 
 def test_make_pose_abs() -> None:
-
     parent = Pose(Position(1, 2, 3), Orientation(0, 0, 1, 0))
     child = Pose()
     assert make_pose_abs(parent, child) == parent
 
 
 def test_make_pose_abs_2() -> None:
-
     parent = Pose(Position(-1, 2, -3), Orientation(0, 0.707, -0.707, 0))
     child = Pose()
     assert make_pose_abs(parent, child) == parent
 
 
 def test_make_pose_abs_3() -> None:
-
     parent = Pose(Position(1, 1, 0), Orientation(0, 0, 0.707, 0.707))
     child = Pose(Position(-1, 1, 0), Orientation())
     assert make_pose_abs(parent, child) == Pose(Position(0, 0, 0), Orientation(0, 0, 0.707, 0.707))
 
 
 def test_make_pose_abs_4() -> None:
-
     parent = Pose()
     child = Pose()
     assert make_pose_abs(parent, child) == parent
 
 
 def test_make_pose_rel_and_abs_again() -> None:
-
     parent = Pose(Position(), Orientation(0, 0, 1, 0))
     child_to_be = Pose(Position(1, 0, 0))
     child = make_pose_rel(parent, child_to_be)
@@ -82,7 +75,6 @@ def test_make_pose_rel_and_abs_again() -> None:
 
 
 def test_make_pose_rel_and_abs_again_2() -> None:
-
     parent = Pose(Position(-1, 1, -1), Orientation(0, -0.707, 0.707, 0))
     child_to_be = Pose(Position(10, -10, 3))
     child = make_pose_rel(parent, child_to_be)
@@ -91,7 +83,6 @@ def test_make_pose_rel_and_abs_again_2() -> None:
 
 @pytest.mark.repeat(100)
 def test_make_pose_rel_and_abs_again_random() -> None:
-
     # hierarchy of poses
     p1 = random_pose()
     p2 = random_pose()
@@ -128,7 +119,6 @@ def check_ap(ap: ActionPoint) -> None:
 
 
 def test_make_relative_ap_global_and_relative_again() -> None:
-
     scene = Scene("s1")
     so1 = SceneObject("so1", "WhatEver", Pose(Position(3, 0, 0), Orientation()))
     scene.objects.append(so1)
@@ -173,7 +163,6 @@ def test_make_relative_ap_global_and_relative_again() -> None:
 
 
 def test_obj_relative_ap_global() -> None:
-
     scene = Scene("s1")
     # object rotated 90° clock-wise
     so1 = SceneObject("so1", "WhatEver", Pose(Position(1, 0, 0), Orientation(0, 0, -0.707, 0.707)))

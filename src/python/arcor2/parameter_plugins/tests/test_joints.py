@@ -36,23 +36,19 @@ def test_abstract() -> None:
 
 
 def test_plugin_from_type() -> None:
-
     assert plugin_from_type(ProjectRobotJoints) is JointsPlugin
 
 
 def test_plugin_from_instance() -> None:
-
     assert plugin_from_instance(ProjectRobotJoints("name", "robot_id", [Joint("name", 0.333)])) is JointsPlugin
 
 
 def test_value_to_json() -> None:
-
     prj = ProjectRobotJoints("name", "robot_id", [Joint("name", 0.333)])
     assert JointsPlugin.value_to_json(prj) == prj.to_json()
 
 
 def test_get_value() -> None:
-
     scene = Scene("s1", "s1")
     obj = SceneObject("test_name", TestObject.__name__)
     prj = ProjectRobotJoints("name", obj.id, [Joint("name", 0.333)])

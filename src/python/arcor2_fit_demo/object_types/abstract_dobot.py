@@ -12,18 +12,15 @@ class DobotException(RobotException):
 
 
 class MoveType(StrEnum):
-
     JUMP: str = "JUMP"
     JOINTS: str = "JOINTS"
     LINEAR: str = "LINEAR"
 
 
 class AbstractDobot(FitCommonMixin, Robot):
-
     robot_type = RobotType.SCARA
 
     def _start(self) -> None:
-
         if self._started():
             self._stop()
 

@@ -27,7 +27,6 @@ mesh_filename = "test_type.dae"
     ],
 )
 def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectModel) -> None:
-
     event(ars, events.c.ShowMainScreen)
 
     type_name = "TestType"
@@ -57,7 +56,6 @@ def test_valid_object_types(start_processes: None, ars: ARServer, model: ObjectM
 
 
 def test_update_object_model(start_processes: None, ars: ARServer) -> None:
-
     upload_def(BoxType, Box(BoxType.__name__, 0.1, 0.1, 0.1))
     upload_def(DummyMultiArmRobot)
 

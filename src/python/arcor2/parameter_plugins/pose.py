@@ -26,7 +26,6 @@ class PosePlugin(ParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
-
         try:
             ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
         except Arcor2Exception as e:
@@ -37,7 +36,6 @@ class PosePlugin(ParameterPlugin):
     def parameter_execution_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Pose:
-
         # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
         return copy.deepcopy(
             tr.abs_pose_from_ap_orientation(scene, project, cls.orientation_id(project, action_id, parameter_id))
@@ -49,14 +47,12 @@ class PosePlugin(ParameterPlugin):
 
     @classmethod
     def uses_orientation(cls, project: CProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
-
         return orientation_id == cls.orientation_id(project, action_id, parameter_id)
 
     @classmethod
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Attribute:
-
         ori_ap, ori = project.bare_ap_and_orientation(cls.orientation_id(project, action_id, parameter_id))
 
         return Attribute(
@@ -85,7 +81,6 @@ class PoseListPlugin(ListParameterPlugin):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> list[Pose]:
-
         ret: list[Pose] = []
 
         ap, action = project.action_point_and_action(action_id)
@@ -100,7 +95,6 @@ class PoseListPlugin(ListParameterPlugin):
     def parameter_execution_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> list[Pose]:
-
         ap, action = project.action_point_and_action(action_id)
 
         if not ap.parent:
@@ -120,7 +114,6 @@ class PoseListPlugin(ListParameterPlugin):
 
     @classmethod
     def uses_orientation(cls, project: CProject, action_id: str, parameter_id: str, orientation_id: str) -> bool:
-
         action = project.action(action_id)
         param = action.parameter(parameter_id)
 

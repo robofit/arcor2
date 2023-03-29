@@ -8,7 +8,6 @@ from arcor2.object_types.upload import upload_def
 
 
 def main() -> None:
-
     upload_def(FlowActions)
     upload_def(LogicActions)
     upload_def(TimeActions)

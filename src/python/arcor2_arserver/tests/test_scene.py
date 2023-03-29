@@ -12,7 +12,6 @@ from arcor2_arserver_data.client import ARServer, get_id
 
 
 def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
-
     test = "Test"
 
     # initial event
@@ -88,7 +87,6 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
     assert show_main_screen_event_3.data.highlight == scene_id
 
     with ARServer(ars_connection_str(), timeout=10, event_mapping=event_mapping) as ars_2:
-
         smse = event(ars_2, events.c.ShowMainScreen)
         assert smse.data
         assert smse.data.what == events.c.ShowMainScreen.Data.WhatEnum.ScenesList
@@ -107,7 +105,6 @@ def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:
 
 
 def test_update_object_pose(start_processes: None, ars: ARServer) -> None:
-
     upload_def(Box, BoxModel("Box", 0.1, 0.1, 0.1))
     upload_def(DummyMultiArmRobot)
 

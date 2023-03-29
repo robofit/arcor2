@@ -21,7 +21,6 @@ from arcor2_execution_data import rpc as erpc
 
 
 def test_linked_pose(start_processes: None, ars: ARServer) -> None:
-
     upload_def(ObjectReturningPose)
 
     event(ars, events.c.ShowMainScreen)

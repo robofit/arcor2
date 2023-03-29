@@ -15,19 +15,16 @@ from arcor2.parameter_plugins import ParameterPluginException, TypesDict
 
 
 class ImportTuple(NamedTuple):
-
     module_name: str
     class_name: str
 
 
 class ParameterPlugin(metaclass=abc.ABCMeta):
-
     EXACT_TYPE = True
     COUNTABLE = False
 
     @classmethod
     def _id_from_value(cls, value: str) -> str:
-
         arbitrary_id = cls._value_from_json(value)
 
         if not isinstance(arbitrary_id, str):
@@ -48,7 +45,6 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
 
     @classmethod
     def meta(cls, param_meta: ParameterMeta, action_method: Callable, action_node: ast.FunctionDef) -> None:
-
         assert param_meta.type == cls.type_name()
         assert param_meta.name
 
@@ -57,7 +53,6 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     def parameter_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
-
         action = project.action(action_id)
         param_value = action.parameter(parameter_id).value
 
@@ -69,14 +64,12 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
             ) from e
 
         if not isinstance(val, cls.type()):
-
             raise ParameterPluginException(f"Parameter {action.name}/{parameter_id} has invalid type: '{type(val)}'.")
 
         return val
 
     @classmethod
     def _value_from_json(cls, value: str) -> Any:
-
         try:
             return json.loads(value)
         except json.JsonException as e:
@@ -86,7 +79,6 @@ class ParameterPlugin(metaclass=abc.ABCMeta):
     def parameter_execution_value(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Any:
-
         # return copy in order to avoid unwanted changes in the original value if an action modifies the parameter
         return copy.deepcopy(cls.parameter_value(type_defs, scene, project, action_id, parameter_id))
 

@@ -11,7 +11,6 @@ _type_to_plugin: TypeToPluginDict = {}
 
 
 def load_plugins() -> None:
-
     if _type_name_to_plugin:
         return
 
@@ -60,18 +59,15 @@ def non_exact_types() -> TypeToPluginDict:
 
 
 def known_parameter_types() -> set[str]:
-
     return set(_type_name_to_plugin.keys())
 
 
 def plugin_from_instance(inst: Any) -> type[ParameterPlugin]:
-
     # TODO support for lists (e.g. list[Pose])
     return plugin_from_type(type(inst))
 
 
 def plugin_from_type_name(param_type_name: str) -> type[ParameterPlugin]:
-
     try:
         return _type_name_to_plugin[param_type_name]
     except KeyError:
@@ -79,11 +75,9 @@ def plugin_from_type_name(param_type_name: str) -> type[ParameterPlugin]:
 
 
 def plugin_from_type(param_type: type[Any]) -> type[ParameterPlugin]:
-
     try:
         return _type_to_plugin[param_type]
     except KeyError:
-
         try:
             type_name = param_type.__name__
         except AttributeError:

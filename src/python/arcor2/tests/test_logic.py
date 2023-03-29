@@ -26,7 +26,6 @@ ac4 = Action("ac4", f"{obj.id}/test", flows=[Flow()])
 
 @pytest.fixture()
 def scene() -> Scene:
-
     scene = Scene("s1", "s1")
     scene.objects.append(obj)
     return scene
@@ -34,7 +33,6 @@ def scene() -> Scene:
 
 @pytest.fixture()
 def project() -> UpdateableCachedProject:
-
     project = Project("p1", "s1")
     ap1 = ActionPoint("ap1", Position())
     project.action_points.append(ap1)
@@ -47,7 +45,6 @@ def project() -> UpdateableCachedProject:
 
 
 def test_project_wo_loop(scene: Scene, project: UpdateableCachedProject) -> None:
-
     project.upsert_logic_item(LogicItem(LogicItem.START, ac1.id))
     project.upsert_logic_item(LogicItem(ac1.id, ac2.id))
     project.upsert_logic_item(LogicItem(ac2.id, ac3.id))
@@ -58,7 +55,6 @@ def test_project_wo_loop(scene: Scene, project: UpdateableCachedProject) -> None
 
 
 def test_project_wo_loop_branched_logic(scene: Scene, project: UpdateableCachedProject) -> None:
-
     project.upsert_logic_item(LogicItem(LogicItem.START, ac1.id))
     project.upsert_logic_item(LogicItem(ac1.id, ac2.id, ProjectLogicIf(f"{ac1.id}/default/0", json.dumps(True))))
     project.upsert_logic_item(LogicItem(ac1.id, ac3.id, ProjectLogicIf(f"{ac1.id}/default/0", json.dumps(False))))
@@ -70,7 +66,6 @@ def test_project_wo_loop_branched_logic(scene: Scene, project: UpdateableCachedP
 
 
 def test_project_with_loop(scene: Scene, project: UpdateableCachedProject) -> None:
-
     project.upsert_logic_item(LogicItem(LogicItem.START, ac1.id))
     project.upsert_logic_item(LogicItem(ac1.id, ac2.id))
     project.upsert_logic_item(LogicItem(ac2.id, ac3.id))
@@ -82,13 +77,11 @@ def test_project_with_loop(scene: Scene, project: UpdateableCachedProject) -> No
 
 
 def test_project_unfinished_logic_wo_loop(scene: Scene, project: UpdateableCachedProject) -> None:
-
     project.upsert_logic_item(LogicItem(ac1.id, ac2.id))
     check_for_loops(project, ac1.id)
 
 
 def test_project_unfinished_logic_with_loop(scene: Scene, project: UpdateableCachedProject) -> None:
-
     project.upsert_logic_item(LogicItem(ac1.id, ac2.id))
     project.upsert_logic_item(LogicItem(ac2.id, ac1.id))
 

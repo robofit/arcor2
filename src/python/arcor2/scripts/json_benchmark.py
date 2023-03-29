@@ -5,7 +5,6 @@ import orjson
 
 
 def main() -> None:
-
     data = """{
   "actionPoints": [
     {

@@ -11,7 +11,6 @@ from arcor2.test_objects.tester import Tester
 
 
 def main() -> None:
-
     upload_def(PositionParam)
     upload_def(Box, BoxModel("Box", 0.1, 0.1, 0.1))
     upload_def(Box2, BoxModel("Box2", 0.2, 0.2, 0.2))

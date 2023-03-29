@@ -19,7 +19,6 @@ detector = aruco.ArucoDetector(aruco_dict, detector_params)
 def detect_corners(
     camera_matrix: list[list[float]], dist_matrix: list[float], image: Image.Image, refine: bool = False
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-
     camera_matrix_arr = np.array(camera_matrix)
     dist_matrix_arr = np.array(dist_matrix)
 
@@ -46,7 +45,6 @@ def detect_corners(
 def estimate_camera_pose(
     camera_matrix: list[list[float]], dist_matrix: list[float], image: Image.Image, marker_size: float
 ) -> dict[int, Pose]:
-
     camera_matrix_arr, dist_matrix_arr, gray, corners, ids = detect_corners(
         camera_matrix, dist_matrix, image, refine=True
     )
@@ -72,7 +70,6 @@ def estimate_camera_pose(
         cv2.imwrite("marker.jpg", backtorgb)
 
     for idx, mid in enumerate(ids):
-
         # convert pose of the marker wrt camera to pose of camera wrt marker
         # based on https://stackoverflow.com/a/51515560/3142796
         marker_rot_matrix, _ = cv2.Rodrigues(rvec[idx])

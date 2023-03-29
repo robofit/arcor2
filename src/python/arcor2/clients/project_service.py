@@ -99,7 +99,6 @@ def get_object_type_ids() -> list[IdDesc]:
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the object type.")
 def update_object_type(object_type: ObjectType) -> datetime:
-
     assert object_type.id
     return parse(rest.call(rest.Method.PUT, f"{URL}/object-types", body=object_type, return_type=str))
 
@@ -148,14 +147,12 @@ def get_project_sources(project_id: str) -> ProjectSources:
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the project.")
 def update_project(project: Project) -> datetime:
-
     assert project.id
     return parse(rest.call(rest.Method.PUT, f"{URL}/projects", return_type=str, body=project))
 
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the project sources.")
 def update_project_sources(project_sources: ProjectSources) -> None:
-
     assert project_sources.id
     rest.call(rest.Method.PUT, f"{URL}/projects/sources", body=project_sources)
 
@@ -169,7 +166,6 @@ def delete_project(project_id: str) -> None:
 def clone_project(
     project_id: str, new_project_name: str, new_description: None | str = None, new_project_id: None | str = None
 ) -> Project:
-
     if not new_project_id:
         new_project_id = Project.uid()
 
@@ -202,7 +198,6 @@ def get_scene(scene_id: str) -> Scene:
 
 @handle(ProjectServiceException, logger, message="Failed to add or update the scene.")
 def update_scene(scene: Scene) -> datetime:
-
     assert scene.id
     return parse(rest.call(rest.Method.PUT, f"{URL}/scenes", return_type=str, body=scene))
 

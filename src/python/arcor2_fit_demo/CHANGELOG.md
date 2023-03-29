@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.0.0] - 2023-03-07
+
+### Changed
+
+- Compatibility with `arcor2_kinect_azure:0.6.0`.
+- Default url for Kinect.
+
 ## [1.0.0] - 2023-02-14
 
 ### Changed

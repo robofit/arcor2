@@ -6,7 +6,6 @@ from arcor2.source.utils import get_name_attr
 
 
 def object_instance_from_res(object_name: str, object_id: str, cls_name: str) -> AnnAssign:
-
     try:
         is_valid_identifier(object_name)
     except Arcor2Exception as e:

@@ -16,7 +16,6 @@ def handle(
     def _handle_exceptions(func: F) -> F:
         @functools.wraps(func)
         def wrapper(*args, **kwargs) -> Any:
-
             try:
                 return func(*args, **kwargs)
             except except_type as e:

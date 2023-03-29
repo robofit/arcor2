@@ -43,7 +43,6 @@ async def get_project_problems(scene: CachedScene, project: CachedProject) -> No
         or _project_problems[project.id].project_modified < project.modified
         or _project_problems[project.id].ot_modified != ot_modified
     ):
-
         logger.debug(f"Updating project_problems for {project.name}.")
 
         _project_problems[project.id] = ProjectProblems(
@@ -64,13 +63,11 @@ async def get_project_problems(scene: CachedScene, project: CachedProject) -> No
 
 
 async def notify_project_opened(evt: OpenProject) -> None:
-
     await notif.broadcast_event(evt)
     await notif.broadcast_event(get_scene_state())
 
 
 async def notify_project_closed(project_id: str, show_mainscreen_after_that: bool = True) -> None:
-
     proj_list = ShowMainScreen.Data.WhatEnum.ProjectsList
 
     await notif.broadcast_event(ProjectClosed())
@@ -80,7 +77,6 @@ async def notify_project_closed(project_id: str, show_mainscreen_after_that: boo
 
 
 async def close_project(show_mainscreen_after_that: bool = True) -> None:
-
     assert glob.LOCK.project
 
     project_id = glob.LOCK.project.project.id
@@ -91,7 +87,6 @@ async def close_project(show_mainscreen_after_that: bool = True) -> None:
 
 
 async def execute_action(action_method: Callable, params: list[Any]) -> None:
-
     assert glob.RUNNING_ACTION
 
     await notif.broadcast_event(ActionExecution(ActionExecution.Data(glob.RUNNING_ACTION)))
@@ -105,9 +100,7 @@ async def execute_action(action_method: Callable, params: list[Any]) -> None:
         logger.debug(str(e), exc_info=True)
         evt.data.error = str(e)
     else:
-
         if action_result is not None:
-
             glob.PREV_RESULTS[glob.RUNNING_ACTION] = action_result
 
             try:
@@ -125,7 +118,6 @@ async def execute_action(action_method: Callable, params: list[Any]) -> None:
 
 
 async def open_project(project_id: str) -> None:
-
     project = await storage.get_project(project_id)
 
     if glob.LOCK.scene:

@@ -5,7 +5,6 @@ from arcor2.image import image_from_str, image_to_str
 
 
 def test_image_str() -> None:
-
     imarray = np.random.rand(16, 16, 3) * 255
     img = Image.fromarray(imarray.astype("uint8")).convert("RGB")
 

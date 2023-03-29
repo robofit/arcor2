@@ -13,7 +13,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Urls(NamedTuple):
-
     scene_url: str
     dobot_url: str
 

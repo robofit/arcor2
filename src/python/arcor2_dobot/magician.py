@@ -9,7 +9,6 @@ from arcor2_dobot.dobot_api import DobotApiException
 
 
 class Joints(StrEnum):
-
     J1: str = "magician_joint_1"
     J2: str = "magician_joint_2"
     J3: str = "magician_joint_3"
@@ -18,7 +17,6 @@ class Joints(StrEnum):
 
 
 class DobotMagician(Dobot):
-
     # Dimensions in meters (according to URDF)
     link_2_length = 0.135
     link_3_length = 0.147
@@ -38,14 +36,12 @@ class DobotMagician(Dobot):
             ]
 
     def _handle_pose_in(self, pose: Pose) -> None:
-
         base_angle = math.atan2(pose.position.y, pose.position.x)
         pose.position.x -= self.link_4_length * math.cos(base_angle)
         pose.position.y -= self.link_4_length * math.sin(base_angle)
         pose.position.z += self.end_effector_length
 
     def _handle_pose_out(self, pose: Pose) -> None:
-
         base_angle = math.atan2(pose.position.y, pose.position.x)
         pose.position.x += self.link_4_length * math.cos(base_angle)
         pose.position.y += self.link_4_length * math.sin(base_angle)
@@ -59,7 +55,6 @@ class DobotMagician(Dobot):
     }
 
     def validate_joints(self, joints: list[Joint]) -> None:
-
         for joint in joints:
             if joint.name in self.valid_ranges:
                 vrange = self.valid_ranges[Joints(joint.name)]
@@ -180,7 +175,6 @@ class DobotMagician(Dobot):
         return tr.make_pose_abs(self.pose, pose)
 
     def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
-
         if self.simulator:
             return self._joint_values
 
@@ -194,7 +188,6 @@ class DobotMagician(Dobot):
         ]
 
     def suck(self) -> None:
-
         if self.simulator:
             return
 
@@ -204,7 +197,6 @@ class DobotMagician(Dobot):
             raise DobotException("Suck failed.") from e
 
     def release(self) -> None:
-
         if self.simulator:
             return
 

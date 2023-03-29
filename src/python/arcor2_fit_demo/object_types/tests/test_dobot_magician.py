@@ -13,7 +13,6 @@ def test_docstrings() -> None:
 
 
 def test_signatures() -> None:
-
     assert inspect.signature(Robot.move_to_pose) == inspect.signature(DobotMagician.move_to_pose)
     assert inspect.signature(Robot.move_to_joints) == inspect.signature(DobotMagician.move_to_joints)
     assert inspect.signature(Robot.inverse_kinematics) == inspect.signature(DobotMagician.inverse_kinematics)

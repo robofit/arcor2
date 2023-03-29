@@ -15,7 +15,6 @@ class RPC:
 
     @dataclass
     class Request(Arcor2Mixin):  # TODO from_dict -> check that request key is == to qualname
-
         id: int
         request: str = field(init=False)
 
@@ -24,7 +23,6 @@ class RPC:
 
     @dataclass
     class Response(Arcor2Mixin):
-
         id: int = 0
         response: str = field(init=False)
         result: bool = True
@@ -51,7 +49,6 @@ class IdArgs(JsonSchemaMixin):
 @dataclass
 class RobotArg(JsonSchemaMixin):
     class RobotArgTuple(NamedTuple):
-
         robot_id: str
         end_effector: str
         arm_id: Optional[str] = None

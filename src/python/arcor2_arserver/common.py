@@ -20,13 +20,11 @@ async def associated_projects(scene_id: str) -> set[str]:
 
 
 async def remove_object_references_from_projects(obj_id: str) -> None:
-
     assert glob.LOCK.scene
 
     updated_project_ids: set[str] = set()
 
     async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj_id):
-
         # action_ids: set[str] = set()
 
         # delete actions using the object
@@ -58,9 +56,7 @@ async def remove_object_references_from_projects(obj_id: str) -> None:
 
 
 async def projects(scene_id: str) -> AsyncIterator[UpdateableCachedProject]:
-
     for project_meta in await storage.get_projects():
-
         project = await storage.get_project(project_meta.id)
 
         if project.scene_id != scene_id:
@@ -70,7 +66,6 @@ async def projects(scene_id: str) -> AsyncIterator[UpdateableCachedProject]:
 
 
 def _project_using_object_as_parent(project: CachedProject, obj_id: str) -> bool:
-
     for ap in project.action_points:
         if ap.parent == obj_id:
             return True
@@ -79,7 +74,6 @@ def _project_using_object_as_parent(project: CachedProject, obj_id: str) -> bool
 
 
 def _project_referencing_object(project: CachedProject, obj_id: str) -> bool:
-
     for action in project.actions:
         action_obj_id, _ = action.parse_type()
 
@@ -104,21 +98,17 @@ async def projects_using_object(scene_id: str, obj_id: str) -> AsyncIterator[Upd
 
 
 async def projects_using_object_as_parent(scene_id: str, obj_id: str) -> AsyncIterator[UpdateableCachedProject]:
-
     async for project in projects(scene_id):
         if _project_using_object_as_parent(project, obj_id):
             yield project
 
 
 async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> None:
-
     assert glob.LOCK.scene
 
     # Invalidates robot joints if action point's parent has changed its pose.
     async for project in projects_using_object_as_parent(glob.LOCK.scene.id, obj.id):
-
         for ap in project.action_points:
-
             if ap.parent != obj.id:
                 continue
 
@@ -129,7 +119,6 @@ async def invalidate_joints_using_object_as_parent(obj: common.SceneObject) -> N
 
 
 async def projects_referencing_object(scene_id: str, obj_id: str) -> AsyncIterator[CachedProject]:
-
     async for project in projects(scene_id):
         if _project_referencing_object(project, obj_id):
             yield project

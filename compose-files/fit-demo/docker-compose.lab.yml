@@ -12,3 +12,7 @@ services:
       - ARCOR2_DOBOT_MOCK=false
     devices:
       - /dev/dobotM1:/dev/dobot
+
+  fit-demo-kinect:
+    environment:
+      - ARCOR2_KINECT_AZURE_MOCK=false
