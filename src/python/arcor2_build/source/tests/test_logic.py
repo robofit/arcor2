@@ -324,3 +324,159 @@ def test_branched_output_2() -> None:
     assert cntsp(spl[ac1_idx]) == cntsp(spl[ac6_idx])
     assert ac6_idx > if_bool_2_res_false_idx
     assert ac6_idx > if_bool_2_res_true_idx
+
+
+def test_if_after_elif() -> None:
+
+    scene = Scene("s1")
+    obj = SceneObject("test_name", "Test")
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    ac1 = Action("ac1", f"{obj.id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ap1.actions.append(ac1)
+
+    ac2 = Action("ac2", f"{obj.id}/test", flows=[Flow(outputs=["bool_res2"])])
+    ap1.actions.append(ac2)
+
+    ac3 = Action("ac3", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac3)
+
+    ac4 = Action("ac4", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac4)
+
+    ac5 = Action("ac5", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac5)
+
+    ac6 = Action("ac6", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac6)
+
+    ac7 = Action("ac7", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac7)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, ac2.id))
+
+    project.logic.append(LogicItem(ac2.id, ac3.id, ProjectLogicIf(f"{ac1.id}/default/0", json.dumps(True))))
+    project.logic.append(LogicItem(ac2.id, ac4.id, ProjectLogicIf(f"{ac1.id}/default/0", json.dumps(False))))
+
+    project.logic.append(LogicItem(ac3.id, ac5.id, ProjectLogicIf(f"{ac2.id}/default/0", json.dumps(True))))
+    project.logic.append(LogicItem(ac3.id, ac6.id, ProjectLogicIf(f"{ac2.id}/default/0", json.dumps(False))))
+
+    project.logic.append(LogicItem(ac4.id, ac5.id, ProjectLogicIf(f"{ac2.id}/default/0", json.dumps(True))))
+    project.logic.append(LogicItem(ac4.id, ac6.id, ProjectLogicIf(f"{ac2.id}/default/0", json.dumps(False))))
+
+    project.logic.append(LogicItem(ac5.id, ac7.id))
+    project.logic.append(LogicItem(ac6.id, ac7.id))
+
+    project.logic.append(LogicItem(ac7.id, LogicItem.END))
+
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
+    """
+    bool_res1 = test_name.test(an='ac1')
+    bool_res2 = test_name.test(an='ac2')
+    if bool_res1 == True:
+        test_name.test(an='ac3')
+    elif bool_res1 == False:
+        test_name.test(an='ac4')
+    if bool_res2 == True:
+        test_name.test(an='ac5')
+    elif bool_res2 == False:
+        test_name.test(an='ac6')
+    test_name.test(an='ac7')
+    """
+
+    spl = src.splitlines()
+
+    ac1_idx = subs_index(spl, "bool_res1 = test_name.test(an='ac1')")
+    ac2_idx = subs_index(spl, "bool_res2 = test_name.test(an='ac2')")
+
+    # first if
+    if_bool_res_true_idx1 = subs_index(spl, "if bool_res1 == True:")
+    assert if_bool_res_true_idx1 > ac1_idx
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_true_idx1])
+
+    assert "test_name.test(an='ac3')" in spl[if_bool_res_true_idx1 + 1]
+    assert cntsp(spl[if_bool_res_true_idx1]) == cntsp(spl[if_bool_res_true_idx1 + 1]) - TAB
+
+    if_bool_res_false_idx1 = subs_index(spl, "if bool_res1 == False:")
+    assert if_bool_res_false_idx1 > ac1_idx
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_false_idx1])
+
+    assert "test_name.test(an='ac4')" in spl[if_bool_res_false_idx1 + 1]
+    assert cntsp(spl[if_bool_res_false_idx1]) == cntsp(spl[if_bool_res_false_idx1 + 1]) - TAB
+
+    # second if
+    if_bool_res_true_idx2 = subs_index(spl, "if bool_res2 == True:")
+    assert if_bool_res_true_idx2 > ac2_idx
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_true_idx2])
+
+    assert "test_name.test(an='ac5')" in spl[if_bool_res_true_idx2 + 1]
+    assert cntsp(spl[if_bool_res_true_idx2]) == cntsp(spl[if_bool_res_true_idx2 + 1]) - TAB
+
+    if_bool_res_false_idx2 = subs_index(spl, "if bool_res2 == False:")
+    assert if_bool_res_false_idx2 > ac2_idx
+    assert cntsp(spl[ac2_idx]) == cntsp(spl[if_bool_res_false_idx2])
+
+    assert "test_name.test(an='ac6')" in spl[if_bool_res_false_idx2 + 1]
+    assert cntsp(spl[if_bool_res_false_idx2]) == cntsp(spl[if_bool_res_false_idx2 + 1]) - TAB
+
+    # last test method
+    ac7_idx = subs_index(spl, "test_name.test(an='ac7')")
+    assert cntsp(spl[ac2_idx]) == cntsp(spl[ac7_idx])
+    assert ac7_idx > if_bool_res_false_idx2
+    assert ac7_idx > if_bool_res_false_idx2
+
+
+def test_alone_if() -> None:
+
+    scene = Scene("s1")
+    obj = SceneObject("test_name", "Test")
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    ac1 = Action("ac1", f"{obj.id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ap1.actions.append(ac1)
+
+    ac2 = Action("ac2", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac2)
+
+    ac3 = Action("ac3", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac3)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+
+    project.logic.append(LogicItem(ac1.id, ac2.id, ProjectLogicIf(f"{ac1.id}/default/0", json.dumps(True))))
+    project.logic.append(LogicItem(ac2.id, ac3.id))
+
+    project.logic.append(LogicItem(ac3.id, LogicItem.END))
+
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
+    """
+    bool_res1 = test_name.test(an='ac1')
+    if bool_res1 == True:
+        test_name.test(an='ac2')
+    test_name.test(an='ac3')
+    """
+
+    spl = src.splitlines()
+
+    ac1_idx = subs_index(spl, "bool_res1 = test_name.test(an='ac1')")
+
+    if_bool_res_true_idx = subs_index(spl, "if bool_res1 == True:")
+    assert if_bool_res_true_idx > ac1_idx
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_true_idx])
+
+    assert "test_name.test(an='ac2')" in spl[if_bool_res_true_idx + 1]
+    assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[if_bool_res_true_idx + 1]) - TAB
+
+    ac3_idx = subs_index(spl, "test_name.test(an='ac3')")
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[ac3_idx])
+    assert ac3_idx > if_bool_res_true_idx
+    assert ac3_idx > if_bool_res_true_idx
