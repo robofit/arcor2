@@ -6,7 +6,7 @@ import os
 import sys
 import tempfile
 import zipfile
-from ast import Assign, Attribute, Call, Constant, Continue, Expr, If, Name, While
+from ast import Assign, Attribute, Call, Compare, Constant, Continue, Expr, If, Module, Name, While
 
 import humps
 
@@ -94,7 +94,7 @@ def zip_package(folder: str):  # TODO: place somewhere else
     return zf
 
 
-def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
+def get_pro_sce_scr(zip_file):  # TODO: remove?
     OBJECT_TYPE_MODULE = "arcor2_object_types"
     original_sys_path = list(sys.path)
     original_sys_modules = dict(sys.modules)
@@ -163,6 +163,7 @@ def get_pro_sce_scr(zip_file):  # TODO: place somewhere else
 def get_parameters(
     rest_of_node: Call, variables: dict, project: Project, action_point: ActionPoint, method: inspect.FullArgSpec
 ):
+    # TODO: chceck num of parameters
     parameters = []
     for i in range(len(rest_of_node.args)):
         param_name = method.args[i + 1]  # +1 to skip self parameter
@@ -250,24 +251,32 @@ def gen_actions(
     rest_of_node = find_Call(node)
     parameters = []
 
+    # flows
     final_flows = [Flow()]
     if flows:
         final_flows = [Flow(outputs=[(flows)])]
 
+    # name
     name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
 
+    # type
     object_method = ast.unparse(rest_of_node.func)
     scene_object = get_object_by_name(object_method, scene)
 
-    if rest_of_node.args != []:  # no args -> no parameters in method
+    # parameters
+    dot_position = object_method.find(".")  # split object.method() to object and method
+    object_name = object_method[:dot_position]
+    method_name = object_method[dot_position + 1 :]
 
-        dot_position = object_method.find(".")  # split object.method() to object and method
-        object_name = object_method[:dot_position]
-        method_name = object_method[dot_position + 1 :]
-        method = inspect.getfullargspec(getattr(object_type[object_name], method_name))  # get infomation about method
+    try:
+        tmp = getattr(object_type[object_name], method_name)
+    except AttributeError:
+        raise Arcor2Exception(f"Method {method_name} does not exists")
 
-        parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
+    method = inspect.getfullargspec(tmp)  # get infomation about method
+    parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
 
+    # create action
     ac1 = Action(name, scene_object, flows=final_flows, parameters=parameters)
     action_point.actions.append(ac1)  # add actions to last seen action_point
 
@@ -312,6 +321,8 @@ def evaluate_if(
     action_point: ActionPoint, node: If, variables: dict, ac_id: str, scene: Scene, project: Project, object_type: dict
 ) -> dict:
 
+    if not isinstance(node.test, Compare):
+        raise Arcor2Exception('Condition must by in from: if "Variable" == "Value":')
     rest_of_node = find_Compare(node)
 
     what_name = ast.unparse(rest_of_node.left)
@@ -333,6 +344,9 @@ def evaluate_if(
     else:  # node first if
         ac_id = project.logic[-1].start
 
+    if isinstance(node.body[0], If):
+        raise Arcor2Exception('After "if" can not be another if without method between')
+
     project.logic[-1].condition = ProjectLogicIf(f"{what}", value)
     variables = evaluate_nodes(action_point, node, variables, scene, project, object_type)
 
@@ -346,7 +360,12 @@ def evaluate_if(
 
 
 def evaluate_nodes(
-    action_point: ActionPoint, tree: If | While, variables: dict, scene: Scene, project: Project, object_type: dict
+    action_point: ActionPoint,
+    tree: If | While | Module,
+    variables: dict,
+    scene: Scene,
+    project: Project,
+    object_type: dict,
 ) -> dict:
 
     """if condition is on, then in future when should by generated new
@@ -359,6 +378,7 @@ def evaluate_nodes(
     for node in tree.body:
 
         if isinstance(node, Expr):
+            # TODO: difrent expr -> err
             ac_id, variables, action_point = gen_actions(action_point, node, variables, scene, project, object_type)
 
             if condition:
@@ -369,6 +389,7 @@ def evaluate_nodes(
 
         elif isinstance(node, Assign):
             flows = ast.unparse(node.targets[0])
+            # TODO: difrent assign -> err
 
             if len(node.targets) > 1:
                 raise Arcor2Exception("Method can have only one output")
@@ -385,7 +406,8 @@ def evaluate_nodes(
 
         elif isinstance(node, If):
             if condition:
-                variables = evaluate_if(action_point, node, variables, ac_id, scene, project, object_type)
+                raise Arcor2Exception('After "elif" cannot be another "if" witout method between them)')
+                # variables = evaluate_if(action_point, node, variables, ac_id, scene, project, object_type)
             else:
                 ac_id = project.logic[-1].start
                 variables = evaluate_if(action_point, node, variables, "", scene, project, object_type)
