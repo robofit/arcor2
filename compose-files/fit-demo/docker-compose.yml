@@ -43,7 +43,7 @@ services:
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
 
   fit-demo-build:
-    image: arcor2/arcor2_build:1.0.0
+    image: arcor2/arcor2_build:1.0.1
     container_name: fit-demo-build
     depends_on:
       fit-demo-project:
