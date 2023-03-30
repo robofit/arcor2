@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.0.1] - 2023-03-30
+
+### Fixed
+
+- Dependency on `arcor2_runtime` was specified on a wrong place.
+
 ## [1.0.0] - 2023-02-14
 
 ### Changed
