@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import copy
+import random
 from datetime import datetime, timezone
 
 import humps
@@ -105,9 +107,16 @@ def get_project(id: str) -> RespT:
     """
 
     try:
-        return jsonify(humps.camelize(PROJECTS[id].to_dict()))
+        project_copy = copy.deepcopy(PROJECTS[id])
     except KeyError:
         raise NotFound(f"Project {id} was not found.")
+
+    random.shuffle(project_copy.action_points)
+    random.shuffle(project_copy.logic)
+    random.shuffle(project_copy.object_overrides)
+    random.shuffle(project_copy.parameters)
+
+    return jsonify(humps.camelize(project_copy.to_dict()))
 
 
 @app.route("/projects/<string:id>", methods=["DELETE"])
@@ -265,9 +274,13 @@ def get_scene(id: str) -> RespT:
     """
 
     try:
-        return jsonify(humps.camelize(SCENES[id].to_dict()))
+        scene_copy = copy.deepcopy(SCENES[id])
     except KeyError:
         raise NotFound(f"Scene {id} was not found.")
+
+    random.shuffle(scene_copy.objects)
+
+    return jsonify(humps.camelize(scene_copy.to_dict()))
 
 
 @app.route("/scenes/<string:id>", methods=["DELETE"])
