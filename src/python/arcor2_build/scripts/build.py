@@ -149,11 +149,6 @@ def _publish(project_id: str, package_name: str) -> RespT:
                 obj_types = set(cached_scene.object_types)
                 obj_types_with_models: set[str] = set()
 
-                if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
-                    import random
-
-                    random.shuffle(scene.objects)
-
                 for scene_obj in scene.objects:
                     if scene_obj.type in types_dict:
                         continue
@@ -540,6 +535,9 @@ def main() -> None:
 
     args = parser.parse_args()
     logger.setLevel(args.debug)
+
+    if __debug__:
+        logger.warning("Development mode.")
 
     run_app(
         app,
