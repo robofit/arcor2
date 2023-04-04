@@ -16,6 +16,10 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from flask import request, send_file
 
 import arcor2_build
+
+# TODO not sure why it is not enough to set it as dependency of the script
+# to make the main script or ObjectTypes be able to import e.g. ResourcesException
+import arcor2_runtime.resources  # noqa
 from arcor2 import env, json
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import project_service as ps
