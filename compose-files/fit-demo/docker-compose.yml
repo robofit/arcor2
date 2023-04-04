@@ -50,6 +50,7 @@ services:
         condition: service_healthy
     environment:
       - ARCOR2_PROJECT_SERVICE_URL=http://fit-demo-project:10000
+      - ARCOR2_PROJECT_PATH=""
     ports:
       - "5008:5008"
     networks:           
