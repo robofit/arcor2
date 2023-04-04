@@ -52,7 +52,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
- - 2023-03-30: [1.0.1](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F1.0.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=1.0.1), [pypi](https://pypi.org/project/arcor2-build/1.0.1/)).
+ - 2023-04-04: [1.0.2](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F1.0.2) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=1.0.2), [pypi](https://pypi.org/project/arcor2-build/1.0.2/)).
 
 ### arcor2_build_data
 

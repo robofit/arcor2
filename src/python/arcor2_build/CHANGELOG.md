@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.0.2] - 2023-04-04
+
+### Fixed
+
+- Fix of the fix (from the previous release).
+- Side effect is that it is now necessary to set `ARCOR2_PROJECT_PATH` (can be set to an arbitrary value).
+
 ## [1.0.1] - 2023-03-30
 
 ### Fixed
