@@ -16,6 +16,10 @@ from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 from flask import request, send_file
 
 import arcor2_build
+
+# TODO not sure why it is not enough to set it as dependency of the script
+# to make the main script or ObjectTypes be able to import e.g. ResourcesException
+import arcor2_runtime.resources  # noqa
 from arcor2 import env, json
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.clients import project_service as ps
@@ -148,11 +152,6 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
                 obj_types = set(cached_scene.object_types)
                 obj_types_with_models: set[str] = set()
-
-                if __debug__:  # this should uncover potential problems with order in which ObjectTypes are processed
-                    import random
-
-                    random.shuffle(scene.objects)
 
                 for scene_obj in scene.objects:
                     if scene_obj.type in types_dict:
@@ -540,6 +539,9 @@ def main() -> None:
 
     args = parser.parse_args()
     logger.setLevel(args.debug)
+
+    if __debug__:
+        logger.warning("Development mode.")
 
     run_app(
         app,

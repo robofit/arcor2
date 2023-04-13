@@ -43,13 +43,14 @@ services:
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
 
   fit-demo-build:
-    image: arcor2/arcor2_build:1.0.0
+    image: arcor2/arcor2_build:1.0.1
     container_name: fit-demo-build
     depends_on:
       fit-demo-project:
         condition: service_healthy
     environment:
       - ARCOR2_PROJECT_SERVICE_URL=http://fit-demo-project:10000
+      - ARCOR2_PROJECT_PATH=""
     ports:
       - "5008:5008"
     networks:           
