@@ -32,7 +32,6 @@ from ast import (
     stmt,
     withitem,
 )
-from typing import Union
 
 import humps
 
@@ -537,7 +536,7 @@ def find_While(tree: Module):
     return ff.While_node
 
 
-def find_Call(tree: Union[Module, AST]) -> Call:
+def find_Call(tree: Module | AST) -> Call:
     class FindCall(NodeVisitor):
         def __init__(self) -> None:
             self.Call_node: Call
@@ -552,7 +551,7 @@ def find_Call(tree: Union[Module, AST]) -> Call:
     return ff.Call_node
 
 
-def find_keyword(tree: Union[Module, AST]) -> keyword:
+def find_keyword(tree: Module | AST) -> keyword:
     class Findkeyword(NodeVisitor):
         def __init__(self) -> None:
             self.keyword_node: keyword
@@ -567,7 +566,7 @@ def find_keyword(tree: Union[Module, AST]) -> keyword:
     return ff.keyword_node
 
 
-def find_Compare(tree: Union[Module, AST]):
+def find_Compare(tree: Module | AST):
     class FindCompare(NodeVisitor):
         def __init__(self) -> None:
             self.Compare_node: list[Compare] = []
