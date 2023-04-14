@@ -1,7 +1,7 @@
 import ast
 import inspect
 import json
-from ast import Assign, Expr, If
+from ast import If
 
 from arcor2.cached import CachedProject
 from arcor2.data.common import (
@@ -39,14 +39,12 @@ from arcor2_build.source.python_to_json import (
 from arcor2_build.source.utils import find_Call
 
 
-class Test_class(StrEnum):
-
+class TestEnum(StrEnum):
     CLASS1: str = "1"
     CLASS2: str = "2"
 
 
 class Test(Generic):
-
     INT = 1234
 
     def get_int(self, an: None | str = None) -> int:
@@ -64,12 +62,12 @@ class Test(Generic):
     def test_joints(self, param: ProjectRobotJoints, an: None | str = None) -> None:
         pass
 
-    def tests_class_value(self, param: Test_class, an: None | str = None):
+    def tests_class_value(self, param: TestEnum, an: None | str = None):
         pass
 
     def test_all(
         self,
-        param: Test_class,
+        param: TestEnum,
         joint: ProjectRobotJoints,
         pose: Pose,
         int_param1: int,
@@ -158,21 +156,18 @@ def test_gen_logic_after_if() -> None:
 
 
 def test_get_object_by_name1() -> None:
-
     # usual case
     id_method1 = get_object_by_name("test.test", scene)
     assert id_method1 == f"{scene.objects[0].id}/test"
 
 
 def test_get_object_by_name2() -> None:
-
     # usual case
     id_method2 = get_object_by_name("test.test_pose", scene)
     assert id_method2 == f"{scene.objects[0].id}/test_pose"
 
 
 def test_get_object_by_name3() -> None:
-
     # nonexistent object
     try:
         get_object_by_name("nonexistent_object_.method", scene)
@@ -182,7 +177,6 @@ def test_get_object_by_name3() -> None:
 
 
 def test_get_parameters1() -> None:
-
     # project parameter
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(int_const,an="ac1")'))
@@ -194,7 +188,6 @@ def test_get_parameters1() -> None:
 
 
 def test_get_parameters2() -> None:
-
     # constant
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(42,an="ac1")'))
@@ -206,7 +199,6 @@ def test_get_parameters2() -> None:
 
 
 def test_get_parameters3() -> None:
-
     # variable
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(variable,an="ac1")'))
@@ -218,7 +210,6 @@ def test_get_parameters3() -> None:
 
 
 def test_get_parameters4() -> None:
-
     # action_point_pose
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_pose(aps.ap1.poses.default,an="ac1")'))
@@ -231,7 +222,6 @@ def test_get_parameters4() -> None:
 
 
 def test_get_parameters5() -> None:
-
     # action_point_joints
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_joints(aps.ap1.joints.default,an="ac1")'))
@@ -244,20 +234,18 @@ def test_get_parameters5() -> None:
 
 
 def test_get_parameters6() -> None:
-
     # class value
     ap_another = ActionPoint("another", Position())
-    call_node = find_Call(ast.parse('test.tests_class_value(Test_class.CLASS2,an="ac1")'))
+    call_node = find_Call(ast.parse('test.tests_class_value(TestEnum.CLASS2,an="ac1")'))
     method = inspect.getfullargspec(Test.tests_class_value)
     parmeters, ap = get_parameters(call_node, {}, project, ap_another, method)
     StrEnum_type = plugin_from_type(StrEnum)
 
-    assert parmeters[0] == ActionParameter("param", StrEnum_type.type_name(), json.dumps(Test_class.CLASS2))
+    assert parmeters[0] == ActionParameter("param", StrEnum_type.type_name(), json.dumps(TestEnum.CLASS2))
     assert ap == ap_another
 
 
 def test_get_parameters7() -> None:
-
     # all parameter types
     ap_another = ActionPoint("another", Position())
     StrEnum_type = plugin_from_type(StrEnum)
@@ -266,14 +254,14 @@ def test_get_parameters7() -> None:
 
     call_node = find_Call(
         ast.parse(
-            """test.test_all(Test_class.CLASS1, aps.ap1.joints.default, aps.ap1.poses.default, variable, 42,
+            """test.test_all(TestEnum.CLASS1, aps.ap1.joints.default, aps.ap1.poses.default, variable, 42,
             int_const, an="ac1")"""
         )
     )
     method = inspect.getfullargspec(Test.test_all)
     parmeters, ap = get_parameters(call_node, {"variable": "id123"}, project, ap_another, method)
 
-    assert parmeters[0] == ActionParameter("param", StrEnum_type.type_name(), json.dumps(Test_class.CLASS1))
+    assert parmeters[0] == ActionParameter("param", StrEnum_type.type_name(), json.dumps(TestEnum.CLASS1))
     assert parmeters[1] == ActionParameter("joint", joints_type.type_name(), json.dumps(ap1.robot_joints[0].id))
     assert parmeters[2] == ActionParameter("pose", pose_type.type_name(), json.dumps(ap1.orientations[0].id))
     assert parmeters[3] == ActionParameter("int_param1", ActionParameter.TypeEnum.LINK, json.dumps("id123/default/0"))
@@ -284,15 +272,54 @@ def test_get_parameters7() -> None:
     assert ap == ap1
 
 
-# TODO: wrong number of parameters
+def test_get_parameters8() -> None:
+    # too much parameters in method
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.test_par(int_const,int_const,int_const,an="ac1")'))
+    method = inspect.getfullargspec(Test.test_par)
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+# TODO: test not enough parameters in method
+
+
+def test_get_parameters10() -> None:
+    # wrong constant value
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.test_par("string",an="ac1")'))
+    method = inspect.getfullargspec(Test.test_par)
+
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_get_parameters11() -> None:
+    # nonexistent variable
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.test_par(variable,an="ac1")'))
+    method = inspect.getfullargspec(Test.test_par)
+
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+# TODO: wrong values types (class value, action_point value)
 
 
 def test_gen_actions1() -> None:
-
     # basic case
     tree = ast.parse('test.test(an="ac1")')
-    if isinstance(tree.body[0], Expr):
-        node = tree.body[0]
+    node = find_Call(tree)
 
     _ac1, variables, action_point = gen_actions(
         ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, ""
@@ -305,14 +332,9 @@ def test_gen_actions1() -> None:
 
 
 def test_gen_actions2() -> None:
-
     # case whit output
     tree = ast.parse('variable = test.test(an="ac1")')
-
-    print(ast.dump(tree, indent=4))
-
-    if isinstance(tree.body[0], Assign):
-        node = tree.body[0]
+    node = find_Call(tree)
 
     ac1, variables, action_point = gen_actions(
         ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, "variable"
@@ -325,11 +347,9 @@ def test_gen_actions2() -> None:
 
 
 def test_gen_actions3() -> None:
-
     # case whit parameter
     tree = ast.parse('variable = test.test_par(variable,an="ac1")')
-    if isinstance(tree.body[0], Assign):
-        node = tree.body[0]
+    node = find_Call(tree)
 
     _ac1, variables, action_point = gen_actions(
         ActionPoint("ap", Position()), node, {"variable": "id123"}, scene, project, {"test": Test}, ""
@@ -344,11 +364,21 @@ def test_gen_actions3() -> None:
 
 
 def test_gen_actions4() -> None:
-
     # nonexistent method
     tree = ast.parse('test.nothing(an="ac1")')
-    if isinstance(tree.body[0], Expr):
-        node = tree.body[0]
+    node = find_Call(tree)
+
+    try:
+        gen_actions(ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, "")
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_gen_actions5() -> None:
+    # missing "an"
+    tree = ast.parse("test.test()")
+    node = find_Call(tree)
 
     try:
         gen_actions(ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, "")
@@ -358,7 +388,6 @@ def test_gen_actions4() -> None:
 
 
 def test_evaluate_if1() -> None:
-
     # usual case
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -399,7 +428,38 @@ elif bool_res1 == False:
 
 
 def test_evaluate_if2() -> None:
+    # if whitout elif
+    project2 = Project("p1", "s1")
+    ap_another = ActionPoint("ap_another", Position())
+    project2.action_points.append(ap_another)
 
+    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ap_another.actions.append(ac1)
+    project2.logic.append(LogicItem(LogicItem.START, ac1.id))
+
+    tree = ast.parse(
+        """
+if bool_res1 == True:
+    test.test(an='ac2')"""
+    )
+    if isinstance(tree.body[0], If):
+        node = tree.body[0]
+
+    variables = evaluate_if(ap_another, node, {"bool_res1": "id123"}, ac1.id, scene, project2, {"test": Test})
+
+    tmp_project = CachedProject(project2)
+    assert variables == {"bool_res1": "id123"}
+    assert len(tmp_project.actions) == 2
+    assert len(tmp_project.logic) == 3
+    assert project2.logic[0].start == "START"
+    assert project2.logic[0].end == ac1.id
+
+    assert project2.logic[1].start == ac1.id
+    assert project2.logic[1].condition == ProjectLogicIf("id123/default/0", json.dumps(True))
+    assert project2.logic[2].end == ""
+
+
+def test_evaluate_if3() -> None:
     # "if" in "if" without method between
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -429,8 +489,7 @@ elif bool_res1 == False:
         assert True
 
 
-def test_evaluate_if3() -> None:
-
+def test_evaluate_if4() -> None:
     # more conditions in "if"
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -458,8 +517,7 @@ elif bool_res1 == False:
         assert True
 
 
-def test_evaluate_if4() -> None:
-
+def test_evaluate_if5() -> None:
     # condition is value
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -487,8 +545,7 @@ elif bool_res1 == False:
         assert True
 
 
-def test_evaluate_if5() -> None:
-
+def test_evaluate_if6() -> None:
     # nonexistent variable
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -516,8 +573,7 @@ elif bool_res1 == False:
         assert True
 
 
-def test_evaluate_if6() -> None:
-
+def test_evaluate_if7() -> None:
     # condition is method
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -543,9 +599,6 @@ elif bool_res1 == False:
         AssertionError()
     except Arcor2Exception:
         assert True
-
-
-# TODO: only "if"
 
 
 def test_evaluate_nodes1() -> None:
@@ -582,7 +635,6 @@ elif bool_res2 == False:
 
 
 def test_evaluate_nodes2() -> None:
-
     # unsaported operation
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -595,9 +647,7 @@ def test_evaluate_nodes2() -> None:
     project2.logic.append(LogicItem(ac1.id, ""))
 
     node = ast.parse(
-        """
-test.test(an='ac1')
-def function():
+        """def function():
     pass"""
     )
 
@@ -608,4 +658,49 @@ def function():
         assert True
 
 
-# TODO: wrong Expr and Assign
+def test_evaluate_nodes3() -> None:
+    # unsaported expression
+    project2 = Project("p1", "s1")
+    ap_another = ActionPoint("ap_another", Position())
+    project2.action_points.append(ap_another)
+
+    node = ast.parse("1 + 2")
+
+    try:
+        evaluate_nodes(ap1, node, {}, scene, project2, {"test": Test})
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_evaluate_nodes4() -> None:
+    # unsaported assign
+    project2 = Project("p1", "s1")
+    ap_another = ActionPoint("ap_another", Position())
+    project2.action_points.append(ap_another)
+
+    node = ast.parse("variable = 1 + 2")
+
+    try:
+        evaluate_nodes(ap1, node, {}, scene, project2, {"test": Test})
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_evaluate_nodes5() -> None:
+    # using function
+    project2 = Project("p1", "s1")
+    ap_another = ActionPoint("ap_another", Position())
+    project2.action_points.append(ap_another)
+
+    try:
+        node = ast.parse('print("hello")')
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+    try:
+        evaluate_nodes(ap1, node, {}, scene, project2, {"test": Test})
+        AssertionError()
+    except Arcor2Exception:
+        assert True

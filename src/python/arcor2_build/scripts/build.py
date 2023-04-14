@@ -36,6 +36,7 @@ from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
+from arcor2_build.source.python_to_json import python_to_json
 from arcor2_build.source.utils import global_action_points_class
 from arcor2_build_data import DEPENDENCIES, SERVICE_NAME, URL, ImportResult
 from arcor2_build_data.exceptions import Conflict, InvalidPackage, InvalidProject, NotFound, WebApiError
@@ -358,6 +359,7 @@ def project_import() -> RespT:
     overwrite_collision_models = request.args.get("overwriteCollisionModels", default="false") == "true"
 
     objects: dict[str, ObjectType] = {}
+    object_type: dict[str, type[Generic]] = {}
     models: dict[str, Models] = {}
 
     """
@@ -414,6 +416,7 @@ def project_import() -> RespT:
                 get_base_from_imported_package(objects[obj_type_name], objects, zip_file, tmp_dir, ast)
 
                 type_def = save_and_import_type_def(obj_type_src, obj_type_name, Generic, tmp_dir, OBJECT_TYPE_MODULE)
+                object_type[scene_obj.name] = type_def
 
                 assert obj_type_name == type_def.__name__
 
@@ -452,6 +455,20 @@ def project_import() -> RespT:
                 parse(script)
             except Arcor2Exception:
                 raise InvalidPackage("Invalid code of the main script.")
+
+        if overwrite_project_sources:
+            try:
+                src = zip_file.read("script.py").decode("UTF-8")
+            except KeyError:
+                raise NotFound("Could not find script.py.")
+
+            try:
+                parse(src)
+            except Arcor2Exception:
+                raise InvalidPackage("Invalid code of the main script.")
+
+            logger.debug("Rewriting project...")
+            project = python_to_json(project, scene, src, object_type)
 
     # check that we are not going to overwrite something
     if not overwrite_scene:

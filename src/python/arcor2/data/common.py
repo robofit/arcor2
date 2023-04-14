@@ -668,6 +668,47 @@ class Project(BareProject):
             id=bare.id,
         )
 
+    def action_print(self):
+        """Print all actions from project whit their specific action_point."""
+
+        count = 1
+        for k in range(len(self.action_points)):
+            print("||-----------||" + self.action_points[k].name + "||------------||")
+            print()
+            for i in self.action_points[k].actions:
+                print("----------------Action", end="")
+                print(count, end="")
+                print("-----------------")
+                print("Name:\t" + i.name)
+                print("Type:\t" + i.type)
+                print("Id:\t" + i.id)
+                print("Param:\t")
+                for j in i.parameters:
+                    print("\t", end="")
+                    print(j)
+                print("Flows:\t")
+                for o in i.flows:
+                    print("\t", end="")
+                    print(o)
+                print()
+                count += 1
+
+    def logic_print(self):
+        """Print all LogicItems from project."""
+
+        count = 1
+        for i in self.logic:
+            print("----------------Logic", end="")
+            print(count, end="")
+            print("-----------------")
+            print("Start:\t" + i.start)
+            print("End:\t" + i.end)
+            print("Con:\t", end="")
+            print(i.condition)
+            print("Id:\t" + i.id)
+            print()
+            count += 1
+
 
 @dataclass
 class ProjectSources(JsonSchemaMixin):

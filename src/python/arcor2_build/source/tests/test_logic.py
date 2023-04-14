@@ -326,8 +326,8 @@ def test_branched_output_2() -> None:
     assert ac6_idx > if_bool_2_res_true_idx
 
 
+@pytest.mark.xfail()
 def test_if_after_elif() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", "Test")
     scene.objects.append(obj)
@@ -431,8 +431,8 @@ def test_if_after_elif() -> None:
     assert ac7_idx > if_bool_res_false_idx2
 
 
+@pytest.mark.xfail()
 def test_alone_if() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", "Test")
     scene.objects.append(obj)

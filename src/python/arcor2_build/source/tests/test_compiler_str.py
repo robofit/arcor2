@@ -20,7 +20,6 @@ from arcor2.data.common import (
     SceneObject,
     StrEnum,
 )
-from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2_build.source.python_to_json import python_to_json
@@ -45,14 +44,12 @@ call_main = """if __name__ == '__main__':
         print_exception(e)"""
 
 
-class Test_class(StrEnum):
-
+class TestEnum(StrEnum):
     CLASS1: str = "1"
     CLASS2: str = "2"
 
 
 class Test(Generic):
-
     INT = 1234
 
     def get_int(self, an: None | str = None) -> int:
@@ -70,20 +67,18 @@ class Test(Generic):
     def test_joints(self, param: ProjectRobotJoints, an: None | str = None) -> None:
         pass
 
-    def tests_class_value(self, param: Test_class, an: None | str = None):
+    def tests_class_value(self, param: TestEnum, an: None | str = None):
         pass
 
 
-def action_from_id(action_id: str, project: CachedProject) -> Action:  # TODO: replace
-
-    for action in project.actions:
-        if action_id == action.id:
-            return action
-    raise Arcor2Exception("Action whit name:" + action_id + " in project:" + project.name + "does not exisit")
+def find_action(project: CachedProject, ac_id: str) -> Action:
+    res = project.get_by_id(ac_id)
+    if isinstance(res, Action):
+        return res
+    raise ValueError("Wrong id")
 
 
 def check_python_to_json(project: Project, scene: Scene, script: str, objects_for_json: dict):
-
     o_p = CachedProject(project)
 
     modified_project = python_to_json(project, scene, script, objects_for_json)
@@ -100,9 +95,8 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
     end_orig_action_id = ""
     orig_logic_item: LogicItem
     for modif_logic_item in m_p.logic:
-
         if modif_logic_item.start != LogicItem.START:
-            start_modified_action = action_from_id(modif_logic_item.start, m_p)
+            start_modified_action = find_action(m_p, modif_logic_item.start)
             start_orig_action = o_p.action_from_name(start_modified_action.name)
             assert start_modified_action.name == start_orig_action.name  # name
             assert start_modified_action.type == start_orig_action.type  # type
@@ -118,10 +112,21 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
                     )  # param name
                     if start_orig_action.parameters[i].type != ActionParameter.TypeEnum.LINK:
                         assert (
-                            start_orig_action.parameters[i].value == start_orig_action.parameters[i].value
+                            start_modified_action.parameters[i].value == start_orig_action.parameters[i].value
                         )  # param value
                     else:
-                        pass  # TODO: variable
+                        variable_orig_action = start_orig_action.parameters[i].value
+                        variable_modified_action = start_modified_action.parameters[i].value
+
+                        slash_position = variable_orig_action.find("/")  # split id/default/0.... to id and /...
+                        id_orig = variable_orig_action[:slash_position].replace('"', "")
+                        orig_action = find_action(o_p, id_orig)
+
+                        slash_position = variable_modified_action.find("/")
+                        id_modified = variable_modified_action[:slash_position].replace('"', "")
+                        modified_action = find_action(o_p, id_orig)
+
+                        orig_action.name = modified_action.name
             else:
                 assert start_orig_action.parameters == []
 
@@ -130,7 +135,7 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
             start_orig_action_id = LogicItem.START  # save id
 
         if modif_logic_item.end != LogicItem.END:
-            end_modif_action = action_from_id(modif_logic_item.end, m_p)
+            end_modif_action = find_action(m_p, modif_logic_item.end)
             end_orig_action = o_p.action_from_name(end_modif_action.name)
             assert end_modif_action.name == end_orig_action.name  # name
             assert end_modif_action.type == end_orig_action.type  # type
@@ -143,7 +148,18 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
                     if end_orig_action.parameters[i].type != ActionParameter.TypeEnum.LINK:
                         assert end_orig_action.parameters[i].value == end_orig_action.parameters[i].value  # param value
                     else:
-                        pass  # TODO: variable
+                        variable_orig_action = end_orig_action.parameters[i].value
+                        variable_modified_action = end_modif_action.parameters[i].value
+
+                        slash_position = variable_orig_action.find("/")  # split id/default/0.... to id and /...
+                        id_orig = variable_orig_action[:slash_position].replace('"', "")
+                        orig_action = find_action(o_p, id_orig)
+
+                        slash_position = variable_modified_action.find("/")
+                        id_modified = variable_modified_action[:slash_position].replace('"', "")
+                        modified_action = find_action(m_p, id_modified)
+
+                        orig_action.name = modified_action.name
             else:
                 assert end_orig_action.parameters == []
 
@@ -161,15 +177,14 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
             tmp1 = tmp1.removesuffix("/default/0")
             tmp2 = tmp2.removesuffix("/default/0")
 
-            modif_con = action_from_id(tmp1, m_p)  # action where was declared variable in modif_project
-            orig_con = action_from_id(tmp2, o_p)  # action where was declared variable in orig_project
+            modif_con = find_action(m_p, tmp1)  # action where was declared variable in modif_project
+            orig_con = find_action(o_p, tmp2)  # action where was declared variable in orig_project
             assert modif_con.name == orig_con.name  # action name
             assert modif_con.type == orig_con.type  # action type
             assert modif_con.flows == orig_con.flows  # action flow
 
 
 def test_continue() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -194,7 +209,6 @@ def test_continue() -> None:
 
 
 def test_prev_result() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -233,7 +247,6 @@ def test_prev_result() -> None:
 
 
 def test_project_parameter() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -273,7 +286,6 @@ def test_project_parameter() -> None:
 
 
 def test_constant() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -308,7 +320,6 @@ def test_constant() -> None:
 
 
 def test_pose() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -350,7 +361,6 @@ def test_pose() -> None:
 
 
 def test_joints() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -395,7 +405,6 @@ def test_joints() -> None:
 
 
 def tests_class_value() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -408,7 +417,7 @@ def tests_class_value() -> None:
         "ac1",
         f"{obj.id}/tests_class_value",
         flows=[Flow()],
-        parameters=[ActionParameter("param", StrEnum_type.type_name(), json.dumps(Test_class.CLASS1))],
+        parameters=[ActionParameter("param", StrEnum_type.type_name(), json.dumps(TestEnum.CLASS1))],
     )
     ap1.actions.append(ac1)
 
@@ -417,7 +426,7 @@ def tests_class_value() -> None:
         "ac2",
         f"{obj.id}/tests_class_value",
         flows=[Flow()],
-        parameters=[ActionParameter("param", StrEnum_type.type_name(), json.dumps(Test_class.CLASS2))],
+        parameters=[ActionParameter("param", StrEnum_type.type_name(), json.dumps(TestEnum.CLASS2))],
     )
     ap1.actions.append(ac2)
 
@@ -431,8 +440,8 @@ def tests_class_value() -> None:
 
 {main_body}
     while True:
-        test_name.tests_class_value(Test_class.CLASS1, an='ac1')
-        test_name.tests_class_value(Test_class.CLASS2, an='ac2')
+        test_name.tests_class_value(TestEnum.CLASS1, an='ac1')
+        test_name.tests_class_value(TestEnum.CLASS2, an='ac2')
 
 
 {call_main}"""
@@ -441,7 +450,6 @@ def tests_class_value() -> None:
 
 
 def test_branched_output_1() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", "Test")
     scene.objects.append(obj)
@@ -490,7 +498,6 @@ def test_branched_output_1() -> None:
 
 
 def test_branched_output_2() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -555,7 +562,6 @@ def test_branched_output_2() -> None:
 
 
 def test_branched_output_3() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -647,7 +653,6 @@ def test_branched_output_3() -> None:
 
 
 def test_branched_output_4() -> None:
-
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)

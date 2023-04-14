@@ -557,7 +557,6 @@ class CachedProject(CachedBase):
         raise CachedProjectException(f"LogicItem in project {self.name} not found.")
 
     def action_from_name(self, name: str) -> cmn.Action:
-
         for action in self.actions:
             if name == action.name:
                 return action
