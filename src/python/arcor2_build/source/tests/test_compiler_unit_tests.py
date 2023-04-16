@@ -3,7 +3,7 @@ import inspect
 import json
 from ast import If
 
-from arcor2.cached import CachedProject
+from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import (
     Action,
     ActionParameter,
@@ -33,7 +33,6 @@ from arcor2_build.source.python_to_json import (
     gen_logic,
     gen_logic_after_if,
     gen_logic_for_if,
-    get_object_by_name,
     get_parameters,
 )
 from arcor2_build.source.utils import find_Call
@@ -80,6 +79,7 @@ class Test(Generic):
 
 scene = Scene("s1")
 scene.objects.append(SceneObject("test", Test.__name__))
+c_s = CachedScene(scene)
 
 project = Project("p1", "s1")
 ap1 = ActionPoint(
@@ -157,20 +157,20 @@ def test_gen_logic_after_if() -> None:
 
 def test_get_object_by_name1() -> None:
     # usual case
-    id_method1 = get_object_by_name("test.test", scene)
-    assert id_method1 == f"{scene.objects[0].id}/test"
+    id_method1 = c_s.get_object_by_name("test.test")
+    assert id_method1 == f"{next(c_s.objects).id}/test"
 
 
 def test_get_object_by_name2() -> None:
     # usual case
-    id_method2 = get_object_by_name("test.test_pose", scene)
-    assert id_method2 == f"{scene.objects[0].id}/test_pose"
+    id_method2 = c_s.get_object_by_name("test.test_pose")
+    assert id_method2 == f"{next(c_s.objects).id}/test_pose"
 
 
 def test_get_object_by_name3() -> None:
     # nonexistent object
     try:
-        get_object_by_name("nonexistent_object_.method", scene)
+        c_s.get_object_by_name("nonexistent_object_.method")
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -322,10 +322,10 @@ def test_gen_actions1() -> None:
     node = find_Call(tree)
 
     _ac1, variables, action_point = gen_actions(
-        ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, ""
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ""
     )
     assert action_point.actions[0].name == "ac1"
-    assert action_point.actions[0].type == f"{scene.objects[0].id}/test"
+    assert action_point.actions[0].type == f"{next(c_s.objects).id}/test"
     assert action_point.actions[0].parameters == []
     assert action_point.actions[0].flows == [Flow()]
     assert variables == {}
@@ -337,10 +337,10 @@ def test_gen_actions2() -> None:
     node = find_Call(tree)
 
     ac1, variables, action_point = gen_actions(
-        ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, "variable"
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, "variable"
     )
     assert action_point.actions[0].name == "ac1"
-    assert action_point.actions[0].type == f"{scene.objects[0].id}/test"
+    assert action_point.actions[0].type == f"{next(c_s.objects).id}/test"
     assert action_point.actions[0].parameters == []
     assert action_point.actions[0].flows == [Flow(outputs=["variable"])]
     assert variables == {"variable": ac1}
@@ -352,10 +352,10 @@ def test_gen_actions3() -> None:
     node = find_Call(tree)
 
     _ac1, variables, action_point = gen_actions(
-        ActionPoint("ap", Position()), node, {"variable": "id123"}, scene, project, {"test": Test}, ""
+        ActionPoint("ap", Position()), node, {"variable": "id123"}, c_s, project, {"test": Test}, ""
     )
     assert action_point.actions[0].name == "ac1"
-    assert action_point.actions[0].type == f"{scene.objects[0].id}/test_par"
+    assert action_point.actions[0].type == f"{next(c_s.objects).id}/test_par"
     assert action_point.actions[0].parameters == [
         ActionParameter("param", ActionParameter.TypeEnum.LINK, json.dumps("id123/default/0"))
     ]
@@ -369,7 +369,7 @@ def test_gen_actions4() -> None:
     node = find_Call(tree)
 
     try:
-        gen_actions(ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, "")
+        gen_actions(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, "")
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -381,7 +381,7 @@ def test_gen_actions5() -> None:
     node = find_Call(tree)
 
     try:
-        gen_actions(ActionPoint("ap", Position()), node, {}, scene, project, {"test": Test}, "")
+        gen_actions(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, "")
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -393,7 +393,7 @@ def test_evaluate_if1() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap_another.actions.append(ac1)
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
 
@@ -408,7 +408,7 @@ elif bool_res1 == False:
         node = tree.body[0]
 
     variables = evaluate_if(
-        ap_another, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, scene, project2, {"test": Test}
+        ap_another, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test}
     )
 
     tmp_project = CachedProject(project2)
@@ -433,7 +433,7 @@ def test_evaluate_if2() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap_another.actions.append(ac1)
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
 
@@ -445,7 +445,7 @@ if bool_res1 == True:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
 
-    variables = evaluate_if(ap_another, node, {"bool_res1": "id123"}, ac1.id, scene, project2, {"test": Test})
+    variables = evaluate_if(ap_another, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
 
     tmp_project = CachedProject(project2)
     assert variables == {"bool_res1": "id123"}
@@ -465,7 +465,7 @@ def test_evaluate_if3() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -483,7 +483,7 @@ elif bool_res1 == False:
         node = tree.body[0]
 
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, scene, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -495,7 +495,7 @@ def test_evaluate_if4() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -511,7 +511,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, scene, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -523,7 +523,7 @@ def test_evaluate_if5() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -539,7 +539,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, scene, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -551,7 +551,7 @@ def test_evaluate_if6() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -567,7 +567,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, scene, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -579,7 +579,7 @@ def test_evaluate_if7() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -595,7 +595,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, scene, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -609,7 +609,7 @@ def test_evaluate_nodes1() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -628,7 +628,7 @@ elif bool_res2 == False:
     )
 
     try:
-        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, scene, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -640,7 +640,7 @@ def test_evaluate_nodes2() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    ac1 = Action("ac1", f"{scene.objects[0].id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow(outputs=["bool_res1"])])
     ap1.actions.append(ac1)
 
     project2.logic.append(LogicItem(LogicItem.START, ac1.id))
@@ -652,7 +652,7 @@ def test_evaluate_nodes2() -> None:
     )
 
     try:
-        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, scene, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -667,7 +667,7 @@ def test_evaluate_nodes3() -> None:
     node = ast.parse("1 + 2")
 
     try:
-        evaluate_nodes(ap1, node, {}, scene, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -682,7 +682,7 @@ def test_evaluate_nodes4() -> None:
     node = ast.parse("variable = 1 + 2")
 
     try:
-        evaluate_nodes(ap1, node, {}, scene, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -700,7 +700,7 @@ def test_evaluate_nodes5() -> None:
     except Arcor2Exception:
         assert True
     try:
-        evaluate_nodes(ap1, node, {}, scene, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test})
         AssertionError()
     except Arcor2Exception:
         assert True

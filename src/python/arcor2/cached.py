@@ -127,6 +127,20 @@ class CachedScene(CachedBase):
         sc.objects = list(self.objects)
         return sc
 
+    def get_object_by_name(self, object_method: str):
+        """find object in scene by name and return a json reprezetation of the
+        obcject whit its method."""
+
+        # looking for object
+        for scene_object in self.objects:
+            if object_method.find(scene_object.name + ".") != -1:
+                # raplece name from code to scene definition
+                object_type = object_method.replace(scene_object.name + ".", (scene_object.id + "/"))
+
+                return object_type
+
+        raise Arcor2Exception(f"Object whit method {object_method} wasn't found")
+
 
 class UpdateableCachedScene(UpdateableMixin, CachedScene):
     __slots__ = ()

@@ -5,6 +5,7 @@ import logging
 from ast import Assign, Attribute, Call, Compare, Constant, Continue, Expr, If, Module, Name, While
 
 from arcor2 import env
+from arcor2.cached import CachedScene
 from arcor2.data.common import (
     Action,
     ActionParameter,
@@ -19,11 +20,7 @@ from arcor2.data.common import (
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 from arcor2.parameter_plugins.utils import plugin_from_type
-from arcor2_build.source.utils import find_Call, find_Compare, find_keyword, find_While
-
-# https://github.com/robofit/arcor2/blob/master/src/python/arcor2_build/source/utils.py#L394.
-POSES = "poses"  # TODO: place arcor2_build/source/__init__.py
-JOINTS = "joints"
+from arcor2_build.source.utils import a_p_const, find_Call, find_Compare, find_keyword, find_While
 
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
@@ -70,9 +67,9 @@ def get_parameters(
                     ):
                         if ap.name == arg.value.value.attr:
                             action_point = ap
-                            if arg.value.attr == POSES:
+                            if arg.value.attr == a_p_const.poses:
                                 param_value = json.dumps(ap.orientations[0].id)
-                            elif arg.value.attr == JOINTS:
+                            elif arg.value.attr == a_p_const.joints:
                                 param_value = json.dumps(ap.robot_joints[0].id)
                             else:
                                 param_value = json.dumps(ap.id)
@@ -97,25 +94,11 @@ def get_parameters(
     return parameters, action_point
 
 
-def get_object_by_name(object_method: str, scene: Scene):  # TODO: function cachedscene
-    """find object from scene by name and return object id."""
-
-    # looking for object
-    for scene_object in scene.objects:
-        if object_method.find(scene_object.name + ".") != -1:
-            # raplece name from code to scene definition
-            object_type = object_method.replace(scene_object.name + ".", (scene_object.id + "/"))
-
-            return object_type
-
-    raise Arcor2Exception(f"Object {object_method} wasn't found")
-
-
 def gen_actions(
     action_point: ActionPoint,
     rest_of_node: Call,
     variables: dict,
-    scene: Scene,
+    scene: CachedScene,
     project: Project,
     object_type: dict,
     flows: str = "",
@@ -135,7 +118,9 @@ def gen_actions(
 
     # type
     object_method = ast.unparse(rest_of_node.func)
-    scene_object = get_object_by_name(object_method, scene)
+
+    aha = CachedScene(scene)
+    scene_object = aha.get_object_by_name(object_method)
 
     # parameters
     dot_position = object_method.find(".")  # split object.method() to object and method
@@ -192,7 +177,13 @@ def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
 
 
 def evaluate_if(
-    action_point: ActionPoint, node: If, variables: dict, ac_id: str, scene: Scene, project: Project, object_type: dict
+    action_point: ActionPoint,
+    node: If,
+    variables: dict,
+    ac_id: str,
+    scene: CachedScene,
+    project: Project,
+    object_type: dict,
 ) -> dict:
     if not isinstance(node.test, Compare):
         raise Arcor2Exception('Condition must by in from: if "variable" == "value":')
@@ -236,7 +227,7 @@ def evaluate_nodes(
     action_point: ActionPoint,
     tree: If | While | Module,
     variables: dict,
-    scene: Scene,
+    scene: CachedScene,
     project: Project,
     object_type: dict,
 ) -> dict:
@@ -302,7 +293,7 @@ def python_to_json(project: Project, scene: Scene, script: str, object_type: dic
     start_item = LogicItem(LogicItem.START, "")
     project.logic.append(start_item)
 
-    evaluate_nodes(project.action_points[0], while_node, variables, scene, project, object_type)
+    evaluate_nodes(project.action_points[0], while_node, variables, CachedScene(scene), project, object_type)
 
     # adding END in to LogicItem with empty end
     for logic_item in project.logic:
