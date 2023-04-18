@@ -51,6 +51,7 @@ services:
     environment:
       - ARCOR2_PROJECT_SERVICE_URL=http://fit-demo-project:10000
       - ARCOR2_PROJECT_PATH=""
+      - ARCOR2_BUILD_DEBUG=1
     ports:
       - "5008:5008"
     networks:           

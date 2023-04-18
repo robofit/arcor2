@@ -74,7 +74,7 @@ def get_parameters(
                             else:
                                 param_value = json.dumps(ap.id)
 
-        elif isinstance(arg, Name):  # variable definated in script or variable from project parameters
+        elif isinstance(arg, Name):  # variable defined in script or variable from project parameters
             arg_name = ast.unparse(arg)
             if arg_name in variables:
                 param_type = ActionParameter.TypeEnum.LINK
@@ -119,8 +119,8 @@ def gen_actions(
     # type
     object_method = ast.unparse(rest_of_node.func)
 
-    aha = CachedScene(scene)
-    scene_object = aha.get_object_by_name(object_method)
+    c_s = CachedScene(scene)
+    scene_object = c_s.get_object_by_name(object_method)
 
     # parameters
     dot_position = object_method.find(".")  # split object.method() to object and method
@@ -177,7 +177,7 @@ def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
 
 
 def evaluate_if(
-    action_point: ActionPoint,
+    action_point: ActionPoint,  # last seen action point where will by add new action
     node: If,
     variables: dict,
     ac_id: str,
@@ -224,18 +224,20 @@ def evaluate_if(
 
 
 def evaluate_nodes(
-    action_point: ActionPoint,
+    action_point: ActionPoint,  # last seen action point where will by add new action
     tree: If | While | Module,
     variables: dict,
     scene: CachedScene,
     project: Project,
     object_type: dict,
 ) -> dict:
-    """if condition is on, then in future when should by generated new
+    """function go through sended tree and generates LogicItems and Actions
+    into the sended project."""
+
+    """if varibale "after_if" is true, then in future when should by generated new
     LogicItem, will be chcek all nodes in project.logic and added id of next
-    action as end of LogicItems in case the condition is active and another
-    node is "if" that node will by processed as "elif" inside "evaluate_if"."""
-    condition = False
+    action as end of LogicItems."""
+    after_if = False
     ac_id = ""
 
     for node in tree.body:
@@ -253,20 +255,19 @@ def evaluate_nodes(
                 action_point, rest_of_node, variables, scene, project, object_type, flows
             )
 
-            if condition:
+            if after_if:
                 gen_logic_after_if(ac_id, project.logic)
-                condition = False
+                after_if = False
             else:
                 gen_logic(ac_id, project.logic)
 
         elif isinstance(node, If):
-            if condition:
+            if after_if:
                 raise Arcor2Exception('After "if or elif" cannot be another "if" witout method between them)')
-                # variables = evaluate_if(action_point, node, variables, ac_id, scene, project, object_type)
             else:
                 ac_id = project.logic[-1].start
                 variables = evaluate_if(action_point, node, variables, "", scene, project, object_type)
-                condition = True
+                after_if = True
 
         elif isinstance(node, Continue):
             project.logic[-1].end = LogicItem.END

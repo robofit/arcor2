@@ -456,19 +456,12 @@ def project_import() -> RespT:
             except Arcor2Exception:
                 raise InvalidPackage("Invalid code of the main script.")
 
-        if overwrite_project_sources:
+        # case when preparing data from script to decompilation
+        if overwrite_project_sources and not overwrite_project and project.has_logic:
             try:
                 src = zip_file.read("script.py").decode("UTF-8")
             except KeyError:
                 raise NotFound("Could not find script.py.")
-
-            try:
-                parse(src)
-            except Arcor2Exception:
-                raise InvalidPackage("Invalid code of the main script.")
-
-            logger.debug("Rewriting project...")
-            project = python_to_json(project, scene, src, object_type)
 
     # check that we are not going to overwrite something
     if not overwrite_scene:
@@ -522,6 +515,11 @@ def project_import() -> RespT:
                     raise Conflict("Collision model difference detected. Overwrite needed.")
             except ps.ProjectServiceException:
                 pass
+
+    if overwrite_project_sources and not overwrite_project and project.has_logic:
+        logger.debug("Overwriting project...")
+        project = python_to_json(project, scene, src, object_type)
+        logger.debug("Project was successfully overwritten")
 
     for model in models.values():
         ps.put_model(model)
