@@ -43,7 +43,7 @@ from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, tree_to_str
 
 
-class a_p_const:
+class SpecialValues:
     poses = "poses"
     joints = "joints"
 
@@ -232,7 +232,7 @@ def global_action_points_class(project: CachedProject) -> str:
                     value=Call(
                         func=Attribute(
                             value=Attribute(value=Name(id="res", ctx=Load()), attr="project", ctx=Load()),
-                            attr=a_p_const.joints,
+                            attr=SpecialValues.joints,
                             ctx=Load(),
                         ),
                         args=[Str(s=joints.id, kind="")],
@@ -305,7 +305,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
             ap_cls_body.append(
                 Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=a_p_const.joints, ctx=Store())],
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=SpecialValues.joints, ctx=Store())],
                     value=Call(
                         func=Name(id=f"{ap_type_name}Joints", ctx=Load()),
                         args=[Name(id="res", ctx=Load())],
@@ -397,7 +397,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
             ap_cls_body.append(
                 Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=a_p_const.poses, ctx=Store())],
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=SpecialValues.poses, ctx=Store())],
                     value=Call(
                         func=Name(id=f"{ap_type_name}Poses", ctx=Load()),
                         args=[Name(id="res", ctx=Load())],

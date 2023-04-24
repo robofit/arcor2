@@ -20,18 +20,22 @@ from arcor2.data.common import (
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
 from arcor2.parameter_plugins.utils import plugin_from_type
-from arcor2_build.source.utils import a_p_const, find_Call, find_Compare, find_keyword, find_While
+from arcor2_build.source.utils import SpecialValues, find_Call, find_Compare, find_keyword, find_While
 
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 
 
 def get_parameters(
-    rest_of_node: Call, variables: dict, project: Project, action_point: ActionPoint, method: inspect.FullArgSpec
-):
-    parameters = []
+    rest_of_node: Call,  # part of tree that is analyzed
+    variables: dict,  # dict of variables declared in the script
+    project: Project,
+    action_point: ActionPoint,  # last seen action_point where a new action will be added
+    method: inspect.FullArgSpec,  # information about called method
+) -> tuple[list[ActionParameter], ActionPoint]:
+    """returns list of parametres for action that is in rest_of_node."""
 
-    # TODO: check small number of parameters
-    if len(rest_of_node.args) > len(method.args) - 1:  # -1 because in AST "slef" parameter is not in args
+    parameters: list[ActionParameter] = []
+    if len(rest_of_node.args) > len(method.args) - 1:  # -1 because in AST "self" parameter is not in args
         raise Arcor2Exception(f"Wrong number of parameters in method {method}")
 
     for i in range(len(rest_of_node.args)):
@@ -44,12 +48,12 @@ def get_parameters(
             value_type = plugin_from_type(method.annotations[param_name])
 
             if plugin_from_type(type(arg.value)) != value_type:
-                raise Arcor2Exception("Value type in method is not equal required value type")
+                raise Arcor2Exception(f"Value {arg.value} type in method is not equal to the required value type")
 
             param_type = value_type.type_name()
             param_value = value_type.value_to_json(arg.value)
 
-        elif isinstance(arg, Attribute):  # class... it can by actionpoint
+        elif isinstance(arg, Attribute):  # class... it can be action_point
             value_type = plugin_from_type(method.annotations[param_name])
             param_type = value_type.type_name()
 
@@ -67,9 +71,9 @@ def get_parameters(
                     ):
                         if ap.name == arg.value.value.attr:
                             action_point = ap
-                            if arg.value.attr == a_p_const.poses:
+                            if arg.value.attr == SpecialValues.poses:
                                 param_value = json.dumps(ap.orientations[0].id)
-                            elif arg.value.attr == a_p_const.joints:
+                            elif arg.value.attr == SpecialValues.joints:
                                 param_value = json.dumps(ap.robot_joints[0].id)
                             else:
                                 param_value = json.dumps(ap.id)
@@ -86,29 +90,24 @@ def get_parameters(
                         param_value = json.dumps(param.id)
                         break
             if not (param_type or param_value):
-                raise Arcor2Exception(f"Variable {arg_name} was't found")
+                raise Arcor2Exception(f"Variable {arg_name} wasn't found")
         else:
-            raise Arcor2Exception("Unsupported operation.")
-        parameters += [ActionParameter(param_name, param_type, param_value)]
+            raise Arcor2Exception("Unsupported operation")
+        parameters.append(ActionParameter(param_name, param_type, param_value))
 
     return parameters, action_point
 
 
-def gen_actions(
-    action_point: ActionPoint,
-    rest_of_node: Call,
-    variables: dict,
+def gen_action(
+    action_point: ActionPoint,  # last seen action_point where a new action will be added
+    rest_of_node: Call,  # part of tree that is analyzed
+    variables: dict,  # dict of variables declared in script
     scene: CachedScene,
     project: Project,
     object_type: dict,
-    flows: str = "",
-):
-    parameters = []
-
-    # flows
-    final_flows = [Flow()]
-    if flows:
-        final_flows = [Flow(outputs=[(flows)])]
+    flows: list[str],  # flows for action
+) -> tuple[str, dict, ActionPoint]:
+    """Generate action from node dependencies."""
 
     # name
     try:
@@ -130,25 +129,34 @@ def gen_actions(
     try:
         tmp = getattr(object_type[object_name], method_name)
     except AttributeError:
-        raise Arcor2Exception(f"Method {method_name} does not exists")
+        raise Arcor2Exception(f"Method {method_name} does not exist")
 
     method = inspect.getfullargspec(tmp)  # get infomation about method
     parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
+
+    # flows
+    final_flows = []
+    if flows:
+        for flow in flows:
+            final_flows.append(Flow(outputs=[(flow)]))
+    else:
+        final_flows = [Flow()]
 
     # create action
     ac1 = Action(name, scene_object, flows=final_flows, parameters=parameters)
     action_point.actions.append(ac1)  # add actions to last seen action_point
 
-    # if variable was declared, adding it to dict with actions id ['name':'id', 'name':'id', ...]
+    # if variable was declared, it will be added to dict with action id ['name':'id', 'name':'id', ...]
     if flows != "":
-        variables[flows] = ac1.id
+        for flow in flows:
+            variables[flow] = ac1.id
 
     return ac1.id, variables, action_point
 
 
-def gen_logic(ac_id: str, logic_list: list) -> None:
-    """add logic item for common case (calling method...) logic item on last
-    position get END of last ac_id and new logic item get ac_id on START."""
+def gen_logic(ac_id: str, logic_list: list[LogicItem]) -> None:
+    """add end point as ac_id to the last LogicItem and generate new LogicItem
+    whit "start" in ac_id."""
 
     logic_list[-1].end = ac_id
     item = LogicItem(ac_id, "")
@@ -156,17 +164,19 @@ def gen_logic(ac_id: str, logic_list: list) -> None:
     return
 
 
-def gen_logic_for_if(ac_id: str, logic_list: list) -> None:
-    """add Logic item in case that before was "if"."""
+def gen_logic_for_if(ac_id: str, logic_list: list[LogicItem]) -> None:
+    """generate new LogicItem whit "start" in ac_id."""
 
     item = LogicItem(ac_id, "")
     logic_list.append(item)
     return
 
 
-def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
-    """add Logic item after closing "if"(elif,else) looking for empty END and
-    adding ac_id of next action."""
+def gen_logic_after_if(ac_id: str, logic_list: list[LogicItem]) -> None:
+    """looking for empty "end" in logic_list and adding ac_id.
+
+    At the end generete one more LogicItem whit "start" in ac_id.
+    """
 
     for logic_item in logic_list:
         if logic_item.end == "":
@@ -177,21 +187,24 @@ def gen_logic_after_if(ac_id: str, logic_list: list) -> None:
 
 
 def evaluate_if(
-    action_point: ActionPoint,  # last seen action point where will by add new action
-    node: If,
-    variables: dict,
-    ac_id: str,
+    action_point: ActionPoint,  # last seen action_point where a new action will be added
+    node: If,  # part of tree that is analyzed
+    variables: dict,  # dict of variables declared in script
+    ac_id: str,  # id of action that was before condition
     scene: CachedScene,
     project: Project,
     object_type: dict,
 ) -> dict:
+    """generate Actions and logicItems for conditions from node into the
+    project."""
+
     if not isinstance(node.test, Compare):
-        raise Arcor2Exception('Condition must by in from: if "variable" == "value":')
+        raise Arcor2Exception('Condition must be in this form: if "variable" == "value":')
     rest_of_node = find_Compare(node)
 
     what_name = ast.unparse(rest_of_node.left)
     try:
-        what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"  # TODO: other variables?
+        what = variables[what_name] + "/" + FlowTypes.DEFAULT + "/0"
     except KeyError:
         raise Arcor2Exception(f"Variable {what_name} does not exist")
 
@@ -200,22 +213,22 @@ def evaluate_if(
         value_type = plugin_from_type(type(rest_of_node.comparators[0].value))
         value = value_type.value_to_json(rest_of_node.comparators[0].value)
     except KeyError:
-        raise Arcor2Exception("Unsupported operation.")
+        raise Arcor2Exception("Unsupported operation")
 
-    if ac_id:  # node orelse
+    if ac_id:  # node "elif"
         gen_logic_for_if(ac_id, project.logic)
 
-    else:  # node first if
+    else:  # node first "if"
         ac_id = project.logic[-1].start
 
     if isinstance(node.body[0], If):
-        raise Arcor2Exception('After "if" can not be another if without method between')
+        raise Arcor2Exception('After "if" can not be another "if" without method between')
 
     project.logic[-1].condition = ProjectLogicIf(f"{what}", value)
     variables = evaluate_nodes(action_point, node, variables, scene, project, object_type)
 
     if node.orelse:
-        # if node orelse contains "if" or "else" and not only "elif" this will find and evaluate all of them
+        # if "if" or "elif" is followed by "else" or "elif" this will find and evaluate all of them
         for else_or_if_node in node.orelse:
             if isinstance(else_or_if_node, If):
                 variables = evaluate_if(action_point, else_or_if_node, variables, ac_id, scene, project, object_type)
@@ -224,34 +237,35 @@ def evaluate_if(
 
 
 def evaluate_nodes(
-    action_point: ActionPoint,  # last seen action point where will by add new action
-    tree: If | While | Module,
-    variables: dict,
+    action_point: ActionPoint,  # last seen action_point where a new action will be added
+    tree: If | While | Module,  # tree from script that is analyzed
+    variables: dict,  # dict of variables declared in script
     scene: CachedScene,
     project: Project,
     object_type: dict,
 ) -> dict:
-    """function go through sended tree and generates LogicItems and Actions
-    into the sended project."""
+    """function iterates through sent tree and generates LogicItems and Actions
+    into the sent project."""
 
-    """if varibale "after_if" is true, then in future when should by generated new
-    LogicItem, will be chcek all nodes in project.logic and added id of next
-    action as end of LogicItems."""
+    # True: for generating Logicitem will be used gen_logic_after_if()
+    # False: for generating Logicitem will be used gen_logic()
     after_if = False
-    ac_id = ""
+
+    ac_id = ""  # id of last generated action
 
     for node in tree.body:
         if isinstance(node, Expr) or isinstance(node, Assign):
             try:
                 rest_of_node = find_Call(node)
             except AttributeError:
-                raise Arcor2Exception(f"Unsuported command {ast.unparse(node)}")
+                raise Arcor2Exception(f"Unsupported command {ast.unparse(node)}")
 
-            flows = ""
+            flows = []
             if isinstance(node, Assign):
-                flows = ast.unparse(node.targets[0])
+                for flow in node.targets:
+                    flows.append(ast.unparse(flow))
 
-            ac_id, variables, action_point = gen_actions(
+            ac_id, variables, action_point = gen_action(
                 action_point, rest_of_node, variables, scene, project, object_type, flows
             )
 
@@ -273,13 +287,15 @@ def evaluate_nodes(
             project.logic[-1].end = LogicItem.END
 
         else:
-            raise Arcor2Exception("Unsupported operation.")
+            raise Arcor2Exception("Unsupported operation")
     return variables
 
 
 def python_to_json(project: Project, scene: Scene, script: str, object_type: dict) -> Project:
+    """compile Python code into the JSON data that is saved in the project."""
+
     # dict of variables with id actions, where variable was declared ['name':'id', 'name':'id', ...]
-    variables: dict[str, str] = {}  # TODO: separate module/class within arcor2_build /function
+    variables: dict[str, str] = {}
 
     try:
         tree = ast.parse(script)
@@ -296,7 +312,7 @@ def python_to_json(project: Project, scene: Scene, script: str, object_type: dic
 
     evaluate_nodes(project.action_points[0], while_node, variables, CachedScene(scene), project, object_type)
 
-    # adding END in to LogicItem with empty end
+    # adding END into LogicItem with empty "end"
     for logic_item in project.logic:
         if logic_item.end == "":
             logic_item.end = LogicItem.END

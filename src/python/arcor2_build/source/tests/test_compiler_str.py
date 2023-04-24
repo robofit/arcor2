@@ -79,6 +79,8 @@ def find_action(project: CachedProject, ac_id: str) -> Action:
 
 
 def check_python_to_json(project: Project, scene: Scene, script: str, objects_for_json: dict):
+    """compare diferences between sent project and compiled script project."""
+
     o_p = CachedProject(project)
 
     modified_project = python_to_json(project, scene, script, objects_for_json)
@@ -177,8 +179,8 @@ def check_python_to_json(project: Project, scene: Scene, script: str, objects_fo
             tmp1 = tmp1.removesuffix("/default/0")
             tmp2 = tmp2.removesuffix("/default/0")
 
-            modif_con = find_action(m_p, tmp1)  # action where was declared variable in modif_project
-            orig_con = find_action(o_p, tmp2)  # action where was declared variable in orig_project
+            modif_con = find_action(m_p, tmp1)  # action where variable was declared in modif_project
+            orig_con = find_action(o_p, tmp2)  # action where variable was declared in orig_project
             assert modif_con.name == orig_con.name  # action name
             assert modif_con.type == orig_con.type  # action type
             assert modif_con.flows == orig_con.flows  # action flow

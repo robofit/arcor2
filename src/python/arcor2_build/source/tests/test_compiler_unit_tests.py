@@ -3,6 +3,8 @@ import inspect
 import json
 from ast import If
 
+import pytest
+
 from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import (
     Action,
@@ -29,7 +31,7 @@ from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2_build.source.python_to_json import (
     evaluate_if,
     evaluate_nodes,
-    gen_actions,
+    gen_action,
     gen_logic,
     gen_logic_after_if,
     gen_logic_for_if,
@@ -51,6 +53,9 @@ class Test(Generic):
 
     def test(self, an: None | str = None) -> bool:
         return True
+
+    def test_two_values(self, an: None | str = None) -> tuple[bool, bool]:
+        return True, False
 
     def test_par(self, param: int, an: None | str = None) -> None:
         pass
@@ -168,9 +173,9 @@ def test_get_object_by_name2() -> None:
 
 
 def test_get_object_by_name3() -> None:
-    # nonexistent object
+    # non-existent object
     try:
-        c_s.get_object_by_name("nonexistent_object_.method")
+        c_s.get_object_by_name("non-existent_object_.method")
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -273,7 +278,7 @@ def test_get_parameters7() -> None:
 
 
 def test_get_parameters8() -> None:
-    # too much parameters in method
+    # too many parameters in method
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(int_const,int_const,int_const,an="ac1")'))
     method = inspect.getfullargspec(Test.test_par)
@@ -282,9 +287,6 @@ def test_get_parameters8() -> None:
         AssertionError()
     except Arcor2Exception:
         assert True
-
-
-# TODO: test not enough parameters in method
 
 
 def test_get_parameters10() -> None:
@@ -301,7 +303,7 @@ def test_get_parameters10() -> None:
 
 
 def test_get_parameters11() -> None:
-    # nonexistent variable
+    # non-existent variable
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(variable,an="ac1")'))
     method = inspect.getfullargspec(Test.test_par)
@@ -313,16 +315,13 @@ def test_get_parameters11() -> None:
         assert True
 
 
-# TODO: wrong values types (class value, action_point value)
-
-
-def test_gen_actions1() -> None:
+def test_gen_action1() -> None:
     # basic case
     tree = ast.parse('test.test(an="ac1")')
     node = find_Call(tree)
 
-    _ac1, variables, action_point = gen_actions(
-        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ""
+    _ac1, variables, action_point = gen_action(
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, []
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test"
@@ -331,13 +330,13 @@ def test_gen_actions1() -> None:
     assert variables == {}
 
 
-def test_gen_actions2() -> None:
-    # case whit output
+def test_gen_action2() -> None:
+    # case with output
     tree = ast.parse('variable = test.test(an="ac1")')
     node = find_Call(tree)
 
-    ac1, variables, action_point = gen_actions(
-        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, "variable"
+    ac1, variables, action_point = gen_action(
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ["variable"]
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test"
@@ -346,13 +345,28 @@ def test_gen_actions2() -> None:
     assert variables == {"variable": ac1}
 
 
-def test_gen_actions3() -> None:
-    # case whit parameter
+def test_gen_action3() -> None:
+    # case with output
+    tree = ast.parse('variable1, vriable2 = test.test_two_values(an="ac1")')
+    node = find_Call(tree)
+
+    ac1, variables, action_point = gen_action(
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ["variable1", "variable2"]
+    )
+    assert action_point.actions[0].name == "ac1"
+    assert action_point.actions[0].type == f"{next(c_s.objects).id}/test_two_values"
+    assert action_point.actions[0].parameters == []
+    assert action_point.actions[0].flows == [Flow(outputs=["variable1"]), Flow(outputs=["variable2"])]
+    assert variables == {"variable1": ac1, "variable2": ac1}
+
+
+def test_gen_action4() -> None:
+    # case with parameter
     tree = ast.parse('variable = test.test_par(variable,an="ac1")')
     node = find_Call(tree)
 
-    _ac1, variables, action_point = gen_actions(
-        ActionPoint("ap", Position()), node, {"variable": "id123"}, c_s, project, {"test": Test}, ""
+    _ac1, variables, action_point = gen_action(
+        ActionPoint("ap", Position()), node, {"variable": "id123"}, c_s, project, {"test": Test}, []
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test_par"
@@ -363,25 +377,25 @@ def test_gen_actions3() -> None:
     assert variables == {"variable": "id123"}
 
 
-def test_gen_actions4() -> None:
-    # nonexistent method
+def test_gen_action5() -> None:
+    # non-existent method
     tree = ast.parse('test.nothing(an="ac1")')
     node = find_Call(tree)
 
     try:
-        gen_actions(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, "")
+        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
 
 
-def test_gen_actions5() -> None:
+def test_gen_action6() -> None:
     # missing "an"
     tree = ast.parse("test.test()")
     node = find_Call(tree)
 
     try:
-        gen_actions(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, "")
+        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -428,7 +442,7 @@ elif bool_res1 == False:
 
 
 def test_evaluate_if2() -> None:
-    # if whitout elif
+    # "if" without "elif"
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
@@ -546,7 +560,7 @@ elif bool_res1 == False:
 
 
 def test_evaluate_if6() -> None:
-    # nonexistent variable
+    # non-existent variable
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
@@ -601,9 +615,8 @@ elif bool_res1 == False:
         assert True
 
 
+@pytest.mark.xfail()
 def test_evaluate_nodes1() -> None:
-    # TODO: shoud this work?
-
     # "if" after "if and elif" without method between
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -627,15 +640,11 @@ elif bool_res2 == False:
     test.test(an='ac3')"""
     )
 
-    try:
-        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test})
-        AssertionError()
-    except Arcor2Exception:
-        assert True
+    evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test})
 
 
 def test_evaluate_nodes2() -> None:
-    # unsaported operation
+    # unsupported operation
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
@@ -659,7 +668,7 @@ def test_evaluate_nodes2() -> None:
 
 
 def test_evaluate_nodes3() -> None:
-    # unsaported expression
+    # unsupported expression
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
@@ -674,7 +683,7 @@ def test_evaluate_nodes3() -> None:
 
 
 def test_evaluate_nodes4() -> None:
-    # unsaported assign
+    # unsupported assign
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)

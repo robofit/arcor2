@@ -325,6 +325,12 @@ def project_import() -> RespT:
                 type: boolean
                 default: false
               description: Replace existing collision models with new ones for specified project.
+            - in: query
+              name: updateProjectFromScript
+              schema:
+                type: boolean
+                default: false
+              description: Compile script and apply chnages to the project.
       requestBody:
               content:
                 multipart/form-data:
@@ -357,6 +363,7 @@ def project_import() -> RespT:
     overwrite_object_types = request.args.get("overwriteObjectTypes", default="false") == "true"
     overwrite_project_sources = request.args.get("overwriteProjectSources", default="false") == "true"
     overwrite_collision_models = request.args.get("overwriteCollisionModels", default="false") == "true"
+    update_project_from_script = request.args.get("updateProjectFromScript", default="false") == "true"
 
     objects: dict[str, ObjectType] = {}
     object_type: dict[str, type[Generic]] = {}
@@ -457,7 +464,7 @@ def project_import() -> RespT:
                 raise InvalidPackage("Invalid code of the main script.")
 
         # case when preparing data from script to decompilation
-        if overwrite_project_sources and not overwrite_project and project.has_logic:
+        if update_project_from_script:
             try:
                 src = zip_file.read("script.py").decode("UTF-8")
             except KeyError:
@@ -516,10 +523,11 @@ def project_import() -> RespT:
             except ps.ProjectServiceException:
                 pass
 
-    if overwrite_project_sources and not overwrite_project and project.has_logic:
-        logger.debug("Overwriting project...")
+    if update_project_from_script:
+        logger.debug("Decompiling source...")
         project = python_to_json(project, scene, src, object_type)
-        logger.debug("Project was successfully overwritten")
+        logger.debug("Decompile was successfull")
+        logger.debug("Project was overwritten")
 
     for model in models.values():
         ps.put_model(model)

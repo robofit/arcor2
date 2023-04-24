@@ -127,14 +127,14 @@ class CachedScene(CachedBase):
         sc.objects = list(self.objects)
         return sc
 
-    def get_object_by_name(self, object_method: str):
-        """find object in scene by name and return a json reprezetation of the
-        obcject whit its method."""
+    def get_object_by_name(self, object_method: str) -> str:
+        """find object in scene by name and return a json representation of the
+        object with its method."""
 
         # looking for object
         for scene_object in self.objects:
             if object_method.find(scene_object.name + ".") != -1:
-                # raplece name from code to scene definition
+                # replace name from code to scene definition
                 object_type = object_method.replace(scene_object.name + ".", (scene_object.id + "/"))
 
                 return object_type
