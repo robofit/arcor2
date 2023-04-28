@@ -27,7 +27,7 @@ logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG"
 
 def get_parameters(
     rest_of_node: Call,  # part of tree that is analyzed
-    variables: dict,  # dict of variables declared in the script
+    variables: dict,  # dict keeping result of actions ['variable':'ac_id', 'variable':'ac_id', ...]
     project: Project,
     action_point: ActionPoint,  # last seen action_point where a new action will be added
     method: inspect.FullArgSpec,  # information about called method
@@ -59,8 +59,13 @@ def get_parameters(
 
             str_arg = ast.unparse(arg)
             if not ("aps." in str_arg) and isinstance(arg.value, Name):  # class value
-                value = (getattr(method.annotations[param_name], arg.attr)).value
-                param_value = value_type.value_to_json(value)
+                try:
+                    value = (getattr(method.annotations[param_name], arg.attr)).value
+                    param_value = value_type.value_to_json(value)
+                except AttributeError:
+                    str_arg = ast.unparse(arg)
+                    dot_position = str_arg.find(".")
+                    raise Arcor2Exception(f"Class {str_arg[:dot_position]} has not attribute {arg.attr}")
 
             else:  # action_point value
                 for ap in project.action_points:
@@ -69,14 +74,18 @@ def get_parameters(
                         and isinstance(arg.value, Attribute)
                         and isinstance(arg.value.value, Attribute)
                     ):
-                        if ap.name == arg.value.value.attr:
+                        if ap.name == arg.value.value.attr:  # find action_point
                             action_point = ap
-                            if arg.value.attr == SpecialValues.poses:
-                                param_value = json.dumps(ap.orientations[0].id)
-                            elif arg.value.attr == SpecialValues.joints:
-                                param_value = json.dumps(ap.robot_joints[0].id)
-                            else:
-                                param_value = json.dumps(ap.id)
+                            if arg.value.attr == SpecialValues.poses:  # actiopn_point.orientations
+                                for pose in ap.orientations:
+                                    if pose.name == arg.attr:
+                                        param_value = json.dumps(pose.id)
+                            elif arg.value.attr == SpecialValues.joints:  # action_point.robot_joints
+                                for joint in ap.robot_joints:
+                                    if joint.name == arg.attr:
+                                        param_value = json.dumps(joint.id)
+                if not param_value:
+                    raise Arcor2Exception(f"ActionPoint {str_arg} was not found")
 
         elif isinstance(arg, Name):  # variable defined in script or variable from project parameters
             arg_name = ast.unparse(arg)
@@ -101,7 +110,7 @@ def get_parameters(
 def gen_action(
     action_point: ActionPoint,  # last seen action_point where a new action will be added
     rest_of_node: Call,  # part of tree that is analyzed
-    variables: dict,  # dict of variables declared in script
+    variables: dict,  # dict keeping result of actions ['variable':'ac_id', 'variable':'ac_id', ...]
     scene: CachedScene,
     project: Project,
     object_type: dict,
@@ -189,7 +198,7 @@ def gen_logic_after_if(ac_id: str, logic_list: list[LogicItem]) -> None:
 def evaluate_if(
     action_point: ActionPoint,  # last seen action_point where a new action will be added
     node: If,  # part of tree that is analyzed
-    variables: dict,  # dict of variables declared in script
+    variables: dict,  # dict keeping result of actions ['variable':'ac_id', 'variable':'ac_id', ...]
     ac_id: str,  # id of action that was before condition
     scene: CachedScene,
     project: Project,
@@ -239,7 +248,7 @@ def evaluate_if(
 def evaluate_nodes(
     action_point: ActionPoint,  # last seen action_point where a new action will be added
     tree: If | While | Module,  # tree from script that is analyzed
-    variables: dict,  # dict of variables declared in script
+    variables: dict,  # dict keeping result of actions ['variable':'ac_id', 'variable':'ac_id', ...]
     scene: CachedScene,
     project: Project,
     object_type: dict,
@@ -294,7 +303,7 @@ def evaluate_nodes(
 def python_to_json(project: Project, scene: Scene, script: str, object_type: dict) -> Project:
     """compile Python code into the JSON data that is saved in the project."""
 
-    # dict of variables with id actions, where variable was declared ['name':'id', 'name':'id', ...]
+    # dict keeping result of actions ['variable':'ac_id', 'variable':'ac_id', ...]
     variables: dict[str, str] = {}
 
     try:

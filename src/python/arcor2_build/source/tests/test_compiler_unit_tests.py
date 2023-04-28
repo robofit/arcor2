@@ -315,6 +315,45 @@ def test_get_parameters11() -> None:
         assert True
 
 
+def test_get_parameters12() -> None:
+    # non-existent action_point_joints
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.test_joints(aps.nothing.default,an="ac1")'))
+    method = inspect.getfullargspec(Test.test_joints)
+
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_get_parameters13() -> None:
+    # non-existent class attribute
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.tests_class_value(TestEnum.nothing,an="ac1")'))
+    method = inspect.getfullargspec(Test.tests_class_value)
+
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_get_parameters14() -> None:
+    # non-existent class
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.tests_class_value(Nothing.CLASS2,an="ac1")'))
+    method = inspect.getfullargspec(Test.tests_class_value)
+
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
 def test_gen_action1() -> None:
     # basic case
     tree = ast.parse('test.test(an="ac1")')
