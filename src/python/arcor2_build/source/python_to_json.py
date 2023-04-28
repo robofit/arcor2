@@ -76,14 +76,20 @@ def get_parameters(
                     ):
                         if ap.name == arg.value.value.attr:  # find action_point
                             action_point = ap
-                            if arg.value.attr == SpecialValues.poses:  # actiopn_point.orientations
+                            if arg.value.attr == SpecialValues.poses:  # actiopn_point.orientations "poses"
                                 for pose in ap.orientations:
                                     if pose.name == arg.attr:
                                         param_value = json.dumps(pose.id)
-                            elif arg.value.attr == SpecialValues.joints:  # action_point.robot_joints
+                            elif arg.value.attr == SpecialValues.joints:  # action_point.robot_joints "joints"
                                 for joint in ap.robot_joints:
                                     if joint.name == arg.attr:
                                         param_value = json.dumps(joint.id)
+
+                    elif isinstance(arg, Attribute) and isinstance(arg.value, Attribute):
+                        if ap.name == arg.value.attr:  # action_point as parameter
+                            action_point = ap
+                            param_value = json.dumps(ap.id)
+
                 if not param_value:
                     raise Arcor2Exception(f"ActionPoint {str_arg} was not found")
 
@@ -99,7 +105,7 @@ def get_parameters(
                         param_value = json.dumps(param.id)
                         break
             if not (param_type or param_value):
-                raise Arcor2Exception(f"Variable {arg_name} wasn't found")
+                raise Arcor2Exception(f"Variable {arg_name} was not found")
         else:
             raise Arcor2Exception("Unsupported operation")
         parameters.append(ActionParameter(param_name, param_type, param_value))

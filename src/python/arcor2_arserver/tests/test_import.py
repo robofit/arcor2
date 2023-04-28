@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from inspect import getmembers, getsource, isclass, ismodule
+from inspect import getsource
 from io import BytesIO
 from os import path
 from time import sleep
@@ -10,7 +10,6 @@ from humps import depascalize
 from arcor2 import rest
 from arcor2.cached import CachedProject
 from arcor2.data.common import Action, ActionPoint, Flow, LogicItem, Position, Project, Scene, SceneObject
-from arcor2.data.events import Event
 from arcor2.data.execution import PackageMeta
 from arcor2.data.rpc.common import IdArgs
 from arcor2.object_types.random_actions import RandomActions
@@ -18,7 +17,6 @@ from arcor2_arserver.tests.testutils import event
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_build.source.utils import global_action_points_class
-from arcor2_execution_data import EVENTS as EXE_EVENTS
 
 import_random_actions = """
 import random
@@ -79,7 +77,7 @@ def create_test_package(project: Project, scene: Scene, script: str, package_nam
     return mem_zip
 
 
-def test_decompile():
+def test_import(start_processes: None, ars: ARServer, build_url_str: str) -> None:
     scene: Scene = Scene("s1", id="scene1")
     obj: SceneObject = SceneObject("random_actions", "RandomActions", id="obj_1")
     scene.objects.append(obj)
@@ -94,59 +92,40 @@ def test_decompile():
     project.logic.append(LogicItem(LogicItem.START, ac1.id))
     project.logic.append(LogicItem(ac1.id, LogicItem.END))
 
-    url_service: str = "http://localhost:5008"
-    url_import: str = """/project/import?overwriteScene=true&overwriteProject=true&overwriteObjectTypes=true
-&overwriteProjectSources=true&overwriteCollisionModels=true&updateProjectFromScript=true"""
-    url: str = url_service + url_import
+    url_import1: str = "/project/import?overwriteScene=true&overwriteProject=true&overwriteObjectTypes=true"
+    url_import2: str = "&overwriteProjectSources=true&overwriteCollisionModels=true&updateProjectFromScript=true"
+    url: str = build_url_str + url_import1 + url_import2
 
     mem_zip = create_test_package(project, scene, script, "pkg_test")
-    rest.call(rest.Method.PUT, url=url, files={"executionPackage": mem_zip})
+    rest.call(rest.Method.PUT, url=url, files={"executionPackage": mem_zip.read()})
 
     sleep(2)
 
-    event_mapping: dict[str, type[Event]] = {evt.__name__: evt for evt in EXE_EVENTS}
-    modules = []
+    assert ars.call_rpc(rpc.p.OpenProject.Request(get_id(), IdArgs("project1")), rpc.p.OpenProject.Response).result
 
-    for _, mod in getmembers(events, ismodule):
-        modules.append(mod)
+    open_project_evt = event(ars, events.p.OpenProject)
+    data = open_project_evt.data
 
-    for mod in modules:
-        for _, cls in getmembers(mod, isclass):
-            if issubclass(cls, Event):
-                event_mapping[cls.__name__] = cls
+    updated_project = data.project
+    c_updated_project = CachedProject(updated_project)
+    assert c_updated_project.actions[0].name == "ac1"
+    assert c_updated_project.actions[0].type == "obj_1/random_bool"
+    assert c_updated_project.actions[0].parameters == []
+    assert c_updated_project.actions[0].flows[0].outputs == ["bool_res1"]
 
-    with ARServer(event_mapping=event_mapping) as ws:
-        test_username = "testUser"
-        assert ws.call_rpc(
-            rpc.u.RegisterUser.Request(get_id(), rpc.u.RegisterUser.Request.Args(test_username)),
-            rpc.u.RegisterUser.Response,
-        ).result
+    assert c_updated_project.actions[1].name == "ac2"
+    assert c_updated_project.actions[1].type == "obj_1/random_bool"
+    assert c_updated_project.actions[1].parameters == []
+    assert c_updated_project.actions[1].flows[0].outputs == ["bool_res2"]
 
-        assert ws.call_rpc(rpc.p.OpenProject.Request(get_id(), IdArgs("project1")), rpc.p.OpenProject.Response).result
+    assert updated_project.logic[0].start == LogicItem.START
+    assert updated_project.logic[0].end == c_updated_project.actions[0].id
+    assert updated_project.logic[0].condition is None
 
-        open_project_evt = event(ws, events.p.OpenProject)
-        data = open_project_evt.data
+    assert updated_project.logic[1].start == c_updated_project.actions[0].id
+    assert updated_project.logic[1].end == c_updated_project.actions[1].id
+    assert updated_project.logic[1].condition is None
 
-        updated_project = data.project
-        c_updated_project = CachedProject(updated_project)
-        assert c_updated_project.actions[0].name == "ac1"
-        assert c_updated_project.actions[0].type == "obj_1/random_bool"
-        assert c_updated_project.actions[0].parameters == []
-        assert c_updated_project.actions[0].flows[0].outputs == ["bool_res1"]
-
-        assert c_updated_project.actions[1].name == "ac2"
-        assert c_updated_project.actions[1].type == "obj_1/random_bool"
-        assert c_updated_project.actions[1].parameters == []
-        assert c_updated_project.actions[1].flows[0].outputs == ["bool_res2"]
-
-        assert updated_project.logic[0].start == LogicItem.START
-        assert updated_project.logic[0].end == c_updated_project.actions[0].id
-        assert updated_project.logic[0].condition is None
-
-        assert updated_project.logic[1].start == c_updated_project.actions[0].id
-        assert updated_project.logic[1].end == c_updated_project.actions[1].id
-        assert updated_project.logic[1].condition is None
-
-        assert updated_project.logic[2].start == c_updated_project.actions[1].id
-        assert updated_project.logic[2].end == LogicItem.END
-        assert updated_project.logic[2].condition is None
+    assert updated_project.logic[2].start == c_updated_project.actions[1].id
+    assert updated_project.logic[2].end == LogicItem.END
+    assert updated_project.logic[2].condition is None

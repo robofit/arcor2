@@ -66,6 +66,9 @@ class Test(Generic):
     def test_joints(self, param: ProjectRobotJoints, an: None | str = None) -> None:
         pass
 
+    def test_position(self, param: Position, an: None | str = None) -> None:
+        pass
+
     def tests_class_value(self, param: TestEnum, an: None | str = None):
         pass
 
@@ -239,6 +242,18 @@ def test_get_parameters5() -> None:
 
 
 def test_get_parameters6() -> None:
+    # action_point_position
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.test_position(aps.ap1.position,an="ac1")'))
+    method = inspect.getfullargspec(Test.test_position)
+    parmeters, ap = get_parameters(call_node, {}, project, ap_another, method)
+    position_type = plugin_from_type(Position)
+
+    assert parmeters[0] == ActionParameter("param", position_type.type_name(), json.dumps(ap1.id))
+    assert ap == ap1
+
+
+def test_get_parameters7() -> None:
     # class value
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.tests_class_value(TestEnum.CLASS2,an="ac1")'))
@@ -250,7 +265,7 @@ def test_get_parameters6() -> None:
     assert ap == ap_another
 
 
-def test_get_parameters7() -> None:
+def test_get_parameters8() -> None:
     # all parameter types
     ap_another = ActionPoint("another", Position())
     StrEnum_type = plugin_from_type(StrEnum)
@@ -277,7 +292,7 @@ def test_get_parameters7() -> None:
     assert ap == ap1
 
 
-def test_get_parameters8() -> None:
+def test_get_parameters9() -> None:
     # too many parameters in method
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(int_const,int_const,int_const,an="ac1")'))
@@ -316,7 +331,7 @@ def test_get_parameters11() -> None:
 
 
 def test_get_parameters12() -> None:
-    # non-existent action_point_joints
+    # non-existent action_point
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_joints(aps.nothing.default,an="ac1")'))
     method = inspect.getfullargspec(Test.test_joints)
