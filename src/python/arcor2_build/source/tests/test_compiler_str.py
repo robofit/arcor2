@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 
 from arcor2.cached import CachedProject
 from arcor2.data.common import (
@@ -70,6 +71,9 @@ class Test(Generic):
     def tests_class_value(self, param: TestEnum, an: None | str = None):
         pass
 
+    def test_position(self, param: Position, an: None | str = None) -> None:
+        pass
+
 
 def find_action(project: CachedProject, ac_id: str) -> Action:
     res = project.get_by_id(ac_id)
@@ -80,11 +84,14 @@ def find_action(project: CachedProject, ac_id: str) -> Action:
 
 def check_python_to_json(project: Project, scene: Scene, script: str, objects_for_json: dict):
     """compare diferences between sent project and compiled script project."""
-
+    orignal_project = deepcopy(project)
     o_p = CachedProject(project)
 
     modified_project = python_to_json(project, scene, script, objects_for_json)
     m_p = CachedProject(modified_project)
+
+    for i in range(len(modified_project.action_points)):  # check if action_points have same number of actions
+        assert len(modified_project.action_points[i].actions) == len(orignal_project.action_points[i].actions)
 
     assert (len(o_p.actions)) == (len(m_p.actions))
     assert (len(o_p.logic)) == (len(m_p.logic))
@@ -444,6 +451,104 @@ def tests_class_value() -> None:
     while True:
         test_name.tests_class_value(TestEnum.CLASS1, an='ac1')
         test_name.tests_class_value(TestEnum.CLASS2, an='ac2')
+
+
+{call_main}"""
+
+    check_python_to_json(project, scene, script, {"test_name": Test})
+
+
+def test_action_point_mix() -> None:
+    scene = Scene("s1")
+    obj = SceneObject("test_name", Test.__name__)
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint(
+        "ap1",
+        Position(1.1, 0.0, -1.1),
+    )
+    ap2 = ActionPoint(
+        "ap2",
+        Position(2.2, 0.0, -2.2),
+    )
+    ap3 = ActionPoint(
+        "ap3",
+        Position(3.3, 0.0, -3.3),
+    )
+
+    project.action_points.append(ap1)
+    project.action_points.append(ap2)
+    project.action_points.append(ap3)
+
+    ac1 = Action("ac1", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac1)
+
+    ac2 = Action("ac2", f"{obj.id}/test", flows=[Flow()])
+    ap2.actions.append(ac2)
+
+    ac3 = Action("ac3", f"{obj.id}/test", flows=[Flow()])
+    ap3.actions.append(ac3)
+
+    ac4 = Action("ac4", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac4)
+
+    ac5 = Action("ac5", f"{obj.id}/test", flows=[Flow()])
+    ap2.actions.append(ac5)
+
+    ac6 = Action("ac6", f"{obj.id}/test", flows=[Flow()])
+    ap3.actions.append(ac6)
+
+    position_type = plugin_from_type(Position)
+    ac1_p = Action(
+        "ac1_p",
+        f"{obj.id}/test_position",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", position_type.type_name(), json.dumps(ap1.id))],
+    )
+    ap1.actions.append(ac1_p)
+
+    ac2_p = Action(
+        "ac2_p",
+        f"{obj.id}/test_position",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", position_type.type_name(), json.dumps(ap2.id))],
+    )
+    ap2.actions.append(ac2_p)
+
+    ac3_p = Action(
+        "ac3_p",
+        f"{obj.id}/test_position",
+        flows=[Flow()],
+        parameters=[ActionParameter("param", position_type.type_name(), json.dumps(ap3.id))],
+    )
+    ap3.actions.append(ac3_p)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, ac2.id))
+    project.logic.append(LogicItem(ac2.id, ac1_p.id))
+    project.logic.append(LogicItem(ac1_p.id, ac3.id))
+    project.logic.append(LogicItem(ac3.id, ac4.id))
+    project.logic.append(LogicItem(ac4.id, ac2_p.id))
+    project.logic.append(LogicItem(ac2_p.id, ac5.id))
+    project.logic.append(LogicItem(ac5.id, ac6.id))
+    project.logic.append(LogicItem(ac6.id, ac3_p.id))
+    project.logic.append(LogicItem(ac3_p.id, LogicItem.END))
+
+    script = f"""
+{head}
+
+
+{main_body}
+    while True:
+        test_name.test(an='ac1')
+        test_name.test(an='ac2')
+        test_name.test_position(aps.ap1.position,an='ac1_p')
+        test_name.test(an='ac3')
+        test_name.test(an='ac4')
+        test_name.test_position(aps.ap2.position,an='ac2_p')
+        test_name.test(an='ac5')
+        test_name.test(an='ac6')
+        test_name.test_position(aps.ap3.position,an='ac3_p')
 
 
 {call_main}"""

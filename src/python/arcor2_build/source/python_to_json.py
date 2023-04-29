@@ -1,10 +1,9 @@
 import ast
 import inspect
 import json
-import logging
 from ast import Assign, Attribute, Call, Compare, Constant, Continue, Expr, If, Module, Name, While
+from copy import deepcopy
 
-from arcor2 import env
 from arcor2.cached import CachedScene
 from arcor2.data.common import (
     Action,
@@ -18,11 +17,19 @@ from arcor2.data.common import (
     Scene,
 )
 from arcor2.exceptions import Arcor2Exception
-from arcor2.logging import get_logger
 from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2_build.source.utils import SpecialValues, find_Call, find_Compare, find_keyword, find_While
 
-logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
+
+# TDOD: Place somewhere else?
+def action_point_in_list(action_points: list[ActionPoint], action_name: str) -> str | None:
+    """return action_point from list[ActionPoint] where sent action_name is
+    name of action which is conin it this action_point."""
+    for action_point in action_points:
+        for action in action_point.actions:
+            if action.name == action_name:
+                return action_point.id
+    return None
 
 
 def get_parameters(
@@ -121,6 +128,7 @@ def gen_action(
     project: Project,
     object_type: dict,
     flows: list[str],  # flows for action
+    action_points: list[ActionPoint],  # list of action_points from original project
 ) -> tuple[str, dict, ActionPoint]:
     """Generate action from node dependencies."""
 
@@ -129,6 +137,13 @@ def gen_action(
         name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
     except AttributeError:
         raise Arcor2Exception(f'Missing value "an" in {ast.unparse(rest_of_node)}')
+
+    # find action_point where shoud by added new action
+    action_point_id = action_point_in_list(action_points, name)
+    if action_point_id:
+        tmp = project.find_action_point(action_point_id)
+        if tmp:  # if action_point was not found, last seen action point will be not overwritten
+            action_point = tmp
 
     # type
     object_method = ast.unparse(rest_of_node.func)
@@ -148,6 +163,7 @@ def gen_action(
 
     method = inspect.getfullargspec(tmp)  # get infomation about method
     parameters, action_point = get_parameters(rest_of_node, variables, project, action_point, method)
+    # action_point -> action will be added to action_point that was used as parameter
 
     # flows
     final_flows = []
@@ -209,6 +225,7 @@ def evaluate_if(
     scene: CachedScene,
     project: Project,
     object_type: dict,
+    action_points: list[ActionPoint],  # list of action_points from original project
 ) -> dict:
     """generate Actions and logicItems for conditions from node into the
     project."""
@@ -240,13 +257,15 @@ def evaluate_if(
         raise Arcor2Exception('After "if" can not be another "if" without method between')
 
     project.logic[-1].condition = ProjectLogicIf(f"{what}", value)
-    variables = evaluate_nodes(action_point, node, variables, scene, project, object_type)
+    variables = evaluate_nodes(action_point, node, variables, scene, project, object_type, action_points)
 
     if node.orelse:
         # if "if" or "elif" is followed by "else" or "elif" this will find and evaluate all of them
         for else_or_if_node in node.orelse:
             if isinstance(else_or_if_node, If):
-                variables = evaluate_if(action_point, else_or_if_node, variables, ac_id, scene, project, object_type)
+                variables = evaluate_if(
+                    action_point, else_or_if_node, variables, ac_id, scene, project, object_type, action_points
+                )
 
     return variables
 
@@ -258,6 +277,7 @@ def evaluate_nodes(
     scene: CachedScene,
     project: Project,
     object_type: dict,
+    action_points: list[ActionPoint],  # list of action_points from original project
 ) -> dict:
     """function iterates through sent tree and generates LogicItems and Actions
     into the sent project."""
@@ -281,7 +301,7 @@ def evaluate_nodes(
                     flows.append(ast.unparse(flow))
 
             ac_id, variables, action_point = gen_action(
-                action_point, rest_of_node, variables, scene, project, object_type, flows
+                action_point, rest_of_node, variables, scene, project, object_type, flows, action_points
             )
 
             if after_if:
@@ -295,7 +315,7 @@ def evaluate_nodes(
                 raise Arcor2Exception('After "if or elif" cannot be another "if" witout method between them)')
             else:
                 ac_id = project.logic[-1].start
-                variables = evaluate_if(action_point, node, variables, "", scene, project, object_type)
+                variables = evaluate_if(action_point, node, variables, "", scene, project, object_type, action_points)
                 after_if = True
 
         elif isinstance(node, Continue):
@@ -318,14 +338,17 @@ def python_to_json(project: Project, scene: Scene, script: str, object_type: dic
         raise Arcor2Exception("script.py contains syntax error")
     while_node = find_While(tree)
 
-    # cleaning project
-    for action_points in project.action_points:
-        action_points.actions = []
-    project.logic = []
-    start_item = LogicItem(LogicItem.START, "")
-    project.logic.append(start_item)
+    action_points = deepcopy(project.action_points)
 
-    evaluate_nodes(project.action_points[0], while_node, variables, CachedScene(scene), project, object_type)
+    # cleaning project
+    for action_point in project.action_points:
+        action_point.actions = []
+    project.logic = []
+    project.logic.append(LogicItem(LogicItem.START, LogicItem.END))
+
+    evaluate_nodes(
+        project.action_points[0], while_node, variables, CachedScene(scene), project, object_type, action_points
+    )
 
     # adding END into LogicItem with empty "end"
     for logic_item in project.logic:

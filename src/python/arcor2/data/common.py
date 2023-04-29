@@ -704,6 +704,14 @@ class Project(BareProject):
             print()
             count += 1
 
+    def find_action_point(self, action_point_id: str) -> ActionPoint | None:
+        """find action_point with specific id in project."""
+
+        for action_point in self.action_points:
+            if action_point.id == action_point_id:
+                return action_point
+        return None
+
 
 @dataclass
 class ProjectSources(JsonSchemaMixin):

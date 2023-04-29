@@ -2,6 +2,7 @@ import ast
 import inspect
 import json
 from ast import If
+from copy import deepcopy
 
 import pytest
 
@@ -375,7 +376,7 @@ def test_gen_action1() -> None:
     node = find_Call(tree)
 
     _ac1, variables, action_point = gen_action(
-        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, []
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [], []
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test"
@@ -390,7 +391,7 @@ def test_gen_action2() -> None:
     node = find_Call(tree)
 
     ac1, variables, action_point = gen_action(
-        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ["variable"]
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ["variable"], []
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test"
@@ -405,7 +406,7 @@ def test_gen_action3() -> None:
     node = find_Call(tree)
 
     ac1, variables, action_point = gen_action(
-        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ["variable1", "variable2"]
+        ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, ["variable1", "variable2"], []
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test_two_values"
@@ -420,7 +421,7 @@ def test_gen_action4() -> None:
     node = find_Call(tree)
 
     _ac1, variables, action_point = gen_action(
-        ActionPoint("ap", Position()), node, {"variable": "id123"}, c_s, project, {"test": Test}, []
+        ActionPoint("ap", Position()), node, {"variable": "id123"}, c_s, project, {"test": Test}, [], []
     )
     assert action_point.actions[0].name == "ac1"
     assert action_point.actions[0].type == f"{next(c_s.objects).id}/test_par"
@@ -437,7 +438,7 @@ def test_gen_action5() -> None:
     node = find_Call(tree)
 
     try:
-        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [])
+        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [], [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -449,7 +450,7 @@ def test_gen_action6() -> None:
     node = find_Call(tree)
 
     try:
-        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [])
+        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [], [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -476,7 +477,7 @@ elif bool_res1 == False:
         node = tree.body[0]
 
     variables = evaluate_if(
-        ap_another, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test}
+        ap_another, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test}, []
     )
 
     tmp_project = CachedProject(project2)
@@ -513,7 +514,7 @@ if bool_res1 == True:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
 
-    variables = evaluate_if(ap_another, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
+    variables = evaluate_if(ap_another, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test}, [])
 
     tmp_project = CachedProject(project2)
     assert variables == {"bool_res1": "id123"}
@@ -551,7 +552,7 @@ elif bool_res1 == False:
         node = tree.body[0]
 
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -579,7 +580,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, ac1.id, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -607,7 +608,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -635,7 +636,7 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -663,14 +664,82 @@ elif bool_res1 == False:
     if isinstance(tree.body[0], If):
         node = tree.body[0]
     try:
-        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test})
+        evaluate_if(ap1, node, {"bool_res1": "id123"}, ac1.id, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
 
 
-@pytest.mark.xfail()
 def test_evaluate_nodes1() -> None:
+    # action_point mix
+    project2 = Project("p1", "s1")
+    ap_another1 = ActionPoint(
+        "ap_another1",
+        Position(1.1, 0.0, -1.1),
+    )
+    ap_another2 = ActionPoint(
+        "ap_another2",
+        Position(2.2, 0.0, -2.2),
+    )
+    ap_another3 = ActionPoint(
+        "ap_another3",
+        Position(3.3, 0.0, -3.3),
+    )
+
+    project2.action_points.append(deepcopy(ap_another1))
+    project2.action_points.append(deepcopy(ap_another2))
+    project2.action_points.append(deepcopy(ap_another3))
+
+    ac1 = Action("ac1", f"{next(c_s.objects).id}/test", flows=[Flow()])
+    ap_another1.actions.append(ac1)
+
+    ac2 = Action("ac2", f"{next(c_s.objects).id}/test", flows=[Flow()])
+    ap_another2.actions.append(ac2)
+
+    ac3 = Action("ac3", f"{next(c_s.objects).id}/test", flows=[Flow()])
+    ap_another3.actions.append(ac3)
+
+    ac4 = Action("ac4", f"{next(c_s.objects).id}/test", flows=[Flow()])
+    ap_another1.actions.append(ac4)
+
+    ac5 = Action("ac5", f"{next(c_s.objects).id}/test", flows=[Flow()])
+    ap_another2.actions.append(ac5)
+
+    ac6 = Action("ac6", f"{next(c_s.objects).id}/test", flows=[Flow()])
+    ap_another3.actions.append(ac6)
+
+    project2.logic.append(LogicItem(LogicItem.START, LogicItem.END))
+
+    node = ast.parse(
+        """
+test.test(an='ac1')
+test.test(an='ac2')
+test.test_position(aps.ap_another1.position,an='ac1_p')
+test.test(an='ac3')
+test.test(an='ac4')
+test.test_position(aps.ap_another2.position,an='ac2_p')
+test.test(an='ac5')
+test.test(an='ac6')
+test.test_position(aps.ap_another3.position,an='ac3_p')"""
+    )
+
+    evaluate_nodes(
+        project2.action_points[0], node, {}, c_s, project2, {"test": Test}, [ap_another1, ap_another2, ap_another3]
+    )
+
+    project2.action_points[0].actions[0].name = "ac1"
+    project2.action_points[0].actions[1].name = "ac4"
+    project2.action_points[0].actions[2].name = "ac1_p"
+    project2.action_points[1].actions[0].name = "ac2"
+    project2.action_points[1].actions[1].name = "ac2_p"
+    project2.action_points[1].actions[2].name = "ac5"
+    project2.action_points[2].actions[0].name = "ac3"
+    project2.action_points[2].actions[1].name = "ac6"
+    project2.action_points[2].actions[2].name = "ac3_p"
+
+
+@pytest.mark.xfail()
+def test_evaluate_nodes2() -> None:
     # "if" after "if and elif" without method between
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -694,10 +763,10 @@ elif bool_res2 == False:
     test.test(an='ac3')"""
     )
 
-    evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test})
+    evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test}, [])
 
 
-def test_evaluate_nodes2() -> None:
+def test_evaluate_nodes3() -> None:
     # unsupported operation
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -715,13 +784,13 @@ def test_evaluate_nodes2() -> None:
     )
 
     try:
-        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {"bool_res1": "id123", "bool_res2": "id456"}, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
 
 
-def test_evaluate_nodes3() -> None:
+def test_evaluate_nodes4() -> None:
     # unsupported expression
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -730,13 +799,13 @@ def test_evaluate_nodes3() -> None:
     node = ast.parse("1 + 2")
 
     try:
-        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
 
 
-def test_evaluate_nodes4() -> None:
+def test_evaluate_nodes5() -> None:
     # unsupported assign
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -745,13 +814,13 @@ def test_evaluate_nodes4() -> None:
     node = ast.parse("variable = 1 + 2")
 
     try:
-        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
 
 
-def test_evaluate_nodes5() -> None:
+def test_evaluate_nodes6() -> None:
     # using function
     project2 = Project("p1", "s1")
     ap_another = ActionPoint("ap_another", Position())
@@ -763,7 +832,7 @@ def test_evaluate_nodes5() -> None:
     except Arcor2Exception:
         assert True
     try:
-        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test})
+        evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test}, [])
         AssertionError()
     except Arcor2Exception:
         assert True
