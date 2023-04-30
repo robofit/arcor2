@@ -14,4 +14,8 @@ class StartError(KinectAzureException):
     description = "Occurs when start condition is not met."
 
 
+class InvalidDirection(KinectAzureException):
+    description = "Cannot determine direction"
+
+
 WebApiError = WebApiErrorFactory.get_class(StartError, NotFound)

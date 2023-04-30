@@ -24,7 +24,7 @@ opencv-contrib-python~=4.7.0.72
 orjson~=3.8.8
 packaging~=21.3  # getting "No matching distribution found" with 22.0
 pyhumps==3.8.0
-pyk4a~=1.5.0
+pyk4a@ git+https://github.com/Jakub-Dv/pyk4a.git@feature/body-tracking
 pyserial~=3.5
 pytest-asyncio~=0.21.0
 pytest-randomly~=3.12.0

@@ -2,6 +2,7 @@ import json
 import logging
 import traceback
 from dataclasses import dataclass, field
+from http import HTTPStatus
 from typing import Optional, Type, TypeAlias, Union, cast
 
 from apispec import APISpec
@@ -112,6 +113,14 @@ class WebApiErrorFactory:
             )
 
         return cast(Type[IWebApiError], WebApiError)
+
+
+class DataclassResponse(Response):
+    """Wrapper around flask.Response that creates Response from provided
+    dataclass as json and sets mimetype to 'application/json'."""
+
+    def __init__(self, dc: JsonSchemaMixin, status: int = HTTPStatus.OK, **kwargs) -> None:
+        super().__init__(response=dc.to_json(), status=status, mimetype="application/json", **kwargs)
 
 
 def create_app(import_name: str) -> Flask:

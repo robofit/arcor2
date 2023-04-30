@@ -8,7 +8,7 @@ from arcor2_fit_demo.object_types.conveyor_belt import ConveyorBelt
 from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 from arcor2_fit_demo.object_types.fit_common_mixin import FitCommonMixin
-from arcor2_fit_demo.object_types.kinect_azure import KinectAzure
+from arcor2_kinect_azure_data.object_types.kinect_azure import KinectAzure
 
 
 def main() -> None:

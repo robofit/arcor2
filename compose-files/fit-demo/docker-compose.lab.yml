@@ -13,6 +13,20 @@ services:
     devices:
       - /dev/dobotM1:/dev/dobot
 
-  fit-demo-kinect:
-    environment:
-      - ARCOR2_KINECT_AZURE_MOCK=false
+# Kinect in docker is available only in MOCK mode.
+# Read README.md located in src/python/arcor2_kinect_azure for running locally
+#  fit-demo-kinect:
+#    environment:
+#      - DISPLAY=$DISPLAY
+#      - ARCOR2_KINECT_AZURE_MOCK=false
+#    # Pass connected kinect to container
+#    devices:
+#      - /dev/bus/usb/:/dev/bus/usb/
+#    # https://docs.docker.com/compose/gpu-support/
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - capabilities: [gpu]
+#    volumes:
+#      - /tmp/.X11-unix:/tmp/.X11-unix:ro

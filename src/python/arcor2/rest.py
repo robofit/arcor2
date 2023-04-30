@@ -96,6 +96,7 @@ def call(
     *,
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> None:
@@ -111,6 +112,7 @@ def call(
     return_type: type[Primitive],
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> Primitive:
@@ -125,6 +127,7 @@ def call(
     return_type: type[DataClass],
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> DataClass:
@@ -139,6 +142,7 @@ def call(
     return_type: type[BytesIO],
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> BytesIO:
@@ -154,6 +158,7 @@ def call(
     list_return_type: type[Primitive],
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> list[Primitive]:
@@ -168,6 +173,7 @@ def call(
     list_return_type: type[DataClass],
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> list[DataClass]:
@@ -182,6 +188,7 @@ def call(
     list_return_type: type[BytesIO],
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> list[BytesIO]:
@@ -196,6 +203,7 @@ def call(
     list_return_type: ReturnType = None,
     body: OptBody = None,
     params: OptParams = None,
+    raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
 ) -> ReturnValue:
@@ -207,6 +215,8 @@ def call(
     :param list_return_type: If set, function will try to return list of a given type.
     :param body: Data to be send in the request body.
     :param params: Path parameters.
+    :param raw_params: Parameters are by default converted to camelCase form.
+                       If you do not want this behavior, pass True here
     :param files: Instead of body, it is possible to send files.
     :param timeout: Specific timeout for a call.
     :return: Return value/type is given by return_type/list_return_type. If both are None, nothing will be returned.
@@ -237,7 +247,7 @@ def call(
     elif body is not None:
         raise RestException("Unsupported type of data.")
 
-    if params:
+    if params and not raw_params:
         params = humps.camelize(params)
 
         # requests just simply stringifies parameters, which does not work for booleans
@@ -339,12 +349,12 @@ def _handle_response(resp: requests.Response) -> None:
             raise RestException(str(cont))
 
 
-def get_image(url: str) -> Image.Image:
+def get_image(url: str, params: OptParams = None, raw_params: bool = False) -> Image.Image:
     """Shortcut for getting an image."""
 
     # TODO check content type?
     try:
-        return Image.open(call(Method.GET, url, return_type=BytesIO))
+        return Image.open(call(Method.GET, url, return_type=BytesIO, params=params, raw_params=raw_params))
     except (UnidentifiedImageError, TypeError) as e:
         raise RestException("Invalid image.") from e
 
