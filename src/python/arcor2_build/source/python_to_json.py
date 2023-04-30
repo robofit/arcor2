@@ -12,19 +12,22 @@ from arcor2.data.common import (
     Flow,
     FlowTypes,
     LogicItem,
+    Pose,
+    Position,
     Project,
     ProjectLogicIf,
+    ProjectRobotJoints,
     Scene,
 )
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins.utils import plugin_from_type
-from arcor2_build.source.utils import SpecialValues, find_Call, find_Compare, find_keyword, find_While
+from arcor2_build.source.utils import SpecialValues, find_Call, find_Compare, find_While
 
 
 # TDOD: Place somewhere else?
 def action_point_in_list(action_points: list[ActionPoint], action_name: str) -> str | None:
     """return action_point from list[ActionPoint] where sent action_name is
-    name of action which is conin it this action_point."""
+    name of action which is in this action_point."""
     for action_point in action_points:
         for action in action_point.actions:
             if action.name == action_name:
@@ -42,8 +45,8 @@ def get_parameters(
     """returns list of parametres for action that is in rest_of_node."""
 
     parameters: list[ActionParameter] = []
-    if len(rest_of_node.args) > len(method.args) - 1:  # -1 because in AST "self" parameter is not in args
-        raise Arcor2Exception(f"Wrong number of parameters in method {method}")
+    if len(rest_of_node.args) != len(method.args) - 2:  # -2 because in AST "self" and "an" parameter is not in args
+        raise Arcor2Exception(f"Wrong number of parameters in method {ast.unparse(rest_of_node)}")
 
     for i in range(len(rest_of_node.args)):
         param_name = method.args[i + 1]  # +1 to skip self parameter
@@ -61,13 +64,13 @@ def get_parameters(
             param_value = value_type.value_to_json(arg.value)
 
         elif isinstance(arg, Attribute):  # class... it can be action_point
-            value_type = plugin_from_type(method.annotations[param_name])
-            param_type = value_type.type_name()
-
             str_arg = ast.unparse(arg)
             if not ("aps." in str_arg) and isinstance(arg.value, Name):  # class value
+                value_type = plugin_from_type(method.annotations[param_name])
+                param_type = value_type.type_name()
+
                 try:
-                    value = (getattr(method.annotations[param_name], arg.attr)).value
+                    value = (getattr(method.annotations[param_name], arg.attr)).value  # get value from atribute
                     param_value = value_type.value_to_json(value)
                 except AttributeError:
                     str_arg = ast.unparse(arg)
@@ -87,18 +90,26 @@ def get_parameters(
                                 for pose in ap.orientations:
                                     if pose.name == arg.attr:
                                         param_value = json.dumps(pose.id)
+                                        param_type = plugin_from_type(Pose).type_name()
+
                             elif arg.value.attr == SpecialValues.joints:  # action_point.robot_joints "joints"
                                 for joint in ap.robot_joints:
                                     if joint.name == arg.attr:
                                         param_value = json.dumps(joint.id)
+                                        param_type = plugin_from_type(ProjectRobotJoints).type_name()
 
                     elif isinstance(arg, Attribute) and isinstance(arg.value, Attribute):
                         if ap.name == arg.value.attr:  # action_point as parameter
                             action_point = ap
                             param_value = json.dumps(ap.id)
+                            param_type = plugin_from_type(Position).type_name()
 
                 if not param_value:
                     raise Arcor2Exception(f"ActionPoint {str_arg} was not found")
+                if plugin_from_type(method.annotations[param_name]).type_name() != param_type:
+                    raise Arcor2Exception(
+                        f"Value {ast.unparse(arg)} type in method is not equal to the required value type"
+                    )
 
         elif isinstance(arg, Name):  # variable defined in script or variable from project parameters
             arg_name = ast.unparse(arg)
@@ -133,10 +144,18 @@ def gen_action(
     """Generate action from node dependencies."""
 
     # name
+    name = ""
     try:
-        name = ast.unparse(find_keyword(rest_of_node).value).replace("'", "")
+        for key in rest_of_node.keywords:
+            if "an" == key.arg and isinstance(key.value, Constant):
+                name = key.value.value
+        if not name:
+            raise AttributeError
     except AttributeError:
         raise Arcor2Exception(f'Missing value "an" in {ast.unparse(rest_of_node)}')
+
+    if action_point_in_list(project.action_points, name):
+        raise Arcor2Exception(f"Name {name} of action is already used")
 
     # find action_point where shoud by added new action
     action_point_id = action_point_in_list(action_points, name)

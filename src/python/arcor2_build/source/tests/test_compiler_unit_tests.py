@@ -73,6 +73,9 @@ class Test(Generic):
     def tests_class_value(self, param: TestEnum, an: None | str = None):
         pass
 
+    def test_pokus(self, param1: int = 1, param2: int = 2, param3: int = 3, an: None | str = None):
+        print("ahoj")
+
     def test_all(
         self,
         param: TestEnum,
@@ -296,7 +299,7 @@ def test_get_parameters8() -> None:
 def test_get_parameters9() -> None:
     # too many parameters in method
     ap_another = ActionPoint("another", Position())
-    call_node = find_Call(ast.parse('test.test_par(int_const,int_const,int_const,an="ac1")'))
+    call_node = find_Call(ast.parse('test.test_par(int_const, int_const, int_const, an="ac1")'))
     method = inspect.getfullargspec(Test.test_par)
     try:
         get_parameters(call_node, {}, project, ap_another, method)
@@ -306,6 +309,18 @@ def test_get_parameters9() -> None:
 
 
 def test_get_parameters10() -> None:
+    # not enought parameters in method
+    ap_another = ActionPoint("another", Position())
+    call_node = find_Call(ast.parse('test.test_par(an="ac1")'))
+    method = inspect.getfullargspec(Test.test_par)
+    try:
+        get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_get_parameters11() -> None:
     # wrong constant value
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par("string",an="ac1")'))
@@ -318,7 +333,7 @@ def test_get_parameters10() -> None:
         assert True
 
 
-def test_get_parameters11() -> None:
+def test_get_parameters12() -> None:
     # non-existent variable
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_par(variable,an="ac1")'))
@@ -331,7 +346,7 @@ def test_get_parameters11() -> None:
         assert True
 
 
-def test_get_parameters12() -> None:
+def test_get_parameters13() -> None:
     # non-existent action_point
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.test_joints(aps.nothing.default,an="ac1")'))
@@ -344,7 +359,7 @@ def test_get_parameters12() -> None:
         assert True
 
 
-def test_get_parameters13() -> None:
+def test_get_parameters14() -> None:
     # non-existent class attribute
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.tests_class_value(TestEnum.nothing,an="ac1")'))
@@ -357,7 +372,7 @@ def test_get_parameters13() -> None:
         assert True
 
 
-def test_get_parameters14() -> None:
+def test_get_parameters15() -> None:
     # non-existent class
     ap_another = ActionPoint("another", Position())
     call_node = find_Call(ast.parse('test.tests_class_value(Nothing.CLASS2,an="ac1")'))
@@ -365,6 +380,18 @@ def test_get_parameters14() -> None:
 
     try:
         get_parameters(call_node, {}, project, ap_another, method)
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_get_parameters16() -> None:
+    # wrong parameter as action_point
+    call_node = find_Call(ast.parse('test.tests_class_value(aps.ap1.position,an="ac1")'))
+    method = inspect.getfullargspec(Test.tests_class_value)
+
+    try:
+        get_parameters(call_node, {}, project, ap1, method)
         AssertionError()
     except Arcor2Exception:
         assert True
@@ -447,6 +474,18 @@ def test_gen_action5() -> None:
 def test_gen_action6() -> None:
     # missing "an"
     tree = ast.parse("test.test()")
+    node = find_Call(tree)
+
+    try:
+        gen_action(ActionPoint("ap", Position()), node, {}, c_s, project, {"test": Test}, [], [])
+        AssertionError()
+    except Arcor2Exception:
+        assert True
+
+
+def test_gen_action7() -> None:
+    # missing "an" version2
+    tree = ast.parse('test.test(something="ac1")')
     node = find_Call(tree)
 
     try:
