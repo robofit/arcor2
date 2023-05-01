@@ -45,7 +45,9 @@ def get_parameters(
     """returns list of parametres for action that is in rest_of_node."""
 
     parameters: list[ActionParameter] = []
-    if len(rest_of_node.args) != len(method.args) - 2:  # -2 because in AST "self" and "an" parameter is not in args
+    # -2 because in AST "self" and "an" parameter is not in args
+    # if in parameters of method is before "an" * then "an" is not in method.args
+    if len(rest_of_node.args) != len(method.args) -2 + len(method.kwonlyargs):  
         raise Arcor2Exception(f"Wrong number of parameters in method {ast.unparse(rest_of_node)}")
 
     for i in range(len(rest_of_node.args)):

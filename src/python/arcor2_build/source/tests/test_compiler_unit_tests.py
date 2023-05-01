@@ -73,9 +73,6 @@ class Test(Generic):
     def tests_class_value(self, param: TestEnum, an: None | str = None):
         pass
 
-    def test_pokus(self, param1: int = 1, param2: int = 2, param3: int = 3, an: None | str = None):
-        print("ahoj")
-
     def test_all(
         self,
         param: TestEnum,
