@@ -865,11 +865,8 @@ def test_evaluate_nodes6() -> None:
     ap_another = ActionPoint("ap_another", Position())
     project2.action_points.append(ap_another)
 
-    try:
-        node = ast.parse('print("hello")')
-        AssertionError()
-    except Arcor2Exception:
-        assert True
+    node = ast.parse('print("hello")')
+
     try:
         evaluate_nodes(ap1, node, {}, c_s, project2, {"test": Test}, [])
         AssertionError()

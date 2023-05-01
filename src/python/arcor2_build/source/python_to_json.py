@@ -125,7 +125,7 @@ def get_parameters(
             if not (param_type or param_value):
                 raise Arcor2Exception(f"Variable {arg_name} was not found")
         else:
-            raise Arcor2Exception("Unsupported operation")
+            raise Arcor2Exception(f"Unsupported operation in {ast.unparse(rest_of_node)}")
         parameters.append(ActionParameter(param_name, param_type, param_value))
 
     return parameters, action_point
@@ -166,9 +166,7 @@ def gen_action(
 
     # type
     object_method = ast.unparse(rest_of_node.func)
-
-    c_s = CachedScene(scene)
-    scene_object = c_s.get_object_by_name(object_method)
+    scene_object = scene.get_object_by_name(object_method)
 
     # parameters
     dot_position = object_method.find(".")  # split object.method() to object and method
@@ -264,7 +262,7 @@ def evaluate_if(
         value_type = plugin_from_type(type(rest_of_node.comparators[0].value))
         value = value_type.value_to_json(rest_of_node.comparators[0].value)
     except KeyError:
-        raise Arcor2Exception("Unsupported operation")
+        raise Arcor2Exception(f"Unsupported operation in {ast.unparse(node)}")
 
     if ac_id:  # node "elif"
         gen_logic_for_if(ac_id, project.logic)
@@ -339,9 +337,10 @@ def evaluate_nodes(
 
         elif isinstance(node, Continue):
             project.logic[-1].end = LogicItem.END
+            break
 
         else:
-            raise Arcor2Exception("Unsupported operation")
+            raise Arcor2Exception(f"Unsupported operation {ast.unparse(node)}")
     return variables
 
 
@@ -354,8 +353,11 @@ def python_to_json(project: Project, scene: Scene, script: str, object_type: dic
     try:
         tree = ast.parse(script)
     except SyntaxError:
-        raise Arcor2Exception("script.py contains syntax error")
-    while_node = find_While(tree)
+        raise Arcor2Exception("Script contains syntax error")
+    try:
+        while_node = find_While(tree)
+    except AttributeError:
+        raise Arcor2Exception('Missing "while" in script')
 
     action_points = deepcopy(project.action_points)
 

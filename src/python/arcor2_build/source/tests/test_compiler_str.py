@@ -413,7 +413,7 @@ def test_joints() -> None:
     check_python_to_json(project, scene, script, {"test_name": Test})
 
 
-def tests_class_value() -> None:
+def test_class_value() -> None:
     scene = Scene("s1")
     obj = SceneObject("test_name", Test.__name__)
     scene.objects.append(obj)
@@ -549,6 +549,42 @@ def test_action_point_mix() -> None:
         test_name.test(an='ac5')
         test_name.test(an='ac6')
         test_name.test_position(aps.ap3.position,an='ac3_p')
+
+
+{call_main}"""
+
+    check_python_to_json(project, scene, script, {"test_name": Test})
+
+
+def test_continuee() -> None:
+    scene = Scene("s1")
+    obj = SceneObject("test_name", "Test")
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    ac1 = Action("ac1", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac1)
+
+    ac2 = Action("ac2", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac2)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+    project.logic.append(LogicItem(ac1.id, ac2.id))
+    project.logic.append(LogicItem(ac2.id, LogicItem.END))
+
+    script = f"""
+{head}
+
+
+{main_body}
+    while True:
+        test_name.test(an='ac1')
+        test_name.test(an='ac2')
+        continue
+        test_name.test(an='ac3')
+        test_name.test(an='ac4')
 
 
 {call_main}"""

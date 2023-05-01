@@ -28,7 +28,6 @@ from ast import (
     alias,
     arg,
     arguments,
-    keyword,
     stmt,
     withitem,
 )
@@ -555,21 +554,6 @@ def find_Call(tree: Module | AST) -> Call:
     ff.visit(tree)
 
     return ff.Call_node
-
-
-def find_keyword(tree: Module | AST) -> keyword:
-    class Findkeyword(NodeVisitor):
-        def __init__(self) -> None:
-            self.keyword_node: keyword
-
-        def visit_keyword(self, node: keyword) -> None:
-            self.keyword_node = node
-            return
-
-    ff = Findkeyword()
-    ff.visit(tree)
-
-    return ff.keyword_node
 
 
 def find_Compare(tree: Module | AST):
