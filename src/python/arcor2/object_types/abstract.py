@@ -100,8 +100,7 @@ class GenericWithPose(Generic):
         """
         return self._pose
 
-    @pose.setter
-    def pose(self, pose: Pose) -> None:
+    def set_pose(self, pose: Pose) -> None:
         self._pose = pose
 
     def update_pose(self, new_pose: Pose, *, an: None | str = None) -> None:
@@ -111,7 +110,7 @@ class GenericWithPose(Generic):
         :return:
         """
 
-        self.pose = new_pose
+        self.set_pose(new_pose)
 
     update_pose.__action__ = ActionMetadata()  # type: ignore
 
@@ -137,13 +136,8 @@ class CollisionObject(GenericWithPose):
         self.collision_model.id = self.id
         scene_service.upsert_collision(self.collision_model, pose)
 
-    @property  # workaround for https://github.com/python/mypy/issues/5936
-    def pose(self) -> Pose:
-        return super().pose
-
-    @pose.setter
-    def pose(self, pose: Pose) -> None:
-        self._pose = pose  # TODO how to set it through super() correctly?
+    def set_pose(self, pose: Pose) -> None:
+        super().set_pose(pose)
         if self._enabled:
             scene_service.upsert_collision(self.collision_model, pose)
 
