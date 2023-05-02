@@ -13,7 +13,7 @@ from arcor2_kinect_azure.routes.depth import depth_image
 blueprint = Blueprint("synchronized", __name__, url_prefix="/synchronized")
 
 
-@blueprint.route("/synchronized/image", methods=["GET"])
+@blueprint.route("/image", methods=["GET"])
 @requires_started
 def get_image_both() -> RespT:
     """Get the both color/depth image.

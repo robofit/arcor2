@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.2.1] - 2023-05-02
+
+### Changed
+
+- KinectAzure now correctly stops when scene is turned off
+- KinectAzure is updated with pose after each calibration
+
 ## [1.2.0] - 2023-04-24
 
 ### Changed

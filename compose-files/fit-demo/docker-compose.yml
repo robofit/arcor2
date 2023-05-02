@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:1.0.1
+    image: arcor2/arcor2_arserver:1.0.2
     container_name: fit-demo-arserver
     depends_on:
       fit-demo-project:
@@ -72,7 +72,7 @@ services:
         - fit-demo-execution:/root/project
 
   fit-demo-kinect:
-    image: arcor2/arcor2_kinect_azure:0.6.0
+    image: arcor2/arcor2_kinect_azure:0.7.1
     container_name: fit-demo-kinect
     networks:
       - fit-demo-kinect-network
@@ -174,7 +174,7 @@ services:
       - fit-demo-asset
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:1.2.0
+    image: arcor2/arcor2_upload_fit_demo:1.2.1
     container_name: "fit-demo-upload-object-types"
     depends_on:
       fit-demo-project:
