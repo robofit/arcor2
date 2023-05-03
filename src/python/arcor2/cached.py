@@ -127,6 +127,26 @@ class CachedScene(CachedBase):
         sc.objects = list(self.objects)
         return sc
 
+    def get_object_by_name(self, object_method: str) -> str:
+        """find object in scene by name and return a json representation of the
+        object with its method, for example dobot_magician.pick ->
+        obj_123456789abc/pick.
+
+        :param object_method: Object and Method in str  for example "dobot_magician.pick"
+
+        :return:    Object_id/method for example "obj_123456789abc/pick"
+        """
+
+        # looking for object
+        for scene_object in self.objects:
+            if object_method.find(scene_object.name + ".") != -1:
+                # replace name from code to scene definition
+                object_type = object_method.replace(scene_object.name + ".", (scene_object.id + "/"))
+
+                return object_type
+
+        raise Arcor2Exception(f"Object with method {object_method} was not found")
+
 
 class UpdateableCachedScene(UpdateableMixin, CachedScene):
     __slots__ = ()
@@ -547,6 +567,26 @@ class CachedProject(CachedBase):
     def update_child(self, obj_id: str, old_parent: None | str, new_parent: None | str) -> None:
         self._remove_child(old_parent, obj_id)
         self._upsert_child(new_parent, obj_id)
+
+    def find_logic_start_end(self, start: str, end: str) -> cmn.LogicItem:
+        """find specific LogicItem with start parameter and end parameter.
+
+        :param start: Start atribut of LogicItem
+        :param end:   End atribut of LogicItem
+
+        :return:   Found LogicItem
+        """
+
+        for logic_item in self.logic:
+            if start == logic_item.start and end == logic_item.end:
+                return logic_item
+        raise CachedProjectException(f"LogicItem in project {self.name} not found.")
+
+    def action_from_name(self, name: str) -> cmn.Action:
+        for action in self.actions:
+            if name == action.name:
+                return action
+        raise CachedProjectException(f"Action {name} in project {self.name} not found.")
 
 
 class UpdateableCachedProject(UpdateableMixin, CachedProject):

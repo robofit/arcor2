@@ -1,5 +1,6 @@
 import copy
 from ast import (
+    AST,
     AnnAssign,
     Assign,
     Attribute,
@@ -16,6 +17,7 @@ from ast import (
     Module,
     Name,
     NameConstant,
+    NodeVisitor,
     Pass,
     Return,
     Store,
@@ -38,6 +40,12 @@ from arcor2.data.common import ActionPoint, Pose, Position, ProjectRobotJoints
 from arcor2.exceptions import Arcor2Exception
 from arcor2.source import SourceException
 from arcor2.source.utils import add_import, find_function, tree_to_str
+
+
+class SpecialValues:
+    poses = "poses"
+    joints = "joints"
+
 
 RES_MODULE = "arcor2_runtime.resources"
 RES_CLS = "Resources"
@@ -223,7 +231,7 @@ def global_action_points_class(project: CachedProject) -> str:
                     value=Call(
                         func=Attribute(
                             value=Attribute(value=Name(id="res", ctx=Load()), attr="project", ctx=Load()),
-                            attr="joints",
+                            attr=SpecialValues.joints,
                             ctx=Load(),
                         ),
                         args=[Str(s=joints.id, kind="")],
@@ -296,7 +304,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
             ap_cls_body.append(
                 Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr="joints", ctx=Store())],
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=SpecialValues.joints, ctx=Store())],
                     value=Call(
                         func=Name(id=f"{ap_type_name}Joints", ctx=Load()),
                         args=[Name(id="res", ctx=Load())],
@@ -388,7 +396,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
             ap_cls_body.append(
                 Assign(
-                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr="poses", ctx=Store())],
+                    targets=[Attribute(value=Name(id="self", ctx=Load()), attr=SpecialValues.poses, ctx=Store())],
                     value=Call(
                         func=Name(id=f"{ap_type_name}Poses", ctx=Load()),
                         args=[Name(id="res", ctx=Load())],
@@ -512,3 +520,52 @@ def find_last_assign(tree: FunctionDef) -> int:
             return body_idx
 
     raise Arcor2Exception("Assign not found.")
+
+
+def find_While(tree: Module):
+    if tree.body == []:
+        return tree
+
+    class FindWhile(NodeVisitor):
+        def __init__(self) -> None:
+            self.While_node: While
+
+        def visit_While(self, node: While) -> None:
+            self.While_node = node
+            self.generic_visit(node)
+            return
+
+    ff = FindWhile()
+    ff.visit(tree)
+
+    return ff.While_node
+
+
+def find_Call(tree: Module | AST) -> Call:
+    class FindCall(NodeVisitor):
+        def __init__(self) -> None:
+            self.Call_node: Call
+
+        def visit_Call(self, node: Call) -> None:
+            self.Call_node = node
+            return
+
+    ff = FindCall()
+    ff.visit(tree)
+
+    return ff.Call_node
+
+
+def find_Compare(tree: Module | AST):
+    class FindCompare(NodeVisitor):
+        def __init__(self) -> None:
+            self.Compare_node: list[Compare] = []
+
+        def visit_Compare(self, node: Compare) -> None:
+            self.Compare_node.append(node)
+            return
+
+    ff = FindCompare()
+    ff.visit(tree)
+
+    return ff.Compare_node[0]

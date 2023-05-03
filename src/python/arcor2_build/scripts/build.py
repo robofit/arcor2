@@ -36,6 +36,7 @@ from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
+from arcor2_build.source.python_to_json import python_to_json
 from arcor2_build.source.utils import global_action_points_class
 from arcor2_build_data import DEPENDENCIES, SERVICE_NAME, URL, ImportResult
 from arcor2_build_data.exceptions import Conflict, InvalidPackage, InvalidProject, NotFound, WebApiError
@@ -324,6 +325,12 @@ def project_import() -> RespT:
                 type: boolean
                 default: false
               description: Replace existing collision models with new ones for specified project.
+            - in: query
+              name: updateProjectFromScript
+              schema:
+                type: boolean
+                default: false
+              description: Compile script and apply changes to the project.
       requestBody:
               content:
                 multipart/form-data:
@@ -356,8 +363,10 @@ def project_import() -> RespT:
     overwrite_object_types = request.args.get("overwriteObjectTypes", default="false") == "true"
     overwrite_project_sources = request.args.get("overwriteProjectSources", default="false") == "true"
     overwrite_collision_models = request.args.get("overwriteCollisionModels", default="false") == "true"
+    update_project_from_script = request.args.get("updateProjectFromScript", default="false") == "true"
 
     objects: dict[str, ObjectType] = {}
+    object_type: dict[str, type[Generic]] = {}
     models: dict[str, Models] = {}
 
     """
@@ -414,6 +423,7 @@ def project_import() -> RespT:
                 get_base_from_imported_package(objects[obj_type_name], objects, zip_file, tmp_dir, ast)
 
                 type_def = save_and_import_type_def(obj_type_src, obj_type_name, Generic, tmp_dir, OBJECT_TYPE_MODULE)
+                object_type[scene_obj.name] = type_def
 
                 assert obj_type_name == type_def.__name__
 
@@ -452,6 +462,13 @@ def project_import() -> RespT:
                 parse(script)
             except Arcor2Exception:
                 raise InvalidPackage("Invalid code of the main script.")
+
+        # case when preparing data from script to decompilation
+        if update_project_from_script:
+            try:
+                src = zip_file.read("script.py").decode("UTF-8")
+            except KeyError:
+                raise NotFound("Could not find script.py.")
 
     # check that we are not going to overwrite something
     if not overwrite_scene:
@@ -505,6 +522,11 @@ def project_import() -> RespT:
                     raise Conflict("Collision model difference detected. Overwrite needed.")
             except ps.ProjectServiceException:
                 pass
+
+    if update_project_from_script:
+        logger.debug("Decompiling source...")
+        project = python_to_json(project, scene, src, object_type)
+        logger.debug("Decompile was successfull and project was overwritten")
 
     for model in models.values():
         ps.put_model(model)

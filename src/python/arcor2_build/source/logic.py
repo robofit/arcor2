@@ -79,7 +79,9 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
     if add_logic:
         add_logic_to_loop(type_defs, tree, scene, project)
 
-    return SCRIPT_HEADER + tree_to_str(tree)
+    Warning = '# Warning: making changes is only allowed in "while" \n \n'
+
+    return SCRIPT_HEADER + Warning + tree_to_str(tree)
 
 
 Container = FunctionDef | If | While  # TODO remove While
