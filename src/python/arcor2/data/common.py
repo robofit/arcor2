@@ -668,6 +668,55 @@ class Project(BareProject):
             id=bare.id,
         )
 
+    def print_actions(self):
+        """Print all actions from project with their specific action_point."""
+
+        count = 1
+        for action_point in self.action_points:
+            print(f"||-----------||{action_point.name}||------------||\n")
+            for action in action_point.actions:
+                print(f"----------------Action {count}-----------------")
+                print("Name:\t" + action.name)
+                print("Type:\t" + action.type)
+                print("Id:\t" + action.id)
+                print("Param:\t")
+                for param in action.parameters:
+                    print("\t", end="")
+                    print(param)
+                print("Flows:\t")
+                for flow in action.flows:
+                    print("\t", end="")
+                    print(flow)
+                print()
+                count += 1
+
+    def print_logic_items(self):
+        """Print all LogicItems from project."""
+
+        count = 1
+        for item in self.logic:
+            print(f"----------------Logic {count}-----------------")
+            print("Start:\t" + item.start)
+            print("End:\t" + item.end)
+            print("Con:\t", end="")
+            print(item.condition)
+            print("Id:\t" + item.id)
+            print()
+            count += 1
+
+    def find_action_point(self, action_point_id: str) -> ActionPoint | None:
+        """find action_point with specific id in project.
+
+        :action_point_id:   Id of action_point
+
+        :return:            Found ActionPoint or None
+        """
+
+        for action_point in self.action_points:
+            if action_point.id == action_point_id:
+                return action_point
+        return None
+
 
 @dataclass
 class ProjectSources(JsonSchemaMixin):

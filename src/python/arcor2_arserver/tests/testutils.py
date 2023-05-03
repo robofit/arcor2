@@ -22,6 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 _arserver_port: int = 0
+build_url: str = ""
 
 
 def log_proc_output(out: tuple[bytes, bytes]) -> None:
@@ -41,6 +42,7 @@ def start_processes(request) -> Iterator[None]:
     """Starts ARServer dependencies."""
 
     global _arserver_port
+    global build_url
 
     additional_deps: None | list[str] = None
 
@@ -151,6 +153,10 @@ def check_health(service_name: str, service_url: str, timeout: int = 60) -> None
 
 def ars_connection_str() -> str:
     return f"ws://0.0.0.0:{_arserver_port}"
+
+
+def build_url_str() -> str:
+    return build_url
 
 
 # TODO refactor this into _data packages

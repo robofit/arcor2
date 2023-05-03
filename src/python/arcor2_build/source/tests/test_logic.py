@@ -324,3 +324,54 @@ def test_branched_output_2() -> None:
     assert cntsp(spl[ac1_idx]) == cntsp(spl[ac6_idx])
     assert ac6_idx > if_bool_2_res_false_idx
     assert ac6_idx > if_bool_2_res_true_idx
+
+
+@pytest.mark.xfail()
+def test_alone_if() -> None:
+    scene = Scene("s1")
+    obj = SceneObject("test_name", "Test")
+    scene.objects.append(obj)
+    project = Project("p1", "s1")
+    ap1 = ActionPoint("ap1", Position())
+    project.action_points.append(ap1)
+
+    ac1 = Action("ac1", f"{obj.id}/test", flows=[Flow(outputs=["bool_res1"])])
+    ap1.actions.append(ac1)
+
+    ac2 = Action("ac2", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac2)
+
+    ac3 = Action("ac3", f"{obj.id}/test", flows=[Flow()])
+    ap1.actions.append(ac3)
+
+    project.logic.append(LogicItem(LogicItem.START, ac1.id))
+
+    project.logic.append(LogicItem(ac1.id, ac2.id, ProjectLogicIf(f"{ac1.id}/default/0", json.dumps(True))))
+    project.logic.append(LogicItem(ac2.id, ac3.id))
+
+    project.logic.append(LogicItem(ac3.id, LogicItem.END))
+
+    src = program_src({Test.__name__: Test}, CachedProject(project), CachedScene(scene))
+
+    """
+    bool_res1 = test_name.test(an='ac1')
+    if bool_res1 == True:
+        test_name.test(an='ac2')
+    test_name.test(an='ac3')
+    """
+
+    spl = src.splitlines()
+
+    ac1_idx = subs_index(spl, "bool_res1 = test_name.test(an='ac1')")
+
+    if_bool_res_true_idx = subs_index(spl, "if bool_res1 == True:")
+    assert if_bool_res_true_idx > ac1_idx
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[if_bool_res_true_idx])
+
+    assert "test_name.test(an='ac2')" in spl[if_bool_res_true_idx + 1]
+    assert cntsp(spl[if_bool_res_true_idx]) == cntsp(spl[if_bool_res_true_idx + 1]) - TAB
+
+    ac3_idx = subs_index(spl, "test_name.test(an='ac3')")
+    assert cntsp(spl[ac1_idx]) == cntsp(spl[ac3_idx])
+    assert ac3_idx > if_bool_res_true_idx
+    assert ac3_idx > if_bool_res_true_idx
