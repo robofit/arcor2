@@ -65,11 +65,11 @@ class BodyJoint(StrEnum):
 
 @dataclass
 class UrlSettings(Settings):
-    url: str = "http://localhost:5017"
+    url: str = "http://192.168.104.100:5017"
 
     @classmethod
     def from_env(cls) -> "UrlSettings":
-        url = os.getenv("ARCOR2_KINECT_AZURE_URL", "http://localhost:5017")
+        url = os.getenv("ARCOR2_KINECT_AZURE_URL", "http://192.168.104.100:5017")
         return cls(url)
 
     def construct_path(self, path: str) -> str:
@@ -135,7 +135,14 @@ class KinectAzure(Camera):
         if not self._started:
             return
 
-        call(Method.GET, self.construct_path("/state/stop"))
+        call(Method.PUT, self.construct_path("/state/stop"))
+
+    def cleanup(self) -> None:
+        self.stop()
+
+    def set_pose(self, pose: Pose) -> None:
+        call(Method.PUT, self.construct_path("/state/pose"), body=pose)
+        super().set_pose(pose)
 
     def color_image(self, *, an: Optional[str] = None) -> Image.Image:
         """Get color image from kinect.

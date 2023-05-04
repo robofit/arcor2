@@ -49,7 +49,7 @@ def test_generic_with_pose(start_processes: None) -> None:
     obj = CollisionObject("id", "name", Pose(), Box("boxId", 0.1, 0.1, 0.1))
     assert obj.id in scene_service.collision_ids()
 
-    obj.pose = Pose()
+    obj.set_pose(Pose())
 
     obj.enabled = False
     assert obj.id not in scene_service.collision_ids()

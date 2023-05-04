@@ -236,13 +236,20 @@ class KinectAzure:
                 time.sleep(0.2)
             return self._capture_buffer[-1]
 
+    @staticmethod
+    def convert_bgra_to_rgba(arr: np.ndarray) -> None:
+        arr[:, :, [0, 1, 2, 3]] = arr[:, :, [2, 1, 0, 3]]
+
     def color_image(self) -> Image.Image:
         capture = self.capture()
 
         if capture.color is None:
             raise KinectAzureException("Color image not available.")
+        else:
+            color = capture.color
+            self.convert_bgra_to_rgba(color)
 
-        return Image.fromarray(capture.color, mode="RGBA")
+        return Image.fromarray(color, mode="RGBA")
 
     def _depth_image(self) -> np.ndarray:
         capture = self.capture()
@@ -266,10 +273,13 @@ class KinectAzure:
     def sync_images(self) -> ColorAndDepthImage:
         capture = self.capture()
 
-        if not capture.color or not capture.depth:
+        if capture.color is None or capture.depth is None:
             raise KinectAzureException("Color/depth image not available.")
+        else:
+            color = capture.color
+            self.convert_bgra_to_rgba(color)
 
-        return ColorAndDepthImage(Image.fromarray(capture.color), Image.fromarray(capture.transformed_depth))
+            return ColorAndDepthImage(Image.fromarray(color).convert("RGB"), Image.fromarray(capture.transformed_depth))
 
     def cleanup(self) -> None:
         if self._capture_thread is not None:

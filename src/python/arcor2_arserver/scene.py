@@ -192,8 +192,8 @@ async def update_scene_object_pose(
 
         assert pose is not None
 
-        # Object pose is property that might call scene service - that's why it has to be called using executor.
-        await hlp.run_in_executor(setattr, obj_inst, "pose", pose)
+        # Setting object pose might call scene service - that's why it has to be called using executor.
+        await hlp.run_in_executor(obj_inst.set_pose, pose)
 
     if lock_owner:
         await glob.LOCK.write_unlock(obj.id, lock_owner, True)
