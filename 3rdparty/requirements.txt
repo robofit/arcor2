@@ -16,6 +16,7 @@ fastuuid~=0.8.0
 flask-swagger-ui~=4.11.1
 flask_cors~=3.0.10
 lru-dict~=1.1.8
+networkx~=2.2  # outdated dependency of urdfpy, needs to be here so we can override its dependencies (missing setuptools)
 numpy-quaternion[scipy,numba]~=2022.4.3
 numpy~=1.23.5  # 1.24.1 causes troubles with building numba wheel
 open3d==0.16.0  # 0.16.1 seems to be only for MacOS, with 0.17.0 there is some pex-related issue
