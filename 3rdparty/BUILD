@@ -14,6 +14,6 @@ python_requirements(
         "apispec-webframeworks": {
             "dependencies": ["#setuptools", "#Flask"]
         },  # https://github.com/marshmallow-code/apispec-webframeworks/issues/99
-        "networkx": {"dependencies": ["#setuptools"]},
+        "urdfpy": {"dependencies": ["#setuptools"]},  #  actually, networkx is missing that dependency
     },
 )
