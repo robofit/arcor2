@@ -2,16 +2,10 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [0.7.1] - 2023-05-02
 
-## Fixed
+## [0.7.0] - 2023-07-20
 
-- Colors in color image
-- Synchronized images download
-
-## [0.7.0] - 2023-04-19
-
-### Changelog
+### Changed
 
 - App is refactored and adds endpoints for tracking user using body-tracking api
 - App can track user in numerous ways:
@@ -21,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
     - Get RGB, depth and rgb with skeleton image
     - Show what camera sees in browser
     - Check if user is nearby some point
-- **Breaking**: App runs in docker only in MOCK mode
+- **Breaking**: App runs in Docker only in MOCK mode.
 
 ## [0.6.0] - 2023-03-07
 

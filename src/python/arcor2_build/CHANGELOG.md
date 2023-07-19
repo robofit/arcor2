@@ -2,37 +2,22 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [1.1.0] - 2023-04-25
+## [1.1.0] - 2023-07-20
 
 ### Added
 
 - Decompiler
-- App adds  posibility to decompile script from imported execute package and then update project data 
-- Decompiler has also detection of unsuported operations, sytax and semantic erros 
-
-- Commands that can by decompiled :
-  - Object whit method which can have many outputs, 
-    parameters in method can be:
+  - Possibility to decompile script from imported execution package and then update of project data. 
+  - Decompiler has also detection of unsupported operations, syntax and semantic errors.
+  - Commands that can be decompiled:
+    - Object with method which can have many outputs, parameters in method can be:
       - constant
       - variable which is result of method
       - project parameter
       - value of ActionPoint
-      - atribute of class 
-    last parameter must contain name of action:
-      - an="action name"
-
-  - Condtions: alone "if" or "if" continued many "elif",
-    condtion must be in form:
-    - if "variable" == "constant":
-
-  - Command "Continue"
-    if is some command after command "continue" on same level it will be not compiled
-
-## [1.0.3] - 2023-04-25
-
-### Added
-
-- Compatibility with `arcor2_kinect_azure:0.7.0`
+      - attribute of class
+    - Conditions: alone "if" or "if" continued many "elif",  condition must be in form `if "variable" == "constant":`.
+    - Command "Continue" if is some command after command "continue" on same level it will be not compiled.
 
 ## [1.0.2] - 2023-04-04
 

@@ -34,13 +34,13 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
 
- - 2023-02-14: [1.0.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F1.0.0) ([pypi](https://pypi.org/project/arcor2/1.0.0/)).
+ - 2023-07-20: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F1.1.0) ([pypi](https://pypi.org/project/arcor2/1.1.0/)).
  
 ### arcor2_arserver
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2023-02-14: [1.0.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F1.0.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=1.0.0), [pypi](https://pypi.org/project/arcor2-arserver/1.0.0/)).
+ - 2023-07-20: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-arserver/1.1.0/)).
  
 ### arcor2_arserver_data
 
@@ -52,7 +52,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
 
- - 2023-04-04: [1.0.2](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F1.0.2) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=1.0.2), [pypi](https://pypi.org/project/arcor2-build/1.0.2/)).
+ - 2023-07-20: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-build/1.1.0/)).
 
 ### arcor2_build_data
 
@@ -82,7 +82,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
 
- - 2023-02-14: [1.0.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F1.0.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=1.0.0), [pypi](https://pypi.org/project/arcor2-execution/1.0.0/)).
+ - 2023-07-20: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-execution/1.1.0/)).
  
 ### arcor2_execution_data
 
@@ -106,13 +106,20 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
-- 2023-03-07: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-fit-demo/1.1.0/)).
+- 2023-07-20: [1.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F1.2.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=1.2.0), [pypi](https://pypi.org/project/arcor2-fit-demo/1.2.0/)).
   
 ### arcor2_kinect_azure
 
 [README](src/python/arcor2_kinect_azure/README.md) | [CHANGELOG](src/python/arcor2_kinect_azure/CHANGELOG.md)
 
- - 2023-03-07: [0.6.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinect_azure%2F0.6.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_kinect_azure/tags?page=1&ordering=last_updated&name=0.6.0), [pypi](https://pypi.org/project/arcor2_kinect_azure/0.6.0/)).
+ - 2023-07-20: [0.7.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinect_azure%2F0.7.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_kinect_azure/tags?page=1&ordering=last_updated&name=0.7.0), [pypi](https://pypi.org/project/arcor2_kinect_azure/0.7.0/)).
+
+### arcor2_kinect_azure_data
+
+[README](src/python/arcor2_kinect_azure_data/README.md) | [CHANGELOG](src/python/arcor2_kinect_azure_data/CHANGELOG.md)
+
+ - 2023-07-20: [0.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinect_azure_data%2F0.1.0) ([pypi](https://pypi.org/project/arcor2_kinect_azure_data/0.1.0/)).
+
 
 ### arcor2_logger
 
