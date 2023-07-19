@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.1.0] - 2023-07-20
+
+### Added
+
+- Few new helper functions.
+
+### Changed
+
+- Object pose is now not set using a property setter but using the `set_pose` method.  
+
 ## [1.0.0] - 2023-02-14
 
 ### Changed

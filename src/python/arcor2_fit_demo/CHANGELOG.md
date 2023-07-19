@@ -2,21 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [1.2.1] - 2023-05-02
+## [1.2.0] - 2023-07-20
 
 ### Changed
 
-- KinectAzure now correctly stops when scene is turned off
-- KinectAzure is updated with pose after each calibration
+- `KinectAzure` ObjectType is now imported from `src/python/arcor2_kinect_azure_data/object_types/kinect_azure.py`.
 
-## [1.2.0] - 2023-04-24
-
-### Changed
-
-- KinectAzure object type is imported from src/python/arcor2_kinect_azure_data/object_types/kinect_azure.py
-- Compatibility with `arcor2_kinect_azure:0.7.0`
-
-## [1.0.0] - 2023-03-07
+## [1.1.0] - 2023-03-07
 
 ### Changed
 
