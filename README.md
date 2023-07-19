@@ -27,6 +27,8 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 - Kapinus, Michal, et al. "Spatially situated end-user robot programming in augmented reality." 2019 28th IEEE International Conference on Robot and Human Interactive Communication (RO-MAN). IEEE, 2019.
 - Kapinus, Michal, et al. "Improved Indirect Virtual Objects Selection Methods for Cluttered Augmented Reality Environments on Mobile Devices." Proceedings of the 2022 ACM/IEEE International Conference on Human-Robot Interaction. 2022.
 - Bambušek, Daniel, et al. "Handheld Augmented Reality: Overcoming Reachability Limitations by Enabling Temporal Switching to Virtual Reality." Proceedings of the 2022 ACM/IEEE International Conference on Human-Robot Interaction. 2022.
+- Bambušek, Daniel, et al. How Do I Get There? Overcoming Reachability Limitations of Constrained Industrial Environments in Augmented Reality Applications. In: 2023 IEEE Conference Virtual Reality and 3D User Interfaces (VR). IEEE, 2023. p. 115-122.
+- Kapinus, Michal, et al. ARCOR2: Framework for Collaborative End-User Management of Industrial Robotic Workplaces using Augmented Reality. arXiv preprint arXiv:2306.08464, 2023.
 
 ## Releases
 
