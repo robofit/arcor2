@@ -9,7 +9,7 @@ jobs:
   compose:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Check syntax of fit-demo
       run: |
         docker-compose -f compose-files/fit-demo/docker-compose.yml -f compose-files/fit-demo/docker-compose.lab.yml config
