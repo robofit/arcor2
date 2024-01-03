@@ -13,7 +13,7 @@ FROM python:3.10.10-slim-bullseye
 # curl is for healthcheck
 RUN apt-get update \
 	&& apt-get -f satisfy ffmpeg -y \
-        && apt-get install -y -q --no-install-recommends sudo=1.9.5p2-3+deb11u1 libhidapi-dev=0.10.1+dfsg-1 libpulse0=14.2-2 libasound2=1.2.4-1.1 libasound2-plugins=1.2.2-2 curl=7.74.0-1.3+deb11u7 \
+        && apt-get install -y -q --no-install-recommends sudo=1.9.5p2-3+deb11u1 libhidapi-dev=0.10.1+dfsg-1 libpulse0=14.2-2 libasound2=1.2.4-1.1 libasound2-plugins=1.2.2-2 curl=7.74.0-1.3+deb11u11 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
