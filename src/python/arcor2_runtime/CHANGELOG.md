@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.1.0] - 2024-01-03
+
+### Changed
+
+- Parameter `interact_with_scene_service` added to the `Resources` class.
+
 ## [1.0.0] - 2023-02-14
 
 ### Changed
