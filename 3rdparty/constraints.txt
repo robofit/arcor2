@@ -3230,7 +3230,7 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "ba64b87b6fed6472569915950061c29b34b5a6a7ee6fa75c99daf1dc6318574c",
+              "hash": "04a3419e6c2bef9799834ef8f8d2cc80fa96d1682c1676c73663095714146f7c",
               "url": "git+https://github.com/Jakub-Dv/pyk4a.git@feature/body-tracking"
             }
           ],
