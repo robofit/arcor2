@@ -87,9 +87,24 @@ T = TypeVar("T", bound=JsonSchemaMixin)
 
 
 class Resources:
-    __slots__ = ("project", "scene", "objects", "args", "executor", "_stream_futures")
+    __slots__ = ("project", "scene", "objects", "args", "executor", "_stream_futures", "interact_with_scene_service")
 
-    def __init__(self, apply_action_mapping: bool = True, scene_start_timeout: rest.OptTimeout = None) -> None:
+    def __init__(
+        self,
+        apply_action_mapping: bool = True,
+        scene_start_timeout: rest.OptTimeout = None,
+        interact_with_scene_service: bool = True,
+    ) -> None:
+        """Initializes Resources class.
+
+        :param apply_action_mapping: Action mapping (name to id) can be disabled when there are no actions.
+        :param scene_start_timeout: Timeout for calling /system/start on the Scene service.
+        :param interact_with_scene_service: when set to False, no call to the Scene service will be made.
+        :return:
+        """
+
+        self.interact_with_scene_service = interact_with_scene_service
+
         models: dict[str, None | Models] = {}
 
         scene = self.read_project_data(Scene.__name__.lower(), Scene)
@@ -163,7 +178,8 @@ class Resources:
         print_event(package_info_event)
 
         # in order to prepare a clean environment (clears all configurations and all collisions)
-        scene_service.stop()
+        if self.interact_with_scene_service:
+            scene_service.stop()
 
         self.executor = concurrent.futures.ThreadPoolExecutor()
         futures: list[concurrent.futures.Future] = []
@@ -205,7 +221,8 @@ class Resources:
             # the first exception will be available as __context__
             raise ResourcesException(" ".join([str(e) for e in exceptions]), exceptions) from exceptions[0]
 
-        scene_service.start(scene_start_timeout)
+        if self.interact_with_scene_service:
+            scene_service.start(scene_start_timeout)
 
         self._stream_futures: list[concurrent.futures.Future] = []
 
@@ -261,7 +278,8 @@ class Resources:
             # this intentionally ignores KeyboardInterrupt (derived from BaseException)
             print_exception(ex_value)
 
-        scene_service.stop()
+        if self.interact_with_scene_service:
+            scene_service.stop()
         self.cleanup_all_objects()
 
         return True
