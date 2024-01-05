@@ -25,29 +25,15 @@ jobs:
       matrix:
         python-version: ['3.10']
     steps:
-    - name: Remove unnecessary packages
-      run: | # stolen from https://github.com/easimon/maximize-build-space
-        echo "=== Before pruning ==="
-        df -h
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo apt-get remove -y '^dotnet-.*'
-        sudo apt-get remove -y '^llvm-.*'
-        sudo apt-get remove -y 'php.*'
-        sudo apt-get remove -y '^mongodb-.*'
-        sudo apt-get remove -y '^mysql-.*'
-        sudo apt-get remove -y azure-cli google-chrome-stable firefox powershell mono-devel libgl1-mesa-dri
-        sudo apt-get autoremove -y
-        sudo apt-get clean
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        sudo swapoff -a
-        sudo rm -f /mnt/swapfile
-        free -h
-        echo
-        echo "=== After pruning ==="
-        df -h
+    - name: Maximize build space
+      uses: easimon/maximize-build-space@v10
+      with:
+        root-reserve-mb: 35000
+        swap-size-mb: 1024
+        remove-dotnet: 'true'
+        remove-android: 'true'
+        remove-haskell: 'true'
+        remove-docker-images: 'true'
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -82,8 +68,8 @@ jobs:
       run: |
         ./pants --changed-since=origin/master --changed-dependees=transitive test
     - name: Build Docker images
-      run: |
-        ./pants --filter-target-type=docker_image --changed-since=origin/master --changed-dependees=transitive package
+      run: |  # filter out non-essential docker images (there was a problem with full storage on github)
+        ./pants filter --target-type=docker_image --changed-since=origin/master --changed-dependees=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_kinect_azure | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs ./pants package
     - name: Build Python packages
       run: |
         ./pants filter --target-type=python_distribution :: | xargs ./pants package
