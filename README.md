@@ -42,7 +42,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
 
- - 2023-07-20: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-arserver/1.1.0/)).
+ - 2024-01-23: [1.1.1](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F1.1.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=1.1.1), [pypi](https://pypi.org/project/arcor2-arserver/1.1.1/)).
  
 ### arcor2_arserver_data
 

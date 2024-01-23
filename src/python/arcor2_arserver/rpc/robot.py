@@ -383,7 +383,7 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
 async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.InverseKinematics.Response:
     glob.LOCK.scene_or_exception()
 
-    async with ctx_read_lock([req.args.robot_id, req.args.end_effector_id], glob.USERS.user_name(ui)):
+    async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.inverse_kinematics.__name__)
@@ -404,7 +404,7 @@ async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.I
 async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.ForwardKinematics.Response:
     glob.LOCK.scene_or_exception()
 
-    async with ctx_read_lock([req.args.robot_id, req.args.end_effector_id], glob.USERS.user_name(ui)):
+    async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.forward_kinematics.__name__)

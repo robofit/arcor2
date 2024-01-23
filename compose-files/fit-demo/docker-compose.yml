@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   fit-demo-arserver:
-    image: arcor2/arcor2_arserver:1.1.0
+    image: arcor2/arcor2_arserver:1.1.1
     container_name: fit-demo-arserver
     depends_on:
       fit-demo-project:

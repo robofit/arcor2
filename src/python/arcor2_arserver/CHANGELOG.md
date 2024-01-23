@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.1.1] - 2024-01-23
+
+### Fixed
+
+- `InverseKinematics` and `ForwardKinematics` RPCs were always returning `Object not found` error.
+
 ## [1.1.0] - 2023-07-20
 
 ### Changed
