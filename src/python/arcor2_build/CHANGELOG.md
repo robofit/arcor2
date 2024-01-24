@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.3.0] - WIP
+
+### Changed
+
+- Object Types listed in `project_objects_ids` are now automatically added to the Execution package.
+  - Those objects don't have to be based on `Generic`, actually the file may contain whatever (no need for a class with name corresponding to the name of the module / Object Type).
+- All scene objects are downloaded prior to trying to find their predecessors. This will allow importing code from one Object Type into another.
+- Cross-importing should be done only between OT listed in scene or objects listed in `project_objects_ids` - OT should not import something from another OT predecessor, as this situation can't be figured out. 
+- All changes are fully backwards compatible.
+
 ## [1.2.0] - 2024-01-08
 
 ### Changed
