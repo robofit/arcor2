@@ -28,7 +28,7 @@ from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import Models, ObjectModel, ObjectType
 from arcor2.exceptions import Arcor2Exception
 from arcor2.flask import RespT, create_app, run_app
-from arcor2.helpers import port_from_url, save_and_import_type_def
+from arcor2.helpers import port_from_url, save_and_import_type_def, save_type_def
 from arcor2.logging import get_logger
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import base_from_source, built_in_types_names, prepare_object_types_dir
@@ -153,6 +153,18 @@ def _publish(project_id: str, package_name: str) -> RespT:
 
                 obj_types = set(cached_scene.object_types)
                 obj_types_with_models: set[str] = set()
+
+                # this is kinda workaround allowing adding additional/utility Python modules into Execution package
+                if project.project_objects_ids:
+                    for additional_module_id in project.project_objects_ids:
+                        logger.debug(f"Getting additional module {additional_module_id}.")
+                        am = ps.get_object_type(additional_module_id)
+                        save_type_def(am.source, am.id, tmp_dir, OBJECT_TYPE_MODULE)
+
+                # to allow imports between OTs, all objects listed in scene are downloaded first
+                for scene_obj in scene.objects:
+                    obj_type = ps.get_object_type(scene_obj.type)
+                    save_type_def(obj_type.source, obj_type.id, tmp_dir, OBJECT_TYPE_MODULE)
 
                 for scene_obj in scene.objects:
                     if scene_obj.type in types_dict:

@@ -93,8 +93,28 @@ async def run_in_executor(
 T = TypeVar("T")
 
 
-def save_and_import_type_def(source: str, type_name: str, output_type: type[T], path: str, module_name: str) -> type[T]:
+def save_type_def(source: str, type_name: str, path: str, module_name: str) -> str:
     """Save source to a file in object_type_path directory.
+
+    :param source:
+    :param type_name:
+    :param path:
+    :param module_name:
+    :return: full path to the module
+    """
+
+    type_file = humps.depascalize(type_name)
+    full_path = f"{os.path.join(path, module_name, type_file)}.py"
+
+    with open(full_path, "w") as file:
+        file.write(source)
+
+    return full_path
+
+
+def save_and_import_type_def(source: str, type_name: str, output_type: type[T], path: str, module_name: str) -> type[T]:
+    """Save source to a file in object_type_path directory and tries to import
+    it.
 
     :param source:
     :param type_name:
@@ -103,11 +123,7 @@ def save_and_import_type_def(source: str, type_name: str, output_type: type[T], 
     :return:
     """
 
-    type_file = humps.depascalize(type_name)
-    full_path = f"{os.path.join(path, module_name, type_file)}.py"
-
-    with open(full_path, "w") as file:
-        file.write(source)
+    full_path = save_type_def(source, type_name, path, module_name)
 
     try:
         return import_type_def(type_name, output_type, path, module_name)
