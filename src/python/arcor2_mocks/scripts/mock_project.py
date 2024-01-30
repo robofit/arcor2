@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import copy
-import random
 from datetime import datetime, timezone
 
 import humps
@@ -18,6 +16,7 @@ app = create_app(__name__)
 
 SCENES: dict[str, common.Scene] = {}
 PROJECTS: dict[str, common.Project] = {}
+PROJECT_SOURCES: dict[str, common.ProjectSources] = {}
 OBJECT_TYPES: dict[str, object_type.ObjectType] = {}
 
 BOXES: dict[str, object_type.Box] = {}
@@ -76,6 +75,80 @@ def put_project() -> RespT:
     return jsonify(project.modified.isoformat())
 
 
+@app.route("/projects/sources", methods=["PUT"])
+def put_project_sources() -> RespT:
+    """Add or update project sources.
+    ---
+    put:
+        tags:
+            - Project
+        description: Add or update project sources.
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: ProjectSources
+        responses:
+            200:
+              description: Timestamp of last project modification.
+            500:
+              description: "Error types: **General**, **ProjectGeneral**, **NotFound**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    if not isinstance(request.json, dict):
+        raise ProjectGeneral("Body should be a JSON dict containing ProjectSources.")
+
+    project_sources = common.ProjectSources.from_dict(humps.decamelize(request.json))
+
+    if project_sources.id not in PROJECTS:
+        raise NotFound(f"Project {project_sources.id} does not exist.")
+
+    PROJECT_SOURCES[project_sources.id] = project_sources
+    return Response(status=200)
+
+
+@app.route("/projects/<string:id>/sources", methods=["GET"])
+def get_project_sources(id: str) -> RespT:
+    """Get project sources.
+    ---
+    get:
+        tags:
+            - Project
+        summary: Gets project by project id.
+        parameters:
+            - name: id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    $ref: ProjectSources
+            500:
+              description: "Error types: **General**, **NotFound**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    try:
+        project_sources = PROJECT_SOURCES[id]
+    except KeyError:
+        raise NotFound(f"Sources for project {id} not found.")
+
+    return jsonify(humps.camelize(project_sources.to_dict()))
+
+
 @app.route("/projects/<string:id>", methods=["GET"])
 def get_project(id: str) -> RespT:
     """Add or update project.
@@ -107,16 +180,11 @@ def get_project(id: str) -> RespT:
     """
 
     try:
-        project_copy = copy.deepcopy(PROJECTS[id])
+        project = PROJECTS[id]
     except KeyError:
         raise NotFound(f"Project {id} was not found.")
 
-    random.shuffle(project_copy.action_points)
-    random.shuffle(project_copy.logic)
-    random.shuffle(project_copy.object_overrides)
-    random.shuffle(project_copy.parameters)
-
-    return jsonify(humps.camelize(project_copy.to_dict()))
+    return jsonify(humps.camelize(project.to_dict()))
 
 
 @app.route("/projects/<string:id>", methods=["DELETE"])
@@ -274,13 +342,11 @@ def get_scene(id: str) -> RespT:
     """
 
     try:
-        scene_copy = copy.deepcopy(SCENES[id])
+        scene = SCENES[id]
     except KeyError:
         raise NotFound(f"Scene {id} was not found.")
 
-    random.shuffle(scene_copy.objects)
-
-    return jsonify(humps.camelize(scene_copy.to_dict()))
+    return jsonify(humps.camelize(scene.to_dict()))
 
 
 @app.route("/scenes/<string:id>", methods=["DELETE"])
@@ -881,6 +947,7 @@ def main() -> None:
         PROJECT_PORT,
         [
             common.Project,
+            common.ProjectSources,
             common.Scene,
             common.IdDesc,
             object_type.ObjectType,
