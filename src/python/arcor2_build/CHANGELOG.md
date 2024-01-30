@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.3.1] - 2024-01-30
+
+### Fixed
+
+- Objects specified in `project_objects_ids` were actually missing in the package.
+
+### Changes
+
+- Support for `project_objects_ids` was added for `import`.
+
 ## [1.3.0] - 2024-01-26
 
 ### Changed

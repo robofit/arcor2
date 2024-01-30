@@ -160,6 +160,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                         logger.debug(f"Getting additional module {additional_module_id}.")
                         am = ps.get_object_type(additional_module_id)
                         save_type_def(am.source, am.id, tmp_dir, OBJECT_TYPE_MODULE)
+                        zf.writestr(os.path.join(ot_path, humps.depascalize(additional_module_id)) + ".py", am.source)
 
                 # to allow imports between OTs, all objects listed in scene are downloaded first
                 for scene_obj in scene.objects:
@@ -412,6 +413,24 @@ def project_import() -> RespT:
 
             prepare_object_types_dir(tmp_dir, OBJECT_TYPE_MODULE)
 
+            # read and save additional objects...
+            if project.project_objects_ids:
+                for add_obj in project.project_objects_ids:
+                    try:
+                        src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(add_obj)}.py")
+                    except KeyError:
+                        raise NotFound(f"Additional object {add_obj} is missing in the package.")
+                    objects[add_obj] = ObjectType(add_obj, src)
+                    save_type_def(src, add_obj, tmp_dir, OBJECT_TYPE_MODULE)
+
+            # extra pass through scene objects to save them all - in order to allow imports between OTs
+            for scene_obj in scene.objects:
+                try:
+                    obj_type_src = read_str_from_zip(zip_file, f"object_types/{humps.depascalize(scene_obj.type)}.py")
+                except KeyError:
+                    raise NotFound(f"Object type {scene_obj.type} is missing in the package.")
+                save_type_def(obj_type_src, scene_obj.type, tmp_dir, OBJECT_TYPE_MODULE)
+
             for scene_obj in scene.objects:
                 obj_type_name = scene_obj.type
 
@@ -462,7 +481,7 @@ def project_import() -> RespT:
 
             models[obj_type.id] = model
 
-        if not project.has_logic:
+        if not project.has_logic or update_project_from_script:
             logger.debug("Importing the main script.")
 
             try:
@@ -474,13 +493,6 @@ def project_import() -> RespT:
                 parse(script)
             except Arcor2Exception:
                 raise InvalidPackage("Invalid code of the main script.")
-
-        # case when preparing data from script to decompilation
-        if update_project_from_script:
-            try:
-                src = zip_file.read("script.py").decode("UTF-8")
-            except KeyError:
-                raise NotFound("Could not find script.py.")
 
     # check that we are not going to overwrite something
     if not overwrite_scene:
@@ -537,8 +549,8 @@ def project_import() -> RespT:
 
     if update_project_from_script:
         logger.debug("Decompiling source...")
-        project = python_to_json(project, scene, src, object_type)
-        logger.debug("Decompile was successfull and project was overwritten")
+        project = python_to_json(project, scene, script, object_type)
+        logger.debug("Decompilation was successfull and project was overwritten")
 
     for model in models.values():
         ps.put_model(model)

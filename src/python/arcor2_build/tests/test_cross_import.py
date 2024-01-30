@@ -2,13 +2,14 @@ import os
 import subprocess as sp
 import tempfile
 import time
+import zipfile
 from typing import Iterator
 
 import pytest
 
 from arcor2 import rest
 from arcor2.clients import project_service as ps
-from arcor2.data.common import Project, Scene, SceneObject
+from arcor2.data.common import Project, ProjectSources, Scene, SceneObject
 from arcor2.data.object_type import ObjectType
 from arcor2.helpers import find_free_port
 
@@ -76,7 +77,7 @@ from arcor2.object_types.abstract import Generic
 from .additional_module import whatever
 
 class ObjectTypeOne(Generic):
-    pass
+    _ABSTRACT = False
 """
 
 ot2 = """
@@ -85,7 +86,7 @@ from .object_type_one import ObjectTypeOne
 from .additional_module import whatever
 
 class ObjectTypeTwo(Generic):
-    pass
+    _ABSTRACT = False
 """
 
 
@@ -104,6 +105,7 @@ def test_cross_import(start_processes: None) -> None:
     project.project_objects_ids = ["AdditionalModule"]
     project.has_logic = False
     ps.update_project(project)
+    ps.update_project_sources(ProjectSources(project.id, "blah"))
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         path = os.path.join(tmpdirname, "publish.zip")
@@ -116,3 +118,19 @@ def test_cross_import(start_processes: None) -> None:
                 "projectId": project.id,
             },
         )
+
+        with zipfile.ZipFile(path) as zip_file:
+            ot_dir_list = [name for name in zip_file.namelist() if name.startswith("object_types")]
+            # there should be three OTs and __init__.py
+            assert len(ot_dir_list) == 4, f"Strange content of object_types dir: {ot_dir_list}"
+
+        assert {ot.id for ot in ps.get_object_type_ids()} == {"AdditionalModule", "ObjectTypeOne", "ObjectTypeTwo"}
+
+        ps.delete_object_type("AdditionalModule")
+        ps.delete_object_type("ObjectTypeOne")
+        ps.delete_object_type("ObjectTypeTwo")
+
+        with open(path, "rb") as fh:
+            rest.call(rest.Method.PUT, url=f"{build_url}/project/import", files={"executionPackage": fh.read()})
+
+        assert {ot.id for ot in ps.get_object_type_ids()} == {"AdditionalModule", "ObjectTypeOne", "ObjectTypeTwo"}
