@@ -44,7 +44,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: pantsbuild/actions/init-pants@v2
+    - uses: pantsbuild/actions/init-pants@v7
       with:
         pants-python-version: ${{ matrix.python-version }}
         gha-cache-key: cache0-py${{ matrix.python-version }}
