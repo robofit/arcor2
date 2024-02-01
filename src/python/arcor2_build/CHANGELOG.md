@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.3.2] - 2024-02-01
+
+### Fixed
+
+- OT was duplicated in zip file when listed both in scene and in `project_objects_ids`.
+
 ## [1.3.1] - 2024-01-30
 
 ### Fixed
