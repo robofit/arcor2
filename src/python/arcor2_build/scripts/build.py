@@ -84,7 +84,11 @@ def get_base_from_project_service(
             save_and_import_type_def(base_obj_type.source, base_obj_type.id, object, tmp_dir, OBJECT_TYPE_MODULE)
             scene_object_types.add(base_obj_type.id)
 
-        zf.writestr(os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py", base_obj_type.source)
+        zip_ot_path = os.path.join(ot_path, humps.depascalize(base_obj_type.id)) + ".py"
+
+        # to prevent duplicate files in ZIP if OT is listed both in scene and in project_objects_ids
+        if zip_ot_path not in zf.namelist():
+            zf.writestr(zip_ot_path, base_obj_type.source)
 
 
 def get_base_from_imported_package(
@@ -187,7 +191,11 @@ def _publish(project_id: str, package_name: str) -> RespT:
                             obj_model.to_json(),
                         )
 
-                    zf.writestr(os.path.join(ot_path, humps.depascalize(obj_type.id)) + ".py", obj_type.source)
+                    zip_ot_path = os.path.join(ot_path, humps.depascalize(obj_type.id)) + ".py"
+
+                    # to prevent duplicate files in ZIP if OT is listed both in scene and in project_objects_ids
+                    if zip_ot_path not in zf.namelist():
+                        zf.writestr(zip_ot_path, obj_type.source)
 
                     # handle inheritance
                     get_base_from_project_service(
