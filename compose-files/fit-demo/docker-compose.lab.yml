@@ -6,6 +6,11 @@ services:
       - ARCOR2_DOBOT_MOCK=false
     devices:
       - /dev/dobotMagician:/dev/dobot
+  fit-demo-dobot-magician2:
+    environment:
+      - ARCOR2_DOBOT_MOCK=false
+    devices:
+      - /dev/dobotMagician2:/dev/dobot
 
   fit-demo-dobot-m1:
     environment:
