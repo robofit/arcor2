@@ -12,5 +12,7 @@ def test_estimate_camera_pose() -> None:
             [[1, 0.00000, 1], [0.00000, 1, 1], [0.00000, 0.00000, 1]], [1.0, 1.0, 1.0, 1.0], im, 0.1
         )
         assert len(markers) == 2
+        assert set(markers.keys()) == {0, 39}
+
         for pose in markers.values():
             assert isinstance(pose, Pose)

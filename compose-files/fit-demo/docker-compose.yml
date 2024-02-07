@@ -82,7 +82,7 @@ services:
       - ARCOR2_KINECT_AZURE_MOCK=true
 
   fit-demo-calibration:
-    image: arcor2/arcor2_calibration:1.0.0
+    image: arcor2/arcor2_calibration:1.1.0
     networks:
       - fit-demo-calibration-network
     ports:
