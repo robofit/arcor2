@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.1.0] - 2024-02-07
+
+### Changed
+
+- Markers used to be from 7x7 dictionary, which is unnecessarily large, now a 4x4 dictionary of size 50 is used (use marker IDs 0..49).
+
 ## [1.0.0] - 2023-02-14
 
 ### Changed

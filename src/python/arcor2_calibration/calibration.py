@@ -11,7 +11,7 @@ from arcor2.exceptions import Arcor2Exception
 
 BLUR_THRESHOLD: float = 150.0
 
-aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_7X7_1000)
+aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
 detector_params = aruco.DetectorParameters()
 detector = aruco.ArucoDetector(aruco_dict, detector_params)
 

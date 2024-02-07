@@ -4,10 +4,32 @@ min_dist: 0.5
 max_dist: 2.0
 blur_threshold: 150.0
 markers:
-  10:
+  0:
+    pose:
+      position:
+        x: -0.729
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+  30:
     pose:
       position:
         x: 0
+        y: 0
+        z: 0
+      orientation:
+        x: 0
+        y: 0
+        z: 0
+        w: 1
+  49:
+    pose:
+      position:
+        x: 0.729
         y: 0
         z: 0
       orientation:
