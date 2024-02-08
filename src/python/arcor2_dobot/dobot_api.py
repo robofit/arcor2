@@ -762,6 +762,27 @@ class DobotApi:
         msg.params.extend(bytearray(struct.pack("f", power)))
         return self._send_command(msg)
 
+    def get_end_effector_params(self) -> tuple[float, float, float]:
+        msg = Message()
+        msg.id = 60
+        response = self._send_command(msg)
+
+        bias_x = struct.unpack_from("f", response.params, 0)[0]
+        bias_y = struct.unpack_from("f", response.params, 4)[0]
+        bias_z = struct.unpack_from("f", response.params, 8)[0]
+
+        return bias_x, bias_y, bias_z
+
+    def set_end_effector_params(self, bias_x: float, bias_y: float, bias_z: float) -> None:
+        msg = Message()
+        msg.id = 60
+        msg.ctrl = 0x3
+        msg.params = bytearray([])
+        msg.params.extend(bytearray(struct.pack("f", bias_x)))
+        msg.params.extend(bytearray(struct.pack("f", bias_y)))
+        msg.params.extend(bytearray(struct.pack("f", bias_z)))
+        self._send_command(msg)
+
     def engrave(
         self,
         image: np.ndarray,

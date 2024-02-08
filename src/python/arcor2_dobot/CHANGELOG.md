@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.1.0] - 2024-02-08
+
+### Changed
+
+- Added `ARCOR2_DOBOT_BIAS_X`, `ARCOR2_DOBOT_BIAS_Y`, `ARCOR2_DOBOT_BIAS_Z` env. variables to set EEF parameters - offset, which is different for different tools.
+
 ## [1.0.0] - 2023-02-14
 
 ### Changed
