@@ -21,6 +21,8 @@ services:
         condition: service_healthy
       fit-demo-dobot-magician:
         condition: service_healthy
+      fit-demo-dobot-magician2:
+        condition: service_healthy
       fit-demo-dobot-m1:
         condition: service_healthy
     ports:
@@ -32,6 +34,7 @@ services:
           - fit-demo-project-network
           - fit-demo-asset-network
           - fit-demo-dobot-magician-network
+          - fit-demo-dobot-magician2-network
           - fit-demo-dobot-m1-network
           - fit-demo-calibration-network
     environment:
@@ -64,6 +67,7 @@ services:
       - fit-demo-execution-network
       - fit-demo-scene-network
       - fit-demo-dobot-magician-network
+      - fit-demo-dobot-magician2-network
       - fit-demo-dobot-m1-network
     environment:
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
@@ -94,7 +98,7 @@ services:
       - ./calibration.yaml:/root/calibration.yaml
 
   fit-demo-dobot-magician:
-    image: arcor2/arcor2_dobot:1.0.0
+    image: arcor2/arcor2_dobot:1.1.0
     container_name: fit-demo-dobot-magician
     depends_on:
       fit-demo-scene:
@@ -109,8 +113,24 @@ services:
       - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
       - ARCOR2_DOBOT_MODEL=magician
 
+  fit-demo-dobot-magician2:
+    image: arcor2/arcor2_dobot:1.1.0
+    container_name: fit-demo-dobot-magician2
+    depends_on:
+      fit-demo-scene:
+        condition: service_healthy
+    networks:
+      - fit-demo-dobot-magician2-network
+      - fit-demo-scene-network
+    ports:
+      - "5020:5018"
+    environment:
+      - ARCOR2_DOBOT_MOCK=true
+      - ARCOR2_SCENE_SERVICE_URL=http://fit-demo-scene:5013
+      - ARCOR2_DOBOT_MODEL=magician
+
   fit-demo-dobot-m1:
-    image: arcor2/arcor2_dobot:1.0.0
+    image: arcor2/arcor2_dobot:1.1.0
     container_name: fit-demo-dobot-m1
     depends_on:
       fit-demo-scene:
@@ -231,5 +251,6 @@ networks:
   fit-demo-asset-network:
   fit-demo-kinect-network:
   fit-demo-dobot-magician-network:
+  fit-demo-dobot-magician2-network:
   fit-demo-dobot-m1-network:
   fit-demo-calibration-network:

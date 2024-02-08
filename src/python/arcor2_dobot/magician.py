@@ -4,7 +4,7 @@ import quaternion
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Orientation, Pose, Position, StrEnum
-from arcor2_dobot.dobot import Dobot, DobotException
+from arcor2_dobot.dobot import BIAS_X, BIAS_Z, Dobot, DobotException
 from arcor2_dobot.dobot_api import DobotApiException
 
 
@@ -20,8 +20,8 @@ class DobotMagician(Dobot):
     # Dimensions in meters (according to URDF)
     link_2_length = 0.135
     link_3_length = 0.147
-    link_4_length = 0.06
-    end_effector_length = 0.06
+    link_4_length = BIAS_X
+    end_effector_length = -BIAS_Z
 
     def __init__(self, pose: Pose, port: str = "/dev/dobot", simulator: bool = False) -> None:
         super(DobotMagician, self).__init__(pose, port, simulator)
@@ -34,18 +34,6 @@ class DobotMagician(Dobot):
                 Joint(Joints.J4, -0.704),
                 Joint(Joints.J5, -0.568),
             ]
-
-    def _handle_pose_in(self, pose: Pose) -> None:
-        base_angle = math.atan2(pose.position.y, pose.position.x)
-        pose.position.x -= self.link_4_length * math.cos(base_angle)
-        pose.position.y -= self.link_4_length * math.sin(base_angle)
-        pose.position.z += self.end_effector_length
-
-    def _handle_pose_out(self, pose: Pose) -> None:
-        base_angle = math.atan2(pose.position.y, pose.position.x)
-        pose.position.x += self.link_4_length * math.cos(base_angle)
-        pose.position.y += self.link_4_length * math.sin(base_angle)
-        pose.position.z -= self.end_effector_length
 
     # TODO joint4/5
     valid_ranges: dict[Joints, tuple[float, float]] = {

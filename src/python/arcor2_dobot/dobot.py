@@ -6,12 +6,18 @@ import quaternion
 
 import arcor2.transformations as tr
 from arcor2.data.common import Joint, Orientation, Pose, StrEnum
+from arcor2.env import get_float
 from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.helpers import NonBlockingLock
 from arcor2.object_types.abstract import RobotException
 from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
 
 # TODO jogging
+
+
+BIAS_X = get_float("ARCOR2_DOBOT_BIAS_X", 0.0)
+BIAS_Y = get_float("ARCOR2_DOBOT_BIAS_Y", 0.0)
+BIAS_Z = get_float("ARCOR2_DOBOT_BIAS_Z", 0.0)
 
 
 class DobotException(RobotException):
@@ -45,6 +51,8 @@ class Dobot(metaclass=ABCMeta):
                 self._dobot = DobotApi(port)
             except DobotApiException as e:
                 raise DobotApiException("Could not connect to the robot.") from e
+
+            self._dobot.set_end_effector_params(BIAS_X, BIAS_Y, BIAS_Z)
 
         else:
             self._joint_values: list[Joint] = []  # has to be set to some initial value in derived classes

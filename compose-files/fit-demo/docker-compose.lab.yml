@@ -4,8 +4,17 @@ services:
   fit-demo-dobot-magician:
     environment:
       - ARCOR2_DOBOT_MOCK=false
+      - ARCOR2_DOBOT_BIAS_X=0.06
+      - ARCOR2_DOBOT_BIAS_Z=-0.06
     devices:
       - /dev/dobotMagician:/dev/dobot
+  fit-demo-dobot-magician2:
+    environment:
+      - ARCOR2_DOBOT_MOCK=false
+      - ARCOR2_DOBOT_BIAS_X=0.06
+      - ARCOR2_DOBOT_BIAS_Z=-0.06
+    devices:
+      - /dev/dobotMagician2:/dev/dobot
 
   fit-demo-dobot-m1:
     environment:
