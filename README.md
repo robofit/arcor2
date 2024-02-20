@@ -78,7 +78,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_dobot/README.md) | [CHANGELOG](src/python/arcor2_dobot/CHANGELOG.md)
 
- - 2024-02-08: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-dobot/1.1.0/)).
+ - 2024-02-20: [1.1.1](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F1.1.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=1.1.1), [pypi](https://pypi.org/project/arcor2-dobot/1.1.1/)).
 
 ### arcor2_execution
 

@@ -21,7 +21,7 @@ class DobotMagician(Dobot):
     link_2_length = 0.135
     link_3_length = 0.147
     link_4_length = BIAS_X
-    end_effector_length = -BIAS_Z
+    end_effector_length = BIAS_Z
 
     def __init__(self, pose: Pose, port: str = "/dev/dobot", simulator: bool = False) -> None:
         super(DobotMagician, self).__init__(pose, port, simulator)
