@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.1.1] - 2024-02-20
+
+### Fixed
+
+- Biases are now converted to millimeters when sent to robot.
+
 ## [1.1.0] - 2024-02-08
 
 ### Changed

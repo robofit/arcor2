@@ -19,6 +19,10 @@ BIAS_X = get_float("ARCOR2_DOBOT_BIAS_X", 0.0)
 BIAS_Y = get_float("ARCOR2_DOBOT_BIAS_Y", 0.0)
 BIAS_Z = get_float("ARCOR2_DOBOT_BIAS_Z", 0.0)
 
+assert BIAS_X >= 0
+assert BIAS_Y >= 0
+assert BIAS_Z >= 0
+
 
 class DobotException(RobotException):
     pass
@@ -52,7 +56,8 @@ class Dobot(metaclass=ABCMeta):
             except DobotApiException as e:
                 raise DobotApiException("Could not connect to the robot.") from e
 
-            self._dobot.set_end_effector_params(BIAS_X, BIAS_Y, BIAS_Z)
+            # bias has to be converted to millimeters
+            self._dobot.set_end_effector_params(BIAS_X * 1000, BIAS_Y * 1000, BIAS_Z * 1000)
 
         else:
             self._joint_values: list[Joint] = []  # has to be set to some initial value in derived classes
