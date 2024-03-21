@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.3.0] - 2024-03-22
+
+### Added
+
+- New ObjectTypes for simulated operations.
+
 ## [1.2.0] - 2023-07-20
 
 ### Changed
