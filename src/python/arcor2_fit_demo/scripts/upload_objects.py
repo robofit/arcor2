@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
-from arcor2.data.object_type import Mesh
+from arcor2.data.object_type import Box, Mesh
 from arcor2.object_types.upload import Urdf, upload_def, upload_whatever
 from arcor2_fit_demo import get_data
 from arcor2_fit_demo.object_types.abstract_dobot import AbstractDobot
 from arcor2_fit_demo.object_types.conveyor_belt import ConveyorBelt
 from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
+from arcor2_fit_demo.object_types.erp import Erp
 from arcor2_fit_demo.object_types.fit_common_mixin import FitCommonMixin
+from arcor2_fit_demo.object_types.milling_machine import MillingMachine
+from arcor2_fit_demo.object_types.optical_quality_control import OpticalQualityControl
 from arcor2_kinect_azure_data.object_types.kinect_azure import KinectAzure
 
 
@@ -26,6 +29,14 @@ def main() -> None:
         file_to_upload=get_data(ConveyorBelt.mesh_filename),
     )
     upload_whatever(FitCommonMixin)
+
+    upload_def(Erp)
+    upload_def(MillingMachine, Box(MillingMachine.__name__, 0.1, 0.1, 0.1))
+    upload_def(
+        OpticalQualityControl,
+        Mesh(OpticalQualityControl.__name__, OpticalQualityControl.mesh_filename),
+        file_to_upload=get_data(OpticalQualityControl.mesh_filename),
+    )
 
 
 if __name__ == "__main__":
