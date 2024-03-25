@@ -23,7 +23,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 import arcor2_execution
 import arcor2_execution_data
 from arcor2 import env, json, ws_server
-from arcor2.data import common, compile_json_schemas
+from arcor2.data import common
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
 from arcor2.exceptions import Arcor2Exception
@@ -192,7 +192,7 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
 
     logger.info(f"Starting script: {script_path}")
     PROCESS = await asyncio.create_subprocess_exec(
-        "python3.10",
+        "python",
         *args,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
@@ -412,8 +412,7 @@ async def send_to_clients(event: events.Event) -> None:
         logger.error(f"Script raised {event.data.type}. {event.data.message}")
 
     if CLIENTS:
-        data = event.to_json()
-        await asyncio.wait([client.send(data) for client in CLIENTS])
+        websockets.broadcast(CLIENTS, event.to_json())
 
 
 async def register(websocket: WsClient) -> None:
@@ -495,8 +494,6 @@ def main() -> None:
     loop.set_debug(enabled=args.asyncio_debug)
 
     loop.set_exception_handler(ws_server.custom_exception_handler)
-
-    compile_json_schemas()
 
     run(aio_main(), loop=loop)
 

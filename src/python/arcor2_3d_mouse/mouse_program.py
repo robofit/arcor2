@@ -1188,12 +1188,12 @@ class MouseProgram:
         )
         self._pop_events()
         if self.program_state == ProgramPosition.WAITING or self.cur_proj is None:
-            return
+            return  # type: ignore
         self._update_logic(self.cur_proj.logic, ap.actions[0].id)
         self._lock_write_unlock(ap.id)
         self._pop_events()
         if self.program_state == ProgramPosition.WAITING:
-            return
+            return  # type: ignore
 
     def _get_added_point(self, name: str) -> ActionPoint:
         """Gets newly added action point.

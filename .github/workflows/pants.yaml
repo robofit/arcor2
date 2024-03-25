@@ -12,18 +12,18 @@ jobs:
   org-check:
     name: Check GitHub Organization
     if: ${{ github.repository_owner == 'robofit' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Noop
         run: "true"
   build:
     env:
       PANTS_CONFIG_FILES: pants.ci.toml
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: org-check
     strategy:
       matrix:
-        python-version: ['3.10']
+        python-version: ['3.11']
     steps:
     - name: Maximize build space
       uses: easimon/maximize-build-space@v10
@@ -44,7 +44,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: pantsbuild/actions/init-pants@v8
+    - uses: pantsbuild/actions/init-pants@v5-scie-pants
       with:
         pants-python-version: ${{ matrix.python-version }}
         gha-cache-key: cache0-py${{ matrix.python-version }}
@@ -53,26 +53,26 @@ jobs:
         base-branch: master
     - name: Check BUILD files
       run: |
-        ./pants --changed-since=HEAD update-build-files --check
+        pants --changed-since=HEAD update-build-files --check
     - name: install system dependencies
-      run: |
+      run: | # cargo is required to build fastuuid (no wheels for Python 3.11)
         sudo ./build-support/install_kinect_prerequisites.sh
-        sudo apt install jq
+        sudo apt install jq cargo
     - name: Lint
       run: |
-        ./pants --changed-since=origin/master lint
+        pants --changed-since=origin/master lint
     - name: Typecheck
       run: |
-        ./pants check --changed-since=origin/master --changed-dependees=transitive
+        pants check --changed-since=origin/master --changed-dependees=transitive
     - name: Test
       run: |
-        ./pants --changed-since=origin/master --changed-dependees=transitive test
+        pants --changed-since=origin/master --changed-dependees=transitive test
     - name: Build Docker images
       run: |  # filter out non-essential docker images (there was a problem with full storage on github)
-        ./pants filter --target-type=docker_image --changed-since=origin/master --changed-dependees=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_kinect_azure | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs ./pants package
+        pants filter --target-type=docker_image --changed-since=origin/master --changed-dependees=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_kinect_azure | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs pants package
     - name: Build Python packages
       run: |
-        ./pants filter --target-type=python_distribution :: | xargs ./pants package
+        pants filter --target-type=python_distribution :: | xargs pants package
         # check for cyclic dependencies or other problems
         python -m venv ./tstvenv
         source ./tstvenv/bin/activate

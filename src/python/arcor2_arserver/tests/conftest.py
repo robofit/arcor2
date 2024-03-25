@@ -10,7 +10,7 @@ from arcor2_arserver_data.client import ARServer
 pytest_plugins = ["arcor2_arserver.tests.testutils"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def scene(ars: ARServer) -> common.Scene:
     assert isinstance(ars.get_event(), events.c.ShowMainScreen)
 
@@ -77,7 +77,7 @@ def scene(ars: ARServer) -> common.Scene:
     return scene_evt.data.scene
 
 
-@pytest.fixture()
+@pytest.fixture
 def project(ars: ARServer, scene: common.Scene) -> common.Project:
     """Creates project with following objects:
 

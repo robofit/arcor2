@@ -17,7 +17,7 @@ from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 
 
-@pytest.fixture()
+@pytest.fixture
 def lock() -> Lock:
     """Creates lock with initialized scene and project."""
     test = "test"
@@ -48,7 +48,7 @@ def lock() -> Lock:
     return lock
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_ctx_read_lock() -> None:
     test = "test"
     user = "user"
@@ -86,7 +86,7 @@ async def test_ctx_read_lock() -> None:
     assert await glob.LOCK.is_write_locked(ap_ap.id, user)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_base_logic(lock: Lock) -> None:
     assert lock.project
 
@@ -105,7 +105,7 @@ async def test_base_logic(lock: Lock) -> None:
     assert not lock._locked_objects
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_locking_unknown_id(lock: Lock) -> None:
     assert lock.project
 
@@ -120,34 +120,32 @@ async def test_locking_unknown_id(lock: Lock) -> None:
     assert not lock._locked_objects
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_locking_special_names(lock: Lock) -> None:
     assert lock.project
 
     test = "test"
 
+    with pytest.raises(Arcor2Exception):
+        await lock.read_lock(lock.Owners.SERVER, test)
+    with pytest.raises(Arcor2Exception):
+        await lock.write_lock(lock.Owners.SERVER, test)
+
     for special_id in lock.SpecialValues:
-        # server id could be used only as lock owner
-        if special_id == lock.Owners.SERVER:
-            with pytest.raises(Arcor2Exception):
-                await lock.read_lock(special_id, test)
-            with pytest.raises(Arcor2Exception):
-                await lock.write_lock(special_id, test)
-        else:
-            await lock.read_lock(special_id, test)
-            assert special_id in lock._locked_objects
-            assert special_id in lock._locked_objects[special_id].read
-            await lock.read_unlock(special_id, test)
-            assert not lock._locked_objects
+        await lock.read_lock(special_id, test)
+        assert special_id in lock._locked_objects
+        assert special_id in lock._locked_objects[special_id].read
+        await lock.read_unlock(special_id, test)
+        assert not lock._locked_objects
 
-            await lock.write_lock(special_id, test)
-            assert special_id in lock._locked_objects
-            assert special_id in lock._locked_objects[special_id].write
-            await lock.write_unlock(special_id, test)
-            assert not lock._locked_objects
+        await lock.write_lock(special_id, test)
+        assert special_id in lock._locked_objects
+        assert special_id in lock._locked_objects[special_id].write
+        await lock.write_unlock(special_id, test)
+        assert not lock._locked_objects
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_unlocking_unknown_or_unlocked(lock: Lock) -> None:
     assert lock.scene
     assert lock.project
@@ -177,7 +175,7 @@ async def test_unlocking_unknown_or_unlocked(lock: Lock) -> None:
     assert not lock._locked_objects
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_whole_lock_yield(lock: Lock) -> None:
     assert lock.scene
     assert lock.project
@@ -199,7 +197,7 @@ async def test_whole_lock_yield(lock: Lock) -> None:
     await lock.write_unlock(lock.scene.id, test)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_recursive_locking(lock: Lock) -> None:
     assert lock.scene
     assert lock.project
@@ -229,7 +227,7 @@ async def test_recursive_locking(lock: Lock) -> None:
     assert not await lock.write_lock(ap.id, test, True)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_count_methods(lock: Lock) -> None:
     assert lock.scene
     assert lock.project
@@ -244,7 +242,7 @@ async def test_count_methods(lock: Lock) -> None:
     await lock.write_unlock(lock.scene.id, test)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_notification_queue(lock: Lock) -> None:
     assert lock.project
 
@@ -265,7 +263,7 @@ async def test_notification_queue(lock: Lock) -> None:
     assert not lock.all_ui_locks
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_possibility_of_locking_tree(lock: Lock) -> None:
     assert lock.project
 
@@ -288,7 +286,7 @@ async def test_possibility_of_locking_tree(lock: Lock) -> None:
     await lock.check_lock_tree(ap_ap.id, test)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_updating_lock(lock: Lock) -> None:
     assert lock.project
 
@@ -321,7 +319,7 @@ async def test_updating_lock(lock: Lock) -> None:
     await lock.write_unlock(ap.id, test)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_root_getter(lock: Lock) -> None:
     assert lock.scene
     assert lock.project
@@ -341,7 +339,7 @@ async def test_root_getter(lock: Lock) -> None:
     assert await lock.get_root_id(scene_object_id) == scene_object_id
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_auto_release(lock: Lock) -> None:
     assert lock.project
 
@@ -379,7 +377,7 @@ async def test_auto_release(lock: Lock) -> None:
     await check_notification_content(lock, test, [ap.id, ap_ap.id, ap_ap_ap.id, ori.id, action.id], False)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
     assert lock.scene
     assert lock.project
@@ -404,7 +402,7 @@ async def test_root_getter_without_scene_and_project(lock: Lock) -> None:
     assert await lock.get_root_id(scene.id) == scene.id
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_update_parent(lock: Lock) -> None:
     assert lock.project
 
@@ -422,7 +420,7 @@ async def test_update_parent(lock: Lock) -> None:
     await lock.write_unlock([ap2.id, ap_ap.id, ap.id], test)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_check_remove(lock: Lock) -> None:
     assert lock.project
 
@@ -464,7 +462,7 @@ async def test_check_remove(lock: Lock) -> None:
     assert not await lock.check_remove(ap.id, test)
 
 
-@pytest.mark.asyncio()
+@pytest.mark.asyncio
 async def test_getters(lock: Lock) -> None:
     assert lock.scene
     assert lock.project

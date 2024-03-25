@@ -35,7 +35,7 @@ def check_health(service_name: str, service_url: str, timeout: int = 60) -> None
         raise Exception(f"{service_name} service at {service_url} is not responding.")
 
 
-@pytest.fixture()
+@pytest.fixture
 def start_processes() -> Iterator[None]:
     global build_url
 

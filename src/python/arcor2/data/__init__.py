@@ -1,11 +1,8 @@
-import importlib
-import inspect
-import pkgutil
 from typing import TYPE_CHECKING
 
 import dataclasses_jsonschema
 import orjson
-from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
+from dataclasses_jsonschema import JsonSchemaMixin
 from dataclasses_jsonschema.apispec import DataclassesPlugin, _schema_reference
 
 from arcor2.exceptions import Arcor2Exception
@@ -45,24 +42,3 @@ def resolve_schema_refs(self, data: dict) -> None:
 
 # monkey patch to solve https://github.com/s-knibbs/dataclasses-jsonschema/issues/126
 DataclassesPlugin.resolve_schema_refs = resolve_schema_refs  # type: ignore
-
-
-def compile_json_schemas() -> None:
-    """
-    Force compilation of json schema (otherwise it might cause troubles later when executed in parallel)
-    :return:
-    """
-
-    from arcor2 import data
-
-    for _, module_name, _ in pkgutil.iter_modules(data.__path__):
-        module = importlib.import_module(f"{data.__name__}.{module_name}")
-
-        for _, obj in inspect.getmembers(module, inspect.isclass):
-            if not issubclass(obj, JsonSchemaMixin) or obj is JsonSchemaMixin or inspect.isabstract(obj):
-                continue
-
-            try:
-                obj.from_dict({})
-            except ValidationError:
-                pass

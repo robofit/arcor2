@@ -1,19 +1,19 @@
 
 
-FROM python:3.10.10-slim-bullseye as deps
+FROM python:3.11.8-bookworm as deps
 COPY src.python.arcor2_3d_mouse.scripts/mouse_launcher.pex /binary.pex
-RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=deps --compile /bin/app
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.10.10-slim-bullseye as srcs
+FROM python:3.11.8-bookworm as srcs
 COPY src.python.arcor2_3d_mouse.scripts/mouse_launcher.pex /binary.pex
-RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=srcs --compile /bin/app
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.10.10-slim-bullseye
+FROM python:3.11.8-bookworm
 
 # curl is for healthcheck
 RUN apt-get update \
 	&& apt-get -f satisfy ffmpeg -y \
-        && apt-get install -y -q --no-install-recommends sudo=1.9.5p2-3+deb11u1 libhidapi-dev=0.10.1+dfsg-1 libpulse0=14.2-2 libasound2=1.2.4-1.1 libasound2-plugins=1.2.2-2 curl=7.74.0-1.3+deb11u11 \
+        && apt-get install -y -q --no-install-recommends sudo=1.9.13p3-1+deb12u1 libhidapi-dev=0.13.1-1 libpulse0=16.1+dfsg1-2+b1 libasound2=1.2.8-1+b1 libasound2-plugins=1.2.7.1-1 curl=7.88.1-10+deb12u5 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

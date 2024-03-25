@@ -5,7 +5,7 @@ import math
 import os
 import socket
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import wraps
 from threading import Lock, Thread
 
@@ -156,7 +156,7 @@ class ThreadSafeRobot(Robot):
 @dataclass
 class Globals:
     robot: None | ThreadSafeRobot = None
-    pose: Pose = Pose()
+    pose: Pose = field(default_factory=Pose)
 
 
 gl = Globals()

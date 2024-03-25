@@ -17,3 +17,21 @@ python_requirements(
         "urdfpy": {"dependencies": ["#setuptools"]},  #  actually, networkx is missing that dependency
     },
 )
+
+python_requirements(
+    name="mypy",
+    source="mypy-requirements.txt",
+    resolve="mypy",
+)
+
+python_requirements(
+    name="pytest",
+    source="pytest-requirements.txt",
+    resolve="pytest",
+)
+
+python_requirements(
+    name="flake8",
+    source="flake8-requirements.txt",
+    resolve="flake8",
+)

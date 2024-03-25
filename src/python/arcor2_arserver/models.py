@@ -19,7 +19,7 @@ def _rename_childs(obj: type[JsonSchemaMixin] | type[Enum]) -> None:
 
             if "." in child_obj.__qualname__:
                 child_obj.__name__ = "".join(child_obj.__qualname__.split("."))
-                child_obj.__renamed__ = None
+                child_obj.__renamed__ = None  # type: ignore
 
             _rename_childs(child_obj)
 

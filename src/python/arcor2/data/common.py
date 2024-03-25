@@ -4,7 +4,9 @@ import abc
 import copy
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum, unique
+from enum import Enum
+from enum import StrEnum as BuiltinStrEnum
+from enum import unique
 from json import JSONEncoder
 from typing import Any, Iterator, NamedTuple, Optional, TypeVar, cast
 
@@ -26,7 +28,7 @@ def uid(prefix: str) -> str:
 
 
 @unique
-class StrEnum(str, Enum):
+class StrEnum(BuiltinStrEnum):
     @classmethod
     def set(cls) -> set[str]:
         return set(map(lambda c: c.value, cls))  # type: ignore

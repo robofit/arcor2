@@ -59,7 +59,7 @@ def average_quaternions(Q: numpy.ndarray) -> numpy.ndarray:
     # Sort by largest eigenvalue
     eigenVectors = eigenVectors[:, eigenValues.argsort()[::-1]]
     # return the real part of the largest eigenvector (has only real part)
-    return numpy.real(eigenVectors[:, 0].A1)
+    return numpy.real(numpy.asarray(eigenVectors[:, 0]).ravel())
 
 
 # Average multiple quaternions with specific weights
@@ -86,4 +86,4 @@ def weighted_average_quaternions(Q: numpy.ndarray, w: numpy.ndarray) -> numpy.nd
     eigenVectors = eigenVectors[:, eigenValues.argsort()[::-1]]
 
     # return the real part of the largest eigenvector (has only real part)
-    return numpy.real(eigenVectors[:, 0].A1)
+    return numpy.real(numpy.asarray(eigenVectors[:, 0]).ravel())

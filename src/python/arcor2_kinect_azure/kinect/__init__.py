@@ -322,7 +322,7 @@ class KinectAzure:
                         (0, 255, 0),
                         2,
                         cv2.LINE_AA,
-                    )
+                    )  # type: ignore
 
         if raw:
             return frame

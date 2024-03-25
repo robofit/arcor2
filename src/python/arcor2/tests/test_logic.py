@@ -24,14 +24,14 @@ ac3 = Action("ac3", f"{obj.id}/test", flows=[Flow()])
 ac4 = Action("ac4", f"{obj.id}/test", flows=[Flow()])
 
 
-@pytest.fixture()
+@pytest.fixture
 def scene() -> Scene:
     scene = Scene("s1", "s1")
     scene.objects.append(obj)
     return scene
 
 
-@pytest.fixture()
+@pytest.fixture
 def project() -> UpdateableCachedProject:
     project = Project("p1", "s1")
     ap1 = ActionPoint("ap1", Position())

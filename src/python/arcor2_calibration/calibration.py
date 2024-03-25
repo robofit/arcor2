@@ -39,7 +39,8 @@ def detect_corners(
 
     corners, ids, _ = detector.detectMarkers(gray)
 
-    return camera_matrix_arr, dist_matrix_arr, gray, corners, ids
+    # TODO improve/fix typing
+    return camera_matrix_arr, dist_matrix_arr, gray, corners, ids  # type: ignore
 
 
 def estimate_camera_pose(
@@ -55,14 +56,15 @@ def estimate_camera_pose(
         return ret
 
     # TODO do not perform estimation for un-configured markers
-    rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix_arr, dist_matrix_arr)
+    # TODO improve/fix typing
+    rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners, marker_size, camera_matrix_arr, dist_matrix_arr)  # type: ignore  # noqa
 
     rvec = rvec.reshape(len(ids), 3)
     tvec = tvec.reshape(len(ids), 3)
 
     if __debug__:
         backtorgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
-        aruco.drawDetectedMarkers(backtorgb, corners)  # Draw A square around the markers
+        aruco.drawDetectedMarkers(backtorgb, corners)  # type: ignore
 
         for idx in range(len(ids)):
             cv2.drawFrameAxes(backtorgb, camera_matrix_arr, dist_matrix_arr, rvec[idx], tvec[idx], 0.15)

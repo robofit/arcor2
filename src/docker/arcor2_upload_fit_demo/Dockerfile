@@ -1,12 +1,12 @@
-FROM python:3.10.10-slim-bullseye as deps
+FROM python:3.11.8-bookworm as deps
 COPY src.python.arcor2_fit_demo.scripts/upload_objects.pex /binary.pex
-RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=deps --compile /bin/app
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.10.10-slim-bullseye as srcs
+FROM python:3.11.8-bookworm as srcs
 COPY src.python.arcor2_fit_demo.scripts/upload_objects.pex /binary.pex
-RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python3.10 /binary.pex venv --scope=srcs --compile /bin/app
+RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.10.10-slim-bullseye
+FROM python:3.11.8-bookworm
 
 ENTRYPOINT ["/bin/app/pex"]
 COPY --from=deps /bin/app /bin/app

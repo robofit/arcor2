@@ -18,7 +18,7 @@ def finish_processes(processes) -> None:
         print(proc.communicate()[0].decode("utf-8").strip())
 
 
-@pytest.fixture()
+@pytest.fixture
 def start_processes() -> Iterator[None]:
     my_env = os.environ.copy()
 

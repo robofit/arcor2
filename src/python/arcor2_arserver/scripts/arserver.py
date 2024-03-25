@@ -21,7 +21,7 @@ import arcor2_arserver_data
 import arcor2_execution_data
 from arcor2 import env, json, ws_server
 from arcor2.clients import aio_scene_service as scene_srv
-from arcor2.data import compile_json_schemas, events, rpc
+from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
 from arcor2.parameter_plugins.utils import known_parameter_types
 from arcor2_arserver import events as server_events
@@ -109,7 +109,12 @@ async def handle_manager_incoming_messages(manager_client) -> None:
         logger.error(f"Connection to manager closed. {str(e)}")
 
 
+_server: websockets.server.WebSocketServer | None = None
+
+
 async def _initialize_server() -> None:
+    global _server
+
     exe_version = await exe.manager_request(rpc.common.Version.Request(exe.get_id()))
     assert isinstance(exe_version, rpc.common.Version.Response)
     if not exe_version.result:
@@ -160,7 +165,7 @@ async def _initialize_server() -> None:
         logger.warn("Development mode. The service will shutdown on any unhandled exception.")
 
     logger.info(f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized.")
-    await asyncio.wait([websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)])
+    _server = await websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)
     asyncio.create_task(run_lock_notification_worker())
 
 
@@ -316,9 +321,9 @@ def main() -> None:
     loop.set_debug(enabled=args.asyncio_debug)
     loop.set_exception_handler(ws_server.custom_exception_handler)
 
-    compile_json_schemas()
-
     run(aio_main(), loop=loop)
+    if _server is not None:
+        _server.close()
 
     shutil.rmtree(settings.OBJECT_TYPE_PATH)
 

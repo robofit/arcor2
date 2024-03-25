@@ -15,12 +15,12 @@ def arcor2_setup_py(**kwargs):
                 "Intended Audience :: Developers",
                 "Topic :: Software Development :: Build Tools",
                 "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-                "Programming Language :: Python :: 3.10",
+                "Programming Language :: Python :: 3.11",
                 "Natural Language :: English",
                 "Topic :: Scientific/Engineering"
             ]
 
-    kwargs["python_requires"] = "==3.10.*"  # we support only Python 3.10
+    kwargs["python_requires"] = "==3.11.*"  # we support only Python 3.11
 
     return setup_py(**kwargs)
 

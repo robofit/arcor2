@@ -133,7 +133,7 @@ async def project_manager_client(handle_manager_incoming_messages) -> None:
         logger.info("Attempting connection to manager...")
 
         try:
-            async with websockets.connect(EXE_URL) as manager_client:  # type: ignore  # TODO not sure what is wrong
+            async with websockets.connect(EXE_URL) as manager_client:
                 logger.info("Connected to manager.")
 
                 future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
