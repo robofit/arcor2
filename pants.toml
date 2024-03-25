@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.16.0a0"  # in order to get newer pex (https://github.com/pantsbuild/pex/pull/2002)
+pants_version = "2.19.0"
 colors = true
 process_execution_local_parallelism = 4
 
@@ -40,50 +40,21 @@ enable_resolves = true
 
 [python.resolves]
 python-default = "3rdparty/constraints.txt"
+flake8 = "3rdparty/flake8_lockfile.txt"
+mypy = "3rdparty/mypy_lockfile.txt"
+pytest = "3rdparty/pytest_lockfile.txt"
 
 [python-bootstrap]
 search_path = ["<PATH>", "/usr/bin/python3.10"]
 
-[black]
-interpreter_constraints = ["==3.10.*"]
-version = "black==23.1.0"
-lockfile = "3rdparty/black_lockfile.txt"
-
 [flake8]
-version = "flake8==6.0.0"
-extra_requirements.add = [
-  "flake8-tidy-imports",
-  "flake8-annotations-coverage",
-  "flake8-pytest-style",
-  "flake8-bugbear",
-  "flake8-pantsbuild",
-#  "flake8-new-union-types",  TODO enable when https://github.com/s-knibbs/dataclasses-jsonschema/issues/195 is solved
-  "flake8-absolute-import",
-  "vulture"
-]
-lockfile = "3rdparty/flake8_lockfile.txt"
-
+install_from_resolve = "flake8"
 
 [mypy]
-version = "mypy==1.1.1"
-interpreter_constraints = ["==3.10.*"]
-extra_requirements.add = [
-  "numpy"
-]
-extra_type_stubs = ["types-PyYAML==6.0.12.8", "types-aiofiles==23.1.0.0", "types-orjson==3.6.2", "types-python-dateutil==2.8.19.10", "types-requests==2.28.11.16",  "types-setuptools==65.7.0.2", "pydub-stubs==0.25.1"]
-lockfile = "3rdparty/mypy_lockfile.txt"
+install_from_resolve = "mypy"
 
 [pytest]
-version = "pytest==7.2.2"
-extra_requirements.add = [
-  "pytest-repeat",
-  "pytest-randomly",
-  "pytest-icdiff",
-  "pygments",
-  "pytest-asyncio"
-]
-lockfile = "3rdparty/pytest_lockfile.txt"
-
+install_from_resolve = "pytest"
 # args = ["--count=3 -x"]
 
 [test]
