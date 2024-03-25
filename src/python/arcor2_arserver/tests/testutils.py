@@ -37,7 +37,7 @@ def finish_processes(processes) -> None:
         log_proc_output(proc.communicate())
 
 
-@pytest.fixture()
+@pytest.fixture
 def start_processes(request) -> Iterator[None]:
     """Starts ARServer dependencies."""
 
@@ -173,7 +173,7 @@ for mod in modules:
             event_mapping[cls.__name__] = cls
 
 
-@pytest.fixture()
+@pytest.fixture
 def ars() -> Iterator[ARServer]:
     with ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping) as ws:
         test_username = "testUser"

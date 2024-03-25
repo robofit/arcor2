@@ -227,7 +227,7 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     ):
         if isinstance(res, Arcor2Exception):
             logger.error(str(res))
-        elif isinstance(res, Exception):
+        elif isinstance(res, BaseException):
             raise res  # zero toleration for other exceptions
         else:
             resp.data.append(res)

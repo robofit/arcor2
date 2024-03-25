@@ -76,7 +76,9 @@ class ARServer:
         # wait for RPC response, put any incoming event into the queue
         while True:
             try:
-                recv_dict = json.loads(self._ws.recv())
+                data = self._ws.recv()
+                assert isinstance(data, str), "Binary payload not supported"
+                recv_dict = json.loads(data)
             except websocket.WebSocketTimeoutException:
                 raise ARServerClientException("RPC timeouted.")
 
@@ -111,7 +113,9 @@ class ARServer:
                 evt = self._event_queue.get_nowait()
             except Empty:
                 try:
-                    recv_dict = json.loads(self._ws.recv())
+                    data = self._ws.recv()
+                    assert isinstance(data, str), "Binary payload not supported."
+                    recv_dict = json.loads(data)
                 except websocket.WebSocketTimeoutException:
                     raise ARServerClientException("Timeouted.")
 

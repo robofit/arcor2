@@ -206,7 +206,7 @@ def iterate_over_actions(
 ) -> Iterator[tuple[str, Callable[[Any,], Any]]]:
     for method_name, method in inspect.getmembers(type_def, inspect.isroutine):
         try:
-            if not isinstance(method.__action__, ActionMetadata):
+            if not isinstance(method.__action__, ActionMetadata):  # type: ignore
                 continue
         except AttributeError:
             continue

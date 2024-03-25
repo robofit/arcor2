@@ -1,4 +1,4 @@
-import pkgutil
+import importlib.resources
 import warnings
 from typing import NamedTuple
 
@@ -20,9 +20,7 @@ if __debug__:
 
 
 def package_version(package: str, file: str = "VERSION") -> str:
-    if res := pkgutil.get_data(package, file):
-        return res.decode().strip()
-    return "unknown"
+    return importlib.resources.read_text(package, file).strip()
 
 
 def version() -> str:

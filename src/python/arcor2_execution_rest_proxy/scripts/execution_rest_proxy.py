@@ -203,7 +203,9 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
     rpc_mapping: dict[str, type[arcor2_rpc.common.RPC]] = {rpc.__name__: rpc for rpc in EXPOSED_RPCS}
 
     while True:
-        data = json.loads(ws.recv())  # TODO handle WebSocketConnectionClosedException
+        raw_data = ws.recv()
+        assert isinstance(raw_data, str), "Binary payload not supported."
+        data = json.loads(raw_data)  # TODO handle WebSocketConnectionClosedException
 
         if not isinstance(data, dict):
             continue

@@ -1,1 +1,1 @@
-docker_image(name="arcor2_build", repository="arcor2/arcor2_build", image_tags=["1.3.2"])
+docker_image(name="arcor2_build", repository="arcor2/arcor2_build", image_tags=["1.4.0"])
