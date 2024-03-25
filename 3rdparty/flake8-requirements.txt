@@ -1,0 +1,8 @@
+flake8-tidy-imports
+flake8-annotations-coverage
+flake8-pytest-style
+flake8-bugbear
+flake8-pantsbuild
+#  "flake8-new-union-types",  TODO enable when https://github.com/s-knibbs/dataclasses-jsonschema/issues/195 is solved
+flake8-absolute-import
+vulture

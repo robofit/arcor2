@@ -1,0 +1,5 @@
+pytest-repeat
+pytest-randomly
+pytest-icdiff
+pygments
+pytest-asyncio
