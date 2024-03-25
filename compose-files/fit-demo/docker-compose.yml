@@ -210,7 +210,7 @@ services:
       - fit-demo-asset
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:1.2.0
+    image: arcor2/arcor2_upload_fit_demo:1.3.0
     container_name: "fit-demo-upload-object-types"
     depends_on:
       fit-demo-project:

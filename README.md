@@ -108,7 +108,7 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
-- 2023-07-20: [1.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F1.2.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=1.2.0), [pypi](https://pypi.org/project/arcor2-fit-demo/1.2.0/)).
+- 2024-03-25: [1.3.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F1.3.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=1.3.0), [pypi](https://pypi.org/project/arcor2-fit-demo/1.3.0/)).
   
 ### arcor2_kinect_azure
 
