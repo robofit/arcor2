@@ -711,11 +711,11 @@ class DobotApi:
         msg.params.extend(bytearray(struct.pack("i", speed)))
         return self._send_command(msg)
 
-    def conveyor_belt_distance(self, speed: float, distance: float, direction: int = 1, interface: int = 0) -> None:
+    def conveyor_belt_distance(self, speed: float, distance: float, direction: int = 1, interface: int = 0) -> int:
         if 0.0 <= speed <= 100.0 and (direction == 1 or direction == -1):
             motor_speed = speed * STEP_PER_CIRCLE / MM_PER_CIRCLE * direction
             steps = (distance * STEP_PER_CIRCLE / MM_PER_CIRCLE) / HUNGARIAN_CONSTANT
-            self._set_stepper_motor_distance(int(motor_speed), int(steps), interface)
+            return self._extract_cmd_index(self._set_stepper_motor_distance(int(motor_speed), int(steps), interface))
         else:
             raise DobotApiException("Wrong conveyor belt parameters.")
 
