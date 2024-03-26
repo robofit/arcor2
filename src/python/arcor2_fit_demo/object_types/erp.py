@@ -9,10 +9,9 @@ class Erp(Generic):
 
     _ABSTRACT = False
 
-    def log_production_step(self, step: str, success: bool, *, an: None | str = None) -> None:
-        """Logs finished production step.
+    def log_production_step(self, success: bool = True, *, an: None | str = None) -> None:
+        """Logs finished production step (described by action name).
 
-        :param step: Name of the production step.
         :param success: Indicates whether the step was successful.
         :param an:
         :return:

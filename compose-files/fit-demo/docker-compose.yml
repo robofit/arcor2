@@ -98,7 +98,7 @@ services:
       - ./calibration.yaml:/root/calibration.yaml
 
   fit-demo-dobot-magician:
-    image: arcor2/arcor2_dobot:1.1.1
+    image: arcor2/arcor2_dobot:1.2.0
     container_name: fit-demo-dobot-magician
     depends_on:
       fit-demo-scene:
@@ -114,7 +114,7 @@ services:
       - ARCOR2_DOBOT_MODEL=magician
 
   fit-demo-dobot-magician2:
-    image: arcor2/arcor2_dobot:1.1.1
+    image: arcor2/arcor2_dobot:1.2.0
     container_name: fit-demo-dobot-magician2
     depends_on:
       fit-demo-scene:
@@ -130,7 +130,7 @@ services:
       - ARCOR2_DOBOT_MODEL=magician
 
   fit-demo-dobot-m1:
-    image: arcor2/arcor2_dobot:1.1.1
+    image: arcor2/arcor2_dobot:1.2.0
     container_name: fit-demo-dobot-m1
     depends_on:
       fit-demo-scene:
@@ -210,7 +210,7 @@ services:
       - fit-demo-asset
 
   fit-demo-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:1.3.0
+    image: arcor2/arcor2_upload_fit_demo:1.4.0
     container_name: "fit-demo-upload-object-types"
     depends_on:
       fit-demo-project:

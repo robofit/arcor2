@@ -83,8 +83,11 @@ class Dobot(metaclass=ABCMeta):
         if not self.simulator:
             self._dobot.conveyor_belt(speed, direction)
 
-    def conveyor_distance(self, speed: float, distance: float, direction: int = 1) -> None:
-        self._dobot.conveyor_belt_distance(speed, distance, direction)
+    def conveyor_distance(self, speed: float, distance: float, direction: int = 1, blocking=True) -> None:
+        idx = self._dobot.conveyor_belt_distance(speed, distance, direction)
+
+        if blocking:
+            self._dobot.wait_for_cmd(idx)
 
     @property
     def hand_teaching_mode(self) -> bool:

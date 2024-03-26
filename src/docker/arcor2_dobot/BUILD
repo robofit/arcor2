@@ -1,1 +1,1 @@
-docker_image(name="arcor2_dobot", repository="arcor2/arcor2_dobot", image_tags=["1.1.1"])
+docker_image(name="arcor2_dobot", repository="arcor2/arcor2_dobot", image_tags=["1.2.0"])

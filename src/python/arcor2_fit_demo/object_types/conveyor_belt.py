@@ -11,8 +11,8 @@ from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class Direction(StrEnum):
-    FORWARD: str = "forward"
-    BACKWARDS: str = "backwards"
+    LEFT: str = "left"
+    RIGHT: str = "right"
 
 
 @dataclass
@@ -45,7 +45,7 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
                 raise Arcor2Exception("Failed to connect to the Dobot Service.")
 
     def set_velocity(
-        self, velocity: float = 0.5, direction: Direction = Direction.FORWARD, *, an: None | str = None
+        self, velocity: float = 0.5, direction: Direction = Direction.RIGHT, *, an: None | str = None
     ) -> None:
         """Belt will move indefinitely with given velocity.
 
@@ -69,7 +69,7 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
         self,
         velocity: float = 0.5,
         distance: float = 0.55,
-        direction: Direction = Direction.FORWARD,
+        direction: Direction = Direction.RIGHT,
         *,
         an: None | str = None,
     ) -> None:
