@@ -11,7 +11,7 @@ FROM python:3.10.10-slim-bullseye
 # libgomp1 and libusb-1.0-0 are because of Open3D
 # curl is for healthcheck
 RUN apt-get update \
-        && apt-get install -y -q --no-install-recommends libgl1-mesa-glx=20.3.5-1 libglib2.0-0=2.66.8-1 libgomp1=10.2.1-6 libusb-1.0-0=2:1.0.24-3 curl=7.74.0-1.3+deb11u11 \
+        && apt-get install -y -q --no-install-recommends libgl1-mesa-glx=20.3.5-1 libglib2.0-0=2.66.8-1+deb11u1 libgomp1=10.2.1-6 libusb-1.0-0=2:1.0.24-3 curl=7.74.0-1.3+deb11u11 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
