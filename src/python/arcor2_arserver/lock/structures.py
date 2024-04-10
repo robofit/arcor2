@@ -21,7 +21,7 @@ class LockedObject:
 
     def __init__(self) -> None:
         # object id: owners
-        self.read: dict[str, list[str]] = {}
+        self.read: dict[str, set[str]] = {}
         self.write: dict[str, str] = {}
 
         self.tree: bool = False
@@ -36,9 +36,9 @@ class LockedObject:
             return False
 
         if obj_id in self.read:  # already locked
-            self.read[obj_id].append(owner)
+            self.read[obj_id].add(owner)
         else:
-            self.read[obj_id] = [owner]
+            self.read[obj_id] = {owner}
         return True
 
     def read_unlock(self, obj_id: str, owner: str) -> None:
@@ -51,9 +51,9 @@ class LockedObject:
         if owner not in self.read[obj_id]:
             raise CannotUnlock(f"{obj_id} lock is not owned by {owner}.")
 
-        if len(self.read[obj_id]) > 1:
-            self.read[obj_id].remove(owner)
-        else:
+        self.read[obj_id].remove(owner)
+
+        if not self.read[obj_id]:
             del self.read[obj_id]
 
     def write_lock(self, obj_id: str, owner: str, lock_tree: bool) -> bool:

@@ -72,7 +72,10 @@ async def test_ctx_read_lock() -> None:
 
     assert await glob.LOCK.get_locked_roots_count() == 0
 
-    await glob.LOCK.write_lock(ap_ap.id, user, True)
+    assert await glob.LOCK.write_lock(ap_ap.id, user, True)
+
+    # attempt to lock it again should be ok
+    # assert await glob.LOCK.write_lock(ap_ap.id, user, True)
 
     assert await glob.LOCK.is_write_locked(test_object.id, user)
     assert await glob.LOCK.is_write_locked(ap.id, user)
@@ -94,12 +97,12 @@ async def test_base_logic(lock: Lock) -> None:
     ap = next(ap for ap in lock.project.action_points if ap.name == "ap")
 
     assert not lock._locked_objects
-    await lock.write_lock(ap.id, test)
+    assert await lock.write_lock(ap.id, test)
     assert ap.id in lock._locked_objects
     assert not await lock.read_lock(ap.id, "second_user")
     await lock.write_unlock(ap.id, test)
 
-    await lock.write_lock(ap.id, test, True)
+    assert await lock.write_lock(ap.id, test, True)
     assert not await lock.read_lock(ap.id, test)
     await lock.write_unlock(ap.id, test)
     assert not lock._locked_objects
@@ -132,7 +135,7 @@ async def test_locking_special_names(lock: Lock) -> None:
         await lock.write_lock(lock.Owners.SERVER, test)
 
     for special_id in lock.SpecialValues:
-        await lock.read_lock(special_id, test)
+        assert await lock.read_lock(special_id, test)
         assert special_id in lock._locked_objects
         assert special_id in lock._locked_objects[special_id].read
         await lock.read_unlock(special_id, test)
@@ -205,25 +208,25 @@ async def test_recursive_locking(lock: Lock) -> None:
     test = "test"
 
     assert not await lock.is_write_locked(lock.scene.id, test)
-    await lock.write_lock(lock.scene.id, test)
+    assert await lock.write_lock(lock.scene.id, test)
     assert await lock.is_write_locked(lock.scene.id, test)
     assert not await lock.is_read_locked(lock.scene.id, test)
     assert not await lock.write_lock(lock.scene.id, test)
     await lock.write_unlock(lock.scene.id, test)
+    assert not await lock.is_write_locked(lock.scene.id, test)
 
     assert not await lock.is_read_locked(lock.scene.id, test)
-    await lock.read_lock(lock.scene.id, test)
+    assert await lock.read_lock(lock.scene.id, test)
     assert await lock.is_read_locked(lock.scene.id, test)
     assert not await lock.is_write_locked(lock.scene.id, test)
-    assert await lock.read_lock(lock.scene.id, test)
-    await lock.read_unlock(lock.scene.id, test)
+    assert await lock.read_lock(lock.scene.id, test)  # attempt to get the lock again should be ok
     assert not await lock.write_lock(lock.scene.id, test)
     await lock.read_unlock(lock.scene.id, test)
 
     # Cover negative return when trying to lock tree with something already locked
     ap = next(ap for ap in lock.project.action_points if ap.name == "ap")
     ap_ap = next(ap for ap in lock.project.action_points if ap.name == "ap_ap")
-    await lock.write_lock(ap_ap.id, test)
+    assert await lock.write_lock(ap_ap.id, test)
     assert not await lock.write_lock(ap.id, test, True)
 
 
@@ -236,7 +239,7 @@ async def test_count_methods(lock: Lock) -> None:
 
     assert await lock.get_locked_roots_count() == 0
     assert await lock.get_write_locks_count() == 0
-    await lock.write_lock(lock.scene.id, test)
+    assert await lock.write_lock(lock.scene.id, test)
     assert await lock.get_locked_roots_count() == 1
     assert await lock.get_write_locks_count() == 1
     await lock.write_unlock(lock.scene.id, test)
@@ -255,7 +258,7 @@ async def test_notification_queue(lock: Lock) -> None:
     action = lock.project.ap_actions(ap_ap_ap.id)[0]
 
     # test check remove of implicitly locked child
-    await lock.write_lock(ap_ap_ap.id, test, True, True)
+    assert await lock.write_lock(ap_ap_ap.id, test, True, True)
     assert lock.all_ui_locks
     await check_notification_content(lock, test, tree_ap_ids + [ori.id, action.id])
     await lock.write_unlock(ap_ap_ap.id, test, True)
@@ -271,14 +274,14 @@ async def test_possibility_of_locking_tree(lock: Lock) -> None:
     ap = next(ap for ap in lock.project.action_points if ap.name == "ap")
     ap_ap = next(ap for ap in lock.project.action_points if ap.name == "ap_ap")
 
-    await lock.write_lock(ap.id, test)
+    assert await lock.write_lock(ap.id, test)
     with pytest.raises(CannotLock):
         await lock.check_lock_tree(ap_ap.id, "another_user")
     await lock.check_lock_tree(ap_ap.id, test)
     await lock.write_unlock(ap.id, test)
     await lock.check_lock_tree(ap_ap.id, test)
 
-    await lock.read_lock(ap.id, test)
+    assert await lock.read_lock(ap.id, test)
     with pytest.raises(CannotLock):
         await lock.check_lock_tree(ap_ap.id, "another_user")
     await lock.check_lock_tree(ap_ap.id, test)
@@ -297,7 +300,7 @@ async def test_updating_lock(lock: Lock) -> None:
     with pytest.raises(LockingException):
         await lock.update_lock(ap.id, test, rpc.lock.UpdateType.TREE)
 
-    await lock.write_lock([ap.id, ap_ap.id], test)
+    assert await lock.write_lock([ap.id, ap_ap.id], test)
     with pytest.raises(LockingException):
         await lock.update_lock(ap.id, test, rpc.lock.UpdateType.TREE)
     await lock.write_unlock(ap_ap.id, test)
@@ -353,12 +356,12 @@ async def test_auto_release(lock: Lock) -> None:
 
     # Test auto-release of locks and auto locking of child in tree
     lock._lock_timeout = 2
-    await lock.write_lock(ap.id, test, True, True)
+    assert await lock.write_lock(ap.id, test, True, True)
     assert await lock.is_write_locked(ap_ap_ap.id, test)
     assert await lock.is_write_locked(ap_ap.id, test)
     await check_notification_content(lock, test, [ap.id, ap_ap.id, ap_ap_ap.id, ori.id, action.id])
 
-    await lock.read_lock(ap2.id, test)
+    assert await lock.read_lock(ap2.id, test)
     await lock.schedule_auto_release(test)
     await lock.cancel_auto_release(test)
     assert await lock.is_write_locked(ap.id, test)
@@ -411,7 +414,7 @@ async def test_update_parent(lock: Lock) -> None:
     ap_ap = next(ap for ap in lock.project.action_points if ap.name == "ap_ap")
     ap2 = next(ap for ap in lock.project.action_points if ap.name == "ap2")
 
-    await lock.write_lock([ap_ap.id, ap.id, ap2.id], test)
+    assert await lock.write_lock([ap_ap.id, ap.id, ap2.id], test)
     ap_ap.parent = ap2.id
     await lock.update_write_lock(ap_ap.id, ap.id, test)
     assert await lock.is_write_locked(ap_ap.id, test)
@@ -432,7 +435,7 @@ async def test_check_remove(lock: Lock) -> None:
     action = lock.project.ap_actions(ap_ap_ap.id)[0]
 
     # test check remove of implicitly locked child
-    await lock.write_lock(ap_ap.id, test, True, True)
+    assert await lock.write_lock(ap_ap.id, test, True, True)
     assert not await lock.check_remove(ap.id, "second_user")
     assert not await lock.check_remove(ap_ap_ap.id, "second_user")
     assert not await lock.check_remove(ori.id, "second_user")
@@ -445,11 +448,11 @@ async def test_check_remove(lock: Lock) -> None:
 
     # test check remove when some child locked
     for obj_id in (action.id, ori.id):
-        await lock.read_lock(obj_id, test)
+        assert await lock.read_lock(obj_id, test)
         assert not await lock.check_remove(ap.id, "second_user")
         await lock.read_unlock(obj_id, test)
 
-        await lock.write_lock(obj_id, test)
+        assert await lock.write_lock(obj_id, test)
         assert not await lock.check_remove(ap.id, "second_user")
         await lock.write_unlock(obj_id, test)
     assert not await lock.check_remove(ap.id, test)
@@ -458,7 +461,7 @@ async def test_check_remove(lock: Lock) -> None:
     await lock.read_lock(ap.id, "second_user")
     await lock.read_lock(ap.id, "third_user")
     assert not await lock.check_remove(ap.id, test)
-    await lock.read_lock(ap.id, test)
+    assert await lock.read_lock(ap.id, test)
     assert not await lock.check_remove(ap.id, test)
 
 
@@ -519,6 +522,9 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
     ori = ap_ap_ap.orientations[0]
 
     lock_object(ars, ap.id, True)
+
+    # second attempt to call RPC should produce warning, return True and no events...
+    lock_object(ars, ap.id, True, expect_event=False)
 
     # lock object and expect event about it on newly logged UI
     ars2 = ARServer(ars_connection_str(), timeout=30, event_mapping=event_mapping)

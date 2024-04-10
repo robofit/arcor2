@@ -580,7 +580,7 @@ class Lock:
                 if read:
                     if owner not in lock_item.read[_obj_id]:
                         return False
-                    if lock_item.read[_obj_id].count != 1:
+                    if len(lock_item.read[_obj_id]) != 1:
                         return False
                 else:
                     if owner != lock_item.write[_obj_id]:

@@ -1,12 +1,19 @@
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2_arserver import globals as glob
+from arcor2_arserver import logger
 from arcor2_arserver.lock.exceptions import CannotLock
 from arcor2_arserver_data import rpc as srpc
 
 
 async def write_lock_cb(req: srpc.lock.WriteLock.Request, ui: WsClient) -> None:
-    if not await glob.LOCK.write_lock(req.args.object_id, glob.USERS.user_name(ui), req.args.lock_tree, notify=True):
+    user_name = glob.USERS.user_name(ui)
+
+    if await glob.LOCK.is_write_locked(req.args.object_id, user_name, req.args.lock_tree):
+        logger.warn(f"User {user_name} attempted to re-acquire lock for {req.args.object_id}. Pretending it is OK...")
+        return
+
+    if not await glob.LOCK.write_lock(req.args.object_id, user_name, req.args.lock_tree, notify=True):
         raise CannotLock(glob.LOCK.ErrMessages.LOCK_FAIL.value)
 
 

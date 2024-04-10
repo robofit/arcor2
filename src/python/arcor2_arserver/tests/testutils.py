@@ -224,13 +224,14 @@ def close_project(ars: ARServer) -> None:
     event(ars, events.p.ProjectClosed)
 
 
-def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False) -> None:
+def lock_object(ars: ARServer, obj_id: str, lock_tree: bool = False, expect_event: bool = True) -> None:
     assert ars.call_rpc(
         rpc.lock.WriteLock.Request(get_id(), rpc.lock.WriteLock.Request.Args(obj_id, lock_tree)),
         rpc.lock.WriteLock.Response,
     ).result
 
-    event(ars, events.lk.ObjectsLocked)
+    if expect_event:
+        event(ars, events.lk.ObjectsLocked)
 
 
 def unlock_object(ars: ARServer, obj_id: str) -> None:
