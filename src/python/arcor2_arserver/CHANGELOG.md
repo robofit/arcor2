@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 
 - Updated dependencies, switched to Python 3.11.
+- `WriteLock` RPC now does not return an error when a user tries to write-lock something already locked (by the same user).
 
 ## [1.1.1] - 2024-01-23
 
