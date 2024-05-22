@@ -13,7 +13,7 @@ from arcor2.logging import get_logger
 URL = os.getenv("ARCOR2_PROJECT_SERVICE_URL", "http://0.0.0.0:10000")
 
 """
-Collection of functions to work with the Project service (0.10.0).
+Collection of functions to work with the Project service (2.0.0).
 
 All functions raise ProjectServiceException when any failure happens.
 

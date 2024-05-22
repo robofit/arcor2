@@ -7,7 +7,7 @@ from arcor2 import package_version
 
 SERVICE_NAME = "Build"
 URL = os.getenv("ARCOR2_BUILD_URL", "http://0.0.0.0:5008")
-DEPENDENCIES: dict[str, str] = {"Project": "1.0.0"}
+DEPENDENCIES: dict[str, str] = {"Project": "2.0.0"}
 
 
 @dataclass
