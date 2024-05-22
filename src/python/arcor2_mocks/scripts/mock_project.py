@@ -958,7 +958,7 @@ def main() -> None:
             WebApiError,
         ],
         args.swagger,
-        api_version="1.0.0",
+        api_version="2.0.0",
     )
 
 

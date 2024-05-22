@@ -62,7 +62,7 @@ def arcor2_python_distribution(name: str, description: str, binaries=None, **kwa
 
     kwargs["sdist"] = True
     kwargs["wheel"] = True
-    kwargs["wheel_config_settings"] = {"--global-option": ["--python-tag", "py310"]}
+    kwargs["wheel_config_settings"] = {"--global-option": ["--python-tag", "py311"]}
 
     if binaries:
         kwargs["entry_points"] = {"console_scripts": binaries}
