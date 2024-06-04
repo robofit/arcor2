@@ -21,7 +21,7 @@ from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPo
 from arcor2.object_types.utils import built_in_types_names, settings_from_params
 from arcor2.parameter_plugins.base import TypesDict
 from arcor2_runtime import action, package
-from arcor2_runtime.action import AP_ID_ATTR, patch_object_actions, patch_with_action_mapping, print_event
+from arcor2_runtime.action import patch_aps, patch_object_actions, patch_with_action_mapping, print_event
 from arcor2_runtime.arguments import parse_args
 from arcor2_runtime.events import RobotEef, RobotJoints
 from arcor2_runtime.exceptions import print_exception
@@ -142,20 +142,19 @@ class Resources:
             if apply_action_mapping:
                 patch_with_action_mapping(cls, self.scene, self.project)
 
-        action.start_paused, action.breakpoints = parse_args()
+        start_paused, action.g.breakpoints = parse_args()
 
-        if action.breakpoints:
+        if start_paused:
+            action.g.pause_on_next_action.set()
+
+        # check if all breakpoint IDs really exist
+        if action.g.breakpoints:
             ap_ids = self.project.action_points_ids
-            for bp in action.breakpoints:
+            for bp in action.g.breakpoints:
                 if bp not in ap_ids:
                     raise ResourcesException(f"Breakpoint ID unknown: {bp}.")
 
-        # orientations / joints have to be monkey-patched with AP's ID in order to make breakpoints work in @action
-        for ap in self.project.action_points:
-            setattr(ap.position, AP_ID_ATTR, ap.id)
-
-            for joints in self.project.ap_joints(ap.id):
-                setattr(joints, AP_ID_ATTR, ap.id)
+        patch_aps(self.project)
 
         package_id = os.path.basename(os.getcwd())
         package_meta = package.read_package_meta(package_id)

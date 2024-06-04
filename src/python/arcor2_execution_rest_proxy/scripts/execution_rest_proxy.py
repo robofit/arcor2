@@ -25,7 +25,7 @@ import arcor2_execution_rest_proxy
 from arcor2 import json
 from arcor2.data import events
 from arcor2.data import rpc as arcor2_rpc
-from arcor2.data.events import ActionStateAfter, ActionStateBefore, PackageInfo, PackageState, ProjectException
+from arcor2.data.events import ActionStateBefore, PackageInfo, PackageState, ProjectException
 from arcor2.data.rpc import get_id
 from arcor2.flask import RespT, create_app, run_app
 from arcor2_execution_data import EVENTS, EXPOSED_RPCS
@@ -177,8 +177,7 @@ exception_messages: list[str] = []
 
 # hold last action state for AP visualization
 # do not unset ActionStateBefore event, this information might be used even after ActionStateAfter event
-action_state_before: None | ActionStateBefore.Data = None
-action_state_after: None | ActionStateAfter.Data = None
+action_state_before: dict[int | None, ActionStateBefore.Data] = {}
 
 breakpoints: dict[str, set[str]] = {}
 
@@ -195,8 +194,6 @@ def tokens_db():
 def ws_thread() -> None:  # TODO use (refactored) arserver client
     global package_info
     global package_state
-    global action_state_before
-    global action_state_after
     assert ws
 
     event_mapping: dict[str, type[events.Event]] = {evt.__name__: evt for evt in EVENTS}
@@ -220,16 +217,14 @@ def ws_thread() -> None:  # TODO use (refactored) arserver client
 
                 if package_state.state == PackageState.Data.StateEnum.RUNNING:
                     exception_messages.clear()
+                    action_state_before.clear()
+                elif package_state.state == PackageState.Data.StateEnum.STOPPED:
+                    action_state_before.clear()
 
             elif isinstance(evt, ProjectException):
                 exception_messages.append(evt.data.message)
             elif isinstance(evt, ActionStateBefore):
-                # assume ActionStateBefore event to be fired always before ActionStateAfter
-                # thus ActionStateBefore here belong to previous action - unset it
-                action_state_after = None
-                action_state_before = evt.data
-            elif isinstance(evt, ActionStateAfter):
-                action_state_after = evt.data
+                action_state_before[evt.data.thread_id] = evt.data
 
         elif "response" in data:
             resp = rpc_mapping[data["response"]].Response.from_dict(data)
@@ -712,7 +707,6 @@ def put_breakpoints(id: str) -> RespT:  # noqa
             type: array
             items:
               type: string
-          required: true
           description: List of breakpoints (IDs of action points).
       responses:
         200:
@@ -999,8 +993,11 @@ def packages_state() -> RespT:
     else:
         ret = ExecutionInfo(ExecutionState.Undefined)  # TODO this is unhandled state - log it
 
-    if action_state_before is not None:
-        ret.actionPointIds = action_state_before.action_point_ids
+    for d in action_state_before.values():
+        if d.action_point_ids:
+            if ret.actionPointIds is None:
+                ret.actionPointIds = set()
+            ret.actionPointIds = ret.actionPointIds.union(d.action_point_ids)
 
     return jsonify(ret.to_dict()), 200
 

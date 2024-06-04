@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.2.0] - 2024-06-14
+
+### Changed
+
+- `ExecutionInfo` contains action point IDs from all threads.
+
+### Fixed
+
+- It was not possible to clear breakpoints (send empty array) using Swagger.
+
 ## [1.1.0] - 2024-04-11
 
 ### Changed

@@ -185,9 +185,11 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     args = [script_path]
 
     if req.args.start_paused:
+        logger.warning("The script will be paused before the first action.")
         args.append("-p")
 
     if req.args.breakpoints:
+        logger.warning(f"Configured breakpoints: {', '.join(req.args.breakpoints)}.")
         args.append(f"-b \"{','.join(req.args.breakpoints)}\"")
 
     logger.info(f"Starting script: {script_path}")

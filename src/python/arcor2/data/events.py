@@ -126,6 +126,8 @@ class ActionStateBefore(Event):
         # might or might not be set in other cases
         action_point_ids: Optional[set[str]] = None
 
+        thread_id: Optional[int] = None  # unique identifier of a thread, not set for the main thread
+
     data: Data
 
 

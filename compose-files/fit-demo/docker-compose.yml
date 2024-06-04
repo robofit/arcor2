@@ -47,7 +47,7 @@ services:
       - ARCOR2_KINECT_AZURE_URL=http://192.168.104.100:5017 # Run kinect using pants
 
   fit-demo-build:
-    image: arcor2/arcor2_build:1.5.0
+    image: arcor2/arcor2_build:1.6.0
     container_name: fit-demo-build
     depends_on:
       fit-demo-project:
@@ -61,7 +61,7 @@ services:
       - fit-demo-project-network
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:1.3.0
+    image: arcor2/arcor2_execution:1.4.0
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
@@ -74,6 +74,22 @@ services:
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
         - fit-demo-execution:/root/project
+
+  fit-demo-execution-proxy:
+    image: arcor2/arcor2_execution_proxy:1.2.0
+    container_name: fit-demo-execution-proxy
+    networks:
+      - fit-demo-execution-network
+    environment:
+      - ARCOR2_PROJECT_PATH=/root/project
+      - ARCOR2_EXECUTION_URL=ws://fit-demo-execution:6790
+    depends_on:
+      fit-demo-execution:
+        condition: service_started
+    volumes:
+      - fit-demo-execution:/root/project
+    ports:
+      - "5009:5009"
 
   fit-demo-kinect:
     image: arcor2/arcor2_kinect_azure:0.8.0
@@ -170,7 +186,7 @@ services:
       - "5013:5013"
 
   fit-demo-asset:
-    image: registry.gitlab.com/kinalisoft/test-it-off/asset:2.0.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/asset:2.0.2
     container_name: "fit-demo-asset"
     environment:
         - "ASSETS_FOLDER=/tmp/assets"
@@ -184,7 +200,7 @@ services:
         - "10040:10040"
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:2.0.0
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:2.0.1
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
