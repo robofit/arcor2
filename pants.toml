@@ -1,5 +1,5 @@
 [GLOBAL]
-pants_version = "2.19.0"
+pants_version = "2.21.0"
 colors = true
 process_execution_local_parallelism = 4
 

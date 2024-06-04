@@ -49,7 +49,7 @@ def calibrate_robot(
     camera_pose: Pose,
     camera_parameters: CameraParameters,
     robot: URDF,
-    depth_image: Image,
+    depth_image: Image.Image,
     draw_results: bool = False,
 ) -> Pose:
     logger.info("Creating robot model...")

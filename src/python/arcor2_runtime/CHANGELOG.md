@@ -2,6 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.3.0] - 2024-06-14
+
+### Changed
+
+- It is now possible to run actions in threads.
+
+### Fixed
+
+- It was not possible to use `Pose` as a breakpoint.
+
 ## [1.2.0] - 2024-04-11
 
 ### Changed

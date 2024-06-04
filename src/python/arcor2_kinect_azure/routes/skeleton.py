@@ -36,7 +36,7 @@ def get_skeleton_image() -> RespT:
         img = color_image()
     else:
         assert app.KINECT is not None
-        img = app.KINECT.skeleton_image()
+        img = app.KINECT.skeleton_image()  # type: ignore  # TODO solve it
 
     return send_file(
         image_to_bytes_io(img, target_format="JPEG", target_mode="RGB"),

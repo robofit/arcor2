@@ -140,13 +140,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "663ef5de80cd32aacd39d362212983bc4636435a6f83700b4ed35acbd0b7d1b8",
-              "url": "https://files.pythonhosted.org/packages/e4/cc/739a2718705bb7e7cab3b017bbabf7e39b2643d8a8cc6f8f18022b513ecc/flake8_bugbear-24.2.6-py3-none-any.whl"
+              "hash": "cb430dd86bc821d79ccc0b030789a9c87a47a369667f12ba06e80f11305e8258",
+              "url": "https://files.pythonhosted.org/packages/23/f2/ea73077346e396fcfad4e546b3a15f686509287a51449e74fdf1fb0bd28c/flake8_bugbear-24.4.26-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "f9cb5f2a9e792dd80ff68e89a14c12eed8620af8b41a49d823b7a33064ac9658",
-              "url": "https://files.pythonhosted.org/packages/e3/bc/07225e7ce0089e91f1b334102ac4526fb8cf894235e27ca1f252bd9d5c83/flake8-bugbear-24.2.6.tar.gz"
+              "hash": "ff8d4ba5719019ebf98e754624c30c05cef0dadcf18a65d91c7567300e52a130",
+              "url": "https://files.pythonhosted.org/packages/d8/a5/08b0ccb03fc75ba422e2d44b3d74a483814ba3e07ab84bfa7b463d9568f5/flake8_bugbear-24.4.26.tar.gz"
             }
           ],
           "project_name": "flake8-bugbear",
@@ -161,7 +161,7 @@
             "tox; extra == \"dev\""
           ],
           "requires_python": ">=3.8.1",
-          "version": "24.2.6"
+          "version": "24.4.26"
         },
         {
           "artifacts": [
@@ -320,9 +320,11 @@
       "platform_tag": null
     }
   ],
+  "only_builds": [],
+  "only_wheels": [],
   "path_mappings": {},
-  "pex_version": "2.1.148",
-  "pip_version": "23.1.2",
+  "pex_version": "2.3.1",
+  "pip_version": "24.0",
   "prefer_older_binary": false,
   "requirements": [
     "flake8-absolute-import",

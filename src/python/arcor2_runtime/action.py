@@ -1,22 +1,59 @@
 import select
 import sys
+import threading
+from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, Callable, TypeVar, cast
 
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.data.common import Pose, ProjectRobotJoints
+from arcor2.data.common import Pose, ProjectRobotJoints, StrEnum
 from arcor2.data.events import ActionStateAfter, ActionStateBefore, Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import iterate_over_actions
 from arcor2.parameter_plugins.utils import plugin_from_instance
 
+
+class Commands(StrEnum):
+    PAUSE: str = "p"
+    RESUME: str = "r"
+    STEP: str = "s"
+
+
 ACTION_NAME_ID_MAPPING_ATTR = "_action_name_id_mapping"
 AP_ID_ATTR = "_ap_id"
 
-_pause_on_next_action = False
-start_paused = False
-breakpoints: None | set[str] = None
+
+@dataclass
+class Globals:
+    breakpoints: None | set[str] = None
+
+    pause_on_next_action = threading.Event()  # stepping
+    pause = threading.Event()  # regular pausing
+    resume = threading.Event()
+
+    # currently executed action(s)
+    # thread_id: action_id*, function
+    # *might be unknown for projects without logic
+    ea: dict[int | None, None | tuple[None | str, Callable]] = field(default_factory=dict)
+
+    depth: dict[int | None, int] = field(default_factory=dict)
+
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+
+g = Globals()
+
+
+def patch_aps(project: CachedProject) -> None:
+    """orientations / joints have to be monkey-patched with AP's ID in order to
+    make breakpoints work in @action."""
+
+    for ap in project.action_points:
+        setattr(ap.position, AP_ID_ATTR, ap.id)
+
+        for joints in project.ap_joints(ap.id):
+            setattr(joints, AP_ID_ATTR, ap.id)
 
 
 def patch_object_actions(type_def: type[Generic]) -> None:
@@ -70,9 +107,9 @@ except ImportError:
         return None
 
 
-def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
+def _get_commands():
     """Reads stdin and checks for commands from parent script (e.g. Execution
-    unit). Prints events to stdout.
+    unit). Prints events to stdout. State is signalled using events.
 
     p == pause script
     r == resume script
@@ -80,22 +117,48 @@ def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
     :return:
     """
 
-    global _pause_on_next_action
-    global start_paused
+    while True:
+        raw_cmd = read_stdin(0.1)
 
-    if read_stdin() == "p" or (before and _pause_on_next_action) or start_paused or breakpoint:
-        start_paused = False
-        print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
-        while True:
-            cmd = read_stdin(0.1)
+        if not raw_cmd:
+            continue
 
-            if cmd not in ("s", "r"):
-                continue
+        cmd = Commands(raw_cmd)
 
-            _pause_on_next_action = cmd == "s"
+        with g.lock:
+            if g.pause.is_set():
+                if cmd in (Commands.STEP, Commands.RESUME):
+                    g.pause.clear()
+                    print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
 
-            print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
-            break
+                    if cmd == Commands.STEP:
+                        g.pause_on_next_action.set()
+
+                    g.resume.set()
+            else:
+                if cmd == Commands.PAUSE:
+                    g.resume.clear()
+                    g.pause.set()
+                    print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
+
+
+_cmd_thread = threading.Thread(target=_get_commands)
+_cmd_thread.daemon = True
+_cmd_thread.start()
+
+
+def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
+    """Actual handling of commands in (potentially parallel) actions."""
+
+    with g.lock:
+        if (breakpoint or (before and g.pause_on_next_action.is_set())) and not g.pause.is_set():
+            g.pause_on_next_action.clear()
+            g.resume.clear()
+            g.pause.set()
+            print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
+
+    if g.pause.is_set():
+        g.resume.wait()
 
 
 def print_event(event: Event) -> None:
@@ -125,11 +188,6 @@ def results_to_json(res: Any) -> None | list[str]:
         return [plugin_from_instance(res).value_to_json(res)]
 
 
-# action_id*, function
-# *might be unknown for projects without logic
-_executed_action: None | tuple[None | str, Callable] = None
-
-
 def action(f: F) -> F:
     """Action decorator that prints events with action id and parameters or
     results.
@@ -149,20 +207,22 @@ def action(f: F) -> F:
 
     @wraps(f)
     def wrapper(obj: Generic, *action_args: Any, an: None | str = None, **kwargs: Any) -> Any:
-        # remembers the outermost action
-        # when set, serves as a flag, that we are inside an action
-        # ...then when another action is executed, we know that it is a nested one (and the outer one is composite)
-        global _executed_action
+        thread_id = threading.get_ident() if threading.current_thread() is not threading.main_thread() else None
 
-        action_id: None | str = None
-        action_mapping_provided = hasattr(obj, ACTION_NAME_ID_MAPPING_ATTR)
+        if thread_id not in g.ea:
+            g.ea[thread_id] = None
 
-        # if not set (e.g. when writing actions manually), do not attempt to get action IDs from names
-        if action_mapping_provided:
-            if _executed_action and an:
-                raise Arcor2Exception("Inner actions should not have name specified.")
+        if thread_id not in g.depth:
+            g.depth[thread_id] = 0
 
-            if not _executed_action:  # do not attempt to get id for inner actions
+        try:
+            action_id: None | str = None
+            action_mapping_provided = hasattr(obj, ACTION_NAME_ID_MAPPING_ATTR)
+
+            inner_action = g.depth[thread_id] > 0
+
+            if not inner_action:  # the following code should be executed only for outermost action
+                # do not attempt to get id for inner actions
                 try:
                     action_id = getattr(obj, ACTION_NAME_ID_MAPPING_ATTR)[an]
                 except AttributeError:
@@ -173,72 +233,91 @@ def action(f: F) -> F:
                         raise Arcor2Exception("Mapping from action name to id provided, but action name not set.")
                     raise Arcor2Exception(f"Mapping from action name to id is missing key {an}.")
 
-            if _executed_action and not _executed_action[1].__action__.composite:  # type: ignore
-                msg = f"Outer action {_executed_action[1].__name__}/{_executed_action[0]} not flagged as composite."
-                _executed_action = None
-                raise Arcor2Exception(msg)
+                assert g.ea[thread_id] is None
 
-        if _executed_action is None:  # the following code should be executed only for outermost action
-            _executed_action = action_id, f
+                g.ea[thread_id] = action_id, f
 
-            # collect action point ids, ignore missing
-            action_point_ids: set[str] = set()
-            for aa in action_args:
-                try:
-                    if isinstance(aa, (Pose, ProjectRobotJoints)):
-                        action_point_ids.add(getattr(aa, AP_ID_ATTR))
-                except AttributeError:
-                    if breakpoints:
-                        raise Arcor2Exception("Orientations/Joints not patched. Breakpoints won't work!")
+                # collect action point ids, ignore missing
+                action_point_ids: set[str] = set()
+                for aa in action_args:
+                    try:
+                        if isinstance(aa, ProjectRobotJoints):
+                            action_point_ids.add(getattr(aa, AP_ID_ATTR))
+                        elif isinstance(aa, Pose):
+                            action_point_ids.add(getattr(aa.position, AP_ID_ATTR))
+                    except AttributeError:
+                        if g.breakpoints:
+                            raise Arcor2Exception("Orientations/Joints not patched. Breakpoints won't work!")
 
-            # validate if break is required
-            make_a_break = bool(breakpoints and breakpoints.intersection(action_point_ids))
+                # validate if break is required
+                make_a_break = bool(g.breakpoints and g.breakpoints.intersection(action_point_ids))
 
-            # dispatch ActionStateBefore event for every (outermost) action
-            state_before = ActionStateBefore(
-                ActionStateBefore.Data(
-                    # TODO deal with kwargs parameters
-                    action_id,
-                    None,
-                    action_point_ids if action_point_ids else None,
+                # dispatch ActionStateBefore event for every (outermost) action
+                state_before = ActionStateBefore(
+                    ActionStateBefore.Data(
+                        # TODO deal with kwargs parameters
+                        action_id,
+                        None,
+                        action_point_ids if action_point_ids else None,
+                        thread_id,
+                    )
                 )
-            )
 
+                try:
+                    state_before.data.parameters = [plugin_from_instance(arg).value_to_json(arg) for arg in action_args]
+                except Arcor2Exception:
+                    if action_id:
+                        # for projects with logic, it should not happen that there is unknown parameter type
+                        # for projects without logic (for which we don't know action_id), it is fine...
+                        raise
+
+                print_event(state_before)
+
+                handle_stdin_commands(before=True, breakpoint=make_a_break)
+
+            else:  # handle outermost actions
+                # if not set (e.g. when writing actions manually), do not attempt to get action IDs from names
+                if action_mapping_provided:
+                    if an:
+                        raise Arcor2Exception("Inner actions should not have name specified.")
+
+                    if not g.ea[thread_id][1].__action__.composite:  # type: ignore
+                        # TODO not sure why this was needed, assert was not enough
+                        ea_value = cast(tuple[str | None, Callable[..., Any]], g.ea[thread_id])
+
+                        msg = f"Outer action {ea_value[1].__name__}/{ea_value[0]} not flagged as composite."
+                        raise Arcor2Exception(msg)
+
+            g.depth[thread_id] += 1
+
+            # the action itself is executed under all circumstances
             try:
-                state_before.data.parameters = [plugin_from_instance(arg).value_to_json(arg) for arg in action_args]
+                res = f(obj, *action_args, an=an, **kwargs)
             except Arcor2Exception:
-                if action_id:
-                    # for projects with logic, it should not happen that there is unknown parameter type
-                    # for projects without logic (for which we don't know action_id), it is fine...
-                    _executed_action = None
-                    raise
+                # this is actually not necessary at the moment as when exception is raised, the script ends anyway
+                # TODO maybe print ProjectException from here instead of from Resources' context manager?
+                # ...could provide action_id from here
+                raise
 
-            print_event(state_before)
+            g.depth[thread_id] -= 1
 
-            handle_stdin_commands(before=True, breakpoint=make_a_break)
+            # manage situation when we are getting out of (composite) action
+            if not inner_action:
+                if action_mapping_provided and action_id:  # for projects with logic - check based on action_id
+                    # TODO not sure why this was needed, assert was not enough
+                    ea_value = cast(tuple[str | None, Callable[..., Any]], g.ea[thread_id])
+                    assert ea_value[0] == action_id
+                    print_event(ActionStateAfter(ActionStateAfter.Data(action_id, results_to_json(res))))
 
-        # the action itself is executed under all circumstances
-        try:
-            res = f(obj, *action_args, an=an, **kwargs)
+                g.ea[thread_id] = None
+
+            handle_stdin_commands(before=False)
+
+            return res
+
         except Arcor2Exception:
-            # this is actually not necessary at the moment as when exception is raised, the script ends anyway
-            _executed_action = None
-            # TODO maybe print ProjectException from here instead of from Resources' context manager?
-            # ...could provide action_id from here
+            g.depth[thread_id] = 0
+            g.ea[thread_id] = None
             raise
-
-        # manage situation when we are getting out of (composite) action
-        if action_mapping_provided:  # for projects with logic - check based on action_id
-            if action_id and _executed_action[0] == action_id:
-                _executed_action = None
-                print_event(ActionStateAfter(ActionStateAfter.Data(action_id, results_to_json(res))))
-        else:  # for projects without logic - can be only based on checking the method
-            if _executed_action[1] == f:
-                # TODO shouldn't we sent ActionStateAfter even here?
-                _executed_action = None
-
-        handle_stdin_commands(before=False)
-
-        return res
 
     return cast(F, wrapper)

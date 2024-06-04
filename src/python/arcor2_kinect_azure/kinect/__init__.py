@@ -338,7 +338,7 @@ class KinectAzure:
             frame = self.skeleton_image(raw=True)
             # lower quality for smooth network transfer
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 30]
-            buffer = cv2.imencode(".jpg", frame, encode_param)[1]
+            buffer = cv2.imencode(".jpg", frame, encode_param)[1]  # type: ignore  # TODO solve it
             buffer_encode = np.array(buffer)
-            frame = buffer_encode.tobytes()
-            yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
+            frame = buffer_encode.tobytes()  # type: ignore  # TODO solve it
+            yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"  # type: ignore  # TODO solve it
