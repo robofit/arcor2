@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.4.1] - 2024-06-19
+
+### Fixed
+
+- Attempt to run package resulted into `NameError` in some environments (and was OK on others, weird).
+
 ## [1.4.0] - 2024-06-14
 
 ### Changed
