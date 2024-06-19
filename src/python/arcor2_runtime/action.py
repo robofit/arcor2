@@ -107,6 +107,13 @@ except ImportError:
         return None
 
 
+def print_event(event: Event) -> None:
+    """Used from main script to print event as JSON."""
+
+    print(event.to_json())
+    sys.stdout.flush()
+
+
 def _get_commands():
     """Reads stdin and checks for commands from parent script (e.g. Execution
     unit). Prints events to stdout. State is signalled using events.
@@ -159,13 +166,6 @@ def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
 
     if g.pause.is_set():
         g.resume.wait()
-
-
-def print_event(event: Event) -> None:
-    """Used from main script to print event as JSON."""
-
-    print(event.to_json())
-    sys.stdout.flush()
 
 
 F = TypeVar("F", bound=Callable[..., Any])

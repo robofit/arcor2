@@ -61,7 +61,7 @@ services:
       - fit-demo-project-network
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:1.4.0
+    image: arcor2/arcor2_execution:1.4.1
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
