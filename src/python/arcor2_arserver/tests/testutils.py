@@ -189,14 +189,14 @@ E = TypeVar("E", bound=Event)
 
 def event(ars: ARServer, evt_type: type[E]) -> E:
     evt = ars.get_event()
-    assert isinstance(evt, evt_type)
+    assert isinstance(evt, evt_type), f"Got {evt}, was expecting {evt_type}"
     assert evt.event == evt_type.__name__
     return evt
 
 
 def wait_for_event(ars: ARServer, evt_type: type[E]) -> E:
     evt = ars.get_event(drop_everything_until=evt_type)
-    assert isinstance(evt, evt_type)
+    assert isinstance(evt, evt_type), f"Got {evt}, was expecting {evt_type}"
     assert evt.event == evt_type.__name__
     return evt
 

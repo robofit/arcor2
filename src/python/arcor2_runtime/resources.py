@@ -173,9 +173,6 @@ class Resources:
             elif isinstance(model, Mesh):
                 package_info_event.data.collision_models.meshes.append(model)
 
-        # following steps might take some time, so let UIs know about the package as a first thing
-        print_event(package_info_event)
-
         # in order to prepare a clean environment (clears all configurations and all collisions)
         if self.interact_with_scene_service:
             scene_service.stop()
@@ -224,6 +221,9 @@ class Resources:
             scene_service.start(scene_start_timeout)
 
         self._stream_futures: list[concurrent.futures.Future] = []
+
+        # the event indicates that the package/script is fully initialized and ready to run
+        print_event(package_info_event)
 
     def read_project_data(self, file_name: str, cls: type[T]) -> T:
         try:

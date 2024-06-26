@@ -72,6 +72,7 @@ class PackageState(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         class StateEnum(Enum):
+            STARTED: str = "started"  # started, but not fully running yet
             RUNNING: str = "running"
             STOPPING: str = "stopping"  # it may take some time to stop the package
             STOPPED: str = "stopped"

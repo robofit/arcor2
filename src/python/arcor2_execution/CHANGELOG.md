@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.4.2] - 2024-06-26
+
+### Fixed
+
+- It was possible to pause or stop the package before it was actually running.
+
+### Changed
+
+- If the attempt to stop the script with SIGINT fails (after timeout configured using `ARCOR2_EXECUTION_PKG_STOP_TIMEOUT`), it is stopped with SIGKILL. This may happen e.g. when using threads without `daemon=True` (which is strongly discouraged).
+- Previously, the package state `RUNNING` was reported once the script was started. Now, `STARTED` is sent when the script starts running and `RUNNING` afterward once the `Resources` class is fully initialized (`PackageInfo` event is sent). This should be fully backwards-compatible. 
+
 ## [1.4.1] - 2024-06-19
 
 ### Fixed

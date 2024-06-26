@@ -983,6 +983,7 @@ def packages_state() -> RespT:
         PackageState.Data.StateEnum.PAUSING,
         PackageState.Data.StateEnum.STOPPING,
         PackageState.Data.StateEnum.RESUMING,
+        PackageState.Data.StateEnum.STARTED,
     ):
         ret = ExecutionInfo(ExecutionState.Pending, package_state.package_id)
     elif package_state.state == PackageState.Data.StateEnum.STOPPED:

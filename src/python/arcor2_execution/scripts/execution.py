@@ -50,6 +50,10 @@ MAIN_SCRIPT_NAME = "script.py"
 
 EVENT_MAPPING = {evt.__name__: evt for evt in EVENTS}
 
+PKG_STOP_TIMEOUT: float | None = env.get_float("ARCOR2_EXECUTION_PKG_STOP_TIMEOUT", 5.0)
+if PKG_STOP_TIMEOUT is not None and PKG_STOP_TIMEOUT <= 0:
+    PKG_STOP_TIMEOUT = None
+
 
 def process_running() -> bool:
     return PROCESS is not None and PROCESS.returncode is None
@@ -104,6 +108,11 @@ async def read_proc_stdout() -> None:
             continue
         elif isinstance(evt, PackageInfo):
             PACKAGE_INFO_EVENT = evt
+
+            # the event is sent just once, when the Resources class is fully initialized
+            await package_state(
+                PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING, RUNNING_PACKAGE_ID))
+            )
 
         await send_to_clients(evt)
 
@@ -205,7 +214,7 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
         raise Arcor2Exception("Failed to start package.")
 
     RUNNING_PACKAGE_ID = req.args.id
-    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING, RUNNING_PACKAGE_ID)))
+    await package_state(PackageState(PackageState.Data(PackageState.Data.StateEnum.STARTED, RUNNING_PACKAGE_ID)))
 
     TASK = asyncio.create_task(read_proc_stdout())  # run task in background
     asyncio.create_task(_update_executed(req.args.id))
@@ -223,7 +232,15 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
         PROCESS.send_signal(signal.SIGINT)  # the same as when a user presses ctrl+c
 
         logger.info("Waiting for process to finish...")
-        await asyncio.wait([TASK])
+        _, pending = await asyncio.wait([TASK], timeout=PKG_STOP_TIMEOUT)
+
+        if pending:
+            logger.info("The script refuses to stop, killing it...")
+            PROCESS.send_signal(signal.SIGKILL)
+            await asyncio.wait([TASK])
+
+        logger.info("Script was stopped.")
+
         PACKAGE_INFO_EVENT = None
         RUNNING_PACKAGE_ID = None
 
