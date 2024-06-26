@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   fit-demo-arserver:
     image: arcor2/arcor2_arserver:1.2.0
@@ -61,7 +59,7 @@ services:
       - fit-demo-project-network
 
   fit-demo-execution:
-    image: arcor2/arcor2_execution:1.4.1
+    image: arcor2/arcor2_execution:1.4.2
     container_name: fit-demo-execution
     networks:
       - fit-demo-execution-network
@@ -74,9 +72,11 @@ services:
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
         - fit-demo-execution:/root/project
+    ports:
+      - "6791:6790"  # only needed for debugging - to be able to connect from outside
 
   fit-demo-execution-proxy:
-    image: arcor2/arcor2_execution_proxy:1.2.0
+    image: arcor2/arcor2_execution_proxy:1.2.1
     container_name: fit-demo-execution-proxy
     networks:
       - fit-demo-execution-network

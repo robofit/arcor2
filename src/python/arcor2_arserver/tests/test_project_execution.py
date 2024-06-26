@@ -160,7 +160,12 @@ def test_run_simple_project(start_processes: None, ars: ARServer) -> None:
     ps = event(ars, arcor2_events.PackageState).data
     assert ps
     assert ps.package_id == package.id
-    assert ps.state == ps.state.RUNNING
+    assert ps.state == ps.state.STARTED
+
+    pr = event(ars, arcor2_events.PackageState).data
+    assert pr
+    assert pr.package_id == package.id
+    assert pr.state == ps.state.RUNNING
 
     pi = event(ars, arcor2_events.PackageInfo).data
     assert pi
