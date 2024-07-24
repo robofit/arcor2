@@ -2,10 +2,11 @@ python_tests(
     name="test_calibration.py",
     runtime_package_dependencies=["src/python/arcor2_calibration/scripts:calibration"],
     sources=["test_calibration.py"],
+    interpreter_constraints=["==3.11.*"]
 )
 
 python_tests(
-    name="test_estimate_camera_pose.py", sources=["test_estimate_camera_pose.py"], dependencies=[":markers.png"]
+    name="test_estimate_camera_pose.py", sources=["test_estimate_camera_pose.py"], dependencies=[":markers.png"], interpreter_constraints=["==3.11.*"]
 )
 
 resources(name="markers.png", sources=["markers.png"])

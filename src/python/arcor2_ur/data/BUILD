@@ -1,0 +1,1 @@
+resources(name="moveit.yaml", sources=["moveit.yaml"])

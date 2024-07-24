@@ -12,14 +12,14 @@ jobs:
   org-check:
     name: Check GitHub Organization
     if: ${{ github.repository_owner == 'robofit' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Noop
         run: "true"
   build:
     env:
       PANTS_CONFIG_FILES: pants.ci.toml
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: org-check
     strategy:
       matrix:
@@ -44,6 +44,9 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
+    - uses: ros-tooling/setup-ros@v0.7
+      with:
+        required-ros-distributions: jazzy
     - uses: pantsbuild/actions/init-pants@v5-scie-pants
       with:
         pants-python-version: ${{ matrix.python-version }}
@@ -57,6 +60,9 @@ jobs:
     - name: install system dependencies
       run: | # cargo is required to build fastuuid (no wheels for Python 3.11)
         sudo apt install jq cargo
+    - name: install ROS 2 dependencies
+      run: |  # copied from arcor2_ur Dockerfile TODO move it into some bash script to have it in one place
+        sudo apt install ros-jazzy-ros-base=0.11.0-1noble.20240731.172749 ros-jazzy-ur=2.4.9-1noble.20240820.020145 ros-jazzy-moveit-py=2.10.0-1noble.20240731.183757
     - name: Lint
       run: |
         pants --changed-since=origin/master lint
@@ -65,6 +71,7 @@ jobs:
         pants check --changed-since=origin/master --changed-dependees=transitive
     - name: Test
       run: |
+        source /opt/ros/jazzy/setup.bash
         pants --changed-since=origin/master --changed-dependees=transitive test
     - name: Build Docker images
       run: |  # filter out non-essential docker images (there was a problem with full storage on github)

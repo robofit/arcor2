@@ -4,7 +4,7 @@
 
 This repository contains the backend solution. It can be easily tested out or deployed using [docker images](https://hub.docker.com/u/arcor2). Unity-based client application for ARCore-supported tablets is available [here](https://github.com/robofit/arcor2_editor).
 
-Development is supported by [Test-it-off: Robotic offline product testing](https://www.fit.vut.cz/research/project/1308/) project (Ministry of Industry and Trade of the Czech Republic).
+Initial development was supported by [Test-it-off: Robotic offline product testing](https://www.fit.vut.cz/research/project/1308/) project (Ministry of Industry and Trade of the Czech Republic). 
 
 For more technical and development-related information, please see our [wiki](https://github.com/robofit/arcor2/wiki).
 
@@ -18,9 +18,13 @@ The video presenting the ARCOR2 system and its development in detail:
 
 [![ARCOR2: Framework for Collaborative End-User Management of Industrial Robotic Workplaces using AR](https://img.youtube.com/vi/RI1uiIEiPK8/hqdefault.jpg)](https://youtu.be/RI1uiIEiPK8)
 
-The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (offline PCB testing), where our system was applied:
+The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (offline PCB testing), where the system was applied:
 
 [![Test-it-off: robotic system for automatic products inspection](http://i3.ytimg.com/vi/6uktcrJCmc0/hqdefault.jpg)](https://youtu.be/6uktcrJCmc0)
+
+## Usage
+
+Most users will stick to [Docker images](https://hub.docker.com/u/arcor2). The easiest method how to get started, is to run [fit-demo](https://github.com/robofit/arcor2/tree/master/compose-files/fit-demo) compose file, which (by default) does not need any hardware. You can just connect using a tablet with AREditor and play around. Alternatively, all packages are also published on [PyPI](https://pypi.org/user/robo_fit/), which might be helpful for advanced use cases. For information about changes, please see individual changelogs, or the [Releases](https://github.com/robofit/arcor2/releases) page.
 
 ## Publications
  
@@ -30,113 +34,4 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 - Bambušek, Daniel, et al. How Do I Get There? Overcoming Reachability Limitations of Constrained Industrial Environments in Augmented Reality Applications. In: 2023 IEEE Conference Virtual Reality and 3D User Interfaces (VR). IEEE, 2023. p. 115-122.
 - Kapinus, Michal, et al. ARCOR2: Framework for Collaborative End-User Management of Industrial Robotic Workplaces using Augmented Reality. arXiv preprint arXiv:2306.08464, 2023.
 
-## Releases
-
-### arcor2
-
-[README](src/python/arcor2/README.md) | [CHANGELOG](src/python/arcor2/CHANGELOG.md)
-
- - 2024-06-14: [1.4.0](https://github.com/robofit/arcor2/releases/tag/arcor2%2F1.4.0) ([pypi](https://pypi.org/project/arcor2/1.4.0/)).
- 
-### arcor2_arserver
-
-[README](src/python/arcor2_arserver/README.md) | [CHANGELOG](src/python/arcor2_arserver/CHANGELOG.md)
-
- - 2024-04-11: [1.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver%2F1.2.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_arserver/tags?page=1&ordering=last_updated&name=1.2.0), [pypi](https://pypi.org/project/arcor2-arserver/1.2.0/)).
- 
-### arcor2_arserver_data
-
-[README](src/python/arcor2_arserver_data/README.md) | [CHANGELOG](src/python/arcor2_arserver_data/CHANGELOG.md)
-
- - 2024-04-11: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_arserver_data%2F1.1.0) ([pypi](https://pypi.org/project/arcor2-arserver-data/1.1.0/)).
-
-### arcor2_build
-
-[README](src/python/arcor2_build/README.md) | [CHANGELOG](src/python/arcor2_build/CHANGELOG.md)
-
- - 2024-06-14: [1.6.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build%2F1.6.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_build/tags?page=1&ordering=last_updated&name=1.6.0), [pypi](https://pypi.org/project/arcor2-build/1.6.0/)).
-
-### arcor2_build_data
-
-[README](src/python/arcor2_build_data/README.md) | [CHANGELOG](src/python/arcor2_build_data/CHANGELOG.md)
-
- - 2024-04-11: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_build_data%2F1.1.0) ([pypi](https://pypi.org/project/arcor2-build-data/1.1.0/)).
-
-### arcor2_calibration
-
-[README](src/python/arcor2_calibration/README.md) | [CHANGELOG](src/python/arcor2_calibration/CHANGELOG.md)
-
- - 2024-04-11: [1.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_calibration%2F1.2.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_calibration/tags?page=1&ordering=last_updated&name=1.2.0), [pypi](https://pypi.org/project/arcor2-calibration/1.2.0/)).
-
-### arcor2_calibration_data
-
-[README](src/python/arcor2_calibration_data/README.md) | [CHANGELOG](src/python/arcor2_calibration_data/CHANGELOG.md)
-
- - 2024-04-11: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_calibration_data%2F1.1.0) ([pypi](https://pypi.org/project/arcor2-calibration-data/1.1.0/)).
-
-### arcor2_dobot
-
-[README](src/python/arcor2_dobot/README.md) | [CHANGELOG](src/python/arcor2_dobot/CHANGELOG.md)
-
- - 2024-04-11: [1.3.0](https://github.com/robofit/arcor2/releases/tag/arcor2_dobot%2F1.3.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_dobot/tags?page=1&ordering=last_updated&name=1.3.0), [pypi](https://pypi.org/project/arcor2-dobot/1.3.0/)).
-
-### arcor2_execution
-
-[README](src/python/arcor2_execution/README.md) | [CHANGELOG](src/python/arcor2_execution/CHANGELOG.md)
-
- - 2024-08-14: [1.5.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution%2F1.5.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution/tags?page=1&ordering=last_updated&name=1.5.0), [pypi](https://pypi.org/project/arcor2-execution/1.5.0/)).
- 
-### arcor2_execution_data
-
-[README](src/python/arcor2_execution_data/README.md) | [CHANGELOG](src/python/arcor2_execution_data/CHANGELOG.md)
-
- - 2024-04-11: [1.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_data%2F1.2.0) ([pypi](https://pypi.org/project/arcor2-execution-data/1.2.0/)).
- 
-### arcor2_execution_rest_proxy
-
-[README](src/python/arcor2_execution_rest_proxy/README.md) | [CHANGELOG](src/python/arcor2_execution_rest_proxy/CHANGELOG.md)
-
- - 2024-06-26: [1.2.1](https://github.com/robofit/arcor2/releases/tag/arcor2_execution_rest_proxy%2F1.2.1) ([docker](https://hub.docker.com/r/arcor2/arcor2_execution_proxy/tags?page=1&ordering=last_updated&name=1.2.1), [pypi](https://pypi.org/project/arcor2-execution-rest-proxy/1.2.1/)).
- 
-### arcor2_fanuc
-
-[README](src/python/arcor2_fanuc/README.md) | [CHANGELOG](src/python/arcor2_fanuc/CHANGELOG.md)
-
- - 2024-04-11: [0.4.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fanuc%2F0.4.0) ([docker-service](https://hub.docker.com/r/arcor2/arcor2_fanuc/tags?page=1&ordering=last_updated&name=0.4.0), [docker-objects](https://hub.docker.com/r/arcor2/arcor2_fanuc_upload_object_types/tags?page=1&ordering=last_updated&name=0.4.0), [pypi](https://pypi.org/project/arcor2-fanuc/0.4.0/)). 
-
-### arcor2_fit_demo
-
-[README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
-
-- 2024-04-11: [1.5.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F1.5.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=1.5.0), [pypi](https://pypi.org/project/arcor2-fit-demo/1.5.0/)).
-
-### arcor2_logger
-
-[README](src/python/arcor2_logger/README.md) | [CHANGELOG](src/python/arcor2_logger/CHANGELOG.md)
-
- - 2024-04-11: [0.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_logger%2F0.2.0) ([pypi](https://pypi.org/project/arcor2-logger/0.2.0/)).
- 
-### arcor2_mocks
-
-[README](src/python/arcor2_mocks/README.md) | [CHANGELOG](src/python/arcor2_mocks/CHANGELOG.md)
-
- - 2024-04-11: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_mocks%2F1.1.0) ([pypi](https://pypi.org/project/arcor2-mocks/1.1.0/)).
-
-### arcor2_runtime
-
-[README](src/python/arcor2_runtime/README.md) | [CHANGELOG](src/python/arcor2_runtime/CHANGELOG.md)
-
- - 2024-08-14: [1.4.0](https://github.com/robofit/arcor2/releases/tag/arcor2_runtime%2F1.4.0) ([pypi](https://pypi.org/project/arcor2-runtime/1.4.0/)).
-
-### arcor2_scene
-
-[README](src/python/arcor2_scene/README.md) | [CHANGELOG](src/python/arcor2_scene/CHANGELOG.md)
-
- - 2024-04-11: [1.1.0](https://github.com/robofit/arcor2/releases/tag/arcor2_scene%2F1.1.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_scene/tags?page=1&ordering=last_updated&name=1.1.0), [pypi](https://pypi.org/project/arcor2-scene/1.1.0/)).
-
-### arcor2_yumi
-
-[README](src/python/arcor2_yumi/README.md) | [CHANGELOG](src/python/arcor2_yumi/CHANGELOG.md)
-
- - 2024-04-11: [0.3.0](https://github.com/robofit/arcor2/releases/tag/arcor2_yumi%2F0.3.0) ([pypi](https://pypi.org/project/arcor2-yumi/0.3.0/)).
 

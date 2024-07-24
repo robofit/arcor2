@@ -1,0 +1,189 @@
+services:
+  ur-demo-ursim:
+    image: universalrobots/ursim_e-series:5.16.0
+    container_name: ur-demo-ursim
+    ports:
+      - "5900:5900"  # VNC port
+      - "6080:6080"  # web VNC
+    networks:
+          - ur-demo-network
+    environment:
+      - ROBOT_MODEL=UR5
+    volumes:
+      - ursim-gui-cache:/ursim/GUI
+      - urcap-build-cache:/ursim/.urcaps
+  ur-demo-robot-api:
+    image: arcor2/arcor2_ur:1.0.0
+    container_name: ur-demo-robot-api
+    ports:
+      - "5012:5012"
+    networks:
+      - ur-demo-network
+    restart: always  # the service tends to crash when calling PUT /state/stop
+  ur-demo-arserver:
+    image: arcor2/arcor2_arserver:1.3.0
+    container_name: ur-demo-arserver
+    depends_on:
+      ur-demo-project:
+        condition: service_healthy
+      ur-demo-asset:
+        condition: service_healthy
+      ur-demo-build:
+        condition: service_healthy
+      ur-demo-execution:
+        condition: service_started
+      ur-demo-scene:
+        condition: service_healthy
+      ur-demo-calibration:
+        condition: service_healthy
+    ports:
+      - "6789:6789"
+      - "6799:6799"
+    networks:
+      - ur-demo-network
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://ur-demo-project:10000
+      - ARCOR2_ASSET_SERVICE_URL=http://ur-demo-asset:10040
+      - ARCOR2_SCENE_SERVICE_URL=http://ur-demo-scene:5013
+      - ARCOR2_EXECUTION_URL=ws://ur-demo-execution:6790
+      - ARCOR2_BUILD_URL=http://ur-demo-build:5008
+      - ARCOR2_CALIBRATION_URL=http://ur-demo-calibration:5014
+      # - ARCOR2_ARSERVER_DEBUG=1
+  ur-demo-build:
+    image: arcor2/arcor2_build:1.7.0
+    container_name: ur-demo-build
+    depends_on:
+      ur-demo-project:
+        condition: service_healthy
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://ur-demo-project:10000
+      - ARCOR2_PROJECT_PATH=""
+    ports:
+      - "5008:5008"
+    networks:
+      - ur-demo-network
+
+  ur-demo-execution:
+    image: arcor2/arcor2_execution:1.6.0
+    container_name: ur-demo-execution
+    networks:
+      - ur-demo-network
+    environment:
+      - ARCOR2_SCENE_SERVICE_URL=http://ur-demo-scene:5013
+      - ARCOR2_PROJECT_PATH=/root/project
+    volumes:
+      - ur-demo-execution:/root/project
+    ports:
+      - "6791:6790"  # only needed for debugging - to be able to connect from outside
+
+  ur-demo-execution-proxy:
+    image: arcor2/arcor2_execution_proxy:1.2.1
+    container_name: ur-demo-execution-proxy
+    networks:
+      - ur-demo-network
+    environment:
+      - ARCOR2_PROJECT_PATH=/root/project
+      - ARCOR2_EXECUTION_URL=ws://ur-demo-execution:6790
+    depends_on:
+      ur-demo-execution:
+        condition: service_started
+    volumes:
+      - ur-demo-execution:/root/project
+    ports:
+      - "5009:5009"
+
+  ur-demo-calibration:
+    image: arcor2/arcor2_calibration:1.2.0
+    networks:
+      - ur-demo-network
+    ports:
+      - "5014:5014"
+    environment:
+      - ARCOR2_CALIBRATION_URL=http://ur-demo-calibration:5014
+      - ARCOR2_CALIBRATION_MOCK=false
+    volumes:
+      - ./calibration.yaml:/root/calibration.yaml
+
+  ur-demo-scene:
+    image: arcor2/arcor2_scene:1.1.0
+    container_name: ur-demo-scene
+    networks:
+      - ur-demo-network
+    ports:
+      - "5013:5013"
+
+  ur-demo-asset:
+    image: registry.gitlab.com/kinalisoft/test-it-off/asset:2.0.2
+    container_name: "ur-demo-asset"
+    environment:
+      - "ASSETS_FOLDER=/tmp/assets"
+    volumes:
+      - ur-demo-asset:/tmp/assets
+    networks:
+      - ur-demo-network
+    expose:
+      - "10040"
+    ports:
+      - "10040:10040"
+
+  ur-demo-project:
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:2.0.2
+    container_name: "ur-demo-project"
+    ports:
+      - "10000-10001:10000-10001"
+    environment:
+      - "ASSET_SERVICE_URL=http://ur-demo-asset:10040"
+    depends_on:
+      ur-demo-asset:
+        condition: service_healthy
+    networks:
+      - ur-demo-network
+
+  ur-demo-nginx:
+    image: nginx:1.25.4
+    container_name: "ur-demo-nginx"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "6790:80"
+    networks:
+      - ur-demo-network
+    depends_on:
+      - ur-demo-asset
+
+  ur-demo-upload-object-types:
+    image: arcor2/arcor2_ur_ot:1.0.0
+    container_name: "ur-demo-upload-object-types"
+    depends_on:
+      ur-demo-project:
+        condition: service_healthy
+      ur-demo-asset:
+        condition: service_healthy
+    networks:
+      - ur-demo-network
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://ur-demo-project:10000
+      - ARCOR2_ASSET_SERVICE_URL=http://ur-demo-asset:10040
+
+  ur-demo-upload-builtin-objects:
+    image: arcor2/arcor2_upload_builtin_objects:1.3.0
+    container_name: "ur-demo-upload-builtin-objects"
+    depends_on:
+      ur-demo-project:
+        condition: service_healthy
+      ur-demo-asset:
+        condition: service_healthy
+    networks:
+      - ur-demo-network
+    environment:
+      - ARCOR2_PROJECT_SERVICE_URL=http://ur-demo-project:10000
+      - ARCOR2_ASSET_SERVICE_URL=http://ur-demo-asset:10040
+
+volumes:
+  ursim-gui-cache:
+  urcap-build-cache:
+  ur-demo-asset:
+  ur-demo-execution:
+
+networks:
+  ur-demo-network:

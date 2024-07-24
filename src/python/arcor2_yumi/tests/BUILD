@@ -1,4 +1,5 @@
 python_tests(
+    interpreter_constraints=["==3.11.*"],
     runtime_package_dependencies=[
         "src/python/arcor2_mocks/scripts:mock_asset",
         "src/python/arcor2_mocks/scripts:mock_project",
