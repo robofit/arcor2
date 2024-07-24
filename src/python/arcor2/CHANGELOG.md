@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.5.0] - 2024-09-12
+
+### Changed
+
+- Added a new universal dataclass `InverseKinematicsRequest` for IK requests (simplifies HTTP requests).
+
+
 ## [1.4.0] - 2024-06-14
 
 ### Changed

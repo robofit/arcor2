@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.6.0] - 2024-09-12
+
+### Changed
+
+- Dependency on `arcor2~=1.5.0`.
+
 ## [1.5.0] - 2024-08-14
 
 ### Changed

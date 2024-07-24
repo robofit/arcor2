@@ -4,3 +4,4 @@ pytest-icdiff
 pygments
 pytest-asyncio
 pytest-cov
+pytest-timeout
