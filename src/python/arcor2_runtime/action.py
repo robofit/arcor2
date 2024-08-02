@@ -41,8 +41,77 @@ class Globals:
 
     lock: threading.Lock = field(default_factory=threading.Lock)
 
+    disable_action_wrapper: bool = False
+
 
 g = Globals()
+
+
+class PackageStateHandler(object):
+    """Singleton class that manages callbacks for PAUSE and RESUME events."""
+
+    _instance = None
+    _on_pause_callbacks: list[Callable[..., None]] = []
+    _on_resume_callbacks: list[Callable[..., None]] = []
+    _instance_lock = threading.Lock()
+    _execution_lock = threading.Lock()
+
+    def __init__(self):
+        """Forbidden initializer."""
+        raise RuntimeError("Call get_instance() instead")
+
+    @classmethod
+    def get_instance(cls):
+        """Returns the singleton instance of the class."""
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls.__new__(cls)
+        return cls._instance
+
+    def add_on_pause_callback(self, on_pause_callback: Callable[..., None]):
+        """Adds a callback to be executed when the script is paused."""
+        self._on_pause_callbacks.append(on_pause_callback)
+
+    def remove_on_pause_callback(self, on_pause_callback: Callable[..., None]):
+        """Removes a callback to be executed when the script is paused."""
+        self._on_pause_callbacks.remove(on_pause_callback)
+
+    def add_on_resume_callback(self, on_resume_callback: Callable[..., None]):
+        """Adds a callback to be executed when the script is resumed."""
+        self._on_resume_callbacks.append(on_resume_callback)
+
+    def remove_on_resume_callback(self, on_resume_callback: Callable[..., None]):
+        """Removes a callback to be executed when the script is resumed."""
+        self._on_resume_callbacks.remove(on_resume_callback)
+
+    def execute_on_pause(self):
+        """Executes all pause callbacks."""
+
+        with self._execution_lock:
+            # Disable action wrapper to prevent stack overflow when action is called from PAUSE callback.
+            g.disable_action_wrapper = True
+
+            try:
+                for callback in self._on_pause_callbacks:
+                    callback()
+            finally:
+                # Enable action wrapper back.
+                g.disable_action_wrapper = False
+
+    def execute_on_resume(self):
+        """Executes all resume callbacks."""
+
+        with self._execution_lock:
+            # Disable action wrapper to prevent stack overflow when action is called from RESUME callback.
+            g.disable_action_wrapper = True
+
+            try:
+                for callback in self._on_resume_callbacks:
+                    callback()
+            finally:
+                # Enable action wrapper back.
+                g.disable_action_wrapper = False
 
 
 def patch_aps(project: CachedProject) -> None:
@@ -162,10 +231,17 @@ def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
             g.pause_on_next_action.clear()
             g.resume.clear()
             g.pause.set()
+
+            # Execute on pause callbacks, prevent transfer to PAUSED state if callback causes exception.
+            PackageStateHandler.get_instance().execute_on_pause()
+
             print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
 
     if g.pause.is_set():
         g.resume.wait()
+
+        # Execute on resume callbacks, if callback causes exception, it is in RUNNING state.
+        PackageStateHandler.get_instance().execute_on_resume()
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -214,6 +290,20 @@ def action(f: F) -> F:
 
         if thread_id not in g.depth:
             g.depth[thread_id] = 0
+
+        # Execute action without wrapping in case that action wrapper is disabled.
+        if g.disable_action_wrapper:
+            g.depth[thread_id] += 1
+
+            try:
+                res = f(obj, *action_args, an=an, **kwargs)
+            except Arcor2Exception:
+                g.depth[thread_id] = 0
+                g.ea[thread_id] = None
+                raise
+
+            g.depth[thread_id] -= 1
+            return res
 
         try:
             action_id: None | str = None
