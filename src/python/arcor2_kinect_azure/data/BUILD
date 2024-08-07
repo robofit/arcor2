@@ -1,1 +1,0 @@
-resources(sources=["*.jpg", "*.png"])

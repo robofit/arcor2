@@ -11,8 +11,6 @@ services:
         condition: service_healthy
       fit-demo-execution:
         condition: service_started
-      fit-demo-kinect:
-        condition: service_healthy
       fit-demo-scene:
         condition: service_healthy
       fit-demo-calibration:
@@ -27,7 +25,6 @@ services:
       - "6789:6789"
       - "6799:6799"
     networks:
-          - fit-demo-kinect-network
           - fit-demo-scene-network
           - fit-demo-project-network
           - fit-demo-asset-network
@@ -42,7 +39,6 @@ services:
       - ARCOR2_EXECUTION_URL=ws://fit-demo-execution:6790
       - ARCOR2_BUILD_URL=http://fit-demo-build:5008
       - ARCOR2_CALIBRATION_URL=http://fit-demo-calibration:5014
-      - ARCOR2_KINECT_AZURE_URL=http://192.168.104.100:5017 # Run kinect using pants
 
   fit-demo-build:
     image: arcor2/arcor2_build:1.6.0
@@ -90,16 +86,6 @@ services:
       - fit-demo-execution:/root/project
     ports:
       - "5009:5009"
-
-  fit-demo-kinect:
-    image: arcor2/arcor2_kinect_azure:0.8.0
-    container_name: fit-demo-kinect
-    networks:
-      - fit-demo-kinect-network
-    ports:
-        - "5016:5016"
-    environment:
-      - ARCOR2_KINECT_AZURE_MOCK=true
 
   fit-demo-calibration:
     image: arcor2/arcor2_calibration:1.2.0
@@ -265,7 +251,6 @@ networks:
   fit-demo-execution-network:
   fit-demo-project-network:
   fit-demo-asset-network:
-  fit-demo-kinect-network:
   fit-demo-dobot-magician-network:
   fit-demo-dobot-magician2-network:
   fit-demo-dobot-m1-network:

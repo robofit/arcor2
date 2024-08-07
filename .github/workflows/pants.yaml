@@ -56,7 +56,6 @@ jobs:
         pants --changed-since=HEAD update-build-files --check
     - name: install system dependencies
       run: | # cargo is required to build fastuuid (no wheels for Python 3.11)
-        sudo ./build-support/install_kinect_prerequisites.sh
         sudo apt install jq cargo
     - name: Lint
       run: |
@@ -69,7 +68,7 @@ jobs:
         pants --changed-since=origin/master --changed-dependees=transitive test
     - name: Build Docker images
       run: |  # filter out non-essential docker images (there was a problem with full storage on github)
-        pants filter --target-type=docker_image --changed-since=origin/master --changed-dependees=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_kinect_azure | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs pants package
+        pants filter --target-type=docker_image --changed-since=origin/master --changed-dependees=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs pants package
     - name: Build Python packages
       run: |
         pants filter --target-type=python_distribution :: | xargs pants package

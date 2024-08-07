@@ -109,19 +109,6 @@ The following video by [Kinali](https://www.kinali.cz/en/) shows the use case (o
 [README](src/python/arcor2_fit_demo/README.md) | [CHANGELOG](src/python/arcor2_fit_demo/CHANGELOG.md)
 
 - 2024-04-11: [1.5.0](https://github.com/robofit/arcor2/releases/tag/arcor2_fit_demo%2F1.5.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_upload_fit_demo/tags?page=1&ordering=last_updated&name=1.5.0), [pypi](https://pypi.org/project/arcor2-fit-demo/1.5.0/)).
-  
-### arcor2_kinect_azure
-
-[README](src/python/arcor2_kinect_azure/README.md) | [CHANGELOG](src/python/arcor2_kinect_azure/CHANGELOG.md)
-
- - 2024-04-11: [0.8.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinect_azure%2F0.8.0) ([docker](https://hub.docker.com/r/arcor2/arcor2_kinect_azure/tags?page=1&ordering=last_updated&name=0.8.0), [pypi](https://pypi.org/project/arcor2_kinect_azure/0.8.0/)).
-
-### arcor2_kinect_azure_data
-
-[README](src/python/arcor2_kinect_azure_data/README.md) | [CHANGELOG](src/python/arcor2_kinect_azure_data/CHANGELOG.md)
-
- - 2024-04-11: [0.2.0](https://github.com/robofit/arcor2/releases/tag/arcor2_kinect_azure_data%2F0.2.0) ([pypi](https://pypi.org/project/arcor2_kinect_azure_data/0.2.0/)).
-
 
 ### arcor2_logger
 
