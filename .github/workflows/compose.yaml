@@ -7,12 +7,12 @@ on:
 
 jobs:
   compose:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
     - name: Check syntax of fit-demo
       run: |
-        docker-compose -f compose-files/fit-demo/docker-compose.yml -f compose-files/fit-demo/docker-compose.lab.yml config
+        docker compose -f compose-files/fit-demo/docker-compose.yml -f compose-files/fit-demo/docker-compose.lab.yml config
     - name: Check syntax of fanuc-demo
       run: |
-          docker-compose -f compose-files/fanuc-demo/docker-compose.yml config
+          docker compose -f compose-files/fanuc-demo/docker-compose.yml config

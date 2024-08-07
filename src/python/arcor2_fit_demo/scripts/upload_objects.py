@@ -11,18 +11,13 @@ from arcor2_fit_demo.object_types.erp import Erp
 from arcor2_fit_demo.object_types.fit_common_mixin import FitCommonMixin
 from arcor2_fit_demo.object_types.milling_machine import MillingMachine
 from arcor2_fit_demo.object_types.optical_quality_control import OpticalQualityControl
-from arcor2_kinect_azure_data.object_types.kinect_azure import KinectAzure
 
 
 def main() -> None:
     upload_def(AbstractDobot)
     upload_def(DobotMagician, urdf=Urdf(get_data("dobot-magician"), DobotMagician.urdf_package_name))
     upload_def(DobotM1, urdf=Urdf(get_data("dobot-m1"), DobotM1.urdf_package_name))
-    upload_def(
-        KinectAzure,
-        Mesh(KinectAzure.__name__, KinectAzure.mesh_filename),
-        file_to_upload=get_data(KinectAzure.mesh_filename),
-    )
+
     upload_def(
         ConveyorBelt,
         Mesh(ConveyorBelt.__name__, ConveyorBelt.mesh_filename),

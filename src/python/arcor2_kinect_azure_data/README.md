@@ -1,1 +1,0 @@
-# arcor2_kinect_azure_data
