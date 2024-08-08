@@ -41,13 +41,13 @@ class Globals:
 
     lock: threading.Lock = field(default_factory=threading.Lock)
 
-    disable_action_wrapper: bool = False
+    disable_action_wrapper: dict[int, bool] = field(default_factory=dict)
 
 
 g = Globals()
 
 
-class PackageStateHandler(object):
+class PackageStateHandler():
     """Singleton class that manages callbacks for PAUSE and RESUME events."""
 
     _instance = None
@@ -87,31 +87,33 @@ class PackageStateHandler(object):
 
     def execute_on_pause(self):
         """Executes all pause callbacks."""
+        thread_id = threading.get_ident() if threading.current_thread() is not threading.main_thread() else None
 
         with self._execution_lock:
             # Disable action wrapper to prevent stack overflow when action is called from PAUSE callback.
-            g.disable_action_wrapper = True
+            g.disable_action_wrapper[thread_id] = True
 
             try:
                 for callback in self._on_pause_callbacks:
                     callback()
             finally:
                 # Enable action wrapper back.
-                g.disable_action_wrapper = False
+                g.disable_action_wrapper[thread_id] = False
 
     def execute_on_resume(self):
         """Executes all resume callbacks."""
+        thread_id = threading.get_ident() if threading.current_thread() is not threading.main_thread() else None
 
         with self._execution_lock:
             # Disable action wrapper to prevent stack overflow when action is called from RESUME callback.
-            g.disable_action_wrapper = True
+            g.disable_action_wrapper[thread_id] = True
 
             try:
                 for callback in self._on_resume_callbacks:
                     callback()
             finally:
                 # Enable action wrapper back.
-                g.disable_action_wrapper = False
+                g.disable_action_wrapper[thread_id] = False
 
 
 def patch_aps(project: CachedProject) -> None:
@@ -205,7 +207,6 @@ def _get_commands():
             if g.pause.is_set():
                 if cmd in (Commands.STEP, Commands.RESUME):
                     g.pause.clear()
-                    print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
 
                     if cmd == Commands.STEP:
                         g.pause_on_next_action.set()
@@ -215,7 +216,6 @@ def _get_commands():
                 if cmd == Commands.PAUSE:
                     g.resume.clear()
                     g.pause.set()
-                    print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
 
 
 _cmd_thread = threading.Thread(target=_get_commands)
@@ -232,13 +232,18 @@ def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
             g.resume.clear()
             g.pause.set()
 
-            # Execute on pause callbacks, prevent transfer to PAUSED state if callback causes exception.
-            PackageStateHandler.get_instance().execute_on_pause()
-
-            print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
-
     if g.pause.is_set():
+        # Execute on pause callbacks, prevent transfer to PAUSED state if callback causes exception.
+        PackageStateHandler.get_instance().execute_on_pause()
+
+        # Signal that thread is paused.
+        print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
+
+        # Wait for resume.
         g.resume.wait()
+
+        # Signal that thread is running.
+        print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
 
         # Execute on resume callbacks, if callback causes exception, it is in RUNNING state.
         PackageStateHandler.get_instance().execute_on_resume()
@@ -291,8 +296,8 @@ def action(f: F) -> F:
         if thread_id not in g.depth:
             g.depth[thread_id] = 0
 
-        # Execute action without wrapping in case that action wrapper is disabled.
-        if g.disable_action_wrapper:
+        # Execute action without wrapping in case that action wrapper is disabled for this thread.
+        if g.disable_action_wrapper.get(thread_id, False):
             g.depth[thread_id] += 1
 
             try:
