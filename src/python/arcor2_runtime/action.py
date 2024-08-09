@@ -47,7 +47,7 @@ class Globals:
 g = Globals()
 
 
-class PackageStateHandler():
+class PackageStateHandler:
     """Singleton class that manages callbacks for PAUSE and RESUME events."""
 
     _instance = None
@@ -69,23 +69,23 @@ class PackageStateHandler():
                     cls._instance = cls.__new__(cls)
         return cls._instance
 
-    def add_on_pause_callback(self, on_pause_callback: Callable[..., None]):
+    def add_on_pause_callback(self, on_pause_callback: Callable[..., None]) -> None:
         """Adds a callback to be executed when the script is paused."""
         self._on_pause_callbacks.append(on_pause_callback)
 
-    def remove_on_pause_callback(self, on_pause_callback: Callable[..., None]):
+    def remove_on_pause_callback(self, on_pause_callback: Callable[..., None]) -> None:
         """Removes a callback to be executed when the script is paused."""
         self._on_pause_callbacks.remove(on_pause_callback)
 
-    def add_on_resume_callback(self, on_resume_callback: Callable[..., None]):
+    def add_on_resume_callback(self, on_resume_callback: Callable[..., None]) -> None:
         """Adds a callback to be executed when the script is resumed."""
         self._on_resume_callbacks.append(on_resume_callback)
 
-    def remove_on_resume_callback(self, on_resume_callback: Callable[..., None]):
+    def remove_on_resume_callback(self, on_resume_callback: Callable[..., None]) -> None:
         """Removes a callback to be executed when the script is resumed."""
         self._on_resume_callbacks.remove(on_resume_callback)
 
-    def execute_on_pause(self):
+    def execute_on_pause(self) -> None:
         """Executes all pause callbacks."""
         thread_id = threading.get_ident() if threading.current_thread() is not threading.main_thread() else None
 
@@ -100,7 +100,7 @@ class PackageStateHandler():
                 # Enable action wrapper back.
                 g.disable_action_wrapper[thread_id] = False
 
-    def execute_on_resume(self):
+    def execute_on_resume(self) -> None:
         """Executes all resume callbacks."""
         thread_id = threading.get_ident() if threading.current_thread() is not threading.main_thread() else None
 
