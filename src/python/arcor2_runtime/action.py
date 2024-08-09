@@ -12,6 +12,7 @@ from arcor2.exceptions import Arcor2Exception
 from arcor2.object_types.abstract import Generic
 from arcor2.object_types.utils import iterate_over_actions
 from arcor2.parameter_plugins.utils import plugin_from_instance
+from arcor2_runtime.exceptions import print_exception
 
 
 class Commands(StrEnum):
@@ -22,6 +23,8 @@ class Commands(StrEnum):
 
 ACTION_NAME_ID_MAPPING_ATTR = "_action_name_id_mapping"
 AP_ID_ATTR = "_ap_id"
+
+CB_TYPE = Callable[[], None] | None
 
 
 @dataclass
@@ -40,6 +43,13 @@ class Globals:
     depth: dict[int | None, int] = field(default_factory=dict)
 
     lock: threading.Lock = field(default_factory=threading.Lock)
+
+    # can be used to react on pause/resume events
+    # callbacks are called before the actual event happens
+    pause_callback: CB_TYPE = None
+    resume_callback: CB_TYPE = None
+    # id of the thread within the one of the callbacks (only one can be called at the time)
+    callback_thread_id: int = 0
 
 
 g = Globals()
@@ -114,7 +124,7 @@ def print_event(event: Event) -> None:
     sys.stdout.flush()
 
 
-def _get_commands():
+def _get_stdin_commands():
     """Reads stdin and checks for commands from parent script (e.g. Execution
     unit). Prints events to stdout. State is signalled using events.
 
@@ -123,6 +133,16 @@ def _get_commands():
 
     :return:
     """
+
+    def callback(cb: CB_TYPE) -> None:
+        if cb:
+            g.callback_thread_id = threading.get_ident()
+            try:
+                cb()
+            except Exception as e:  # otherwise, the thread will stop silently
+                print_exception(e)
+                sys.exit(1)
+            g.callback_thread_id = 0
 
     while True:
         raw_cmd = read_stdin(0.1)
@@ -135,6 +155,7 @@ def _get_commands():
         with g.lock:
             if g.pause.is_set():
                 if cmd in (Commands.STEP, Commands.RESUME):
+                    callback(g.resume_callback)
                     g.pause.clear()
                     print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.RUNNING)))
 
@@ -144,26 +165,29 @@ def _get_commands():
                     g.resume.set()
             else:
                 if cmd == Commands.PAUSE:
+                    callback(g.pause_callback)
                     g.resume.clear()
                     g.pause.set()
                     print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
 
 
-_cmd_thread = threading.Thread(target=_get_commands)
+_cmd_thread = threading.Thread(target=_get_stdin_commands)
 _cmd_thread.daemon = True
 _cmd_thread.start()
 
 
-def handle_stdin_commands(*, before: bool, breakpoint: bool = False) -> None:
+def handle_commands(*, before: bool, breakpoint: bool = False) -> None:
     """Actual handling of commands in (potentially parallel) actions."""
 
     with g.lock:
+        # this is to handle pause caused by breakpoint
         if (breakpoint or (before and g.pause_on_next_action.is_set())) and not g.pause.is_set():
             g.pause_on_next_action.clear()
             g.resume.clear()
             g.pause.set()
             print_event(PackageState(PackageState.Data(PackageState.Data.StateEnum.PAUSED)))
 
+    # waiting - the same for both "external" and "internal" pause (command from the Execution service, or breakpoint)
     if g.pause.is_set():
         g.resume.wait()
 
@@ -214,6 +238,10 @@ def action(f: F) -> F:
 
         if thread_id not in g.depth:
             g.depth[thread_id] = 0
+
+        # this allows calling actions in pause/resume callbacks by treating them as ordinary methods (no events, etc.)
+        if thread_id == g.callback_thread_id:
+            return f(obj, *action_args, an=an, **kwargs)
 
         try:
             action_id: None | str = None
@@ -273,7 +301,7 @@ def action(f: F) -> F:
 
                 print_event(state_before)
 
-                handle_stdin_commands(before=True, breakpoint=make_a_break)
+                handle_commands(before=True, breakpoint=make_a_break)
 
             else:  # handle outermost actions
                 # if not set (e.g. when writing actions manually), do not attempt to get action IDs from names
@@ -311,7 +339,7 @@ def action(f: F) -> F:
 
                 g.ea[thread_id] = None
 
-            handle_stdin_commands(before=False)
+            handle_commands(before=False)
 
             return res
 
