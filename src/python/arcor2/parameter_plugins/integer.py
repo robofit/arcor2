@@ -96,7 +96,7 @@ class IntegerPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Num:
-        return Num(n=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None)
+        return Num(value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None)
 
 
 class IntegerListPlugin(ListParameterPlugin):

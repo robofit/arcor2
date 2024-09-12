@@ -2,7 +2,7 @@ python_tests(
     runtime_package_dependencies=[
         "src/python/arcor2_ur/scripts:ur",
     ],
-    interpreter_constraints=["==3.12.*"]
+    interpreter_constraints=["==3.12.*"],
 )
 
 python_test_utils(name="test_utils")

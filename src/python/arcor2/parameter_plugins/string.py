@@ -26,7 +26,7 @@ class StringPlugin(ParameterPlugin):
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
     ) -> Str:
-        return Str(s=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind="")
+        return Str(value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind="")
 
 
 class StringListPlugin(ListParameterPlugin):

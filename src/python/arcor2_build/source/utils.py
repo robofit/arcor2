@@ -105,7 +105,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
             ),
             If(
                 test=Compare(
-                    left=Name(id="__name__", ctx=Load()), ops=[Eq()], comparators=[Str(s="__main__", kind="")]
+                    left=Name(id="__name__", ctx=Load()), ops=[Eq()], comparators=[Str(value="__main__", kind="")]
                 ),
                 body=[
                     Try(
@@ -197,10 +197,10 @@ def global_action_points_class(project: CachedProject) -> str:
         )
     )
 
-    aps_init_body: list[Assign | Pass] = []
+    aps_init_body: list[stmt] = []
 
     for ap in project.action_points:
-        ap_cls_body: list[Assign] = [
+        ap_cls_body: list[stmt] = [
             Assign(
                 targets=[Attribute(value=Name(id="self", ctx=Load()), attr="_position", ctx=Store())],
                 value=Attribute(
@@ -210,7 +210,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             attr=CachedProject.bare_action_point.__name__,
                             ctx=Load(),
                         ),
-                        args=[Str(s=ap.id, kind="")],
+                        args=[Str(value=ap.id, kind="")],
                         keywords=[],
                     ),
                     attr="position",
@@ -222,7 +222,7 @@ def global_action_points_class(project: CachedProject) -> str:
 
         ap_type_name = humps.pascalize(ap.name)
 
-        ap_joints_init_body: list[Assign] = []
+        ap_joints_init_body: list[stmt] = []
 
         for joints in project.ap_joints(ap.id):
             ap_joints_init_body.append(
@@ -234,7 +234,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             attr=SpecialValues.joints,
                             ctx=Load(),
                         ),
-                        args=[Str(s=joints.id, kind="")],
+                        args=[Str(value=joints.id, kind="")],
                         keywords=[],
                     ),
                     type_comment=None,
@@ -314,7 +314,7 @@ def global_action_points_class(project: CachedProject) -> str:
                 )
             )
 
-        ap_orientations_init_body: list[Assign] = []
+        ap_orientations_init_body: list[stmt] = []
 
         for ori in project.ap_orientations(ap.id):
             ap_orientations_init_body.append(
@@ -326,7 +326,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             attr="pose",
                             ctx=Load(),
                         ),
-                        args=[Str(s=ori.id, kind="")],
+                        args=[Str(value=ori.id, kind="")],
                         keywords=[],
                     ),
                     type_comment=None,
