@@ -1,12 +1,12 @@
-FROM python:3.11.9-bookworm as deps
+FROM python:3.11.10-bookworm as deps
 COPY src.python.arcor2_fanuc.scripts/fanuc.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.11.9-bookworm as srcs
+FROM python:3.11.10-bookworm as srcs
 COPY src.python.arcor2_fanuc.scripts/fanuc.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.11.9-bookworm
+FROM python:3.11.10-bookworm
 
 # curl is for healthcheck
 RUN apt-get update \

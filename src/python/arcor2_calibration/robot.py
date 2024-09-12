@@ -3,17 +3,13 @@ import copy
 import cv2
 import numpy as np
 import open3d as o3d
+from gr_urchin import URDF
 from PIL import Image
 
 from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Joint, Pose
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
-
-np.int = int  # type: ignore  # TODO workaround for urdfpy
-np.float = float  # type: ignore  # TODO workaround for urdfpy
-
-from urdfpy import URDF  # noqa
 
 logger = get_logger(__name__)
 

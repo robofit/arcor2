@@ -61,9 +61,9 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
         if isinstance(val, bool):  # subclass of int
             aval = NameConstant(value=val, kind=None)
         elif isinstance(val, (int, float)):
-            aval = Num(n=val, kind=None)
+            aval = Num(value=val, kind=None)
         elif isinstance(val, str):
-            aval = Str(s=val, kind="")
+            aval = Str(value=val, kind="")
 
         if not aval:
             raise Arcor2Exception(f"Unsupported project parameter type ({param.type}) or value ({val}).")
@@ -162,7 +162,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
             ac_obj,
             act.action_type,
             args,
-            [keyword(arg="an", value=Str(s=current_action.name, kind=""))],
+            [keyword(arg="an", value=Str(value=current_action.name, kind=""))],
             current_action.flow(FlowTypes.DEFAULT).outputs,
         )
 

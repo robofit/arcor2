@@ -1,32 +1,12 @@
-import collections
-import fractions
 import io
-import math
 import os
 import tempfile
 import zipfile
 
-import numpy as np
+from gr_urchin import URDF
 
 from arcor2 import rest
 from arcor2.exceptions import Arcor2Exception
-
-# this is a workaround to make urdfpy/networkx happy under Python 3.9/3.10
-# TODO not sure if it really works in runtime, the best would be to solve https://github.com/mmatl/urdfpy/issues/4
-# or to switch to another package as proposed here https://github.com/robofit/arcor2/issues/706
-fractions.gcd = math.gcd  # type: ignore
-
-# another workaround related to urdfpy/networkx and Python 3.10
-from collections.abc import Iterable, Mapping, Set  # noqa:E402
-
-collections.Mapping = Mapping  # type: ignore
-collections.Set = Set  # type: ignore
-collections.Iterable = Iterable  # type: ignore
-
-np.int = int  # type: ignore  # TODO workaround for urdfpy
-np.float = float  # type: ignore  # TODO workaround for urdfpy
-
-from urdfpy import URDF  # noqa
 
 
 class Arcor2UrdfException(Arcor2Exception):

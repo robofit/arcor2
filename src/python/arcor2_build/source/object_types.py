@@ -1,4 +1,4 @@
-from ast import AnnAssign, Index, Load, Name, Store, Str, Subscript
+from ast import AnnAssign, Load, Name, Store, Str, Subscript
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import is_valid_identifier, is_valid_type
@@ -19,8 +19,6 @@ def object_instance_from_res(object_name: str, object_id: str, cls_name: str) ->
     return AnnAssign(
         target=Name(id=object_name, ctx=Store()),
         annotation=Name(id=cls_name, ctx=Load()),
-        value=Subscript(
-            value=get_name_attr("res", "objects"), slice=Index(value=Str(s=object_id, kind="")), ctx=Load()
-        ),
+        value=Subscript(value=get_name_attr("res", "objects"), slice=Str(value=object_id, kind=""), ctx=Load()),
         simple=1,
     )
