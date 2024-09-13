@@ -38,9 +38,9 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
 
 
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    ros-jazzy-ros-base=0.11.0-1noble.20240731.172749 \
-    ros-jazzy-ur=2.4.9-1noble.20240820.020145 \
-    ros-jazzy-moveit-py=2.10.0-1noble.20240731.183757 \
+    ros-jazzy-ros-base=0.11.0-1noble.20240916.013254 \
+    ros-jazzy-ur=2.4.10-1noble.20240916.021917 \
+    ros-jazzy-moveit-py=2.10.0-1noble.20240916.020150 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /etc/bash.bashrc
