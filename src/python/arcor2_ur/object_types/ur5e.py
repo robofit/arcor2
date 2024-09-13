@@ -24,7 +24,10 @@ class Ur5e(Robot):
         return rest.call(rest.Method.GET, f"{self.settings.url}/state/started", return_type=bool)
 
     def _stop(self) -> None:
-        rest.call(rest.Method.PUT, f"{self.settings.url}/state/stop")
+        try:  # TODO the service crashes on stop (and is auto-restarted after that), so let's tolerate errors here
+            rest.call(rest.Method.PUT, f"{self.settings.url}/state/stop")
+        except rest.RestException:
+            pass
 
     def _start(self) -> None:
         if self._started():
@@ -54,11 +57,13 @@ class Ur5e(Robot):
     def move_to_pose(
         self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, linear: bool = True
     ) -> None:
-        self.move(target_pose)
+        self.move(target_pose, speed * 100)
 
     def move(
         self,
         pose: Pose,
+        speed: float,
+        payload: float = 0.0,
         *,
         an: None | str = None,
     ) -> None:
@@ -68,11 +73,14 @@ class Ur5e(Robot):
         :return:
         """
 
+        assert 0.0 <= payload <= 5.0
+
         with self._move_lock:
             rest.call(
                 rest.Method.PUT,
                 f"{self.settings.url}/eef/pose",
                 body=pose,
+                params={"velocity": speed, "payload": payload},
             )
 
     def robot_joints(self, include_gripper: bool = False) -> list[Joint]:

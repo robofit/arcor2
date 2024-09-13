@@ -22,6 +22,7 @@ from tf2_geometry_msgs import do_transform_pose  # pants: no-infer-dep
 from tf2_ros.buffer import Buffer  # pants: no-infer-dep
 from tf2_ros.transform_listener import TransformListener  # pants: no-infer-dep
 from ur_dashboard_msgs.srv import Load  # pants: no-infer-dep
+from ur_msgs.srv import SetPayload, SetSpeedSliderFraction  # pants: no-infer-dep
 
 from arcor2 import env
 from arcor2 import transformations as tr
@@ -49,6 +50,9 @@ BRAKE_RELEASE_SRV = "/dashboard_client/brake_release"
 POWER_OFF_SRV = "/dashboard_client/power_off"
 LOAD_PROGRAM_SRV = "/dashboard_client/load_program"
 PLAY_SRV = "/dashboard_client/play"
+
+SET_SPEED_SLIDER_SRV = "/io_and_status_controller/set_speed_slider"
+SET_PAYLOAD_SRV = "/io_and_status_controller/set_payload"
 
 
 def plan_and_execute(
@@ -106,6 +110,14 @@ class MyNode(Node):
         while self.interact_with_dashboard and not self._play_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {PLAY_SRV} not available, waiting again...")
 
+        self._set_speed_slider_client = self.create_client(SetSpeedSliderFraction, SET_SPEED_SLIDER_SRV)
+        while not self._set_speed_slider_client.wait_for_service(timeout_sec=1.0):
+            logger.warning(f"Service {SET_SPEED_SLIDER_SRV} not available, waiting again...")
+
+        self._set_payload_client = self.create_client(SetPayload, SET_PAYLOAD_SRV)
+        while not self._set_payload_client.wait_for_service(timeout_sec=1.0):
+            logger.warning(f"Service {SET_PAYLOAD_SRV} not available, waiting again...")
+
     def brake_release(self) -> None:
         if not self.interact_with_dashboard:
             return
@@ -114,11 +126,11 @@ class MyNode(Node):
         rclpy.spin_until_future_complete(self, future, timeout_sec=2)
 
         if future.result() is None:
-            raise Exception("Service call failed!")
+            raise UrGeneral("Service call failed!")
 
         response = future.result()
         if not response.success:
-            raise Exception(f"Service call failed with message: {response.message}")
+            raise UrGeneral(f"Service call failed with message: {response.message}")
 
     def power_off(self) -> None:
         if not self.interact_with_dashboard:
@@ -128,11 +140,11 @@ class MyNode(Node):
         rclpy.spin_until_future_complete(self, future, timeout_sec=2)
 
         if future.result() is None:
-            raise Exception("Service call failed!")
+            raise UrGeneral("Service call failed!")
 
         response = future.result()
         if not response.success:
-            raise Exception(f"Service call failed with message: {response.message}")
+            raise UrGeneral(f"Service call failed with message: {response.message}")
 
     def load_program(self) -> None:
         if not self.interact_with_dashboard:
@@ -142,11 +154,11 @@ class MyNode(Node):
         rclpy.spin_until_future_complete(self, future, timeout_sec=2)
 
         if future.result() is None:
-            raise Exception("Service call failed!")
+            raise UrGeneral("Service call failed!")
 
         response = future.result()
         if not response.success:
-            raise Exception(f"Service call failed with message: {response.answer}")
+            raise UrGeneral(f"Service call failed with message: {response.answer}")
 
     def play(self) -> None:
         if not self.interact_with_dashboard:
@@ -156,11 +168,39 @@ class MyNode(Node):
         rclpy.spin_until_future_complete(self, future, timeout_sec=2)
 
         if future.result() is None:
-            raise Exception("Service call failed!")
+            raise UrGeneral("Service call failed!")
 
         response = future.result()
         if not response.success:
-            raise Exception(f"Service call failed with message: {response.message}")
+            raise UrGeneral(f"Service call failed with message: {response.message}")
+
+    def set_speed_slider(self, value: float):
+        if value <= 0 or value > 1:
+            raise UrGeneral("Invalid speed.")
+
+        future = self._set_speed_slider_client.call_async(SetSpeedSliderFraction.Request(speed_slider_fraction=value))
+        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
+
+        if future.result() is None:
+            raise UrGeneral("Service call failed!")
+
+        response = future.result()
+        if not response.success:
+            raise UrGeneral(f"Service call failed (speed: {value}).")
+
+    def set_payload(self, value: float):
+        if value < 0:
+            raise UrGeneral("Invalid payload.")
+
+        future = self._set_payload_client.call_async(SetPayload.Request(mass=value))
+        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
+
+        if future.result() is None:
+            raise UrGeneral("Service call failed!")
+
+        response = future.result()
+        if not response.success:
+            raise UrGeneral("Service call failed.")
 
     def listener_callback(self, msg: JointState) -> None:
         joints = []
@@ -523,6 +563,22 @@ def put_eef_pose() -> RespT:
         description: Set the EEF pose.
         tags:
            - Robot
+        parameters:
+            - name: velocity
+              in: query
+              schema:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 100
+        parameters:
+            - name: payload
+              in: query
+              schema:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 5
         requestBody:
               content:
                 application/json:
@@ -545,6 +601,9 @@ def put_eef_pose() -> RespT:
         raise UrGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
+    velocity = float(request.args.get("velocity", default=50.0)) / 100.0
+    payload = float(request.args.get("payload", default=0.0))
+
     pose = tr.make_pose_rel(globs.state.pose, pose)
 
     pose_goal = PoseStamped()
@@ -566,7 +625,10 @@ def put_eef_pose() -> RespT:
     globs.state.ur_manipulator.set_start_state_to_current_state()
     globs.state.ur_manipulator.set_goal_state(pose_stamped_msg=pose_goal, pose_link=TOOL_LINK)
 
-    plan_and_execute(globs.state.moveitpy, globs.state.ur_manipulator, logger, sleep_time=3.0)
+    globs.state.node.set_speed_slider(velocity)
+    globs.state.node.set_payload(payload)
+
+    plan_and_execute(globs.state.moveitpy, globs.state.ur_manipulator, logger)
 
     return Response(status=204)
 

@@ -13,13 +13,20 @@ services:
       - ursim-gui-cache:/ursim/GUI
       - urcap-build-cache:/ursim/.urcaps
   ur-demo-robot-api:
-    image: arcor2/arcor2_ur:1.0.0
+    image: arcor2/arcor2_ur:1.1.0
     container_name: ur-demo-robot-api
     ports:
       - "5012:5012"
     networks:
       - ur-demo-network
     restart: always  # the service tends to crash when calling PUT /state/stop
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      rttime: -1 # corresponds to 'unlimited'
+      memlock: 8428281856
+    # network_mode: host
   ur-demo-arserver:
     image: arcor2/arcor2_arserver:1.3.0
     container_name: ur-demo-arserver
@@ -152,7 +159,7 @@ services:
       - ur-demo-asset
 
   ur-demo-upload-object-types:
-    image: arcor2/arcor2_ur_ot:1.0.0
+    image: arcor2/arcor2_ur_ot:1.1.0
     container_name: "ur-demo-upload-object-types"
     depends_on:
       ur-demo-project:
