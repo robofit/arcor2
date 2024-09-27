@@ -2,13 +2,13 @@ FROM ubuntu:24.04 AS deps
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2
-RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 python3 /binary.pex venv --scope=deps --compile /bin/app
+RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=deps --compile /bin/app
 
 FROM ubuntu:24.04 AS srcs
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2
-RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 python3 /binary.pex venv --scope=srcs --compile /bin/app
+RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=srcs --compile /bin/app
 
 FROM ubuntu:24.04
 
@@ -35,23 +35,18 @@ RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o 
 # hadolint ignore=SC2086
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo \"${UBUNTU_CODENAME}\") main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
 
-
-
-RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    ros-jazzy-ros-base=0.11.0-1noble.20240916.013254 \
-    ros-jazzy-ur=2.4.10-1noble.20240916.021917 \
-    ros-jazzy-moveit-py=2.10.0-1noble.20240916.020150 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN echo "source /opt/ros/jazzy/setup.bash" >> /etc/bash.bashrc
+COPY build-support/install_ur_dependencies.sh /root/install_ur_dependencies.sh
 
 # libgl1-mesa-glx ??
 RUN apt-get update \
+        && /root/install_ur_dependencies.sh \
         && apt-get install -y -q --no-install-recommends \
         libglib2.0-0=2.80.0-6ubuntu3.1 \
         libgomp1=14-20240412-0ubuntu1 libusb-1.0-0=2:1.0.27-1 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
+
+RUN echo "source /opt/ros/jazzy/setup.bash" >> /etc/bash.bashrc
 
 COPY src/docker/arcor2_ur/start.sh /root/start.sh
 RUN chmod +x /root/start.sh

@@ -12,4 +12,4 @@ sleep 10s # TODO find a way how to detect that the robot is up and running (test
 
 ros2 launch ur_robot_driver ur_control.launch.py ur_type:="$UR_TYPE" robot_ip:="$ROBOT_CONTAINER_IP" launch_rviz:=false &
 
-PEX_EXTRA_SYS_PATH=/opt/ros/jazzy/lib/python3.12/site-packages /bin/app/pex
+PEX_EXTRA_SYS_PATH=/opt/ros/jazzy/lib/python3.12/site-packages PYTHONOPTIMIZE=1 /bin/app/pex
