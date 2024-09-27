@@ -1,6 +1,6 @@
 services:
   ur-demo-ursim:
-    image: universalrobots/ursim_e-series:5.16.0
+    image: universalrobots/ursim_e-series:5.17.2
     container_name: ur-demo-ursim
     ports:
       - "5900:5900"  # VNC port
@@ -13,11 +13,11 @@ services:
       - ursim-gui-cache:/ursim/GUI
       - urcap-build-cache:/ursim/.urcaps
   ur-demo-robot-api:
-    image: arcor2/arcor2_ur:1.1.0
+    image: arcor2/arcor2_ur:1.2.0
     container_name: ur-demo-robot-api
     ports:
       - "5012:5012"
-    networks:
+    networks:  # TODO use network_mode: "host" for the real robot
       - ur-demo-network
     restart: always  # the service tends to crash when calling PUT /state/stop
     cap_add:
@@ -159,7 +159,7 @@ services:
       - ur-demo-asset
 
   ur-demo-upload-object-types:
-    image: arcor2/arcor2_ur_ot:1.1.0
+    image: arcor2/arcor2_ur_ot:1.2.0
     container_name: "ur-demo-upload-object-types"
     depends_on:
       ur-demo-project:

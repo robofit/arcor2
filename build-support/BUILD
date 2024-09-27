@@ -1,0 +1,1 @@
+shell_source(name="install_ur_dependencies.sh", source="install_ur_dependencies.sh")
