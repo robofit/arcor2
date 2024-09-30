@@ -1,0 +1,6 @@
+services:
+  ur-demo-robot-api:
+    ports:
+      - "50002:50002"  # robot connects to this port
+    environment:
+      - ROBOT_CONTAINER_NAME=ur-20245500974

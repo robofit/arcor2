@@ -87,7 +87,10 @@ def plan_and_execute(
 
 class MyNode(Node):
     def __init__(self, interact_with_dashboard=True) -> None:
-        super().__init__("my_node")
+        super().__init__("ur_api_node", enable_logger_service=True)
+        if globs.debug:
+            # TODO makes no difference for moveitpy :-/
+            rclpy.logging.set_logger_level("ur_api_node", rclpy.logging.LoggingSeverity.DEBUG)
 
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
@@ -241,6 +244,7 @@ class State:
 
 @dataclass
 class Globs:
+    debug = False
     state: State | None = None
     # lock: threading.Lock = threading.Lock()
 
@@ -571,7 +575,7 @@ def put_eef_pose() -> RespT:
                 format: float
                 minimum: 0
                 maximum: 100
-        parameters:
+                default: 50
             - name: payload
               in: query
               schema:
@@ -579,6 +583,7 @@ def put_eef_pose() -> RespT:
                 format: float
                 minimum: 0
                 maximum: 5
+                default: 0
         requestBody:
               content:
                 application/json:
@@ -648,6 +653,7 @@ def main() -> None:
 
     args = parser.parse_args()
     logger.setLevel(args.debug)
+    globs.debug = args.debug
 
     # TODO there will be a ROS-specific scene service
     # if not args.swagger:
