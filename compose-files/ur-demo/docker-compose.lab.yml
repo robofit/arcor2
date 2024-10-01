@@ -1,6 +1,7 @@
 services:
   ur-demo-robot-api:
-    ports:
-      - "50002:50002"  # robot connects to this port
     environment:
-      - ROBOT_CONTAINER_NAME=ur-20245500974
+      - ROBOT_IP=192.168.104.149
+    volumes:
+      - ./robot_calibration.yaml:/root/robot_calibration.yaml
+    network_mode: host  # ObjectType has to connect to localhost:5012
