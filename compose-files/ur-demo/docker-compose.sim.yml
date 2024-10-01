@@ -1,0 +1,32 @@
+services:
+  ur-demo-ursim:
+    image: universalrobots/ursim_e-series:5.17.2
+    container_name: ur-demo-ursim
+    ports:  # network_mode: host can't be (easily) used as ursim starts its own X server
+      - "5900:5900"  # VNC port
+      - "6080:6080"  # web VNC
+#      - "30001:30001"
+#      - "30002:30002"
+#      - "30004:30004"
+#      - "29999:29999"
+    networks:
+      - ur-demo-network
+    environment:
+      - ROBOT_MODEL=UR5
+    volumes:
+      - ursim-gui-cache:/ursim/GUI
+      - urcap-build-cache:/ursim/.urcaps
+      - ursim-programs:/ursim/programs
+  ur-demo-robot-api:
+    environment:
+      - ROBOT_IP=ur-demo-ursim
+      - SLEEP=10
+    networks:
+      - ur-demo-network  # ObjectType has to connect to ur-demo-ursim:5012
+
+volumes:
+  ursim-gui-cache:
+  urcap-build-cache:
+  ursim-programs:
+  ur-demo-asset:
+  ur-demo-execution:
