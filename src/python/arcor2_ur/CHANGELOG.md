@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.4.0] - 2024-11-06
+
+### Changed
+
+- Ability to control OnRobot VGC10 suction through Modbus (requires [RS485 URCap](https://github.com/UniversalRobots/Universal_Robots_ToolComm_Forwarder_URCap) in the robot).
+- `ROBOT_IP` env. variable changed to `ARCOR2_UR_ROBOT_IP`.
+- `PUT /state/start` often failed because robot was not yet ready to start a program - added check for robot's state - however, it does not work at the moment. Until it is resolved, it is recommended to start the robot manually.
+
 ## [1.3.0] - 2024-10-01
 
 ### Changed

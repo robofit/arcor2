@@ -19,8 +19,8 @@ services:
       - ursim-programs:/ursim/programs
   ur-demo-robot-api:
     environment:
-      - ROBOT_IP=ur-demo-ursim
-      - SLEEP=10
+      - ARCOR2_UR_ROBOT_IP=ur-demo-ursim
+      - ARCOR2_UR_STARTUP_SLEEP=10
     networks:
       - ur-demo-network  # ObjectType has to connect to ur-demo-ursim:5012
 
@@ -28,5 +28,3 @@ volumes:
   ursim-gui-cache:
   urcap-build-cache:
   ursim-programs:
-  ur-demo-asset:
-  ur-demo-execution:

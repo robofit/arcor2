@@ -1,7 +1,7 @@
 services:
   ur-demo-robot-api:
     environment:
-      - ROBOT_IP=192.168.104.149
+      - ARCOR2_UR_ROBOT_IP=192.168.80.2
     volumes:
       - ./robot_calibration.yaml:/root/robot_calibration.yaml
-    network_mode: host  # ObjectType has to connect to localhost:5012
+    network_mode: "host"  # ObjectType has to connect to localhost:5012

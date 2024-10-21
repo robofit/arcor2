@@ -54,3 +54,4 @@ types-setuptools==74.1.0.20240907
 pydub-stubs==0.25.1.1
 opencv-stubs[opencv-contrib]==0.0.10
 lark==1.2.2
+pymodbus~=3.7.4

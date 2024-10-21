@@ -1,22 +1,22 @@
-FROM ubuntu:24.04 AS deps
+FROM ubuntu:noble-20241011 AS deps
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2
 RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=deps --compile /bin/app
 
-FROM ubuntu:24.04 AS srcs
+FROM ubuntu:noble-20241011 AS srcs
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2
 RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM ubuntu:24.04
+FROM ubuntu:noble-20241011
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2 \
-    curl=8.5.0-2ubuntu10.3 \
+    curl=8.5.0-2ubuntu10.4 \
     gnupg2=2.4.4-2ubuntu17 \
     lsb-release=12.0-2 \
     locales=2.39-0ubuntu8 \
@@ -42,11 +42,15 @@ RUN apt-get update \
         && /root/install_ur_dependencies.sh \
         && apt-get install -y -q --no-install-recommends \
         libglib2.0-0=2.80.0-6ubuntu3.1 \
-        libgomp1=14-20240412-0ubuntu1 libusb-1.0-0=2:1.0.27-1 \
+        libgomp1=14.2.0-4ubuntu2~24.04 libusb-1.0-0=2:1.0.27-1 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /etc/bash.bashrc
+
+ENV ARCOR2_UR_TYPE=${ARCOR2_UR_TYPE}
+ENV ARCOR2_UR_ROBOT_IP=${ARCOR2_UR_ROBOT_IP}
+ENV ARCOR2_UR_STARTUP_SLEEP=${ARCOR2_UR_STARTUP_SLEEP}
 
 COPY src/docker/arcor2_ur/start.sh /root/start.sh
 RUN chmod +x /root/start.sh
