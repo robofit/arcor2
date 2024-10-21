@@ -59,7 +59,7 @@ def start_processes(request) -> Iterator[Urls]:
     robot_url = f"http://0.0.0.0:{find_free_port()}"
     my_env["ARCOR2_UR_URL"] = robot_url
     my_env["ARCOR2_UR_INTERACT_WITH_DASHBOARD"] = "false"
-    my_env["UR_TYPE"] = ur_type
+    my_env["ARCOR2_UR_TYPE"] = ur_type
     my_env["PEX_EXTRA_SYS_PATH"] = "/opt/ros/jazzy/lib/python3.12/site-packages"
 
     robot_proc = sp.Popen(["python", "src.python.arcor2_ur.scripts/ur.pex"], **kwargs)  # type: ignore

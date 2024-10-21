@@ -7,6 +7,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from functools import wraps
+from threading import Event
 
 import rclpy  # pants: no-infer-dep
 from ament_index_python.packages import get_package_share_directory  # pants: no-infer-dep
@@ -17,10 +18,12 @@ from moveit.planning import MoveItPy, PlanningComponent  # pants: no-infer-dep
 from moveit_configs_utils import MoveItConfigsBuilder  # pants: no-infer-dep
 from rclpy.node import Node  # pants: no-infer-dep
 from sensor_msgs.msg import JointState  # pants: no-infer-dep
+from std_msgs.msg import Bool, String  # pants: no-infer-dep
 from std_srvs.srv import Trigger  # pants: no-infer-dep
 from tf2_geometry_msgs import do_transform_pose  # pants: no-infer-dep
 from tf2_ros.buffer import Buffer  # pants: no-infer-dep
 from tf2_ros.transform_listener import TransformListener  # pants: no-infer-dep
+from ur_dashboard_msgs.msg import RobotMode  # pants: no-infer-dep
 from ur_dashboard_msgs.srv import Load  # pants: no-infer-dep
 from ur_msgs.srv import SetPayload, SetSpeedSliderFraction  # pants: no-infer-dep
 
@@ -33,6 +36,8 @@ from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2_ur import get_data, version
 from arcor2_ur.exceptions import StartError, UrGeneral, WebApiError
+from arcor2_ur.object_types.ur5e import Vacuum
+from arcor2_ur.vgc10 import VGC10
 
 logger = get_logger(__name__)
 
@@ -41,18 +46,23 @@ BASE_LINK = os.getenv("ARCOR2_UR_BASE_LINK", "base_link")
 TOOL_LINK = os.getenv("ARCOR2_UR_TOOL_LINK", "tool0")
 UR_TYPE = os.getenv("ARCOR2_UR_TYPE", "ur5e")
 PLANNING_GROUP_NAME = os.getenv("ARCOR2_UR_PLANNING_GROUP_NAME", "ur_manipulator")
+ROBOT_IP = os.getenv("ARCOR2_UR_ROBOT_IP", "")
+VGC10_PORT = env.get_int("ARCOR2_UR_VGC10_PORT", 54321)
 
 SERVICE_NAME = f"UR Web API ({UR_TYPE})"
 
 INTERACT_WITH_DASHBOARD = env.get_bool("ARCOR2_UR_INTERACT_WITH_DASHBOARD", True)
+DASHBOARD_CLIENT_NS = "/dashboard_client"
+BRAKE_RELEASE_SRV = f"{DASHBOARD_CLIENT_NS}/brake_release"
+POWER_OFF_SRV = f"{DASHBOARD_CLIENT_NS}/power_off"
+LOAD_PROGRAM_SRV = f"{DASHBOARD_CLIENT_NS}/load_program"
+PLAY_SRV = f"{DASHBOARD_CLIENT_NS}/play"
 
-BRAKE_RELEASE_SRV = "/dashboard_client/brake_release"
-POWER_OFF_SRV = "/dashboard_client/power_off"
-LOAD_PROGRAM_SRV = "/dashboard_client/load_program"
-PLAY_SRV = "/dashboard_client/play"
-
-SET_SPEED_SLIDER_SRV = "/io_and_status_controller/set_speed_slider"
-SET_PAYLOAD_SRV = "/io_and_status_controller/set_payload"
+IO_AND_STATUS_CONTROLLER_NS = "/io_and_status_controller"
+ROBOT_MODE_TOPIC = f"{IO_AND_STATUS_CONTROLLER_NS}/robot_mode"
+ROBOT_PROGRAM_RUNNING_TOPIC = f"{IO_AND_STATUS_CONTROLLER_NS}/robot_program_running"
+SET_SPEED_SLIDER_SRV = f"{IO_AND_STATUS_CONTROLLER_NS}/set_speed_slider"
+SET_PAYLOAD_SRV = f"{IO_AND_STATUS_CONTROLLER_NS}/set_payload"
 
 
 def plan_and_execute(
@@ -94,32 +104,69 @@ class MyNode(Node):
 
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
-        self.subscription = self.create_subscription(JointState, "joint_states", self.listener_callback, 10)
+        self.subscription = self.create_subscription(JointState, "joint_states", self.joint_states_cb, 10)
         self.interact_with_dashboard = interact_with_dashboard
 
+        self.robot_mode: RobotMode | None = None
+        self.robot_mode_evt = Event()
+        self.robot_program_running_evt = Event()
+
         self._break_release_client = self.create_client(Trigger, BRAKE_RELEASE_SRV)
+        self._power_off_client = self.create_client(Trigger, POWER_OFF_SRV)
+        self._load_program_client = self.create_client(Load, LOAD_PROGRAM_SRV)
+        self._play_client = self.create_client(Trigger, PLAY_SRV)
+        self._set_speed_slider_client = self.create_client(SetSpeedSliderFraction, SET_SPEED_SLIDER_SRV)
+        self._set_payload_client = self.create_client(SetPayload, SET_PAYLOAD_SRV)
+
+        self.script_cmd_pub = self.create_publisher(String, "/urscript_interface/script_command", 10)
+        self.robot_mode_sub = self.create_subscription(RobotMode, ROBOT_MODE_TOPIC, self.robot_mode_cb, 10)
+        self.robot_program_running_sub = self.create_subscription(
+            Bool, ROBOT_PROGRAM_RUNNING_TOPIC, self.robot_program_running_cb, 10
+        )
+
+    def wait_for_services(self) -> None:
         while self.interact_with_dashboard and not self._break_release_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {BRAKE_RELEASE_SRV} not available, waiting again...")
 
-        self._power_off_client = self.create_client(Trigger, POWER_OFF_SRV)
         while self.interact_with_dashboard and not self._power_off_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {POWER_OFF_SRV} not available, waiting again...")
 
-        self._load_program_client = self.create_client(Load, LOAD_PROGRAM_SRV)
         while self.interact_with_dashboard and not self._load_program_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {LOAD_PROGRAM_SRV} not available, waiting again...")
 
-        self._play_client = self.create_client(Trigger, PLAY_SRV)
         while self.interact_with_dashboard and not self._play_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {PLAY_SRV} not available, waiting again...")
 
-        self._set_speed_slider_client = self.create_client(SetSpeedSliderFraction, SET_SPEED_SLIDER_SRV)
         while not self._set_speed_slider_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {SET_SPEED_SLIDER_SRV} not available, waiting again...")
 
-        self._set_payload_client = self.create_client(SetPayload, SET_PAYLOAD_SRV)
         while not self._set_payload_client.wait_for_service(timeout_sec=1.0):
             logger.warning(f"Service {SET_PAYLOAD_SRV} not available, waiting again...")
+
+    def robot_program_running_cb(self, msg: Bool) -> None:
+        logger.info(f"Program running: {msg.data}")
+        if msg.data:
+            self.robot_program_running_evt.set()
+        else:
+            self.robot_program_running_evt.clear()
+
+    def robot_mode_cb(self, msg: RobotMode) -> None:
+        logger.info(f"Robot mode: {msg.mode}")
+        self.robot_mode = msg
+        self.robot_mode_evt.set()
+
+    def wait_for_robot_mode(self, mode: RobotMode, timeout=30) -> None:
+        while self.robot_mode is None or self.robot_mode.mode != mode:
+            if not self.robot_mode_evt.wait(timeout):
+                if self.robot_mode is None:
+                    raise TimeoutError("Didn't get any robot mode.")
+                raise TimeoutError(f"Current mode {self.robot_mode.mode}, was waiting for {mode}.")
+            self.robot_mode_evt.clear()
+
+    def urscript(self, src: str) -> None:
+        msg = String()
+        msg.data = src
+        self.script_cmd_pub.publish(msg)
 
     def brake_release(self) -> None:
         if not self.interact_with_dashboard:
@@ -205,41 +252,38 @@ class MyNode(Node):
         if not response.success:
             raise UrGeneral("Service call failed.")
 
-    def listener_callback(self, msg: JointState) -> None:
-        joints = []
-        for name, position in zip(msg.name, msg.position):
-            joints.append(Joint(name, position))
+    def joint_states_cb(self, msg: JointState) -> None:
         if globs.state is not None:
-            globs.state.joints = joints  # TODO not very clean solution
+            # TODO not very clean solution
+            globs.state.joints = [Joint(name, position) for name, position in zip(msg.name, msg.position)]
 
 
 @dataclass
 class State:
     pose: Pose
     node: MyNode
+    executor: rclpy.executors.MultiThreadedExecutor
+    executor_thread: threading.Thread
     moveitpy: MoveItPy
     ur_manipulator: PlanningComponent
     joints: list[Joint] = field(default_factory=list)
-
-    _executor: rclpy.executors.MultiThreadedExecutor | None = None
-    _executor_thread: threading.Thread | None = None
+    tool: VGC10 | None = None
 
     def shutdown(self) -> None:
-        assert self._executor
-        assert self._executor_thread
+        if self.tool:
+            self.tool.release_vacuum()
+            self.tool.close_connection()
 
         self.node.destroy_node()
-        self._executor.shutdown()
-        self._executor_thread.join(3)
-        assert not self._executor_thread.is_alive()
+        self.executor.shutdown()
+        self.executor_thread.join(3)
+        assert not self.executor_thread.is_alive()
         self.moveitpy.shutdown()
         rclpy.shutdown()
 
     def __post_init__(self) -> None:
-        self._executor = rclpy.executors.MultiThreadedExecutor()
-        self._executor.add_node(self.node)
-        self._executor_thread = threading.Thread(target=self._executor.spin, daemon=True)
-        self._executor_thread.start()
+        if self.tool:
+            self.tool.open_connection()
 
 
 @dataclass
@@ -320,22 +364,41 @@ def put_start() -> RespT:
     pose = Pose.from_dict(request.json)
 
     rclpy.init()
-
-    # TODO find better way how to detect that the launch was started (wait for some topic?)
-    time.sleep(2)
-
     node = MyNode(INTERACT_WITH_DASHBOARD)
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(node)
+    executor_thread = threading.Thread(target=executor.spin, daemon=True)
+    executor_thread.start()
+
+    node.wait_for_services()
+
     try:
         node.brake_release()
+        # node.wait_for_robot_mode(RobotMode.RUNNING)  # TODO why wtf is RobotMode not received??
         node.load_program()
         node.play()
+        # if not node.robot_program_running_evt.wait(10):
+        #    raise TimeoutError("Robot program not running.")
+
     except Exception:
         node.destroy_node()
         rclpy.shutdown()
         raise
 
+    vgc10: VGC10 | None = None
+    if ROBOT_IP:
+        vgc10 = VGC10(ROBOT_IP, VGC10_PORT)
+
     moveitpy = MoveItPy(node_name="moveit_py", config_dict=moveit_config)
-    globs.state = State(pose, node, moveitpy, moveitpy.get_planning_component(PLANNING_GROUP_NAME))
+    globs.state = State(
+        pose,
+        node,
+        executor,
+        executor_thread,
+        moveitpy,
+        moveitpy.get_planning_component(PLANNING_GROUP_NAME),
+        tool=vgc10,
+    )
 
     return Response(status=204)
 
@@ -638,6 +701,113 @@ def put_eef_pose() -> RespT:
     return Response(status=204)
 
 
+@app.route("/suction/suck", methods=["PUT"])
+@requires_started
+def put_suck() -> RespT:
+    """Turn on suction.
+    ---
+    put:
+        description: Get the current state.
+        tags:
+           - Tool
+        parameters:
+            - name: vacuum
+              in: query
+              schema:
+                type: integer
+                minimum: 0
+                maximum: 80
+                default: 60
+              description: Tells how hard to grasp in the range of 0% to 80 % vacuum.
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    assert globs.state
+
+    if not globs.state.tool:
+        # "simulate" the tool when not configured (e.g. when using with simulation)
+        logger.warning("PUT /suction/suck called while a tool is not configured.")
+        return Response(status=204)
+
+    vacuum = int(request.args.get("vacuum", default=60))
+    globs.state.tool.vacuum_on(vacuum)
+
+    return Response(status=204)
+
+
+@app.route("/suction/vacuum", methods=["GET"])
+@requires_started
+def get_vacuum() -> RespT:
+    """Gets vacuum value.
+    ---
+    get:
+        description: Get the measured vacuum.
+        tags:
+           - Tool
+        responses:
+            200:
+              description: Returns current relative vacuum on each channel.
+              content:
+                application/json:
+                  schema:
+                    $ref: Vacuum
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    assert globs.state
+
+    if not globs.state.tool:
+        # "simulate" the tool when not configured (e.g. when using with simulation)
+        logger.warning("PUT /suction/vacuum called while a tool is not configured.")
+        return jsonify(Vacuum(0, 0).to_dict())
+
+    return jsonify(Vacuum(globs.state.tool.get_channelA_vacuum(), globs.state.tool.get_channelB_vacuum()).to_dict())
+
+
+@app.route("/suction/release", methods=["PUT"])
+@requires_started
+def put_release() -> RespT:
+    """Turn off suction.
+    ---
+    put:
+        description: Get the current state.
+        tags:
+           - Tool
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    assert globs.state
+
+    if not globs.state.tool:
+        logger.warning("PUT /suction/release called while a tool is not configured.")
+        return Response(status=204)
+
+    globs.state.tool.release_vacuum()
+
+    return Response(status=204)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=SERVICE_NAME)
     parser.add_argument("-s", "--swagger", action="store_true", default=False)
@@ -667,7 +837,7 @@ def main() -> None:
         SERVICE_NAME,
         version(),
         port_from_url(URL),
-        [Pose, Joint, InverseKinematicsRequest, WebApiError],
+        [Vacuum, Pose, Joint, InverseKinematicsRequest, WebApiError],
         args.swagger,
         # dependencies={"ARCOR2 Scene": "1.0.0"},
     )

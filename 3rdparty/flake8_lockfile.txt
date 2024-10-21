@@ -319,13 +319,13 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "12d745f7710ffbf6aeb8279ba9068a24d4e52e8ed333b8b044035c9d6b823aba",
-              "url": "https://files.pythonhosted.org/packages/47/13/e7ae7ec4beb4b0b1b26249719adb310e201ac9d020ac01d983d9df8478b0/vulture-2.11-py2.py3-none-any.whl"
+              "hash": "34793ba60488e7cccbecdef3a7fe151656372ef94fdac9fe004c52a4000a6d44",
+              "url": "https://files.pythonhosted.org/packages/fd/1b/bc096603b79edbac62899cbe852bd5ccdf0f8e8a7faa9f7390ee1995cedb/vulture-2.13-py2.py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "f0fbb60bce6511aad87ee0736c502456737490a82d919a44e6d92262cb35f1c2",
-              "url": "https://files.pythonhosted.org/packages/da/70/29f296be6353598dfbbdf994f5496e6bf0776be6811c8491611a31aa15da/vulture-2.11.tar.gz"
+              "hash": "78248bf58f5eaffcc2ade306141ead73f437339950f80045dce7f8b078e5a1aa",
+              "url": "https://files.pythonhosted.org/packages/1d/7d/e78586863119fe28741c347988f892301319ce05edd11dbe0b45b18cc3b9/vulture-2.13.tar.gz"
             }
           ],
           "project_name": "vulture",
@@ -333,7 +333,7 @@
             "tomli>=1.1.0; python_version < \"3.11\""
           ],
           "requires_python": ">=3.8",
-          "version": "2.11"
+          "version": "2.13"
         }
       ],
       "platform_tag": null

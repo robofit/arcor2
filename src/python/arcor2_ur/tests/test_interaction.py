@@ -5,7 +5,7 @@ from arcor2_ur.object_types.ur5e import Ur5e, UrSettings
 from arcor2_ur.tests.conftest import Urls
 
 
-@pytest.mark.timeout(30)
+@pytest.mark.timeout(60)
 def test_basics(start_processes: Urls) -> None:
     ot = Ur5e("", "", Pose(), UrSettings(start_processes.robot_url))
 
@@ -13,5 +13,8 @@ def test_basics(start_processes: Urls) -> None:
     pos = ot.get_end_effector_pose("")
     pos.position.z -= 0.01
     ot.move_to_pose("", pos, 0.5)
+
+    ot.suck()
+    ot.release()
 
     ot.cleanup()
