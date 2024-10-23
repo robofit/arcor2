@@ -674,6 +674,8 @@ class UpdateableCachedProject(UpdateableMixin, CachedProject):
     def upsert_action_point(
         self, ap_id: str, name: str, position: cmn.Position, parent: None | str = None
     ) -> cmn.BareActionPoint:
+        assert parent != ""
+
         try:
             ap = self.bare_action_point(ap_id)
             ap.name = name
