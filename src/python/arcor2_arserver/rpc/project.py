@@ -447,7 +447,8 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
     ap = proj.bare_action_point(req.args.action_point_id)
 
     # some super basic checks (not involving other objects) are performed before locking anything
-    if req.args.new_parent_id == ap.parent:
+    if req.args.new_parent_id == ("" if ap.parent is None else ap.parent):
+        logger.warn(f"Attempted useless update of parent from {ap.parent} to {req.args.new_parent_id} on AP {ap.name}.")
         return None
 
     if req.args.new_parent_id == ap.id:
@@ -473,10 +474,12 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
         if not ap.parent and req.args.new_parent_id:
             # AP position and all orientations will become relative to the parent
             updated_aps = tr.make_global_ap_relative(scene, proj, ap, req.args.new_parent_id)
+            assert ap.parent == req.args.new_parent_id
 
         elif ap.parent and not req.args.new_parent_id:
             # AP position and all orientations will become absolute
             updated_aps = tr.make_relative_ap_global(scene, proj, ap)
+            assert ap.parent is None
         else:
             assert ap.parent
             # AP position and all orientations will become relative to another parent
@@ -866,6 +869,11 @@ async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> No
 async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
+
+    # TODO workaround for issue with parent
+    # best solution would be probably to make it non-optional everywhere
+    if req.args.parent == "":
+        req.args.parent = None
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT, glob.USERS.user_name(ui)):
         hlp.is_valid_identifier(req.args.name)

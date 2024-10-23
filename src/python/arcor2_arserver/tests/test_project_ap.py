@@ -70,6 +70,48 @@ def test_project_ap_rpcs(start_processes: None, ars: ARServer) -> None:
     child_ap_evt = event(ars, events.p.ActionPointChanged)
     assert child_ap_evt.data.parent == parent_ap_evt.data.id
 
+    assert ars.call_rpc(
+        rpc.p.UpdateActionPointParent.Request(
+            get_id(), rpc.p.UpdateActionPointParent.Request.Args(child_ap_evt.data.id, parent_ap_evt.data.id)
+        ),
+        rpc.p.UpdateActionPointParent.Response,
+    ).result
+
+    lock_object(ars, child_ap_evt.data.id)
+
+    assert ars.call_rpc(
+        rpc.p.UpdateActionPointParent.Request(
+            get_id(), rpc.p.UpdateActionPointParent.Request.Args(child_ap_evt.data.id, "")
+        ),
+        rpc.p.UpdateActionPointParent.Response,
+    ).result
+
+    update_ap_parent_evt = event(ars, events.p.ActionPointChanged)
+    assert update_ap_parent_evt.data.parent is None
+
+    event(ars, events.lk.ObjectsUnlocked)
+
+    assert ars.call_rpc(
+        rpc.p.UpdateActionPointParent.Request(
+            get_id(), rpc.p.UpdateActionPointParent.Request.Args(child_ap_evt.data.id, "")
+        ),
+        rpc.p.UpdateActionPointParent.Response,
+    ).result
+
+    lock_object(ars, child_ap_evt.data.id)
+
+    assert ars.call_rpc(
+        rpc.p.UpdateActionPointParent.Request(
+            get_id(), rpc.p.UpdateActionPointParent.Request.Args(child_ap_evt.data.id, parent_ap_evt.data.id)
+        ),
+        rpc.p.UpdateActionPointParent.Response,
+    ).result
+
+    update_ap_parent_evt = event(ars, events.p.ActionPointChanged)
+    assert update_ap_parent_evt.data.parent == parent_ap_evt.data.id
+
+    event(ars, events.lk.ObjectsUnlocked)
+
     lock_object(ars, child_ap_evt.data.id)
 
     assert ars.call_rpc(
