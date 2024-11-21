@@ -7,7 +7,6 @@ import threading
 import time
 from dataclasses import dataclass, field
 from functools import wraps
-from threading import Event
 
 import rclpy  # pants: no-infer-dep
 from ament_index_python.packages import get_package_share_directory  # pants: no-infer-dep
@@ -16,7 +15,9 @@ from geometry_msgs.msg import Pose as RosPose  # pants: no-infer-dep
 from geometry_msgs.msg import PoseStamped  # pants: no-infer-dep
 from moveit.planning import MoveItPy, PlanningComponent  # pants: no-infer-dep
 from moveit_configs_utils import MoveItConfigsBuilder  # pants: no-infer-dep
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup  # pants: no-infer-dep
 from rclpy.node import Node  # pants: no-infer-dep
+from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy  # pants: no-infer-dep
 from sensor_msgs.msg import JointState  # pants: no-infer-dep
 from std_msgs.msg import Bool, String  # pants: no-infer-dep
 from std_srvs.srv import Trigger  # pants: no-infer-dep
@@ -34,7 +35,7 @@ from arcor2.data.robot import InverseKinematicsRequest
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
-from arcor2_ur import get_data, version
+from arcor2_ur import get_data, topics, version
 from arcor2_ur.exceptions import StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
 from arcor2_ur.vgc10 import VGC10
@@ -48,21 +49,9 @@ UR_TYPE = os.getenv("ARCOR2_UR_TYPE", "ur5e")
 PLANNING_GROUP_NAME = os.getenv("ARCOR2_UR_PLANNING_GROUP_NAME", "ur_manipulator")
 ROBOT_IP = os.getenv("ARCOR2_UR_ROBOT_IP", "")
 VGC10_PORT = env.get_int("ARCOR2_UR_VGC10_PORT", 54321)
+INTERACT_WITH_DASHBOARD = env.get_bool("ARCOR2_UR_INTERACT_WITH_DASHBOARD", True)
 
 SERVICE_NAME = f"UR Web API ({UR_TYPE})"
-
-INTERACT_WITH_DASHBOARD = env.get_bool("ARCOR2_UR_INTERACT_WITH_DASHBOARD", True)
-DASHBOARD_CLIENT_NS = "/dashboard_client"
-BRAKE_RELEASE_SRV = f"{DASHBOARD_CLIENT_NS}/brake_release"
-POWER_OFF_SRV = f"{DASHBOARD_CLIENT_NS}/power_off"
-LOAD_PROGRAM_SRV = f"{DASHBOARD_CLIENT_NS}/load_program"
-PLAY_SRV = f"{DASHBOARD_CLIENT_NS}/play"
-
-IO_AND_STATUS_CONTROLLER_NS = "/io_and_status_controller"
-ROBOT_MODE_TOPIC = f"{IO_AND_STATUS_CONTROLLER_NS}/robot_mode"
-ROBOT_PROGRAM_RUNNING_TOPIC = f"{IO_AND_STATUS_CONTROLLER_NS}/robot_program_running"
-SET_SPEED_SLIDER_SRV = f"{IO_AND_STATUS_CONTROLLER_NS}/set_speed_slider"
-SET_PAYLOAD_SRV = f"{IO_AND_STATUS_CONTROLLER_NS}/set_payload"
 
 
 def plan_and_execute(
@@ -102,66 +91,83 @@ class MyNode(Node):
             # TODO makes no difference for moveitpy :-/
             rclpy.logging.set_logger_level("ur_api_node", rclpy.logging.LoggingSeverity.DEBUG)
 
+        sub_qos = QoSProfile(
+            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL, reliability=QoSReliabilityPolicy.RELIABLE
+        )
+
         self.buffer = Buffer()
         self.listener = TransformListener(self.buffer, self)
-        self.subscription = self.create_subscription(JointState, "joint_states", self.joint_states_cb, 10)
+        self.subscription = self.create_subscription(
+            JointState, "joint_states", self.joint_states_cb, 10, callback_group=MutuallyExclusiveCallbackGroup()
+        )
         self.interact_with_dashboard = interact_with_dashboard
 
         self.robot_mode: RobotMode | None = None
-        self.robot_mode_evt = Event()
-        self.robot_program_running_evt = Event()
+        self.robot_program_running: bool | None = None
 
-        self._break_release_client = self.create_client(Trigger, BRAKE_RELEASE_SRV)
-        self._power_off_client = self.create_client(Trigger, POWER_OFF_SRV)
-        self._load_program_client = self.create_client(Load, LOAD_PROGRAM_SRV)
-        self._play_client = self.create_client(Trigger, PLAY_SRV)
-        self._set_speed_slider_client = self.create_client(SetSpeedSliderFraction, SET_SPEED_SLIDER_SRV)
-        self._set_payload_client = self.create_client(SetPayload, SET_PAYLOAD_SRV)
+        self._break_release_client = self.create_client(Trigger, topics.BRAKE_RELEASE_SRV)
+        self._power_off_client = self.create_client(Trigger, topics.POWER_OFF_SRV)
+        self._load_program_client = self.create_client(Load, topics.LOAD_PROGRAM_SRV)
+        self._play_client = self.create_client(Trigger, topics.PLAY_SRV)
+        self._set_speed_slider_client = self.create_client(SetSpeedSliderFraction, topics.SET_SPEED_SLIDER_SRV)
+        self._set_payload_client = self.create_client(SetPayload, topics.SET_PAYLOAD_SRV)
 
         self.script_cmd_pub = self.create_publisher(String, "/urscript_interface/script_command", 10)
-        self.robot_mode_sub = self.create_subscription(RobotMode, ROBOT_MODE_TOPIC, self.robot_mode_cb, 10)
+        self.robot_mode_sub = self.create_subscription(
+            RobotMode,
+            topics.ROBOT_MODE_TOPIC,
+            self.robot_mode_cb,
+            sub_qos,
+            callback_group=MutuallyExclusiveCallbackGroup(),
+        )
         self.robot_program_running_sub = self.create_subscription(
-            Bool, ROBOT_PROGRAM_RUNNING_TOPIC, self.robot_program_running_cb, 10
+            Bool,
+            topics.ROBOT_PROGRAM_RUNNING_TOPIC,
+            self.robot_program_running_cb,
+            sub_qos,
+            callback_group=MutuallyExclusiveCallbackGroup(),
         )
 
     def wait_for_services(self) -> None:
         while self.interact_with_dashboard and not self._break_release_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {BRAKE_RELEASE_SRV} not available, waiting again...")
+            logger.warning(f"Service {topics.BRAKE_RELEASE_SRV} not available, waiting again...")
 
         while self.interact_with_dashboard and not self._power_off_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {POWER_OFF_SRV} not available, waiting again...")
+            logger.warning(f"Service {topics.POWER_OFF_SRV} not available, waiting again...")
 
         while self.interact_with_dashboard and not self._load_program_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {LOAD_PROGRAM_SRV} not available, waiting again...")
+            logger.warning(f"Service {topics.LOAD_PROGRAM_SRV} not available, waiting again...")
 
         while self.interact_with_dashboard and not self._play_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {PLAY_SRV} not available, waiting again...")
+            logger.warning(f"Service {topics.PLAY_SRV} not available, waiting again...")
 
         while not self._set_speed_slider_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {SET_SPEED_SLIDER_SRV} not available, waiting again...")
+            logger.warning(f"Service {topics.SET_SPEED_SLIDER_SRV} not available, waiting again...")
 
         while not self._set_payload_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {SET_PAYLOAD_SRV} not available, waiting again...")
+            logger.warning(f"Service {topics.SET_PAYLOAD_SRV} not available, waiting again...")
 
     def robot_program_running_cb(self, msg: Bool) -> None:
         logger.info(f"Program running: {msg.data}")
-        if msg.data:
-            self.robot_program_running_evt.set()
-        else:
-            self.robot_program_running_evt.clear()
+        self.robot_program_running = msg.data
 
     def robot_mode_cb(self, msg: RobotMode) -> None:
         logger.info(f"Robot mode: {msg.mode}")
         self.robot_mode = msg
-        self.robot_mode_evt.set()
 
-    def wait_for_robot_mode(self, mode: RobotMode, timeout=30) -> None:
-        while self.robot_mode is None or self.robot_mode.mode != mode:
-            if not self.robot_mode_evt.wait(timeout):
-                if self.robot_mode is None:
-                    raise TimeoutError("Didn't get any robot mode.")
-                raise TimeoutError(f"Current mode {self.robot_mode.mode}, was waiting for {mode}.")
-            self.robot_mode_evt.clear()
+    def wait_for_robot_mode(self, mode: set[RobotMode], timeout=30) -> None:
+        start = time.monotonic()
+        while self.robot_mode is None or self.robot_mode.mode not in mode:
+            time.sleep(0.1)
+            if time.monotonic() - start > timeout:
+                raise TimeoutError(f"Timeout when waiting for RobotMode={mode}.")
+
+    def wait_for_program_running(self, timeout=10) -> None:
+        start = time.monotonic()
+        while not self.robot_program_running:
+            time.sleep(0.1)
+            if time.monotonic() - start > timeout:
+                raise TimeoutError("Timeout when waiting for program running.")
 
     def urscript(self, src: str) -> None:
         msg = String()
@@ -374,11 +380,10 @@ def put_start() -> RespT:
 
     try:
         node.brake_release()
-        # node.wait_for_robot_mode(RobotMode.RUNNING)  # TODO why wtf is RobotMode not received??
+        node.wait_for_robot_mode({RobotMode.RUNNING, RobotMode.IDLE})
         node.load_program()
         node.play()
-        # if not node.robot_program_running_evt.wait(10):
-        #    raise TimeoutError("Robot program not running.")
+        node.wait_for_program_running()
 
     except Exception:
         node.destroy_node()

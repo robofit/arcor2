@@ -8,3 +8,9 @@ arcor2_pex_binary(
 arcor2_pex_binary(
     name="upload_objects", dependencies=["src/python/arcor2_ur/data/urdf:ur5e"], interpreter_constraints=["==3.12.*"]
 )
+
+arcor2_pex_binary(
+    name="robot_publisher",
+    interpreter_constraints=["==3.12.*"],
+    dependencies=["3rdparty#PyYAML", "3rdparty#numpy"],
+)

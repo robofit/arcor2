@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.4.1] - 2024-11-21
+
+### Fixed
+
+- Checking for robot's state - it should no longer be necessary to start the robot manually (before calling `PUT /state/start`). It should also work if the robot is already started.
+
 ## [1.4.0] - 2024-11-06
 
 ### Changed
