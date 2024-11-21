@@ -71,10 +71,19 @@ def start_processes(request) -> Iterator[Urls]:
         raise Exception("Robot service died.")
 
     try:
-        check_health("UR", robot_url, timeout=10)
+        check_health("UR", robot_url, timeout=20)
     except CheckHealthException:
         finish_processes(processes)
         raise
+
+    # robot_mode etc. is not published with mock_hw -> there is this helper node to do that
+    # it can't be published from here as it depends on ROS (Python 3.12)
+    robot_pub_proc = sp.Popen(["python", "src.python.arcor2_ur.scripts/robot_publisher.pex"], **kwargs)  # type: ignore
+    processes.append(robot_pub_proc)
+
+    if robot_pub_proc.poll():
+        finish_processes(processes)
+        raise Exception("Robot publisher node died.")
 
     yield Urls(ros_domain_id, robot_url)
 

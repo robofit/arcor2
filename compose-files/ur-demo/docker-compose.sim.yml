@@ -1,6 +1,6 @@
 services:
   ur-demo-ursim:
-    image: universalrobots/ursim_e-series:5.17.2
+    image: universalrobots/ursim_e-series:5.17.3  # version should match version of the Polyscope on the robot
     container_name: ur-demo-ursim
     ports:  # network_mode: host can't be (easily) used as ursim starts its own X server
       - "5900:5900"  # VNC port

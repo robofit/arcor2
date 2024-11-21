@@ -1,6 +1,6 @@
 python_tests(
     runtime_package_dependencies=[
-        "src/python/arcor2_ur/scripts:ur",
+        "src/python/arcor2_ur/scripts:ur", "src/python/arcor2_ur/scripts:robot_publisher",
     ],
     interpreter_constraints=["==3.12.*"],
 )
