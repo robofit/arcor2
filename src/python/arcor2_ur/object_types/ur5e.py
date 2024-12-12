@@ -75,12 +75,13 @@ class Ur5e(Robot):
     def move_to_pose(
         self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, linear: bool = True
     ) -> None:
-        self.move(target_pose, speed * 100)
+        self.move(target_pose, speed * 100, safe)
 
     def move(
         self,
         pose: Pose,
         speed: float = 50.0,
+        safe: bool = True,
         payload: float = 0.0,
         *,
         an: None | str = None,
@@ -89,6 +90,7 @@ class Ur5e(Robot):
 
         :param pose: Target pose.
         :param speed: Relative speed.
+        :param safe: Avoid collisions.
         :param payload: Object weight.
 
         :return:
@@ -102,7 +104,7 @@ class Ur5e(Robot):
                 rest.Method.PUT,
                 f"{self.settings.url}/eef/pose",
                 body=pose,
-                params={"velocity": speed, "payload": payload},
+                params={"velocity": speed, "payload": payload, "safe": safe},
             )
 
     def suck(
