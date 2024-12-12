@@ -7,7 +7,9 @@ import threading
 import time
 from dataclasses import dataclass, field
 from functools import wraps
+from typing import NamedTuple
 
+import humps
 import rclpy  # pants: no-infer-dep
 from ament_index_python.packages import get_package_share_directory  # pants: no-infer-dep
 from flask import Response, jsonify, request
@@ -15,10 +17,12 @@ from geometry_msgs.msg import Pose as RosPose  # pants: no-infer-dep
 from geometry_msgs.msg import PoseStamped  # pants: no-infer-dep
 from moveit.planning import MoveItPy, PlanningComponent  # pants: no-infer-dep
 from moveit_configs_utils import MoveItConfigsBuilder  # pants: no-infer-dep
+from moveit_msgs.msg import CollisionObject  # pants: no-infer-dep
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup  # pants: no-infer-dep
 from rclpy.node import Node  # pants: no-infer-dep
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy  # pants: no-infer-dep
 from sensor_msgs.msg import JointState  # pants: no-infer-dep
+from shape_msgs.msg import SolidPrimitive  # pants: no-infer-dep
 from std_msgs.msg import Bool, String  # pants: no-infer-dep
 from std_srvs.srv import Trigger  # pants: no-infer-dep
 from tf2_geometry_msgs import do_transform_pose  # pants: no-infer-dep
@@ -30,13 +34,14 @@ from ur_msgs.srv import SetPayload, SetSpeedSliderFraction  # pants: no-infer-de
 
 from arcor2 import env
 from arcor2 import transformations as tr
+from arcor2.data import common, object_type
 from arcor2.data.common import Joint, Pose
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2_ur import get_data, topics, version
-from arcor2_ur.exceptions import StartError, UrGeneral, WebApiError
+from arcor2_ur.exceptions import NotFound, StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
 from arcor2_ur.vgc10 import VGC10
 
@@ -52,6 +57,24 @@ VGC10_PORT = env.get_int("ARCOR2_UR_VGC10_PORT", 54321)
 INTERACT_WITH_DASHBOARD = env.get_bool("ARCOR2_UR_INTERACT_WITH_DASHBOARD", True)
 
 SERVICE_NAME = f"UR Web API ({UR_TYPE})"
+
+
+class CollisionObjectTuple(NamedTuple):
+    model: object_type.Models
+    pose: common.Pose
+
+
+def pose_to_ros_pose(ps: Pose) -> RosPose:
+    rp = RosPose()
+    rp.position.x = ps.position.x
+    rp.position.y = ps.position.y
+    rp.position.z = ps.position.z
+    rp.orientation.x = ps.orientation.x
+    rp.orientation.y = ps.orientation.y
+    rp.orientation.z = ps.orientation.z
+    rp.orientation.w = ps.orientation.w
+
+    return rp
 
 
 def plan_and_execute(
@@ -296,7 +319,8 @@ class State:
 class Globs:
     debug = False
     state: State | None = None
-    # lock: threading.Lock = threading.Lock()
+    collision_objects: dict[str, CollisionObjectTuple] = field(default_factory=dict)
+    scene_started = False  # flag for "Scene service"
 
 
 globs: Globs = Globs()
@@ -323,6 +347,34 @@ moveit_config = (
 ).to_dict()
 
 
+def apply_collision_objects(scene) -> None:
+    assert globs.state
+
+    scene.remove_all_collision_objects()
+
+    for obj_id, obj in globs.collision_objects.items():
+        if not isinstance(obj.model, object_type.Box):
+            continue
+
+        collision_object = CollisionObject()
+        collision_object.header.frame_id = BASE_LINK
+        collision_object.id = obj_id
+
+        box_pose = pose_to_ros_pose(tr.make_pose_rel(globs.state.pose, obj.pose))
+
+        box = SolidPrimitive()
+        box.type = SolidPrimitive.BOX
+        box.dimensions = (obj.model.size_x, obj.model.size_y, obj.model.size_z)
+
+        collision_object.primitives.append(box)
+        collision_object.primitive_poses.append(box_pose)
+        collision_object.operation = CollisionObject.ADD
+
+        scene.apply_collision_object(collision_object)
+
+    scene.current_state.update()
+
+
 def started() -> bool:
     return globs.state is not None
 
@@ -335,6 +387,12 @@ def requires_started(f):
         return f(*args, **kwargs)
 
     return wrapped
+
+
+@app.route("/system/start", methods=["PUT"])  # for compatibility with Scene service
+def put_start_scene() -> RespT:
+    globs.scene_started = True
+    return Response(status=200)
 
 
 @app.route("/state/start", methods=["PUT"])
@@ -362,7 +420,7 @@ def put_start() -> RespT:
     """
 
     if started():
-        raise StartError("Already started.")
+        raise UrGeneral("Already started.")
 
     if not isinstance(request.json, dict):
         raise UrGeneral("Body should be a JSON dict containing Pose.")
@@ -380,10 +438,12 @@ def put_start() -> RespT:
 
     try:
         node.brake_release()
-        node.wait_for_robot_mode({RobotMode.RUNNING, RobotMode.IDLE})
+        # TODO this is somehow broken, not sure why
+        # node.wait_for_robot_mode({RobotMode.RUNNING, RobotMode.IDLE})
         node.load_program()
         node.play()
-        node.wait_for_program_running()
+        # TODO this is somehow broken, not sure why
+        # node.wait_for_program_running()
 
     except Exception:
         node.destroy_node()
@@ -405,6 +465,15 @@ def put_start() -> RespT:
         tool=vgc10,
     )
 
+    with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
+        apply_collision_objects(scene)
+
+    return Response(status=204)
+
+
+@app.route("/system/stop", methods=["PUT"])  # for compatibility with Scene service
+def put_stop_scene() -> RespT:
+    globs.scene_started = False
     return Response(status=204)
 
 
@@ -428,6 +497,9 @@ def put_stop() -> RespT:
                     $ref: WebApiError
     """
 
+    if not started():
+        raise UrGeneral("Not started!")
+
     assert globs.state
 
     globs.state.node.power_off()
@@ -435,6 +507,11 @@ def put_stop() -> RespT:
     globs.state = None
 
     return Response(status=204)
+
+
+@app.route("/system/running", methods=["GET"])  # for compatibility with Scene service
+def get_stated_scene() -> RespT:
+    return jsonify(globs.scene_started)
 
 
 @app.route("/state/started", methods=["GET"])
@@ -461,6 +538,308 @@ def get_started() -> RespT:
     """
 
     return jsonify(started())
+
+
+@app.route("/collisions/box", methods=["PUT"])
+def put_box() -> RespT:
+    """Add or update collision box.
+    ---
+    put:
+        tags:
+            - Collisions
+        description: Add or update collision box.
+        parameters:
+            - name: boxId
+              in: query
+              description: unique box collision ID
+              required: true
+              schema:
+                type: string
+            - name: sizeX
+              in: query
+              schema:
+                type: number
+                format: float
+            - name: sizeY
+              in: query
+              schema:
+                type: number
+                format: float
+            - name: sizeZ
+              in: query
+              schema:
+                type: number
+                format: float
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: Pose
+        responses:
+            204:
+                description: Ok
+            500:
+                description: "Error types: **General**, **SceneGeneral**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
+    """
+
+    if not isinstance(request.json, dict):
+        raise UrGeneral("Body should be a JSON dict containing Pose.")
+
+    args = request.args.to_dict()
+    box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
+    globs.collision_objects[box.id] = CollisionObjectTuple(box, common.Pose.from_dict(humps.decamelize(request.json)))
+
+    if started():
+        assert globs.state
+        with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
+            apply_collision_objects(scene)
+
+    return Response(status=204)
+
+
+@app.route("/collisions/sphere", methods=["PUT"])
+def put_sphere() -> RespT:
+    """Add or update collision sphere.
+    ---
+    put:
+        tags:
+            - Collisions
+        description: Add or update collision sphere.
+        parameters:
+            - name: sphereId
+              in: query
+              description: unique sphere collision ID
+              required: true
+              schema:
+                type: string
+            - name: radius
+              in: query
+              schema:
+                type: number
+                format: float
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: Pose
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    if not isinstance(request.json, dict):
+        raise UrGeneral("Body should be a JSON dict containing Pose.")
+
+    args = humps.decamelize(request.args.to_dict())
+    sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
+    globs.collision_objects[sphere.id] = CollisionObjectTuple(
+        sphere, common.Pose.from_dict(humps.decamelize(request.json))
+    )
+
+    logger.warning("Sphere collision object added but will be ignored as only boxes are supported at the moment.")
+
+    return Response(status=204)
+
+
+@app.route("/collisions/cylinder", methods=["PUT"])
+def put_cylinder() -> RespT:
+    """Add or update collision cylinder.
+    ---
+    put:
+        tags:
+            - Collisions
+        description: Add or update collision cylinder.
+        parameters:
+            - name: cylinderId
+              in: query
+              description: unique cylinder collision ID
+              required: true
+              schema:
+                type: string
+            - name: radius
+              in: query
+              schema:
+                type: number
+                format: float
+            - name: height
+              in: query
+              schema:
+                type: number
+                format: float
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: Pose
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                  schema:
+                    type: string
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    if not isinstance(request.json, dict):
+        raise UrGeneral("Body should be a JSON dict containing Pose.")
+
+    args = humps.decamelize(request.args.to_dict())
+    cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
+    globs.collision_objects[cylinder.id] = CollisionObjectTuple(
+        cylinder, common.Pose.from_dict(humps.decamelize(request.json))
+    )
+
+    logger.warning("Cylinder collision object added but will be ignored as only boxes are supported at the moment.")
+
+    return Response(status=204)
+
+
+@app.route("/collisions/mesh", methods=["PUT"])
+def put_mesh() -> RespT:
+    """Add or update collision mesh.
+    ---
+    put:
+        tags:
+            - Collisions
+        description: Add or update collision mesh.
+        parameters:
+            - name: meshId
+              in: query
+              description: unique mesh collision ID
+              required: true
+              schema:
+                type: string
+            - name: meshFileId
+              in: query
+              schema:
+                type: string
+            - name: meshScaleX
+              in: query
+              schema:
+                type: number
+                format: float
+                default: 1.0
+            - name: meshScaleY
+              in: query
+              schema:
+                type: number
+                format: float
+                default: 1.0
+            - name: meshScaleZ
+              in: query
+              schema:
+                type: number
+                format: float
+                default: 1.0
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    $ref: Pose
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **SceneGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    if not isinstance(request.json, dict):
+        raise UrGeneral("Body should be a JSON dict containing Pose.")
+
+    args = humps.decamelize(request.args.to_dict())
+    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
+    globs.collision_objects[mesh.id] = CollisionObjectTuple(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
+
+    logger.warning("Mesh collision object added but will be ignored as only boxes are supported at the moment.")
+
+    return Response(status=204)
+
+
+@app.route("/collisions/<string:id>", methods=["DELETE"])
+def delete_collision(id: str) -> RespT:
+    """Deletes collision object.
+    ---
+    delete:
+        tags:
+            - Collisions
+        summary: Deletes collision object.
+        parameters:
+            - name: id
+              in: path
+              description: unique ID
+              required: true
+              schema:
+                type: string
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **NotFound**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    try:
+        del globs.collision_objects[id]
+    except KeyError:
+        raise NotFound("Collision not found")
+
+    if started():
+        assert globs.state
+        with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
+            apply_collision_objects(scene)
+
+    return Response(status=200)
+
+
+@app.route("/collisions", methods=["GET"])
+def get_collisions() -> RespT:
+    """Gets collision ids.
+    ---
+    get:
+        tags:
+        - Collisions
+        summary: Gets collision ids.
+        responses:
+            200:
+              description: Success
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      type: string
+            500:
+              description: "Error types: **General**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+
+    return jsonify(list(globs.collision_objects.keys()))
 
 
 @app.route("/joints", methods=["GET"])
@@ -542,35 +921,34 @@ def put_ik() -> RespT:
     logger.debug(f"Got IK request: {ikr}")
 
     with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
-        if not ikr.avoid_collisions:
+        if ikr.avoid_collisions:
+            apply_collision_objects(scene)
+        else:
             scene.remove_all_collision_objects()
 
         scene.current_state.update(force=True)
-
         scene.current_state.joint_positions = {j.name: j.value for j in ikr.start_joints}
+        pose_goal = pose_to_ros_pose(ikr.pose)
 
-        pose_goal = RosPose()
-        pose_goal.position.x = ikr.pose.position.x
-        pose_goal.position.y = ikr.pose.position.y
-        pose_goal.position.z = ikr.pose.position.z
-        pose_goal.orientation.x = ikr.pose.orientation.x
-        pose_goal.orientation.y = ikr.pose.orientation.y
-        pose_goal.orientation.z = ikr.pose.orientation.z
-        pose_goal.orientation.w = ikr.pose.orientation.w
+        try:
+            # Set the robot state and check collisions
+            if not scene.current_state.set_from_ik(PLANNING_GROUP_NAME, pose_goal, TOOL_LINK, timeout=3):
+                raise UrGeneral("Can't get IK!")
 
-        # Set the robot state and check collisions
-        if not scene.current_state.set_from_ik(PLANNING_GROUP_NAME, pose_goal, TOOL_LINK, timeout=3):
-            raise UrGeneral("Can't get IK!")
+            scene.current_state.update()  # required to update transforms
 
-        scene.current_state.update()  # required to update transforms
-
-        if (
-            scene.is_state_colliding(
-                robot_state=scene.current_state, joint_model_group_name=PLANNING_GROUP_NAME, verbose=True
-            )
-            and ikr.avoid_collisions
-        ):
-            raise UrGeneral("State is in collision.")  # TODO IK exception...
+            if (
+                scene.is_state_colliding(
+                    robot_state=scene.current_state, joint_model_group_name=PLANNING_GROUP_NAME, verbose=True
+                )
+                and ikr.avoid_collisions
+            ):
+                raise UrGeneral("State is in collision.")  # TODO IK exception...
+        except UrGeneral:
+            if not ikr.avoid_collisions:
+                # restore collision objects
+                apply_collision_objects(scene)
+            raise
 
         assert len(scene.current_state.joint_positions) == len(globs.state.joints)
 
@@ -652,6 +1030,11 @@ def put_eef_pose() -> RespT:
                 minimum: 0
                 maximum: 5
                 default: 0
+            - in: query
+              name: safe
+              schema:
+                type: boolean
+                default: true
         requestBody:
               content:
                 application/json:
@@ -676,6 +1059,7 @@ def put_eef_pose() -> RespT:
     pose = Pose.from_dict(request.json)
     velocity = float(request.args.get("velocity", default=50.0)) / 100.0
     payload = float(request.args.get("payload", default=0.0))
+    safe = request.args.get("safe", default="true") == "true"
 
     pose = tr.make_pose_rel(globs.state.pose, pose)
 
@@ -691,6 +1075,11 @@ def put_eef_pose() -> RespT:
     pose_goal.pose.position.z = pose.position.z
 
     with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
+        if safe:
+            apply_collision_objects(scene)
+        else:
+            scene.remove_all_collision_objects()
+
         scene.current_state.update(force=True)
         scene.current_state.joint_positions = {j.name: j.value for j in globs.state.joints}
         scene.current_state.update()
@@ -702,7 +1091,6 @@ def put_eef_pose() -> RespT:
     globs.state.node.set_payload(payload)
 
     plan_and_execute(globs.state.moveitpy, globs.state.ur_manipulator, logger)
-
     return Response(status=204)
 
 

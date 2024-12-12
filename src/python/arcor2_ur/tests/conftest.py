@@ -34,7 +34,7 @@ def start_processes(request) -> Iterator[Urls]:
     pypath = ":".join(sys.path)
     my_env["PYTHONPATH"] = pypath
 
-    kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
+    kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT, "start_new_session": True}
 
     processes.append(
         sp.Popen(  # type: ignore
@@ -61,6 +61,7 @@ def start_processes(request) -> Iterator[Urls]:
     my_env["ARCOR2_UR_INTERACT_WITH_DASHBOARD"] = "false"
     my_env["ARCOR2_UR_TYPE"] = ur_type
     my_env["PEX_EXTRA_SYS_PATH"] = "/opt/ros/jazzy/lib/python3.12/site-packages"
+    my_env["ARCOR2_REST_API_DEBUG"] = "true"
 
     robot_proc = sp.Popen(["python", "src.python.arcor2_ur.scripts/ur.pex"], **kwargs)  # type: ignore
 
