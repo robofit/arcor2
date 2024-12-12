@@ -1,6 +1,6 @@
 services:
   ur-demo-robot-api:
-    image: arcor2/arcor2_ur:1.4.1
+    image: arcor2/arcor2_ur:1.5.0
     container_name: ur-demo-robot-api
     ports:
       - "5012:5012"
@@ -26,8 +26,6 @@ services:
         condition: service_healthy
       ur-demo-execution:
         condition: service_started
-      ur-demo-scene:
-        condition: service_healthy
       ur-demo-calibration:
         condition: service_healthy
     ports:
@@ -38,7 +36,7 @@ services:
     environment:
       - ARCOR2_PROJECT_SERVICE_URL=http://ur-demo-project:10000
       - ARCOR2_ASSET_SERVICE_URL=http://ur-demo-asset:10040
-      - ARCOR2_SCENE_SERVICE_URL=http://ur-demo-scene:5013
+      - ARCOR2_SCENE_SERVICE_URL=http://ur-demo-robot-api:5012
       - ARCOR2_EXECUTION_URL=ws://ur-demo-execution:6790
       - ARCOR2_BUILD_URL=http://ur-demo-build:5008
       - ARCOR2_CALIBRATION_URL=http://ur-demo-calibration:5014
@@ -63,7 +61,7 @@ services:
     networks:
       - ur-demo-network
     environment:
-      - ARCOR2_SCENE_SERVICE_URL=http://ur-demo-scene:5013
+      - ARCOR2_SCENE_SERVICE_URL=http://ur-demo-robot-api:5012
       - ARCOR2_PROJECT_PATH=/root/project
     volumes:
       - ur-demo-execution:/root/project
@@ -97,15 +95,6 @@ services:
       - ARCOR2_CALIBRATION_MOCK=false
     volumes:
       - ./calibration.yaml:/root/calibration.yaml
-
-  ur-demo-scene:
-    image: arcor2/arcor2_scene:1.1.0
-    container_name: ur-demo-scene
-    networks:
-      - ur-demo-network
-    ports:
-      - "5013:5013"
-
   ur-demo-asset:
     image: registry.gitlab.com/kinalisoft/test-it-off/asset:2.0.2
     container_name: "ur-demo-asset"

@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.5.0] - 2024-12-16
+
+### Changed
+
+- Checking for robot's state disabled as it was not working reliable.
+- Added Scene functions - ability to manage collision objects. Please note that so far, only boxes are considered. Other types can be added, but will be ignored.
+
 ## [1.4.1] - 2024-11-21
 
 ### Fixed

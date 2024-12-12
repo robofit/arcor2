@@ -2,7 +2,9 @@
 
 The service communicates over ROS 2 and MoveItPy with Universal Robots and provides simple REST API to control the robot and allow integration into ARCOR2.
 
-The service is tested with Ubuntu 24.04, ROS 2 Jazzy and the UR5e robot - however, it should be possible to use it with any robot supported by the [ROS 2 driver](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/tree/main). It expects that the `ur_control.launch.py` is already running (which is handled in the [docker image](https://github.com/robofit/arcor2/blob/master/src/docker/arcor2_ur/start.sh)).
+It is tested with Ubuntu 24.04, ROS 2 Jazzy and the UR5e robot - however, it should be possible to use it with any robot supported by the [ROS 2 driver](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/tree/main). It expects that the `ur_control.launch.py` is already running (which is handled in the [docker image](https://github.com/robofit/arcor2/blob/master/src/docker/arcor2_ur/start.sh)).
+
+This service also offers API for managing collision objects. The API is compatible with `arcor2_scene`, meaning that the standard client `arcor2.clients.scene_service` can be used, and it is also fully compatible with ARServer. Typically, in ARCOR2 architecture, this would be done by a separate service. This solution was chosen for simplicity. In the future, there might be something like `arcor2_scene_ros2`, which would enable managing collision objects for multiple robots (which could be just a proxy for forwarding collision object requests to individual ROS-based robots, if they will use separate ROS domains). 
 
 ## Setup
  
