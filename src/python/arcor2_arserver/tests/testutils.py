@@ -32,8 +32,12 @@ def log_proc_output(out: tuple[bytes, bytes]) -> None:
 
 def finish_processes(processes) -> None:
     for proc in processes:
-        proc.terminate()
-        proc.wait()
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except sp.TimeoutExpired:
+                proc.kill()
         log_proc_output(proc.communicate())
 
 

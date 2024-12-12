@@ -10,6 +10,10 @@ class UrGeneral(UrException):
     description = General.description
 
 
+class UrCollisions(UrException):
+    description = "Something regarding collision objects went wrong"
+
+
 class NotFound(UrException):
     description = "Occurs when something is not found"
 

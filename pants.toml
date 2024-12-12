@@ -63,7 +63,7 @@ install_from_resolve = "setuptools"
 
 [test]
 use_coverage = false
-extra_env_vars = ["PYTHONDEVMODE=1", "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/lib", "HOME=/tmp"]  # "PYTHONWARNINGS=error" not useable due to DeprecationWarning in networkx-2.2
+extra_env_vars = ["PYTHONDEVMODE=1", "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib", "HOME=/tmp"]  # "PYTHONWARNINGS=error" not useable due to DeprecationWarning in networkx-2.2
 timeout_default = 600
 
 [python-infer]
