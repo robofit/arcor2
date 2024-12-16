@@ -41,7 +41,7 @@ COPY build-support/install_ur_dependencies.sh /root/install_ur_dependencies.sh
 RUN apt-get update \
         && /root/install_ur_dependencies.sh \
         && apt-get install -y -q --no-install-recommends \
-        libglib2.0-0=2.80.0-6ubuntu3.1 \
+        libglib2.0-0=2.80.0-6ubuntu3.2 \
         libgomp1=14.2.0-4ubuntu2~24.04 libusb-1.0-0=2:1.0.27-1 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
