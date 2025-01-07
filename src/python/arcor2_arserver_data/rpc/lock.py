@@ -7,8 +7,8 @@ from arcor2.data.rpc.common import RPC
 
 
 class UpdateType(StrEnum):
-    TREE: str = "TREE"
-    OBJECT: str = "OBJECT"
+    TREE = "TREE"
+    OBJECT = "OBJECT"
 
 
 # ----------------------------------------------------------------------------------------------------------------------

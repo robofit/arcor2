@@ -1,6 +1,6 @@
 import asyncio
 
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2.cached import UpdateableCachedScene
 from arcor2.exceptions import Arcor2Exception
@@ -17,7 +17,7 @@ from arcor2_arserver_data.rpc.camera import CalibrateCamera, CameraColorImage, C
 from arcor2_calibration_data import client as calib_client
 
 
-async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> CameraColorImage.Response:
+async def camera_color_image_cb(req: CameraColorImage.Request, ui: ServerConnection) -> CameraColorImage.Response:
     glob.LOCK.scene_or_exception()
 
     await ensure_write_locked(req.args.id, glob.USERS.user_name(ui))
@@ -30,7 +30,7 @@ async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> 
 
 
 async def camera_color_parameters_cb(
-    req: CameraColorParameters.Request, ui: WsClient
+    req: CameraColorParameters.Request, ui: ServerConnection
 ) -> CameraColorParameters.Response:
     glob.LOCK.scene_or_exception()
 
@@ -64,7 +64,7 @@ async def calibrate_camera(scene: UpdateableCachedScene, camera: Camera) -> None
     await notif.broadcast_event(ProcessState(ProcessState.Data(CAMERA_CALIB, ProcessState.Data.StateEnum.Finished)))
 
 
-async def calibrate_camera_cb(req: CalibrateCamera.Request, ui: WsClient) -> None:
+async def calibrate_camera_cb(req: CalibrateCamera.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
 
     ensure_scene_started()

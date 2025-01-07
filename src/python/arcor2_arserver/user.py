@@ -1,7 +1,7 @@
 import asyncio
 
+from websockets.asyncio.server import ServerConnection
 from websockets.exceptions import WebSocketException
-from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.exceptions import Arcor2Exception
 
@@ -14,9 +14,9 @@ class Users:
     __slots__ = ("_interfaces", "_users_ui", "_ui_users")
 
     def __init__(self) -> None:
-        self._interfaces: set[WsClient] = set()
-        self._users_ui: dict[str, WsClient] = {}
-        self._ui_users: dict[WsClient, str] = {}
+        self._interfaces: set[ServerConnection] = set()
+        self._users_ui: dict[str, ServerConnection] = {}
+        self._ui_users: dict[ServerConnection, str] = {}
 
     def _assert_consistency(self) -> None:
         assert list(self._ui_users.keys()) == list(self._users_ui.values())
@@ -24,13 +24,13 @@ class Users:
         assert set(self._ui_users).issubset(self._interfaces)
 
     @property
-    def interfaces(self) -> set[WsClient]:
+    def interfaces(self) -> set[ServerConnection]:
         return self._interfaces
 
-    def add_interface(self, ui: WsClient) -> None:
+    def add_interface(self, ui: ServerConnection) -> None:
         self._interfaces.add(ui)
 
-    async def login(self, user_name: str, ui: WsClient) -> None:
+    async def login(self, user_name: str, ui: ServerConnection) -> None:
         self._assert_consistency()
 
         if not user_name:
@@ -56,7 +56,7 @@ class Users:
 
         self._assert_consistency()
 
-    def logout(self, ui: WsClient) -> None:
+    def logout(self, ui: ServerConnection) -> None:
         """Removes ui from known interfaces and logs a user out (if logged in).
 
         :param ui:
@@ -79,7 +79,7 @@ class Users:
     def user_names(self) -> set[str]:
         return set(self._users_ui)
 
-    def user_name(self, ui: WsClient) -> str:
+    def user_name(self, ui: ServerConnection) -> str:
         self._assert_consistency()
 
         try:

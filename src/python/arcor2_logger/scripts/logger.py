@@ -6,7 +6,7 @@ import websockets
 from aiologger.levels import LogLevel
 from aiorun import run
 from dataclasses_jsonschema import ValidationError
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import env
 from arcor2.exceptions import Arcor2Exception
@@ -23,7 +23,7 @@ logging_level = Level.from_string(os.getenv("ARCOR2_LOGGER_LEVEL", "info"))
 # ...but for now this is much more simpler and just enough
 
 
-async def handle_requests(websocket: WsClient, path: str) -> None:
+async def handle_requests(websocket: ServerConnection) -> None:
     assert not sys.stdout.closed  # closed stdout was problem when creating and shutting down logger for each client
 
     try:
@@ -75,7 +75,7 @@ async def handle_requests(websocket: WsClient, path: str) -> None:
 
 
 async def aio_main() -> None:
-    await websockets.server.serve(
+    await websockets.asyncio.server.serve(
         handle_requests, "localhost", port_from_url(os.getenv("ARCOR2_LOGGER_URL", "ws://0.0.0.0:8765"))
     )
     await logger.info(f"Logger service {version()} started. Logging level is {logging_level.name}.")

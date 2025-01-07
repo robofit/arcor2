@@ -57,7 +57,8 @@ def start_processes(request) -> Iterator[None]:
         try:
             processes = []
             my_env = os.environ.copy()
-            kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
+            my_env["ARCOR2_REST_API_DEBUG"] = "true"
+            kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT, "start_new_session": True}
 
             project_port = find_free_port()
             project_url = f"http://0.0.0.0:{project_port}"
@@ -104,9 +105,9 @@ def start_processes(request) -> Iterator[None]:
             )
 
             check_health("Build", build_url)
-        except CheckHealthException:
+        except CheckHealthException as e:
             finish_processes(processes)
-            raise
+            pytest.exit(str(e), returncode=2)
 
         if additional_deps:
             for dep in additional_deps:
@@ -115,7 +116,7 @@ def start_processes(request) -> Iterator[None]:
                 ret = add_proc.communicate()
                 if add_proc.returncode != 0:
                     log_proc_output(ret)
-                    raise Exception(f"Additional dependency {dep} failed.")
+                    pytest.exit(f"Additional dependency {dep} failed.", returncode=2)
 
         _arserver_port = find_free_port()
         my_env["ARCOR2_ARSERVER_PORT"] = str(_arserver_port)
@@ -132,7 +133,7 @@ def start_processes(request) -> Iterator[None]:
 
         if arserver_proc.poll():
             finish_processes(processes)
-            raise Exception("ARServer died.")
+            pytest.exit("ARServer died.", returncode=2)
 
         yield None
 

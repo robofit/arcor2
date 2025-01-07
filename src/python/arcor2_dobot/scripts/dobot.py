@@ -26,8 +26,8 @@ logger = get_logger(__name__)
 
 
 class DobotModels(StrEnum):
-    MAGICIAN: str = "magician"
-    M1: str = "m1"
+    MAGICIAN = "magician"
+    M1 = "m1"
 
 
 URL = os.getenv("ARCOR2_DOBOT_URL", "http://localhost:5018")

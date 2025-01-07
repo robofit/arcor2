@@ -36,6 +36,12 @@ python_requirements(
 )
 
 python_requirements(
+    name="black",
+    source="black-requirements.txt",
+    resolve="black",
+)
+
+python_requirements(
     name="setuptools",
     source="setuptools-requirements.txt",
     resolve="setuptools",

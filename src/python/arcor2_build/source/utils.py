@@ -102,6 +102,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
                 decorator_list=[],
                 returns=NameConstant(value=None, kind=None),
                 type_comment=None,
+                type_params=[],
             ),
             If(
                 test=Compare(
@@ -265,9 +266,11 @@ def global_action_points_class(project: CachedProject) -> str:
                         decorator_list=[],
                         returns=None,
                         type_comment=None,
+                        type_params=[],
                     )
                 ],
                 decorator_list=[],
+                type_params=[],
             )
 
             for joints in project.ap_joints(ap.id):
@@ -297,6 +300,7 @@ def global_action_points_class(project: CachedProject) -> str:
                         decorator_list=[Name(id="property", ctx=Load())],
                         returns=Name(id=ProjectRobotJoints.__name__, ctx=Load()),
                         type_comment=None,
+                        type_params=[],
                     )
                 )
 
@@ -357,9 +361,11 @@ def global_action_points_class(project: CachedProject) -> str:
                         decorator_list=[],
                         returns=None,
                         type_comment=None,
+                        type_params=[],
                     )
                 ],
                 decorator_list=[],
+                type_params=[],
             )
 
             for ori in project.ap_orientations(ap.id):
@@ -389,6 +395,7 @@ def global_action_points_class(project: CachedProject) -> str:
                         decorator_list=[Name(id="property", ctx=Load())],
                         returns=Name(id=Pose.__name__, ctx=Load()),
                         type_comment=None,
+                        type_params=[],
                     )
                 )
 
@@ -429,9 +436,11 @@ def global_action_points_class(project: CachedProject) -> str:
                     decorator_list=[],
                     returns=None,
                     type_comment=None,
+                    type_params=[],
                 )
             ],
             decorator_list=[],
+            type_params=[],
         )
 
         # add copy property for position
@@ -459,6 +468,7 @@ def global_action_points_class(project: CachedProject) -> str:
                 decorator_list=[Name(id="property", ctx=Load())],
                 returns=Name(id=Position.__name__, ctx=Load()),
                 type_comment=None,
+                type_params=[],
             )
         )
 
@@ -498,9 +508,11 @@ def global_action_points_class(project: CachedProject) -> str:
                 decorator_list=[],
                 returns=None,
                 type_comment=None,
+                type_params=[],
             )
         ],
         decorator_list=[],
+        type_params=[],
     )
 
     tree.body.append(aps_cls_def)

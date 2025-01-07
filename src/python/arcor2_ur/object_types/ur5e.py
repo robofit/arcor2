@@ -25,9 +25,9 @@ class Vacuum(JsonSchemaMixin):
 
 
 class VacuumChannel(StrEnum):
-    A: str = "a"
-    B: str = "b"
-    BOTH: str = "both"
+    A = "a"
+    B = "b"
+    BOTH = "both"
 
 
 class Ur5e(Robot):

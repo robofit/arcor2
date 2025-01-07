@@ -46,7 +46,7 @@ def start_processes(request) -> Iterator[Urls]:
 
     if dobot_proc.poll():
         finish_processes(processes)
-        raise Exception("Dobot service died.")
+        pytest.exit("Dobot service died.", returncode=2)
 
     check_health("Dobot", dobot_url)
 

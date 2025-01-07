@@ -10,7 +10,7 @@ log = true
 use_coverage = true
 
 [coverage-py]
-interpreter_constraints = ["==3.11.*"]
+interpreter_constraints = ["==3.12.*"]
 report = ["xml"]
 global_report = true
 

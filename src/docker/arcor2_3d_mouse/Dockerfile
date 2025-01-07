@@ -1,14 +1,14 @@
 
 
-FROM python:3.11.10-bookworm as deps
+FROM python:3.12.8-bookworm as deps
 COPY src.python.arcor2_3d_mouse.scripts/mouse_launcher.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.11.10-bookworm as srcs
+FROM python:3.12.8-bookworm as srcs
 COPY src.python.arcor2_3d_mouse.scripts/mouse_launcher.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.11.10-bookworm
+FROM python:3.12.8-bookworm
 
 # curl is for healthcheck
 RUN apt-get update \

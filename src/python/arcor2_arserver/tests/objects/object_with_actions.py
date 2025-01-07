@@ -5,9 +5,9 @@ from arcor2.object_types.abstract import Generic, Settings
 
 
 class MyEnum(IntEnum):
-    ONE: int = 1
-    TWO: int = 2
-    THREE: int = 3
+    ONE = 1
+    TWO = 2
+    THREE = 3
 
 
 class ObjectWithActions(Generic):

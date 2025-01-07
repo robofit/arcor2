@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 from typing import Any
 
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2.data import events
 from arcor2.object_types.abstract import Generic
@@ -32,7 +32,7 @@ ACTION_STATE_BEFORE: None | events.ActionStateBefore.Data = None
 
 TEMPORARY_PACKAGE: bool = False
 
-RegisteredUiDict = defaultdict[str, set[WsClient]]
+RegisteredUiDict = defaultdict[str, set[ServerConnection]]
 
 ROBOT_JOINTS_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs
 ROBOT_EEF_REGISTERED_UIS: RegisteredUiDict = defaultdict(lambda: set())  # robot, UIs

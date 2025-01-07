@@ -95,7 +95,7 @@ class VGC10:
 
         modeval = 0x0100  # grip
         # command = 0x00ff  # 100 % vacuum
-        commands: list[bytes | int] = [modeval + vac, modeval + vac]
+        commands: list[int] = [modeval + vac, modeval + vac]
         try:
             result = self._client.write_registers(address=0, values=commands, slave=65)
         except ModbusException as exc:
@@ -107,7 +107,7 @@ class VGC10:
         """Releases all vacuums."""
         modeval = 0x0000  # release
         command = 0x0000  # 0 % vacuum
-        commands: list[bytes | int] = [modeval + command, modeval + command]
+        commands: list[int] = [modeval + command, modeval + command]
 
         try:
             result = self._client.write_registers(address=0, values=commands, slave=65)

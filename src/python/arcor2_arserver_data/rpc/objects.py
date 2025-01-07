@@ -179,9 +179,9 @@ class UpdateObjectPoseUsingRobot(RPC):
         @dataclass
         class Args(IdArgs):
             class PivotEnum(StrEnum):
-                TOP: str = "top"
-                MIDDLE: str = "middle"
-                BOTTOM: str = "bottom"
+                TOP = "top"
+                MIDDLE = "middle"
+                BOTTOM = "bottom"
 
             robot: RobotArg
             pivot: PivotEnum = PivotEnum.MIDDLE

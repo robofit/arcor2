@@ -1,5 +1,5 @@
 [flake8]
 max-line-length = 120
 application-import-names = arcor2,arcor2_arserver,arcor2_arserver_data,arcor2_build,arcor2_build_data,arcor2_calibration,arcor2_execution,arcor2_execution_data,arcor2_fit_demo,arcor2_kinali,arcor2_mocks
-ignore = B306, E203, E231, W503
+ignore = B306, E203, E231, W503, E226, E704
 known-modules = numpy-quaternion:[quaternion],lru-dict:[lru]

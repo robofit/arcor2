@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene
@@ -47,7 +47,7 @@ class AimedObject:
 _objects_being_aimed: dict[str, AimedObject] = {}  # key == user_name
 
 
-async def object_aiming_start_cb(req: srpc.o.ObjectAimingStart.Request, ui: WsClient) -> None:
+async def object_aiming_start_cb(req: srpc.o.ObjectAimingStart.Request, ui: ServerConnection) -> None:
     """Starts the aiming process for a selected object (with mesh) and robot.
 
     Only possible when the scene is started/online.
@@ -124,7 +124,7 @@ async def object_aiming_prune() -> None:
         _objects_being_aimed.pop(td, None)
 
 
-async def object_aiming_check(ui: WsClient) -> AimingTuple:
+async def object_aiming_check(ui: ServerConnection) -> AimingTuple:
     """Gets object that is being aimed by the user or exception.
 
     :param ui:
@@ -144,7 +144,7 @@ async def object_aiming_check(ui: WsClient) -> AimingTuple:
     return AimingTuple(fo, user_name)
 
 
-async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: WsClient) -> None:
+async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: ServerConnection) -> None:
     """Cancel aiming of the object.
 
     :param req:
@@ -163,7 +163,7 @@ async def object_aiming_cancel_cb(req: srpc.o.ObjectAimingCancel.Request, ui: Ws
 
 
 async def object_aiming_add_point_cb(
-    req: srpc.o.ObjectAimingAddPoint.Request, ui: WsClient
+    req: srpc.o.ObjectAimingAddPoint.Request, ui: ServerConnection
 ) -> srpc.o.ObjectAimingAddPoint.Response:
     scene = glob.LOCK.scene_or_exception()
     fo, user_name = await object_aiming_check(ui)
@@ -200,7 +200,7 @@ async def object_aiming_add_point_cb(
     return r
 
 
-async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClient) -> None:
+async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: ServerConnection) -> None:
     """Calls scene service to get a new pose for the object.
 
     In case of success, robot and object are kept locked, unlocking is responsibility of ui.
@@ -257,7 +257,7 @@ async def object_aiming_done_cb(req: srpc.o.ObjectAimingDone.Request, ui: WsClie
     return None
 
 
-async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) -> None:
+async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(glob.LOCK.SpecialValues.ADDING_OBJECT, glob.USERS.user_name(ui)):
         meta = req.args
 
@@ -322,7 +322,7 @@ async def new_object_type_cb(req: srpc.o.NewObjectType.Request, ui: WsClient) ->
         return None
 
 
-async def update_object_model_cb(req: srpc.o.UpdateObjectModel.Request, ui: WsClient) -> None:
+async def update_object_model_cb(req: srpc.o.UpdateObjectModel.Request, ui: ServerConnection) -> None:
     can_modify_scene()
     glob.LOCK.scene_or_exception(True)  # only allow while editing scene
 
@@ -358,11 +358,13 @@ async def update_object_model_cb(req: srpc.o.UpdateObjectModel.Request, ui: WsCl
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-async def get_object_actions_cb(req: srpc.o.GetActions.Request, ui: WsClient) -> srpc.o.GetActions.Response:
+async def get_object_actions_cb(req: srpc.o.GetActions.Request, ui: ServerConnection) -> srpc.o.GetActions.Response:
     return srpc.o.GetActions.Response(data=list(glob.OBJECT_TYPES[req.args.type].actions.values()))
 
 
-async def get_object_types_cb(req: srpc.o.GetObjectTypes.Request, ui: WsClient) -> srpc.o.GetObjectTypes.Response:
+async def get_object_types_cb(
+    req: srpc.o.GetObjectTypes.Request, ui: ServerConnection
+) -> srpc.o.GetObjectTypes.Response:
     return srpc.o.GetObjectTypes.Response(data=[obj.meta for obj in glob.OBJECT_TYPES.values()])
 
 
@@ -372,7 +374,7 @@ def check_scene_for_object_type(scene: CachedScene, object_type: str) -> None:
 
 
 async def delete_object_type_cb(
-    req: srpc.o.DeleteObjectTypes.Request, ui: WsClient
+    req: srpc.o.DeleteObjectTypes.Request, ui: ServerConnection
 ) -> srpc.o.DeleteObjectTypes.Response:
     async def _delete_model(obj_type: ObjectTypeData) -> None:
         # do not care so much if delete_model fails
@@ -476,7 +478,7 @@ def check_override(
     return obj
 
 
-async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None:
+async def add_override_cb(req: srpc.o.AddOverride.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -499,7 +501,7 @@ async def add_override_cb(req: srpc.o.AddOverride.Request, ui: WsClient) -> None
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -> None:
+async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -521,7 +523,7 @@ async def update_override_cb(req: srpc.o.UpdateOverride.Request, ui: WsClient) -
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -> None:
+async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -545,7 +547,9 @@ async def delete_override_cb(req: srpc.o.DeleteOverride.Request, ui: WsClient) -
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-async def object_type_usage_cb(req: srpc.o.ObjectTypeUsage.Request, ui: WsClient) -> srpc.o.ObjectTypeUsage.Response:
+async def object_type_usage_cb(
+    req: srpc.o.ObjectTypeUsage.Request, ui: ServerConnection
+) -> srpc.o.ObjectTypeUsage.Response:
     resp = srpc.o.ObjectTypeUsage.Response()
     resp.data = set()  # mypy does not recognize it correctly with Response(data=set())
 

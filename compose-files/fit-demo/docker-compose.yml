@@ -186,7 +186,7 @@ services:
         - "10040:10040"
 
   fit-demo-project:
-    image: registry.gitlab.com/kinalisoft/test-it-off/project:2.0.2
+    image: registry.gitlab.com/kinalisoft/test-it-off/project:2.2.0
     container_name: "fit-demo-project"
     ports:
       - "10000-10001:10000-10001"
@@ -200,7 +200,7 @@ services:
       - fit-demo-asset-network
 
   fit-demo-nginx:
-    image: nginx:1.27.1
+    image: nginx:1.27.3
     container_name: "fit-demo-nginx"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf

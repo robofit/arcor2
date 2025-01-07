@@ -16,10 +16,10 @@ Common stuff
 @dataclass
 class Event(JsonSchemaMixin):
     class Type(common.StrEnum):
-        ADD: str = "add"
-        UPDATE: str = "update"
-        REMOVE: str = "remove"
-        UPDATE_BASE: str = "update_base"
+        ADD = "add"
+        UPDATE = "update"
+        REMOVE = "remove"
+        UPDATE_BASE = "update_base"
 
     event: str = field(init=False)
     change_type: Optional[Type] = field(init=False)
@@ -36,9 +36,9 @@ class Notification(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         class Level(common.StrEnum):
-            INFO: str = "Info"
-            WARN: str = "Warn"
-            ERROR: str = "Error"
+            INFO = "Info"
+            WARN = "Warn"
+            ERROR = "Error"
 
         message: str
         level: Level
@@ -72,14 +72,14 @@ class PackageState(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         class StateEnum(Enum):
-            STARTED: str = "started"  # started, but not fully running yet
-            RUNNING: str = "running"
-            STOPPING: str = "stopping"  # it may take some time to stop the package
-            STOPPED: str = "stopped"
-            PAUSING: str = "pausing"  # it may take some time to pause the package
-            PAUSED: str = "paused"
-            RESUMING: str = "resuming"
-            UNDEFINED: str = "undefined"
+            STARTED = "started"  # started, but not fully running yet
+            RUNNING = "running"
+            STOPPING = "stopping"  # it may take some time to stop the package
+            STOPPED = "stopped"
+            PAUSING = "pausing"  # it may take some time to pause the package
+            PAUSED = "paused"
+            RESUMING = "resuming"
+            UNDEFINED = "undefined"
 
         state: StateEnum = StateEnum.UNDEFINED
         package_id: Optional[str] = None

@@ -46,8 +46,8 @@ call_main = """if __name__ == '__main__':
 
 
 class TestEnum(StrEnum):
-    CLASS1: str = "1"
-    CLASS2: str = "2"
+    CLASS1 = "1"
+    CLASS2 = "2"
 
 
 class Test(Generic):

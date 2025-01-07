@@ -35,6 +35,7 @@ def new_object_type(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> AST:
             )
         ],
         decorator_list=[],
+        type_params=[],
     )
 
     # TODO add docstring with description (if provided)

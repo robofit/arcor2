@@ -16,9 +16,9 @@ from arcor2_runtime.exceptions import print_exception
 
 
 class Commands(StrEnum):
-    PAUSE: str = "p"
-    RESUME: str = "r"
-    STEP: str = "s"
+    PAUSE = "p"
+    RESUME = "r"
+    STEP = "s"
 
 
 ACTION_NAME_ID_MAPPING_ATTR = "_action_name_id_mapping"

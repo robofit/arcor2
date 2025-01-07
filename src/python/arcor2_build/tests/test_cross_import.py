@@ -32,7 +32,7 @@ def check_health(service_name: str, service_url: str, timeout: int = 60) -> None
             pass
         time.sleep(1)
     else:
-        raise Exception(f"{service_name} service at {service_url} is not responding.")
+        pytest.exit(f"{service_name} service at {service_url} is not responding.", returncode=2)
 
 
 @pytest.fixture

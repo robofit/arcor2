@@ -1,5 +1,4 @@
 python_tests(
-    interpreter_constraints=["==3.11.*"],
     runtime_package_dependencies=[
         "src/python/arcor2/scripts:upload_builtin_objects",
         "src/python/arcor2_mocks/scripts:mock_asset",

@@ -1,6 +1,6 @@
 import asyncio
 
-from websockets.server import WebSocketServerProtocol
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import ws_server
 from arcor2.data import events
@@ -16,5 +16,5 @@ async def broadcast_event(event: events.Event) -> None:
         await asyncio.gather(*[ws_server.send_json_to_client(intf, message) for intf in glob.USERS.interfaces])
 
 
-async def event(interface: WebSocketServerProtocol, event: events.Event) -> None:
+async def event(interface: ServerConnection, event: events.Event) -> None:
     await ws_server.send_json_to_client(interface, event.to_json())

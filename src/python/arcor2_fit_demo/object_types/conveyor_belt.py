@@ -11,13 +11,13 @@ from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class Direction(StrEnum):
-    LEFT: str = "left"
-    RIGHT: str = "right"
+    LEFT = "left"
+    RIGHT = "right"
 
 
 @dataclass
 class ConveyorBeltSettings(UrlSettings):
-    url: str = "http://fit-demo-dobot-magician:5018"
+    url = "http://fit-demo-dobot-magician:5018"
 
 
 class ConveyorBelt(FitCommonMixin, CollisionObject):

@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 import aiofiles
 import websockets
 from aiofiles import tempfile
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.client import connect
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import helpers as hlp
 from arcor2 import rest
@@ -118,7 +119,7 @@ async def build_and_upload_package(project_id: str, package_name: str) -> str:
     return package_id
 
 
-async def manager_request(req: rpc.common.RPC.Request, ui: None | WsClient = None) -> rpc.common.RPC.Response:
+async def manager_request(req: rpc.common.RPC.Request, ui: None | ServerConnection = None) -> rpc.common.RPC.Response:
     assert req.id not in MANAGER_RPC_RESPONSES
 
     MANAGER_RPC_RESPONSES[req.id] = RespQueue(maxsize=1)
@@ -129,29 +130,26 @@ async def manager_request(req: rpc.common.RPC.Request, ui: None | WsClient = Non
 
 
 async def project_manager_client(handle_manager_incoming_messages) -> None:
-    while True:
-        logger.info("Attempting connection to manager...")
-
+    async for manager_client in connect(EXE_URL):
         try:
-            async with websockets.connect(EXE_URL) as manager_client:
-                logger.info("Connected to manager.")
+            logger.info("Connected to manager.")
 
-                future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
+            future = asyncio.ensure_future(handle_manager_incoming_messages(manager_client))
 
-                while True:
-                    if future.done():
-                        break
+            while True:
+                if future.done():
+                    break
 
-                    try:
-                        msg = await asyncio.wait_for(MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
-                    except asyncio.TimeoutError:
-                        continue
+                try:
+                    msg = await asyncio.wait_for(MANAGER_RPC_REQUEST_QUEUE.get(), 1.0)
+                except asyncio.TimeoutError:
+                    continue
 
-                    try:
-                        await manager_client.send(msg.to_json())
-                    except websockets.exceptions.ConnectionClosed:
-                        await MANAGER_RPC_REQUEST_QUEUE.put(msg)
-                        break
-        except ConnectionRefusedError as e:
+                try:
+                    await manager_client.send(msg.to_json())
+                except websockets.exceptions.ConnectionClosed:
+                    await MANAGER_RPC_REQUEST_QUEUE.put(msg)
+                    break
+        except websockets.exceptions.ConnectionClosed as e:
             logger.error(e)
-            await asyncio.sleep(delay=1.0)
+            continue

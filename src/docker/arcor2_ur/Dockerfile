@@ -1,16 +1,16 @@
-FROM ubuntu:noble-20241011 AS deps
+FROM ubuntu:noble-20241118.1 AS deps
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2
 RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=deps --compile /bin/app
 
-FROM ubuntu:noble-20241011 AS srcs
+FROM ubuntu:noble-20241118.1 AS srcs
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
     python3=3.12.3-0ubuntu2
 RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM ubuntu:noble-20241011
+FROM ubuntu:noble-20241118.1
 
 ARG DEBIAN_FRONTEND=noninteractive
 

@@ -99,8 +99,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> None:
-    ...
+) -> None: ...
 
 
 # single value-returning overloads
@@ -115,8 +114,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> Primitive:
-    ...
+) -> Primitive: ...
 
 
 @overload
@@ -130,8 +128,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> DataClass:
-    ...
+) -> DataClass: ...
 
 
 @overload
@@ -145,8 +142,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> BytesIO:
-    ...
+) -> BytesIO: ...
 
 
 # list-returning overloads
@@ -161,8 +157,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> list[Primitive]:
-    ...
+) -> list[Primitive]: ...
 
 
 @overload
@@ -176,8 +171,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> list[DataClass]:
-    ...
+) -> list[DataClass]: ...
 
 
 @overload
@@ -191,8 +185,7 @@ def call(
     raw_params: bool = False,
     files: OptFiles = None,
     timeout: OptTimeout = None,
-) -> list[BytesIO]:
-    ...
+) -> list[BytesIO]: ...
 
 
 def call(

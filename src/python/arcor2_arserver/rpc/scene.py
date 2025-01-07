@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import quaternion
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import helpers as hlp
 from arcor2.cached import UpdateableCachedScene
@@ -93,7 +93,7 @@ async def managed_scene(scene_id: str, make_copy: bool = False) -> AsyncGenerato
             asyncio.ensure_future(storage.update_scene(scene))
 
 
-async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
+async def new_scene_cb(req: srpc.s.NewScene.Request, ui: ServerConnection) -> None:
     """Creates and opens a new scene on the server. Fails if any scene is open
     or if scene id/name already exists.
 
@@ -126,7 +126,7 @@ async def new_scene_cb(req: srpc.s.NewScene.Request, ui: WsClient) -> None:
         return None
 
 
-async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
+async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: ServerConnection) -> None:
     """Closes scene on the server.
 
     :param req:
@@ -157,7 +157,7 @@ async def close_scene_cb(req: srpc.s.CloseScene.Request, ui: WsClient) -> None:
         asyncio.ensure_future(notify_scene_closed(scene_id))
 
 
-async def save_scene_cb(req: srpc.s.SaveScene.Request, ui: WsClient) -> None:
+async def save_scene_cb(req: srpc.s.SaveScene.Request, ui: ServerConnection) -> None:
     async with glob.LOCK.get_lock(req.dry_run):
         scene = glob.LOCK.scene_or_exception()
 
@@ -171,7 +171,7 @@ async def save_scene_cb(req: srpc.s.SaveScene.Request, ui: WsClient) -> None:
         return None
 
 
-async def open_scene_cb(req: srpc.s.OpenScene.Request, ui: WsClient) -> None:
+async def open_scene_cb(req: srpc.s.OpenScene.Request, ui: ServerConnection) -> None:
     async with glob.LOCK.get_lock():
         if glob.PACKAGE_STATE.state in PackageState.RUN_STATES:
             raise Arcor2Exception("Can't open scene while package runs.")
@@ -189,7 +189,7 @@ async def open_scene_cb(req: srpc.s.OpenScene.Request, ui: WsClient) -> None:
         return None
 
 
-async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s.ListScenes.Response:
+async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: ServerConnection) -> srpc.s.ListScenes.Response:
     resp = srpc.s.ListScenes.Response()
     resp.data = []
 
@@ -205,11 +205,11 @@ async def list_scenes_cb(req: srpc.s.ListScenes.Request, ui: WsClient) -> srpc.s
     return resp
 
 
-async def get_scene_cb(req: srpc.s.GetScene.Request, ui: WsClient) -> srpc.s.GetScene.Response:
+async def get_scene_cb(req: srpc.s.GetScene.Request, ui: ServerConnection) -> srpc.s.GetScene.Response:
     return srpc.s.GetScene.Response(data=(await storage.get_scene(req.args.id)).scene)
 
 
-async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsClient) -> None:
+async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(glob.LOCK.SpecialValues.SCENE, glob.USERS.user_name(ui)):
         scene = glob.LOCK.scene_or_exception()
 
@@ -235,7 +235,7 @@ async def add_object_to_scene_cb(req: srpc.s.AddObjectToScene.Request, ui: WsCli
         return None
 
 
-async def update_object_parameters_cb(req: srpc.s.UpdateObjectParameters.Request, ui: WsClient) -> None:
+async def update_object_parameters_cb(req: srpc.s.UpdateObjectParameters.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
 
     can_modify_scene()
@@ -264,7 +264,7 @@ async def update_object_parameters_cb(req: srpc.s.UpdateObjectParameters.Request
 
 
 async def scene_object_usage_request_cb(
-    req: srpc.s.SceneObjectUsage.Request, ui: WsClient
+    req: srpc.s.SceneObjectUsage.Request, ui: ServerConnection
 ) -> srpc.s.SceneObjectUsage.Response:
     """Works for both services and objects.
 
@@ -289,7 +289,7 @@ async def scene_object_usage_request_cb(
 
 # TODO move to objects
 async def action_param_values_cb(
-    req: srpc.o.ActionParamValues.Request, ui: WsClient
+    req: srpc.o.ActionParamValues.Request, ui: ServerConnection
 ) -> srpc.o.ActionParamValues.Response:
     glob.LOCK.scene_or_exception()
 
@@ -329,7 +329,7 @@ async def action_param_values_cb(
         return resp
 
 
-async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient) -> None:
+async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
     user_name = glob.USERS.user_name(ui)
 
@@ -365,7 +365,9 @@ async def remove_from_scene_cb(req: srpc.s.RemoveFromScene.Request, ui: WsClient
             await schedule_auto_remove(meta.type)
 
 
-async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRobot.Request, ui: WsClient) -> None:
+async def update_object_pose_using_robot_cb(
+    req: srpc.o.UpdateObjectPoseUsingRobot.Request, ui: ServerConnection
+) -> None:
     """Updates object's pose using a pose of the robot's end effector.
 
     :param req:
@@ -437,7 +439,7 @@ async def update_object_pose_using_robot_cb(req: srpc.o.UpdateObjectPoseUsingRob
         return None
 
 
-async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClient) -> None:
+async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
 
     if scene_started():
@@ -462,7 +464,7 @@ async def update_object_pose_cb(req: srpc.s.UpdateObjectPose.Request, ui: WsClie
     return None
 
 
-async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> None:
+async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception(ensure_project_closed=True)
     target_obj = scene.object(req.args.id)
 
@@ -493,7 +495,7 @@ async def rename_object_cb(req: srpc.s.RenameObject.Request, ui: WsClient) -> No
     return None
 
 
-async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None:
+async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: ServerConnection) -> None:
     unique_name(req.args.new_name, (await scene_names()))
 
     # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
@@ -516,7 +518,7 @@ async def rename_scene_cb(req: srpc.s.RenameScene.Request, ui: WsClient) -> None
     return None
 
 
-async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> None | srpc.s.DeleteScene.Response:
+async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: ServerConnection) -> None | srpc.s.DeleteScene.Response:
     if glob.LOCK.scene:
         raise Arcor2Exception("Scene has to be closed first.")
 
@@ -549,7 +551,7 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> None
 
 
 async def projects_with_scene_cb(
-    req: srpc.s.ProjectsWithScene.Request, ui: WsClient
+    req: srpc.s.ProjectsWithScene.Request, ui: ServerConnection
 ) -> srpc.s.ProjectsWithScene.Response:
     async with ctx_read_lock(req.args.id, glob.USERS.user_name(ui)):
         resp = srpc.s.ProjectsWithScene.Response()
@@ -557,7 +559,7 @@ async def projects_with_scene_cb(
         return resp
 
 
-async def update_scene_description_cb(req: srpc.s.UpdateSceneDescription.Request, ui: WsClient) -> None:
+async def update_scene_description_cb(req: srpc.s.UpdateSceneDescription.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(req.args.scene_id, glob.USERS.user_name(ui)):
         async with managed_scene(req.args.scene_id) as scene:
             scene.description = req.args.new_description
@@ -569,7 +571,7 @@ async def update_scene_description_cb(req: srpc.s.UpdateSceneDescription.Request
         return None
 
 
-async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
+async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(req.args.source_id, glob.USERS.user_name(ui)):
         # TODO check if target_name is unique
         async with managed_scene(req.args.source_id, make_copy=True) as scene:
@@ -583,7 +585,7 @@ async def copy_scene_cb(req: srpc.s.CopyScene.Request, ui: WsClient) -> None:
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
-async def get_camera_pose_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) -> srpc.c.GetCameraPose.Response:
+async def get_camera_pose_cb(req: srpc.c.GetCameraPose.Request, ui: ServerConnection) -> srpc.c.GetCameraPose.Response:
     try:
         return srpc.c.GetCameraPose.Response(
             data=await hlp.run_in_executor(
@@ -601,7 +603,7 @@ async def get_camera_pose_cb(req: srpc.c.GetCameraPose.Request, ui: WsClient) ->
 
 
 # TODO maybe this would better fit into another category of RPCs? Like common/misc?
-async def marker_corners_cb(req: srpc.c.MarkersCorners.Request, ui: WsClient) -> srpc.c.MarkersCorners.Response:
+async def marker_corners_cb(req: srpc.c.MarkersCorners.Request, ui: ServerConnection) -> srpc.c.MarkersCorners.Response:
     return srpc.c.MarkersCorners.Response(
         data=await hlp.run_in_executor(
             calibration.markers_corners, req.args.camera_parameters, image_from_str(req.args.image)
@@ -609,7 +611,7 @@ async def marker_corners_cb(req: srpc.c.MarkersCorners.Request, ui: WsClient) ->
     )
 
 
-async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
+async def start_scene_cb(req: srpc.s.StartScene.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
 
     if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Stopped:
@@ -632,7 +634,7 @@ async def start_scene_cb(req: srpc.s.StartScene.Request, ui: WsClient) -> None:
     asyncio.ensure_future(start_scene(scene))
 
 
-async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
+async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
 
     if get_scene_state().data.state != sevts.s.SceneState.Data.StateEnum.Started:
@@ -654,7 +656,7 @@ async def stop_scene_cb(req: srpc.s.StopScene.Request, ui: WsClient) -> None:
 
 
 async def add_virtual_collision_object_to_scene_cb(
-    req: srpc.s.AddVirtualCollisionObjectToScene.Request, ui: WsClient
+    req: srpc.s.AddVirtualCollisionObjectToScene.Request, ui: ServerConnection
 ) -> None:
     async with ctx_write_lock(
         (glob.LOCK.SpecialValues.SCENE, glob.LOCK.SpecialValues.ADDING_OBJECT), glob.USERS.user_name(ui)

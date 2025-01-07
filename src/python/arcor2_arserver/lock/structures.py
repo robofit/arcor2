@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2_arserver.lock.common import ObjIds, obj_ids_to_list
 from arcor2_arserver.lock.exceptions import CannotUnlock, LockingException
@@ -9,7 +9,7 @@ from arcor2_arserver.lock.exceptions import CannotUnlock, LockingException
 class LockEventData:
     __slots__ = "obj_ids", "owner", "lock", "client"
 
-    def __init__(self, obj_ids: ObjIds, owner: str, lock: bool = False, client: None | WsClient = None):
+    def __init__(self, obj_ids: ObjIds, owner: str, lock: bool = False, client: None | ServerConnection = None):
         self.obj_ids = obj_ids_to_list(obj_ids)
         self.owner = owner
         self.lock = lock

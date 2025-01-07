@@ -1,12 +1,12 @@
-FROM python:3.11.10-bookworm as deps
+FROM python:3.12.8-bookworm as deps
 COPY src.python.arcor2_scene.scripts/scene.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.11.10-bookworm as srcs
+FROM python:3.12.8-bookworm as srcs
 COPY src.python.arcor2_scene.scripts/scene.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.11.10-bookworm
+FROM python:3.12.8-bookworm
 
 # libgomp1 and libusb-1.0-0 are because of Open3D
 # curl is for healthcheck

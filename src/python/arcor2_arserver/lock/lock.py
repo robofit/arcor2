@@ -21,23 +21,23 @@ class Lock:
     class Owners(cmn.StrEnum):
         """Values that can be used as lock owner substitution."""
 
-        SERVER: str = "SERVER"
+        SERVER = "SERVER"
 
     class SpecialValues(cmn.StrEnum):
         """Values for special locking cases e.g. global variable access."""
 
-        SCENE: str = "SCENE"
-        PROJECT: str = "PROJECT"
-        RUNNING_ACTION: str = "ACTION"
-        ADDING_OBJECT: str = "ADDING_OBJECT"
+        SCENE = "SCENE"
+        PROJECT = "PROJECT"
+        RUNNING_ACTION = "ACTION"
+        ADDING_OBJECT = "ADDING_OBJECT"
 
     class ErrMessages(cmn.StrEnum):
         """Lock general error messages."""
 
-        SOMETHING_LOCKED: str = "There are locked objects"
-        SOMETHING_LOCKED_IN_TREE: str = "Part of tree is locked"
-        LOCK_FAIL: str = "Locking failed, try again"
-        NOT_LOCKED: str = "Object not locked"
+        SOMETHING_LOCKED = "There are locked objects"
+        SOMETHING_LOCKED_IN_TREE = "Part of tree is locked"
+        LOCK_FAIL = "Locking failed, try again"
+        NOT_LOCKED = "Object not locked"
 
     __slots__ = (
         "_scene",

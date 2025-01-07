@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, Coroutine, TypeVar
 import websockets
 from aiologger.levels import LogLevel
 from dataclasses_jsonschema import ValidationError
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import env, json
 from arcor2.data.events import Event
@@ -19,11 +19,11 @@ RPCT = TypeVar("RPCT", bound=RPC)
 ReqT = TypeVar("ReqT", bound=RPC.Request)
 RespT = TypeVar("RespT", bound=RPC.Response)
 
-RPC_CB = Callable[[ReqT, WsClient], Coroutine[Any, Any, None | RespT]]
+RPC_CB = Callable[[ReqT, ServerConnection], Coroutine[Any, Any, None | RespT]]
 RPC_DICT_TYPE = dict[str, tuple[type[RPC], RPC_CB]]
 
 EventT = TypeVar("EventT", bound=Event)
-EVENT_DICT_TYPE = dict[str, tuple[type[EventT], Callable[[EventT, WsClient], Coroutine[Any, Any, None]]]]
+EVENT_DICT_TYPE = dict[str, tuple[type[EventT], Callable[[EventT, ServerConnection], Coroutine[Any, Any, None]]]]
 
 
 def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
@@ -34,7 +34,7 @@ def custom_exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str,
         loop.stop()
 
 
-async def send_json_to_client(client: WsClient, data: str) -> None:
+async def send_json_to_client(client: ServerConnection, data: str) -> None:
     try:
         await client.send(data)
     except websockets.exceptions.ConnectionClosed:

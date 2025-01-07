@@ -12,9 +12,9 @@ class ShowMainScreen(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         class WhatEnum(common.StrEnum):
-            ScenesList: str = "ScenesList"
-            ProjectsList: str = "ProjectsList"
-            PackagesList: str = "PackagesList"
+            ScenesList = "ScenesList"
+            ProjectsList = "ProjectsList"
+            PackagesList = "PackagesList"
 
         what: WhatEnum
         highlight: Optional[str] = None
@@ -27,9 +27,9 @@ class ProcessState(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         class StateEnum(common.StrEnum):
-            Started: str = "started"
-            Finished: str = "finished"
-            Failed: str = "failed"
+            Started = "started"
+            Finished = "finished"
+            Failed = "failed"
 
         id: str
         state: StateEnum

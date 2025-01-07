@@ -18,7 +18,7 @@ from aiofiles import tempfile
 from aiologger.levels import LogLevel
 from aiorun import run
 from dataclasses_jsonschema import ValidationError
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 import arcor2_execution
 import arcor2_execution_data
@@ -44,7 +44,7 @@ PACKAGE_INFO_EVENT: None | PackageInfo = None
 
 TASK: None | asyncio.Task = None
 
-CLIENTS: set[WsClient] = set()
+CLIENTS: set[ServerConnection] = set()
 
 MAIN_SCRIPT_NAME = "script.py"
 
@@ -157,7 +157,7 @@ async def check_script(script_path: str) -> None:
         raise Arcor2Exception("Main script not found.")
 
 
-async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
+async def run_package_cb(req: rpc.RunPackage.Request, ui: ServerConnection) -> None:
     async def _update_executed(package_id: str) -> None:
         meta = await run_in_executor(read_package_meta, package_id)
         meta.executed = datetime.now(tz=timezone.utc)
@@ -220,7 +220,7 @@ async def run_package_cb(req: rpc.RunPackage.Request, ui: WsClient) -> None:
     asyncio.create_task(_update_executed(req.args.id))
 
 
-async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
+async def stop_package_cb(req: rpc.StopPackage.Request, ui: ServerConnection) -> None:
     async def _terminate_task() -> None:
         global PACKAGE_INFO_EVENT
         global RUNNING_PACKAGE_ID
@@ -253,7 +253,7 @@ async def stop_package_cb(req: rpc.StopPackage.Request, ui: WsClient) -> None:
     asyncio.create_task(_terminate_task())
 
 
-async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
+async def pause_package_cb(req: rpc.PausePackage.Request, ui: ServerConnection) -> None:
     async def _pause() -> None:
         assert PROCESS is not None
         assert PROCESS.stdin is not None
@@ -270,7 +270,7 @@ async def pause_package_cb(req: rpc.PausePackage.Request, ui: WsClient) -> None:
     asyncio.create_task(_pause())
 
 
-async def step_action_cb(req: rpc.StepAction.Request, ui: WsClient) -> None:
+async def step_action_cb(req: rpc.StepAction.Request, ui: ServerConnection) -> None:
     async def _step() -> None:
         assert PROCESS is not None
         assert PROCESS.stdin is not None
@@ -287,7 +287,7 @@ async def step_action_cb(req: rpc.StepAction.Request, ui: WsClient) -> None:
     asyncio.create_task(_step())
 
 
-async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> None:
+async def resume_package_cb(req: rpc.ResumePackage.Request, ui: ServerConnection) -> None:
     async def _resume() -> None:
         assert PROCESS is not None
         assert PROCESS.stdin is not None
@@ -305,7 +305,7 @@ async def resume_package_cb(req: rpc.ResumePackage.Request, ui: WsClient) -> Non
     asyncio.create_task(_resume())
 
 
-async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: WsClient) -> None:
+async def _upload_package_cb(req: rpc.UploadPackage.Request, ui: ServerConnection) -> None:
     async def _upload_event(path_to_package: str) -> None:
         summary = await get_summary(path_to_package)
         evt = events.PackageChanged(summary)
@@ -373,7 +373,7 @@ async def get_opt_summary(path: str) -> None | PackageSummary:
     return PackageSummary(package_dir, package_meta, ProjectMeta.from_project(project))
 
 
-async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.ListPackages.Response:
+async def list_packages_cb(req: rpc.ListPackages.Request, ui: ServerConnection) -> rpc.ListPackages.Response:
     resp = rpc.ListPackages.Response()
     subfolders = [f.path for f in os.scandir(PROJECT_PATH) if f.is_dir()]
     resp.data = [
@@ -384,7 +384,7 @@ async def list_packages_cb(req: rpc.ListPackages.Request, ui: WsClient) -> rpc.L
     return resp
 
 
-async def delete_package_cb(req: rpc.DeletePackage.Request, ui: WsClient) -> None:
+async def delete_package_cb(req: rpc.DeletePackage.Request, ui: ServerConnection) -> None:
     if RUNNING_PACKAGE_ID and RUNNING_PACKAGE_ID == req.args.id:
         raise Arcor2Exception("Package is being executed.")
 
@@ -403,7 +403,7 @@ async def delete_package_cb(req: rpc.DeletePackage.Request, ui: WsClient) -> Non
     return None
 
 
-async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> None:
+async def rename_package_cb(req: rpc.RenamePackage.Request, ui: ServerConnection) -> None:
     target_path = os.path.join(PROJECT_PATH, req.args.package_id, "package.json")
 
     pm = read_package_meta(req.args.package_id)
@@ -420,7 +420,9 @@ async def rename_package_cb(req: rpc.RenamePackage.Request, ui: WsClient) -> Non
     asyncio.ensure_future(send_to_clients(evt))
 
 
-async def _version_cb(req: arcor2_rpc.common.Version.Request, ui: WsClient) -> arcor2_rpc.common.Version.Response:
+async def _version_cb(
+    req: arcor2_rpc.common.Version.Request, ui: ServerConnection
+) -> arcor2_rpc.common.Version.Response:
     resp = arcor2_rpc.common.Version.Response()
     resp.data = resp.Data(await run_in_executor(arcor2_execution_data.version))
     return resp
@@ -434,7 +436,7 @@ async def send_to_clients(event: events.Event) -> None:
         websockets.broadcast(CLIENTS, event.to_json())
 
 
-async def register(websocket: WsClient) -> None:
+async def register(websocket: ServerConnection) -> None:
     logger.info("Registering new client")
     CLIENTS.add(websocket)
 
@@ -446,7 +448,7 @@ async def register(websocket: WsClient) -> None:
     await asyncio.gather(*tasks)
 
 
-async def unregister(websocket: WsClient) -> None:
+async def unregister(websocket: ServerConnection) -> None:
     logger.info("Unregistering client")
     CLIENTS.remove(websocket)
 
@@ -473,7 +475,7 @@ async def aio_main() -> None:
         f"Execution service {arcor2_execution.version()} " f"(API version {arcor2_execution_data.version()}) started."
     )
 
-    await websockets.server.serve(
+    await websockets.asyncio.server.serve(
         functools.partial(ws_server.server, logger=logger, register=register, unregister=unregister, rpc_dict=RPC_DICT),
         "0.0.0.0",
         port_from_url(URL),

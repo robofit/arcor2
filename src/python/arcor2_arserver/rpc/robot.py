@@ -4,7 +4,7 @@ import time
 from typing import Awaitable, Callable
 
 import numpy as np
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import env
 from arcor2 import transformations as tr
@@ -122,13 +122,15 @@ async def robot_eef_pose_event(robot_inst: Robot) -> None:
     logger.info(f"Sending poses for {robot_inst.name} stopped.")
 
 
-async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: WsClient) -> srpc.r.GetRobotMeta.Response:
+async def get_robot_meta_cb(req: srpc.r.GetRobotMeta.Request, ui: ServerConnection) -> srpc.r.GetRobotMeta.Response:
     return srpc.r.GetRobotMeta.Response(
         data=[obj.robot_meta for obj in glob.OBJECT_TYPES.values() if obj.robot_meta is not None]
     )
 
 
-async def get_robot_joints_cb(req: srpc.r.GetRobotJoints.Request, ui: WsClient) -> srpc.r.GetRobotJoints.Response:
+async def get_robot_joints_cb(
+    req: srpc.r.GetRobotJoints.Request, ui: ServerConnection
+) -> srpc.r.GetRobotJoints.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -139,7 +141,7 @@ async def get_robot_joints_cb(req: srpc.r.GetRobotJoints.Request, ui: WsClient) 
 
 
 async def get_end_effector_pose_cb(
-    req: srpc.r.GetEndEffectorPose.Request, ui: WsClient
+    req: srpc.r.GetEndEffectorPose.Request, ui: ServerConnection
 ) -> srpc.r.GetEndEffectorPose.Response:
     glob.LOCK.scene_or_exception()
 
@@ -152,7 +154,9 @@ async def get_end_effector_pose_cb(
         )
 
 
-async def get_end_effectors_cb(req: srpc.r.GetEndEffectors.Request, ui: WsClient) -> srpc.r.GetEndEffectors.Response:
+async def get_end_effectors_cb(
+    req: srpc.r.GetEndEffectors.Request, ui: ServerConnection
+) -> srpc.r.GetEndEffectors.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -162,7 +166,7 @@ async def get_end_effectors_cb(req: srpc.r.GetEndEffectors.Request, ui: WsClient
         )
 
 
-async def get_robot_arms_cb(req: srpc.r.GetRobotArms.Request, ui: WsClient) -> srpc.r.GetRobotArms.Response:
+async def get_robot_arms_cb(req: srpc.r.GetRobotArms.Request, ui: ServerConnection) -> srpc.r.GetRobotArms.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -170,7 +174,7 @@ async def get_robot_arms_cb(req: srpc.r.GetRobotArms.Request, ui: WsClient) -> s
         return srpc.r.GetRobotArms.Response(data=await robot.get_arms(get_robot_instance(req.args.robot_id)))
 
 
-async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: WsClient) -> srpc.r.GetGrippers.Response:
+async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: ServerConnection) -> srpc.r.GetGrippers.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -180,7 +184,7 @@ async def get_grippers_cb(req: srpc.r.GetGrippers.Request, ui: WsClient) -> srpc
         )
 
 
-async def get_suctions_cb(req: srpc.r.GetSuctions.Request, ui: WsClient) -> srpc.r.GetSuctions.Response:
+async def get_suctions_cb(req: srpc.r.GetSuctions.Request, ui: ServerConnection) -> srpc.r.GetSuctions.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -193,7 +197,7 @@ async def get_suctions_cb(req: srpc.r.GetSuctions.Request, ui: WsClient) -> srpc
 async def register(
     req: srpc.r.RegisterForRobotEvent.Request,
     robot_inst: Robot,
-    ui: WsClient,
+    ui: ServerConnection,
     tasks: TaskDict,
     reg_uis: glob.RegisteredUiDict,
     coro: Callable[[Robot], Awaitable[None]],
@@ -221,7 +225,7 @@ async def register(
             del tasks[req.args.robot_id]
 
 
-async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request, ui: WsClient) -> None:
+async def register_for_robot_event_cb(req: srpc.r.RegisterForRobotEvent.Request, ui: ServerConnection) -> None:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -265,7 +269,7 @@ async def check_feature(robot_inst: Robot, feature_name: str) -> None:
         raise Arcor2Exception(f"Unknown robot feature: {feature_name}.")
 
 
-async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
+async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: ServerConnection) -> None:
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
@@ -306,7 +310,7 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
         )
 
 
-async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> None:
+async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: ServerConnection) -> None:
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
@@ -321,7 +325,7 @@ async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> N
         )
 
 
-async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
+async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: ServerConnection) -> None:
     glob.LOCK.scene_or_exception()
 
     # Stop robot cannot use lock, because robot is locked when action is called. Stop will also release lock.
@@ -331,7 +335,7 @@ async def stop_robot_cb(req: srpc.r.StopRobot.Request, ui: WsClient) -> None:
     await robot.stop(robot_inst)
 
 
-async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsClient) -> None:
+async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
@@ -380,7 +384,7 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
             )
 
 
-async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.InverseKinematics.Response:
+async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: ServerConnection) -> srpc.r.InverseKinematics.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -401,7 +405,7 @@ async def ik_cb(req: srpc.r.InverseKinematics.Request, ui: WsClient) -> srpc.r.I
         return resp
 
 
-async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: WsClient) -> srpc.r.ForwardKinematics.Response:
+async def fk_cb(req: srpc.r.ForwardKinematics.Request, ui: ServerConnection) -> srpc.r.ForwardKinematics.Response:
     glob.LOCK.scene_or_exception()
 
     async with ctx_read_lock(req.args.robot_id, glob.USERS.user_name(ui)):
@@ -454,7 +458,7 @@ async def calibrate_robot(
         await glob.LOCK.write_unlock(camera_inst.id, user_name)
 
 
-async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -> None:
+async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: ServerConnection) -> None:
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
@@ -486,7 +490,7 @@ async def calibrate_robot_cb(req: srpc.r.CalibrateRobot.Request, ui: WsClient) -
         return None
 
 
-async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClient) -> None:
+async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: ServerConnection) -> None:
     glob.LOCK.scene_or_exception()
 
     ensure_scene_started()
@@ -522,7 +526,7 @@ async def hand_teaching_mode_cb(req: srpc.r.HandTeachingMode.Request, ui: WsClie
     asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> None:
+async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
 
     ensure_scene_started()
@@ -577,7 +581,9 @@ async def step_robot_eef_cb(req: srpc.r.StepRobotEef.Request, ui: WsClient) -> N
     )
 
 
-async def set_eef_perpendicular_to_world_cb(req: srpc.r.SetEefPerpendicularToWorld.Request, ui: WsClient) -> None:
+async def set_eef_perpendicular_to_world_cb(
+    req: srpc.r.SetEefPerpendicularToWorld.Request, ui: ServerConnection
+) -> None:
     glob.LOCK.scene_or_exception()
 
     ensure_scene_started()

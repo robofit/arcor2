@@ -13,7 +13,7 @@ import websockets
 from aiologger.levels import LogLevel
 from aiorun import run
 from dataclasses_jsonschema import ValidationError
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 import arcor2.helpers as hlp
 import arcor2_arserver
@@ -109,7 +109,7 @@ async def handle_manager_incoming_messages(manager_client) -> None:
         logger.error(f"Connection to manager closed. {str(e)}")
 
 
-_server: websockets.server.WebSocketServer | None = None
+_server: websockets.asyncio.server.Server | None = None
 
 
 async def _initialize_server() -> None:
@@ -165,15 +165,15 @@ async def _initialize_server() -> None:
         logger.warn("Development mode. The service will shutdown on any unhandled exception.")
 
     logger.info(f"ARServer {arcor2_arserver.version()} " f"(API version {arcor2_arserver_data.version()}) initialized.")
-    _server = await websockets.server.serve(bound_handler, "0.0.0.0", glob.PORT)
+    _server = await websockets.asyncio.server.serve(bound_handler, "0.0.0.0", glob.PORT)
     asyncio.create_task(run_lock_notification_worker())
 
 
-async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: WsClient) -> obj_rpc.ListMeshes.Response:
+async def list_meshes_cb(req: obj_rpc.ListMeshes.Request, ui: ServerConnection) -> obj_rpc.ListMeshes.Response:
     return obj_rpc.ListMeshes.Response(data=await storage.get_meshes())
 
 
-async def register(websocket: WsClient) -> None:
+async def register(websocket: ServerConnection) -> None:
     logger.info("Registering new ui")
     glob.USERS.add_interface(websocket)
 
@@ -199,7 +199,7 @@ async def register(websocket: WsClient) -> None:
         await notif.event(websocket, scene.get_scene_state())
 
 
-async def unregister(websocket: WsClient) -> None:
+async def unregister(websocket: ServerConnection) -> None:
     try:
         user_name = glob.USERS.user_name(websocket)
     except Arcor2Exception:
@@ -220,7 +220,7 @@ async def unregister(websocket: WsClient) -> None:
             registered_uis.remove(websocket)
 
 
-async def system_info_cb(req: srpc.c.SystemInfo.Request, ui: WsClient) -> srpc.c.SystemInfo.Response:
+async def system_info_cb(req: srpc.c.SystemInfo.Request, ui: ServerConnection) -> srpc.c.SystemInfo.Response:
     resp = srpc.c.SystemInfo.Response()
     resp.data = resp.Data(
         arcor2_arserver.version(),

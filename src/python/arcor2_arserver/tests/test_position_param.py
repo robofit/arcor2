@@ -142,12 +142,12 @@ def test_position_param(start_processes: None, ars: ARServer) -> None:
     ps = event(ars, arcor2_events.PackageState).data
     assert ps
     assert ps.package_id == package.id
-    assert ps.state == ps.state.STARTED
+    assert ps.state == arcor2_events.PackageState.Data.StateEnum.STARTED
 
     pr = event(ars, arcor2_events.PackageState).data
     assert pr
     assert pr.package_id == package.id
-    assert pr.state == ps.state.RUNNING
+    assert pr.state == arcor2_events.PackageState.Data.StateEnum.RUNNING
 
     pi = event(ars, arcor2_events.PackageInfo).data
     assert pi
@@ -168,12 +168,12 @@ def test_position_param(start_processes: None, ars: ARServer) -> None:
     ps2 = wait_for_event(ars, arcor2_events.PackageState).data
     assert ps2
     assert ps2.package_id == package.id
-    assert ps2.state == ps.state.STOPPING
+    assert ps2.state == arcor2_events.PackageState.Data.StateEnum.STOPPING
 
     ps3 = wait_for_event(ars, arcor2_events.PackageState).data
     assert ps3
     assert ps3.package_id == package.id
-    assert ps3.state == ps.state.STOPPED
+    assert ps3.state == arcor2_events.PackageState.Data.StateEnum.STOPPED
 
     show_main_screen_event = event(ars, events.c.ShowMainScreen)
     assert show_main_screen_event.data

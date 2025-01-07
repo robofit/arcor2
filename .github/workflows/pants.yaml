@@ -23,7 +23,7 @@ jobs:
     needs: org-check
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
     steps:
     - name: Maximize build space
       uses: easimon/maximize-build-space@v10
@@ -47,7 +47,7 @@ jobs:
     - uses: ros-tooling/setup-ros@v0.7
       with:
         required-ros-distributions: jazzy
-    - uses: pantsbuild/actions/init-pants@v5-scie-pants
+    - uses: pantsbuild/actions/init-pants@v6-scie-pants
       with:
         pants-python-version: ${{ matrix.python-version }}
         gha-cache-key: cache0-py${{ matrix.python-version }}
@@ -62,19 +62,23 @@ jobs:
         sudo apt update
         sudo apt install jq cargo
         sudo ./build-support/install_ur_dependencies.sh
+    - name: Test int
+      run: |
+        source /opt/ros/jazzy/setup.bash
+        pants test --debug src/python/arcor2_ur/tests/test_interaction.py -- -s -vv
     - name: Lint
       run: |
         pants --changed-since=origin/master lint
     - name: Typecheck
       run: |
-        pants check --changed-since=origin/master --changed-dependees=transitive
+        pants check --changed-since=origin/master --changed-dependents=transitive
     - name: Test
       run: |
         source /opt/ros/jazzy/setup.bash
-        pants --changed-since=origin/master --changed-dependees=transitive test
+        pants --changed-since=origin/master --changed-dependents=transitive test
     - name: Build Docker images
       run: |  # filter out non-essential docker images (there was a problem with full storage on github)
-        pants filter --target-type=docker_image --changed-since=origin/master --changed-dependees=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs pants package
+        pants filter --target-type=docker_image --changed-since=origin/master --changed-dependents=transitive | grep -v arcor2_3d_mouse | grep -v arcor2_fanuc arcor2_fanuc_upload_object_types | xargs pants package
     - name: Build Python packages
       run: |
         pants filter --target-type=python_distribution :: | xargs pants package

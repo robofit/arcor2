@@ -3,7 +3,7 @@ import copy
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2 import helpers as hlp
 from arcor2 import transformations as tr
@@ -77,7 +77,7 @@ async def managed_project(project_id: str, make_copy: bool = False) -> AsyncGene
             asyncio.ensure_future(storage.update_project(project))
 
 
-async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> None:
+async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
@@ -119,7 +119,7 @@ async def cancel_action_cb(req: srpc.p.CancelAction.Request, ui: WsClient) -> No
     glob.RUNNING_ACTION_PARAMS = None
 
 
-async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> None:
+async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
@@ -193,7 +193,7 @@ async def execute_action_cb(req: srpc.p.ExecuteAction.Request, ui: WsClient) -> 
         return None
 
 
-async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> srpc.p.ListProjects.Response:
+async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: ServerConnection) -> srpc.p.ListProjects.Response:
     async def project_info(project_id: str) -> srpc.p.ListProjects.Response.Data:
         project = await storage.get_project(project_id)
 
@@ -235,11 +235,11 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
     return resp
 
 
-async def get_project_cb(req: srpc.p.GetProject.Request, ui: WsClient) -> srpc.p.GetProject.Response:
+async def get_project_cb(req: srpc.p.GetProject.Request, ui: ServerConnection) -> srpc.p.GetProject.Response:
     return srpc.p.GetProject.Response(data=(await storage.get_project(req.args.id)).project)
 
 
-async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClient) -> None:
+async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: ServerConnection) -> None:
     async def notify(ap: common.BareActionPoint, ori: common.NamedOrientation, joi: common.ProjectRobotJoints) -> None:
         ap_evt = sevts.p.ActionPointChanged(ap)
         ap_evt.change_type = Event.Type.ADD
@@ -284,7 +284,7 @@ async def add_ap_using_robot_cb(req: srpc.p.AddApUsingRobot.Request, ui: WsClien
 
 
 async def add_action_point_joints_using_robot_cb(
-    req: srpc.p.AddActionPointJointsUsingRobot.Request, ui: WsClient
+    req: srpc.p.AddActionPointJointsUsingRobot.Request, ui: ServerConnection
 ) -> None:
     hlp.is_valid_identifier(req.args.name)
     proj = glob.LOCK.project_or_exception()
@@ -319,7 +319,7 @@ async def add_action_point_joints_using_robot_cb(
 
 
 async def update_action_point_joints_using_robot_cb(
-    req: srpc.p.UpdateActionPointJointsUsingRobot.Request, ui: WsClient
+    req: srpc.p.UpdateActionPointJointsUsingRobot.Request, ui: ServerConnection
 ) -> None:
     proj = glob.LOCK.project_or_exception()
 
@@ -343,7 +343,7 @@ async def update_action_point_joints_using_robot_cb(
         return None
 
 
-async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Request, ui: WsClient) -> None:
+async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
 
     ap, robot_joints = proj.ap_and_joints(req.args.joints_id)
@@ -364,7 +364,7 @@ async def update_action_point_joints_cb(req: srpc.p.UpdateActionPointJoints.Requ
     return None
 
 
-async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Request, ui: WsClient) -> None:
+async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Request, ui: ServerConnection) -> None:
     """Removes joints from action point.
 
     :param req:
@@ -391,7 +391,7 @@ async def remove_action_point_joints_cb(req: srpc.p.RemoveActionPointJoints.Requ
     return None
 
 
-async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: WsClient) -> None:
+async def rename_action_point_cb(req: srpc.p.RenameActionPoint.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
 
     ap = proj.bare_action_point(req.args.action_point_id)
@@ -440,7 +440,7 @@ def detect_ap_loop(proj: CachedProject, ap: common.BareActionPoint, new_parent_i
             break
 
 
-async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Request, ui: WsClient) -> None:
+async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
     user_name = glob.USERS.user_name(ui)
@@ -542,7 +542,7 @@ async def update_ap_position(
     asyncio.ensure_future(notif.broadcast_event(ap_evt))
 
 
-async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.Request, ui: WsClient) -> None:
+async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
     ap = proj.bare_action_point(req.args.action_point_id)
     user_name = glob.USERS.user_name(ui)
@@ -558,7 +558,9 @@ async def update_action_point_position_cb(req: srpc.p.UpdateActionPointPosition.
     await update_ap_position(proj, ap, req.args.new_position)
 
 
-async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingRobot.Request, ui: WsClient) -> None:
+async def update_action_point_using_robot_cb(
+    req: srpc.p.UpdateActionPointUsingRobot.Request, ui: ServerConnection
+) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
     ensure_scene_started()
@@ -579,7 +581,7 @@ async def update_action_point_using_robot_cb(req: srpc.p.UpdateActionPointUsingR
         return None
 
 
-async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.Request, ui: WsClient) -> None:
+async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.Request, ui: ServerConnection) -> None:
     """Adds orientation and joints to the action point.
 
     :param req:
@@ -607,7 +609,9 @@ async def add_action_point_orientation_cb(req: srpc.p.AddActionPointOrientation.
     return None
 
 
-async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrientation.Request, ui: WsClient) -> None:
+async def update_action_point_orientation_cb(
+    req: srpc.p.UpdateActionPointOrientation.Request, ui: ServerConnection
+) -> None:
     """Updates orientation of the action point.
 
     :param req:
@@ -629,7 +633,7 @@ async def update_action_point_orientation_cb(req: srpc.p.UpdateActionPointOrient
 
 
 async def add_action_point_orientation_using_robot_cb(
-    req: srpc.p.AddActionPointOrientationUsingRobot.Request, ui: WsClient
+    req: srpc.p.AddActionPointOrientationUsingRobot.Request, ui: ServerConnection
 ) -> None:
     """Adds orientation and joints to the action point.
 
@@ -671,7 +675,7 @@ async def add_action_point_orientation_using_robot_cb(
 
 
 async def update_action_point_orientation_using_robot_cb(
-    req: srpc.p.UpdateActionPointOrientationUsingRobot.Request, ui: WsClient
+    req: srpc.p.UpdateActionPointOrientationUsingRobot.Request, ui: ServerConnection
 ) -> None:
     """Updates orientation and joint of the action point.
 
@@ -707,7 +711,9 @@ async def update_action_point_orientation_using_robot_cb(
         return None
 
 
-async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrientation.Request, ui: WsClient) -> None:
+async def remove_action_point_orientation_cb(
+    req: srpc.p.RemoveActionPointOrientation.Request, ui: ServerConnection
+) -> None:
     """Removes orientation.
 
     :param req:
@@ -740,7 +746,7 @@ async def remove_action_point_orientation_cb(req: srpc.p.RemoveActionPointOrient
         return None
 
 
-async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None:
+async def open_project_cb(req: srpc.p.OpenProject.Request, ui: ServerConnection) -> None:
     """Opens a project. This can be done even when a scene or another project
     is opened.
 
@@ -767,7 +773,7 @@ async def open_project_cb(req: srpc.p.OpenProject.Request, ui: WsClient) -> None
         return None
 
 
-async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None:
+async def save_project_cb(req: srpc.p.SaveProject.Request, ui: ServerConnection) -> None:
     async with glob.LOCK.get_lock(req.dry_run):
         proj = glob.LOCK.project_or_exception()
 
@@ -788,7 +794,7 @@ async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None
     return None
 
 
-async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
+async def new_project_cb(req: srpc.p.NewProject.Request, ui: ServerConnection) -> None:
     if glob.LOCK.project:
         raise Arcor2Exception("Project has to be closed first.")
 
@@ -851,7 +857,7 @@ async def new_project_cb(req: srpc.p.NewProject.Request, ui: WsClient) -> None:
         return None
 
 
-async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> None:
+async def close_project_cb(req: srpc.p.CloseProject.Request, ui: ServerConnection) -> None:
     async with glob.LOCK.get_lock(req.dry_run):
         proj = glob.LOCK.project_or_exception()
         can_modify_scene()
@@ -866,7 +872,7 @@ async def close_project_cb(req: srpc.p.CloseProject.Request, ui: WsClient) -> No
         return None
 
 
-async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) -> None:
+async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
@@ -891,7 +897,7 @@ async def add_action_point_cb(req: srpc.p.AddActionPoint.Request, ui: WsClient) 
         return None
 
 
-async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsClient) -> None:
+async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
 
     user_name = glob.USERS.user_name(ui)
@@ -959,7 +965,7 @@ async def remove_action_point_cb(req: srpc.p.RemoveActionPoint.Request, ui: WsCl
         return None
 
 
-async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient) -> None:
+async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
 
     async def copy_action_point(
@@ -1076,7 +1082,7 @@ async def copy_action_point_cb(req: srpc.p.CopyActionPoint.Request, ui: WsClient
             await notif.broadcast_event(action_added_evt)
 
 
-async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
+async def add_action_cb(req: srpc.p.AddAction.Request, ui: ServerConnection) -> None:
     """Adds new action to project.
 
     Used also when duplicating action.
@@ -1115,7 +1121,7 @@ async def add_action_cb(req: srpc.p.AddAction.Request, ui: WsClient) -> None:
         return None
 
 
-async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> None:
+async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception()
 
@@ -1148,7 +1154,7 @@ async def update_action_cb(req: srpc.p.UpdateAction.Request, ui: WsClient) -> No
     return None
 
 
-async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> None:
+async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: ServerConnection) -> None:
     def check_action_usage(proj: CachedProject, action: common.Action) -> None:
         # check parameters
         for act in proj.actions:
@@ -1190,7 +1196,7 @@ async def remove_action_cb(req: srpc.p.RemoveAction.Request, ui: WsClient) -> No
         return None
 
 
-async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> None:
+async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: ServerConnection) -> None:
     scene = glob.LOCK.scene_or_exception()
     proj = glob.LOCK.project_or_exception(must_have_logic=True)
     user_name = glob.USERS.user_name(ui)
@@ -1220,7 +1226,7 @@ async def add_logic_item_cb(req: srpc.p.AddLogicItem.Request, ui: WsClient) -> N
     return None
 
 
-async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient) -> None:
+async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: ServerConnection) -> None:
     # TODO lock RPC when used
 
     scene = glob.LOCK.scene_or_exception()
@@ -1249,7 +1255,7 @@ async def update_logic_item_cb(req: srpc.p.UpdateLogicItem.Request, ui: WsClient
     return None
 
 
-async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient) -> None:
+async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception(must_have_logic=True)
     logic_item = proj.logic_item(req.args.logic_item_id)
 
@@ -1269,7 +1275,7 @@ async def remove_logic_item_cb(req: srpc.p.RemoveLogicItem.Request, ui: WsClient
     return None
 
 
-async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: WsClient) -> None:
+async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
 
     async with ctx_write_lock(glob.LOCK.SpecialValues.PROJECT, glob.USERS.user_name(ui)):
@@ -1287,7 +1293,7 @@ async def add_project_parameter_cb(req: srpc.p.AddProjectParameter.Request, ui: 
         return None
 
 
-async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request, ui: WsClient) -> None:
+async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
     param = proj.parameter(req.args.id)
     user_name = glob.USERS.user_name(ui)
@@ -1315,7 +1321,7 @@ async def update_project_parameter_cb(req: srpc.p.UpdateProjectParameter.Request
     await glob.LOCK.write_unlock(param.id, user_name, True)
 
 
-async def remove_project_parameter_cb(req: srpc.p.RemoveProjectParameter.Request, ui: WsClient) -> None:
+async def remove_project_parameter_cb(req: srpc.p.RemoveProjectParameter.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
     pparam = proj.parameter(req.args.id)
 
@@ -1343,7 +1349,7 @@ async def remove_project_parameter_cb(req: srpc.p.RemoveProjectParameter.Request
         asyncio.ensure_future(notif.broadcast_event(evt))
 
 
-async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> None:
+async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: ServerConnection) -> None:
     if glob.LOCK.project:
         raise Arcor2Exception("Project has to be closed first.")
 
@@ -1360,7 +1366,7 @@ async def delete_project_cb(req: srpc.p.DeleteProject.Request, ui: WsClient) -> 
         return None
 
 
-async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> None:
+async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: ServerConnection) -> None:
     unique_name(req.args.new_name, (await project_names()))
 
     # TODO workaround for https://gitlab.com/kinalisoft/test-it-off/project/-/issues/16
@@ -1385,7 +1391,7 @@ async def rename_project_cb(req: srpc.p.RenameProject.Request, ui: WsClient) -> 
     return None
 
 
-async def copy_project_cb(req: srpc.p.CopyProject.Request, ui: WsClient) -> None:
+async def copy_project_cb(req: srpc.p.CopyProject.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(req.args.source_id, glob.USERS.user_name(ui)):
         unique_name(req.args.target_name, (await project_names()))
 
@@ -1402,7 +1408,7 @@ async def copy_project_cb(req: srpc.p.CopyProject.Request, ui: WsClient) -> None
         return None
 
 
-async def update_project_description_cb(req: srpc.p.UpdateProjectDescription.Request, ui: WsClient) -> None:
+async def update_project_description_cb(req: srpc.p.UpdateProjectDescription.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(req.args.project_id, glob.USERS.user_name(ui)):
         async with managed_project(req.args.project_id) as project:
             project.description = req.args.new_description
@@ -1414,7 +1420,7 @@ async def update_project_description_cb(req: srpc.p.UpdateProjectDescription.Req
         return None
 
 
-async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogic.Request, ui: WsClient) -> None:
+async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogic.Request, ui: ServerConnection) -> None:
     async with ctx_write_lock(req.args.project_id, glob.USERS.user_name(ui)):
         async with managed_project(req.args.project_id) as project:
             if project.has_logic and not req.args.new_has_logic:
@@ -1436,7 +1442,7 @@ async def update_project_has_logic_cb(req: srpc.p.UpdateProjectHasLogic.Request,
         return None
 
 
-async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Request, ui: WsClient) -> None:
+async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
     ap, joints = proj.ap_and_joints(req.args.joints_id)
 
@@ -1458,7 +1464,9 @@ async def rename_action_point_joints_cb(req: srpc.p.RenameActionPointJoints.Requ
     return None
 
 
-async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrientation.Request, ui: WsClient) -> None:
+async def rename_action_point_orientation_cb(
+    req: srpc.p.RenameActionPointOrientation.Request, ui: ServerConnection
+) -> None:
     proj = glob.LOCK.project_or_exception()
     ap, ori = proj.bare_ap_and_orientation(req.args.orientation_id)
 
@@ -1480,7 +1488,7 @@ async def rename_action_point_orientation_cb(req: srpc.p.RenameActionPointOrient
     return None
 
 
-async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: WsClient) -> None:
+async def rename_action_cb(req: srpc.p.RenameAction.Request, ui: ServerConnection) -> None:
     proj = glob.LOCK.project_or_exception()
     unique_name(req.args.new_name, proj.action_names)
     user_name = glob.USERS.user_name(ui)

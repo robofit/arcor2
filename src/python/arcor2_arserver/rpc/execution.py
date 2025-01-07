@@ -1,6 +1,6 @@
 import asyncio
 
-from websockets.server import WebSocketServerProtocol as WsClient
+from websockets.asyncio.server import ServerConnection
 
 from arcor2.exceptions import Arcor2Exception
 from arcor2_arserver import globals as glob
@@ -9,7 +9,7 @@ from arcor2_arserver.helpers import ctx_write_lock
 from arcor2_arserver_data import rpc
 
 
-async def build_project_cb(req: rpc.b.BuildProject.Request, ui: WsClient) -> rpc.b.BuildProject.Response:
+async def build_project_cb(req: rpc.b.BuildProject.Request, ui: ServerConnection) -> rpc.b.BuildProject.Response:
     """Builds project and uploads resulting package to the execution unit.
 
     :param req:
@@ -25,7 +25,7 @@ async def build_project_cb(req: rpc.b.BuildProject.Request, ui: WsClient) -> rpc
         return resp
 
 
-async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: WsClient) -> None:
+async def temporary_package_cb(req: rpc.b.TemporaryPackage.Request, ui: ServerConnection) -> None:
     async with glob.LOCK.get_lock():
         project = glob.LOCK.project_or_exception()
 
