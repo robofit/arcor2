@@ -61,7 +61,7 @@ class AbstractDobot(FitCommonMixin, Robot):
     def move(
         self,
         pose: Pose,
-        move_type: MoveType,
+        move_type: MoveType = MoveType.JOINTS,
         velocity: float = 50.0,
         acceleration: float = 50.0,
         safe: bool = True,

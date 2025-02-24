@@ -9,8 +9,8 @@ from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
 from arcor2_fit_demo.object_types.dobot_magician import DobotMagician
 from arcor2_fit_demo.object_types.erp import Erp
 from arcor2_fit_demo.object_types.fit_common_mixin import FitCommonMixin
-from arcor2_fit_demo.object_types.milling_machine import MillingMachine
 from arcor2_fit_demo.object_types.optical_quality_control import OpticalQualityControl
+from arcor2_fit_demo.object_types.weighing_machine import WeighingMachine
 
 
 def main() -> None:
@@ -26,12 +26,8 @@ def main() -> None:
     upload_whatever(FitCommonMixin)
 
     upload_def(Erp)
-    upload_def(MillingMachine, Box(MillingMachine.__name__, 0.1, 0.1, 0.1))
-    upload_def(
-        OpticalQualityControl,
-        Mesh(OpticalQualityControl.__name__, OpticalQualityControl.mesh_filename),
-        file_to_upload=get_data(OpticalQualityControl.mesh_filename),
-    )
+    upload_def(WeighingMachine, Box(WeighingMachine.__name__, 0.15, 0.15, 0.17))
+    upload_def(OpticalQualityControl)
 
 
 if __name__ == "__main__":

@@ -65,7 +65,7 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
 
     set_velocity.__action__ = ActionMetadata()  # type: ignore
 
-    def set_distance(
+    def move_distance(
         self,
         velocity: float = 0.5,
         distance: float = 0.55,
@@ -91,4 +91,4 @@ class ConveyorBelt(FitCommonMixin, CollisionObject):
             params={"velocity": velocity * 100, "distance": distance, "direction": direction},
         )
 
-    set_distance.__action__ = ActionMetadata()  # type: ignore
+    move_distance.__action__ = ActionMetadata()  # type: ignore

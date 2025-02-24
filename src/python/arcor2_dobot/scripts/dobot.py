@@ -228,10 +228,10 @@ def put_conveyor_distance() -> RespT:
               name: direction
               schema:
                 type: string
-                default: forward
+                default: left
                 enum:
-                    - forward
-                    - backwards
+                    - left
+                    - right
               description: Direction
         responses:
             204:
@@ -245,11 +245,11 @@ def put_conveyor_distance() -> RespT:
     """
 
     speed = float(request.args.get("velocity", default=50.0))
-    direction = request.args.get("direction", default="forward")
+    direction = request.args.get("direction", default="left")
     distance = float(request.args.get("distance", default=0.1))
 
     assert _dobot is not None
-    _dobot.conveyor_distance(speed, distance * 1000, 1 if direction == "forward" else -1)
+    _dobot.conveyor_distance(speed, distance * 1000, 1 if direction == "left" else -1)
     return Response(status=204)
 
 
