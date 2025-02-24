@@ -2,11 +2,10 @@ import random
 import time
 
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import CollisionObject
+from arcor2.object_types.abstract import GenericWithPose
 
 
-class OpticalQualityControl(CollisionObject):
-    mesh_filename = "kinect_azure.dae"
+class OpticalQualityControl(GenericWithPose):
     _ABSTRACT = False
 
     def measure_quality(self, *, an: None | str = None) -> bool:

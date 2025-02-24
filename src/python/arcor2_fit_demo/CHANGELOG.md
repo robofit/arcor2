@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.5.1] - 2025-02-24
+
+### Changed
+
+- Some actions were renamed, etc.
+
 ## [1.5.0] - 2024-04-11
 
 ### Changed
