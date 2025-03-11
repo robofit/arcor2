@@ -128,6 +128,25 @@ services:
       - ARCOR2_PROJECT_SERVICE_URL=http://fit-demo2-project:10000
       - ARCOR2_ASSET_SERVICE_URL=http://fit-demo2-asset:10040
 
+  fit-demo2-dobot-magician:
+    image: arcor2/arcor2_dobot:1.3.1
+    container_name: fit-demo2-dobot-magician
+    depends_on:
+      fit-demo2-scene:
+        condition: service_healthy
+    networks:
+      - fit-demo2-network
+    ports:
+      - "5018:5018"
+    environment:
+      - ARCOR2_DOBOT_MOCK=false
+      - ARCOR2_SCENE_SERVICE_URL=http://fit-demo2-scene:5013
+      - ARCOR2_DOBOT_MODEL=magician
+      - ARCOR2_DOBOT_BIAS_X=0.0597
+      - ARCOR2_DOBOT_BIAS_Z=0.06
+    devices:
+      - /dev/dobotMagician3:/dev/dobot
+
 
 volumes:
   fit-demo2-asset:

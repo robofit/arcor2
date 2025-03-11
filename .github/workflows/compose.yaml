@@ -13,6 +13,15 @@ jobs:
     - name: Check syntax of fit-demo
       run: |
         docker compose -f compose-files/fit-demo/docker-compose.yml -f compose-files/fit-demo/docker-compose.lab.yml config
+    - name: Check syntax of fit-demo2
+      run: |
+        docker compose -f compose-files/fit-demo/docker-compose.2.yml config
     - name: Check syntax of fanuc-demo
       run: |
           docker compose -f compose-files/fanuc-demo/docker-compose.yml config
+    - name: Check syntax of ur-demo (sim)
+      run: |
+          docker compose -f compose-files/ur-demo/docker-compose.yml -f compose-files/ur-demo/docker-compose.sim.yml config
+    - name: Check syntax of ur-demo (lab)
+      run: |
+          docker compose -f compose-files/ur-demo/docker-compose.yml -f compose-files/ur-demo/docker-compose.lab.yml config
