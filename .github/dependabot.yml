@@ -1,10 +1,14 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: "/.github/"
     schedule:
       interval: "daily"
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/src/docker"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "docker-compose"
+    directory: "/compose-files"
     schedule:
       interval: "daily"
