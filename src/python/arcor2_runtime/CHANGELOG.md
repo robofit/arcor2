@@ -2,6 +2,14 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.4.1] - 2025-05-06
+
+### Fixed
+
+- Avoided high CPU load when running under Docker Compose without stdin attached.
+  The `select` call returned immediately due to detached stdin, causing a busy loop. 
+  Now the stdin command thread is only started when stdin is a TTY.
+
 ## [1.4.0] - 2024-08-14
 
 ### Added
