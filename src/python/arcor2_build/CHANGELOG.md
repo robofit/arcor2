@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.7.1] - 2025-05-06
+
+### Fixed
+
+High CPU load (fixed in arcor2_runtime).
+
 ## [1.7.0] - 2024-09-12
 
 ### Changed

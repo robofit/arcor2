@@ -173,7 +173,10 @@ def _get_stdin_commands():
 
 _cmd_thread = threading.Thread(target=_get_stdin_commands)
 _cmd_thread.daemon = True
-_cmd_thread.start()
+
+# only start a thread when stdin is available - otherwise select will return immediately and cause high CPU load
+if sys.stdin.isatty():
+    _cmd_thread.start()
 
 
 def handle_commands(*, before: bool, breakpoint: bool = False) -> None:

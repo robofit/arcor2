@@ -36,6 +36,9 @@ def setup_action():
     action = importlib.reload(action)
     action.read_stdin = read_stdin
 
+    # thread would not start without proper stdin
+    action._cmd_thread.start()
+
     return action, cmd_q
 
 
