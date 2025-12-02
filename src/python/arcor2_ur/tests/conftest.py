@@ -2,7 +2,6 @@ import logging
 import os
 import random
 import subprocess as sp
-import sys
 import time
 from typing import Iterator, NamedTuple
 
@@ -19,6 +18,26 @@ class Urls(NamedTuple):
     robot_url: str
 
 
+def _load_ros_env() -> dict[str, str]:
+    """Load environment variables from ROS setup script."""
+    try:
+        output = sp.check_output(
+            ["bash", "-lc", "source /opt/ros/jazzy/setup.bash >/dev/null && env -0"],
+            text=False,
+            env={},
+        )
+    except sp.CalledProcessError as exc:  # pragma: no cover - best effort helper
+        raise RuntimeError("Failed to source /opt/ros/jazzy/setup.bash") from exc
+
+    env: dict[str, str] = {}
+    for chunk in output.split(b"\0"):
+        if not chunk:
+            continue
+        key, _, value = chunk.partition(b"=")
+        env[key.decode()] = value.decode()
+    return env
+
+
 @pytest.fixture(scope="module", params=["ur5e"])
 def start_processes(request) -> Iterator[Urls]:
     """Starts Dobot dependencies."""
@@ -27,17 +46,20 @@ def start_processes(request) -> Iterator[Urls]:
     ur_type: str = request.param
 
     processes = []
+    ros_env = _load_ros_env()
     my_env = os.environ.copy()
+    my_env.update(ros_env)
     my_env["ROS_DOMAIN_ID"] = ros_domain_id
-    my_env["AMENT_PREFIX_PATH"] = "/opt/ros/jazzy"
 
-    pypath = ":".join(sys.path)
-    my_env["PYTHONPATH"] = pypath
+    # Keep ROS view of the world dominant; strip test-only/debug env for the ROS launcher
+    ros_launch_env = {k: v for k, v in my_env.items() if not k.startswith("PEX_")}
+    for key in ("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "PYTEST_PLUGINS", "PYTHONDEVMODE", "PYTHONWARNINGS"):
+        ros_launch_env.pop(key, None)
 
     kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT, "start_new_session": True}
 
     processes.append(
-        sp.Popen(  # type: ignore
+        sp.Popen(
             [
                 "ros2",
                 "launch",
@@ -48,7 +70,10 @@ def start_processes(request) -> Iterator[Urls]:
                 "use_mock_hardware:=true",
                 "robot_ip:=xyz",
             ],
-            **kwargs,
+            env=ros_launch_env,
+            stdout=sp.PIPE,
+            stderr=sp.STDOUT,
+            start_new_session=True,
         )
     )
     time.sleep(3)  # TODO find another way how to make sure that everything is running

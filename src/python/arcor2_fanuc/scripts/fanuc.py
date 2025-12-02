@@ -488,7 +488,7 @@ def get_joints() -> RespT:
     # see https://www.robot-forum.com/robotforum/thread/22888-fanuc-j2-j3-relationship/ for explanation
     joints[2] += joints[1]
 
-    return jsonify([Joint(f"joint_{idx+1}", math.radians(value)).to_dict() for idx, value in enumerate(joints)])
+    return jsonify([Joint(f"joint_{idx + 1}", math.radians(value)).to_dict() for idx, value in enumerate(joints)])
 
 
 @app.route("/gripper", methods=["PUT"])

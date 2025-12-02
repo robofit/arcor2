@@ -1,4 +1,4 @@
-from packaging.version import parse, LegacyVersion
+from packaging.version import InvalidVersion, Version
 
 from pants.backend.python.target_types import PythonProvidesField
 from pants.backend.python.util_rules.package_dists import SetupKwargsRequest, SetupKwargs
@@ -37,9 +37,10 @@ async def setup_kwargs_plugin(request: CustomSetupKwargsRequest) -> SetupKwargs:
 
     package_name = request.target[PythonProvidesField].value.kwargs["name"]
 
-    local_version = parse(version)
-    if isinstance(local_version, LegacyVersion):
-        raise ValueError(f"Version {local_version} of {package_name} is not valid.")
+    try:
+        Version(version)
+    except InvalidVersion as exc:
+        raise ValueError(f"Version {version} of {package_name} is not valid.") from exc
 
     desc_digest_contents = await Get(
         DigestContents,

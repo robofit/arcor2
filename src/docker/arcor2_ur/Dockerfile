@@ -1,26 +1,26 @@
-FROM ubuntu:noble-20241011 AS deps
+FROM ubuntu:noble AS deps
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    python3=3.12.3-0ubuntu2
+    python3=3.12.3-0ubuntu2.1
 RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=deps --compile /bin/app
 
-FROM ubuntu:noble-20241011 AS srcs
+FROM ubuntu:noble AS srcs
 COPY src.python.arcor2_ur.scripts/ur.pex /binary.pex
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    python3=3.12.3-0ubuntu2
+    python3=3.12.3-0ubuntu2.1
 RUN PEX_TOOLS=1 python3 /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM ubuntu:noble-20241011
+FROM ubuntu:noble
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
-    python3=3.12.3-0ubuntu2 \
-    curl=8.5.0-2ubuntu10.4 \
-    gnupg2=2.4.4-2ubuntu17 \
+    python3=3.12.3-0ubuntu2.1 \
+    curl=8.5.0-2ubuntu10.6 \
+    gnupg2=2.4.4-2ubuntu17.3 \
     lsb-release=12.0-2 \
-    locales=2.39-0ubuntu8 \
-    software-properties-common=0.99.48 \
+    locales=2.39-0ubuntu8.6 \
+    software-properties-common=0.99.49.3 \
     && locale-gen en_US en_US.UTF-8 \
     && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
     && apt-get clean \
@@ -41,7 +41,7 @@ COPY build-support/install_ur_dependencies.sh /root/install_ur_dependencies.sh
 RUN apt-get update \
         && /root/install_ur_dependencies.sh \
         && apt-get install -y -q --no-install-recommends \
-        libglib2.0-0=2.74.6-2+deb12u5 \
+        libglib2.0-0t64=2.80.0-6ubuntu3.4 \
         libgomp1=14.2.0-4ubuntu2~24.04 libusb-1.0-0=2:1.0.27-1 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*

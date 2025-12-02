@@ -4,5 +4,5 @@ arcor2_python_distribution(
     binaries={
         "arcor2_scene": "src/python/arcor2_scene/scripts:scene",
     },
-    interpreter_constraints=["==3.11.*"],
+    interpreter_constraints=["==3.12.*"],
 )

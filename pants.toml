@@ -1,11 +1,7 @@
 [GLOBAL]
-pants_version = "2.22.0"
+pants_version = "2.28.0"
 colors = true
 process_execution_local_parallelism = 4
-
-plugins = [
-  "packaging==21.3",
-]
 
 backend_packages.add = [
   "pants.backend.python",
@@ -35,7 +31,7 @@ root_patterns = [
 ]
 
 [python]
-interpreter_constraints = [">=3.11,<3.13"]
+interpreter_constraints = ["==3.12.*"]
 enable_resolves = true
 
 [python.resolves]
@@ -46,7 +42,7 @@ pytest = "3rdparty/pytest_lockfile.txt"
 setuptools = "3rdparty/setuptools_lockfile.txt"
 
 [python-bootstrap]
-search_path = ["<PATH>", "/usr/bin/python3.11"]
+search_path = ["<PATH>", "/usr/bin/python3.12"]
 
 [flake8]
 install_from_resolve = "flake8"
@@ -56,14 +52,15 @@ install_from_resolve = "mypy"
 
 [pytest]
 install_from_resolve = "pytest"
-# args = ["--count=3 -x"]
+# Ensure needed plugins load even with PYTEST_DISABLE_PLUGIN_AUTOLOAD
+args = ["-p", "pytest_asyncio"]
 
 [setuptools]
 install_from_resolve = "setuptools"
 
 [test]
 use_coverage = false
-extra_env_vars = ["PYTHONDEVMODE=1", "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib", "HOME=/tmp"]  # "PYTHONWARNINGS=error" not useable due to DeprecationWarning in networkx-2.2
+extra_env_vars = ["PYTHONDEVMODE=1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1", "PYTEST_PLUGINS=pytest_asyncio.plugin", "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib", "HOME=/tmp"]  # "PYTHONWARNINGS=error" not useable due to DeprecationWarning in networkx-2.2
 timeout_default = 600
 
 [python-infer]

@@ -480,7 +480,7 @@ class Lock:
             read, write = self._get_owner_locks(owner)
 
             if read or write:
-                logger.warn(f"{len(read)+len(write)} lock(s) of {owner} were just discarded.")
+                logger.warn(f"{len(read) + len(write)} lock(s) of {owner} were just discarded.")
 
             self._read_unlock(list(read), list(read.values()), owner)
             self._write_unlock(list(write), list(write.values()), owner)

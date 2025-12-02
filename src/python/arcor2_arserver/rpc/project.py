@@ -782,7 +782,7 @@ async def save_project_cb(req: srpc.p.SaveProject.Request, ui: WsClient) -> None
 
         start = time.monotonic()
         proj.modified = await storage.update_project(proj)
-        logger.info(f"Updating the project took {time.monotonic()-start:.3f}s.")
+        logger.info(f"Updating the project took {time.monotonic() - start:.3f}s.")
 
     asyncio.ensure_future(notif.broadcast_event(sevts.p.ProjectSaved()))
     return None

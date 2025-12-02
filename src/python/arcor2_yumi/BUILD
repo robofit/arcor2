@@ -2,5 +2,5 @@ arcor2_python_distribution(
     name="arcor2_yumi",
     description="ARCOR2 Calibration",
     binaries={"arcor2_calibration": "src/python/arcor2_calibration/scripts:calibration"},
-    interpreter_constraints=["==3.11.*"],
+    interpreter_constraints=["==3.12.*"],
 )

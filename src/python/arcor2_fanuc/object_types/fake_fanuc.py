@@ -47,6 +47,6 @@ class FakeFanuc(Robot):
         assert 0.0 <= acceleration <= 100.0
 
     def robot_joints(self, include_gripper: bool = False) -> list[Joint]:
-        return [Joint(f"joint_{x+1}", 0.0) for x in range(6)]
+        return [Joint(f"joint_{x + 1}", 0.0) for x in range(6)]
 
     move.__action__ = ActionMetadata()  # type: ignore
