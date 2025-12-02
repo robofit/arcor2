@@ -203,7 +203,17 @@ def base_from_source(source: str | ast.AST, cls_name: str) -> list[str]:
 
 def iterate_over_actions(
     type_def: type[Generic],
-) -> Iterator[tuple[str, Callable[[Any,], Any]]]:
+) -> Iterator[
+    tuple[
+        str,
+        Callable[
+            [
+                Any,
+            ],
+            Any,
+        ],
+    ]
+]:
     for method_name, method in inspect.getmembers(type_def, inspect.isroutine):
         try:
             if not isinstance(method.__action__, ActionMetadata):

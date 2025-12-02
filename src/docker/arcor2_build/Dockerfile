@@ -1,16 +1,16 @@
-FROM python:3.11.12-bookworm as deps
+FROM python:3.12.7-bookworm as deps
 COPY src.python.arcor2_build.scripts/build.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.11.12-bookworm as srcs
+FROM python:3.12.7-bookworm as srcs
 COPY src.python.arcor2_build.scripts/build.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.11.12-bookworm
+FROM python:3.12.7-bookworm
 
 # curl is for healthcheck
 RUN apt-get update \
-        && apt-get install -y -q --no-install-recommends libgl1-mesa-glx=22.3.6-1+deb12u1 libglib2.0-0=2.74.6-2+deb12u5 curl=7.88.1-10+deb12u12 \
+        && apt-get install -y -q --no-install-recommends libgl1-mesa-glx=22.3.6-1+deb12u1 libglib2.0-0=2.74.6-2+deb12u7 curl=7.88.1-10+deb12u14 \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

@@ -28,7 +28,7 @@ class Settings(JsonSchemaMixin):
     pass
 
 
-class Generic(metaclass=abc.ABCMeta):
+class Generic(metaclass=abc.ABCMeta):  # noqa:B024
     """Generic object."""
 
     DYNAMIC_PARAMS: DynamicParamDict = {}

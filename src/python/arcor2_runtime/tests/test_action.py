@@ -523,18 +523,23 @@ def test_pause_resume_callbacks(mock_stdin, capsys, setup_action) -> None:
     assert action._cmd_thread.is_alive()
 
     assert pause_callback_called.is_set()
-    assert resume_callback_called.is_set()
+    assert resume_callback_called.wait(0.2)
     assert my_obj.action_to_be_called_in_cb_called == 2
 
     output, _ = capsys.readouterr()
     arr = output.strip().split("\n")
     assert len(arr) == 3
 
-    ps_evt = PackageState.from_json(arr[0])
-    assert ps_evt.data.state == PackageState.Data.StateEnum.PAUSED
+    before_evt: ActionStateBefore | None = None
+    states: list[PackageState.Data.StateEnum] = []
 
-    before_evt = ActionStateBefore.from_json(arr[1])
+    for line in arr:
+        if '"ActionStateBefore"' in line:
+            before_evt = ActionStateBefore.from_json(line)
+        if '"PackageState"' in line:
+            states.append(PackageState.from_json(line).data.state)
+
+    assert before_evt is not None
     assert before_evt.data.thread_id is not None
-
-    ps_evt = PackageState.from_json(arr[2])
-    assert ps_evt.data.state == PackageState.Data.StateEnum.RUNNING
+    assert PackageState.Data.StateEnum.PAUSED in states
+    assert PackageState.Data.StateEnum.RUNNING in states

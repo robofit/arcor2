@@ -201,7 +201,7 @@ def main() -> None:
             lib.loads(data)
         end = time.monotonic()
 
-        print(f"{lib.__name__}.loads: {(end-start)*1000:.3f}ms")
+        print(f"{lib.__name__}.loads: {(end - start) * 1000:.3f}ms")
 
     print()
 
@@ -211,7 +211,7 @@ def main() -> None:
             lib.loads(comp_data)
         end = time.monotonic()
 
-        print(f"{lib.__name__}.loads (comp): {(end-start)*1000:.3f}ms")
+        print(f"{lib.__name__}.loads (comp): {(end - start) * 1000:.3f}ms")
 
     print()
 
@@ -220,7 +220,7 @@ def main() -> None:
         json.dumps(d)
     end = time.monotonic()
 
-    print(f"{json.__name__}.dumps: {(end-start)*1000:.3f}ms")
+    print(f"{json.__name__}.dumps: {(end - start) * 1000:.3f}ms")
 
     start = time.monotonic()
     for _ in range(iterations):

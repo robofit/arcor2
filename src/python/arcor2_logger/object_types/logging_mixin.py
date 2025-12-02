@@ -83,12 +83,10 @@ class Logger:
 
 class GenericProtocol(Protocol):
     @property
-    def id(self) -> str:
-        ...
+    def id(self) -> str: ...
 
     @property
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
 
 class LoggingMixin:

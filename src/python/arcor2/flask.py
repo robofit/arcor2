@@ -149,9 +149,11 @@ def run_app(
         openapi_version="3.0.2",
         plugins=[FlaskPlugin(), DataclassesPlugin()],
         info={
-            "description": "Dependencies: none"
-            if dependencies is None
-            else f'Dependencies: {", ".join([f"{k} {v}" for k, v in dependencies.items()])}'
+            "description": (
+                "Dependencies: none"
+                if dependencies is None
+                else f'Dependencies: {", ".join([f"{k} {v}" for k, v in dependencies.items()])}'
+            )
         },
     )
 
