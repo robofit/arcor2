@@ -3,47 +3,25 @@
 import argparse
 import logging
 import os
-import threading
-import time
 from dataclasses import dataclass, field
 from functools import wraps
-from typing import NamedTuple
 
 import humps
-import rclpy  # pants: no-infer-dep
 from ament_index_python.packages import get_package_share_directory  # pants: no-infer-dep
 from flask import Response, jsonify, request
-from geometry_msgs.msg import Pose as RosPose  # pants: no-infer-dep
-from geometry_msgs.msg import PoseStamped  # pants: no-infer-dep
-from moveit.planning import MoveItPy, PlanningComponent  # pants: no-infer-dep
 from moveit_configs_utils import MoveItConfigsBuilder  # pants: no-infer-dep
-from moveit_msgs.msg import CollisionObject  # pants: no-infer-dep
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup  # pants: no-infer-dep
-from rclpy.node import Node  # pants: no-infer-dep
-from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy  # pants: no-infer-dep
-from sensor_msgs.msg import JointState  # pants: no-infer-dep
-from shape_msgs.msg import SolidPrimitive  # pants: no-infer-dep
-from std_msgs.msg import Bool, String  # pants: no-infer-dep
-from std_srvs.srv import Trigger  # pants: no-infer-dep
-from tf2_geometry_msgs import do_transform_pose  # pants: no-infer-dep
-from tf2_ros.buffer import Buffer  # pants: no-infer-dep
-from tf2_ros.transform_listener import TransformListener  # pants: no-infer-dep
-from ur_dashboard_msgs.msg import RobotMode  # pants: no-infer-dep
-from ur_dashboard_msgs.srv import Load  # pants: no-infer-dep
-from ur_msgs.srv import SetPayload, SetSpeedSliderFraction  # pants: no-infer-dep
 
 from arcor2 import env
-from arcor2 import transformations as tr
 from arcor2.data import common, object_type
 from arcor2.data.common import Joint, Pose
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
-from arcor2_ur import get_data, topics, version
+from arcor2_ur import get_data, version
 from arcor2_ur.exceptions import NotFound, StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
-from arcor2_ur.vgc10 import VGC10
+from arcor2_ur.scripts.ros_worker import CollisionObjectTuple, RosWorkerClient
 
 logger = get_logger(__name__)
 
@@ -59,266 +37,16 @@ INTERACT_WITH_DASHBOARD = env.get_bool("ARCOR2_UR_INTERACT_WITH_DASHBOARD", True
 SERVICE_NAME = f"UR Web API ({UR_TYPE})"
 
 
-class CollisionObjectTuple(NamedTuple):
-    model: object_type.Models
-    pose: common.Pose
-
-
-def pose_to_ros_pose(ps: Pose) -> RosPose:
-    rp = RosPose()
-    rp.position.x = ps.position.x
-    rp.position.y = ps.position.y
-    rp.position.z = ps.position.z
-    rp.orientation.x = ps.orientation.x
-    rp.orientation.y = ps.orientation.y
-    rp.orientation.z = ps.orientation.z
-    rp.orientation.w = ps.orientation.w
-
-    return rp
-
-
-def plan_and_execute(
-    robot,
-    planning_component,
-    logger,
-    single_plan_parameters=None,
-    multi_plan_parameters=None,
-    sleep_time=0.0,
-) -> None:
-    """Helper function to plan and execute a motion."""
-    # plan to goal
-    logger.info("Planning trajectory")
-    if multi_plan_parameters is not None:
-        plan_result = planning_component.plan(multi_plan_parameters=multi_plan_parameters)
-    elif single_plan_parameters is not None:
-        plan_result = planning_component.plan(single_plan_parameters=single_plan_parameters)
-    else:
-        plan_result = planning_component.plan()
-
-    # execute the plan
-    if plan_result:
-        logger.info("Executing plan")
-        robot_trajectory = plan_result.trajectory
-        if not robot.execute(robot_trajectory, controllers=[]):
-            raise UrGeneral("Trajectory execution failed.")
-    else:
-        raise UrGeneral("Planning failed")  # TODO raise more specific exception
-
-    time.sleep(sleep_time)
-
-
-class MyNode(Node):
-    def __init__(self, interact_with_dashboard=True) -> None:
-        super().__init__("ur_api_node", enable_logger_service=True)
-        if globs.debug:
-            # TODO makes no difference for moveitpy :-/
-            rclpy.logging.set_logger_level("ur_api_node", rclpy.logging.LoggingSeverity.DEBUG)
-
-        sub_qos = QoSProfile(
-            depth=1, durability=QoSDurabilityPolicy.TRANSIENT_LOCAL, reliability=QoSReliabilityPolicy.RELIABLE
-        )
-
-        self.buffer = Buffer()
-        self.listener = TransformListener(self.buffer, self)
-        self.subscription = self.create_subscription(
-            JointState, "joint_states", self.joint_states_cb, 10, callback_group=MutuallyExclusiveCallbackGroup()
-        )
-        self.interact_with_dashboard = interact_with_dashboard
-
-        self.robot_mode: RobotMode | None = None
-        self.robot_program_running: bool | None = None
-
-        self._break_release_client = self.create_client(Trigger, topics.BRAKE_RELEASE_SRV)
-        self._power_off_client = self.create_client(Trigger, topics.POWER_OFF_SRV)
-        self._load_program_client = self.create_client(Load, topics.LOAD_PROGRAM_SRV)
-        self._play_client = self.create_client(Trigger, topics.PLAY_SRV)
-        self._set_speed_slider_client = self.create_client(SetSpeedSliderFraction, topics.SET_SPEED_SLIDER_SRV)
-        self._set_payload_client = self.create_client(SetPayload, topics.SET_PAYLOAD_SRV)
-
-        self.script_cmd_pub = self.create_publisher(String, "/urscript_interface/script_command", 10)
-        self.robot_mode_sub = self.create_subscription(
-            RobotMode,
-            topics.ROBOT_MODE_TOPIC,
-            self.robot_mode_cb,
-            sub_qos,
-            callback_group=MutuallyExclusiveCallbackGroup(),
-        )
-        self.robot_program_running_sub = self.create_subscription(
-            Bool,
-            topics.ROBOT_PROGRAM_RUNNING_TOPIC,
-            self.robot_program_running_cb,
-            sub_qos,
-            callback_group=MutuallyExclusiveCallbackGroup(),
-        )
-
-    def wait_for_services(self) -> None:
-        while self.interact_with_dashboard and not self._break_release_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {topics.BRAKE_RELEASE_SRV} not available, waiting again...")
-
-        while self.interact_with_dashboard and not self._power_off_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {topics.POWER_OFF_SRV} not available, waiting again...")
-
-        while self.interact_with_dashboard and not self._load_program_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {topics.LOAD_PROGRAM_SRV} not available, waiting again...")
-
-        while self.interact_with_dashboard and not self._play_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {topics.PLAY_SRV} not available, waiting again...")
-
-        while not self._set_speed_slider_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {topics.SET_SPEED_SLIDER_SRV} not available, waiting again...")
-
-        while not self._set_payload_client.wait_for_service(timeout_sec=1.0):
-            logger.warning(f"Service {topics.SET_PAYLOAD_SRV} not available, waiting again...")
-
-    def robot_program_running_cb(self, msg: Bool) -> None:
-        logger.info(f"Program running: {msg.data}")
-        self.robot_program_running = msg.data
-
-    def robot_mode_cb(self, msg: RobotMode) -> None:
-        logger.info(f"Robot mode: {msg.mode}")
-        self.robot_mode = msg
-
-    def wait_for_robot_mode(self, mode: set[RobotMode], timeout=30) -> None:
-        start = time.monotonic()
-        while self.robot_mode is None or self.robot_mode.mode not in mode:
-            time.sleep(0.1)
-            if time.monotonic() - start > timeout:
-                raise TimeoutError(f"Timeout when waiting for RobotMode={mode}.")
-
-    def wait_for_program_running(self, timeout=10) -> None:
-        start = time.monotonic()
-        while not self.robot_program_running:
-            time.sleep(0.1)
-            if time.monotonic() - start > timeout:
-                raise TimeoutError("Timeout when waiting for program running.")
-
-    def urscript(self, src: str) -> None:
-        msg = String()
-        msg.data = src
-        self.script_cmd_pub.publish(msg)
-
-    def brake_release(self) -> None:
-        if not self.interact_with_dashboard:
-            return
-
-        future = self._break_release_client.call_async(Trigger.Request())
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
-
-        if future.result() is None:
-            raise UrGeneral("Service call failed!")
-
-        response = future.result()
-        if not response.success:
-            raise UrGeneral(f"Service call failed with message: {response.message}")
-
-    def power_off(self) -> None:
-        if not self.interact_with_dashboard:
-            return
-
-        future = self._power_off_client.call_async(Trigger.Request())
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
-
-        if future.result() is None:
-            raise UrGeneral("Service call failed!")
-
-        response = future.result()
-        if not response.success:
-            raise UrGeneral(f"Service call failed with message: {response.message}")
-
-    def load_program(self) -> None:
-        if not self.interact_with_dashboard:
-            return
-
-        future = self._load_program_client.call_async(Load.Request(filename="prog.urp"))
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
-
-        if future.result() is None:
-            raise UrGeneral("Service call failed!")
-
-        response = future.result()
-        if not response.success:
-            raise UrGeneral(f"Service call failed with message: {response.answer}")
-
-    def play(self) -> None:
-        if not self.interact_with_dashboard:
-            return
-
-        future = self._play_client.call_async(Trigger.Request())
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
-
-        if future.result() is None:
-            raise UrGeneral("Service call failed!")
-
-        response = future.result()
-        if not response.success:
-            raise UrGeneral(f"Service call failed with message: {response.message}")
-
-    def set_speed_slider(self, value: float):
-        if value <= 0 or value > 1:
-            raise UrGeneral("Invalid speed.")
-
-        future = self._set_speed_slider_client.call_async(SetSpeedSliderFraction.Request(speed_slider_fraction=value))
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
-
-        if future.result() is None:
-            raise UrGeneral("Service call failed!")
-
-        response = future.result()
-        if not response.success:
-            raise UrGeneral(f"Service call failed (speed: {value}).")
-
-    def set_payload(self, value: float):
-        if value < 0:
-            raise UrGeneral("Invalid payload.")
-
-        future = self._set_payload_client.call_async(SetPayload.Request(mass=value))
-        rclpy.spin_until_future_complete(self, future, timeout_sec=2)
-
-        if future.result() is None:
-            raise UrGeneral("Service call failed!")
-
-        response = future.result()
-        if not response.success:
-            raise UrGeneral("Service call failed.")
-
-    def joint_states_cb(self, msg: JointState) -> None:
-        if globs.state is not None:
-            # TODO not very clean solution
-            globs.state.joints = [Joint(name, position) for name, position in zip(msg.name, msg.position)]
-
-
 @dataclass
-class State:
+class ServiceState:
     pose: Pose
-    node: MyNode
-    executor: rclpy.executors.MultiThreadedExecutor
-    executor_thread: threading.Thread
-    moveitpy: MoveItPy
-    ur_manipulator: PlanningComponent
-    joints: list[Joint] = field(default_factory=list)
-    tool: VGC10 | None = None
-
-    def shutdown(self) -> None:
-        if self.tool:
-            self.tool.release_vacuum()
-            self.tool.close_connection()
-
-        self.node.destroy_node()
-        self.executor.shutdown()
-        self.executor_thread.join(3)
-        assert not self.executor_thread.is_alive()
-        self.moveitpy.shutdown()
-        rclpy.shutdown()
-
-    def __post_init__(self) -> None:
-        if self.tool:
-            self.tool.open_connection()
+    worker: RosWorkerClient
 
 
 @dataclass
 class Globs:
     debug = False
-    state: State | None = None
+    state: ServiceState | None = None
     collision_objects: dict[str, CollisionObjectTuple] = field(default_factory=dict)
     scene_started = False  # flag for "Scene service"
 
@@ -347,34 +75,6 @@ moveit_config = (
 ).to_dict()
 
 
-def apply_collision_objects(scene) -> None:
-    assert globs.state
-
-    scene.remove_all_collision_objects()
-
-    for obj_id, obj in globs.collision_objects.items():
-        if not isinstance(obj.model, object_type.Box):
-            continue
-
-        collision_object = CollisionObject()
-        collision_object.header.frame_id = BASE_LINK
-        collision_object.id = obj_id
-
-        box_pose = pose_to_ros_pose(tr.make_pose_rel(globs.state.pose, obj.pose))
-
-        box = SolidPrimitive()
-        box.type = SolidPrimitive.BOX
-        box.dimensions = (obj.model.size_x, obj.model.size_y, obj.model.size_z)
-
-        collision_object.primitives.append(box)
-        collision_object.primitive_poses.append(box_pose)
-        collision_object.operation = CollisionObject.ADD
-
-        scene.apply_collision_object(collision_object)
-
-    scene.current_state.update()
-
-
 def started() -> bool:
     return globs.state is not None
 
@@ -391,6 +91,7 @@ def requires_started(f):
 
 @app.route("/system/start", methods=["PUT"])  # for compatibility with Scene service
 def put_start_scene() -> RespT:
+    """Start the scene (compatibility)."""
     globs.scene_started = True
     return Response(status=200)
 
@@ -418,7 +119,6 @@ def put_start() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     if started():
         raise UrGeneral("Already started.")
 
@@ -426,53 +126,26 @@ def put_start() -> RespT:
         raise UrGeneral("Body should be a JSON dict containing Pose.")
 
     pose = Pose.from_dict(request.json)
-
-    rclpy.init()
-    node = MyNode(INTERACT_WITH_DASHBOARD)
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor_thread = threading.Thread(target=executor.spin, daemon=True)
-    executor_thread.start()
-
-    node.wait_for_services()
-
-    try:
-        node.brake_release()
-        # TODO this is somehow broken, not sure why
-        # node.wait_for_robot_mode({RobotMode.RUNNING, RobotMode.IDLE})
-        node.load_program()
-        node.play()
-        # TODO this is somehow broken, not sure why
-        # node.wait_for_program_running()
-
-    except Exception:
-        node.destroy_node()
-        rclpy.shutdown()
-        raise
-
-    vgc10: VGC10 | None = None
-    if ROBOT_IP:
-        vgc10 = VGC10(ROBOT_IP, VGC10_PORT)
-
-    moveitpy = MoveItPy(node_name="moveit_py", config_dict=moveit_config)
-    globs.state = State(
+    worker = RosWorkerClient(
         pose,
-        node,
-        executor,
-        executor_thread,
-        moveitpy,
-        moveitpy.get_planning_component(PLANNING_GROUP_NAME),
-        tool=vgc10,
+        globs.collision_objects,
+        BASE_LINK,
+        TOOL_LINK,
+        PLANNING_GROUP_NAME,
+        moveit_config,
+        INTERACT_WITH_DASHBOARD,
+        ROBOT_IP,
+        VGC10_PORT,
+        globs.debug,
     )
-
-    with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
-        apply_collision_objects(scene)
+    globs.state = ServiceState(pose, worker)
 
     return Response(status=204)
 
 
 @app.route("/system/stop", methods=["PUT"])  # for compatibility with Scene service
 def put_stop_scene() -> RespT:
+    """Stop the scene (compatibility)."""
     globs.scene_started = False
     return Response(status=204)
 
@@ -496,14 +169,12 @@ def put_stop() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     if not started():
         raise UrGeneral("Not started!")
 
     assert globs.state
 
-    globs.state.node.power_off()
-    globs.state.shutdown()
+    globs.state.worker.stop()
     globs.state = None
 
     return Response(status=204)
@@ -511,32 +182,13 @@ def put_stop() -> RespT:
 
 @app.route("/system/running", methods=["GET"])  # for compatibility with Scene service
 def get_stated_scene() -> RespT:
+    """Return whether scene is running (compatibility)."""
     return jsonify(globs.scene_started)
 
 
 @app.route("/state/started", methods=["GET"])
 def get_started() -> RespT:
-    """Get the current state.
-    ---
-    get:
-        description: Get the current state.
-        tags:
-           - State
-        responses:
-            200:
-              description: Ok
-              content:
-                application/json:
-                    schema:
-                        type: boolean
-            500:
-              description: "Error types: **General**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-
+    """Get service started flag."""
     return jsonify(started())
 
 
@@ -585,7 +237,6 @@ def put_box() -> RespT:
                         schema:
                             $ref: WebApiError
     """
-
     if not isinstance(request.json, dict):
         raise UrGeneral("Body should be a JSON dict containing Pose.")
 
@@ -595,8 +246,7 @@ def put_box() -> RespT:
 
     if started():
         assert globs.state
-        with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
-            apply_collision_objects(scene)
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
 
     return Response(status=204)
 
@@ -636,7 +286,6 @@ def put_sphere() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     if not isinstance(request.json, dict):
         raise UrGeneral("Body should be a JSON dict containing Pose.")
 
@@ -647,6 +296,10 @@ def put_sphere() -> RespT:
     )
 
     logger.warning("Sphere collision object added but will be ignored as only boxes are supported at the moment.")
+
+    if started():
+        assert globs.state
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
 
     return Response(status=204)
 
@@ -695,7 +348,6 @@ def put_cylinder() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     if not isinstance(request.json, dict):
         raise UrGeneral("Body should be a JSON dict containing Pose.")
 
@@ -706,6 +358,10 @@ def put_cylinder() -> RespT:
     )
 
     logger.warning("Cylinder collision object added but will be ignored as only boxes are supported at the moment.")
+
+    if started():
+        assert globs.state
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
 
     return Response(status=204)
 
@@ -762,7 +418,6 @@ def put_mesh() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     if not isinstance(request.json, dict):
         raise UrGeneral("Body should be a JSON dict containing Pose.")
 
@@ -771,6 +426,10 @@ def put_mesh() -> RespT:
     globs.collision_objects[mesh.id] = CollisionObjectTuple(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
 
     logger.warning("Mesh collision object added but will be ignored as only boxes are supported at the moment.")
+
+    if started():
+        assert globs.state
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
 
     return Response(status=204)
 
@@ -800,7 +459,6 @@ def delete_collision(id: str) -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     try:
         del globs.collision_objects[id]
     except KeyError:
@@ -808,8 +466,7 @@ def delete_collision(id: str) -> RespT:
 
     if started():
         assert globs.state
-        with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
-            apply_collision_objects(scene)
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
 
     return Response(status=200)
 
@@ -838,7 +495,6 @@ def get_collisions() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     return jsonify(list(globs.collision_objects.keys()))
 
 
@@ -867,10 +523,8 @@ def get_joints() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
-
-    return jsonify([joint.to_dict() for joint in globs.state.joints])
+    return jsonify(globs.state.worker.request("get_joints"))
 
 
 @app.route("/ik", methods=["PUT"])
@@ -903,56 +557,74 @@ def put_ik() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
 
     if not isinstance(request.json, dict):
         raise UrGeneral("Body should be a JSON dict containing InverseKinematicsRequest.")
 
     ikr = InverseKinematicsRequest.from_dict(request.json)
-
-    if not ikr.start_joints:
-        ikr.start_joints = globs.state.joints
-    elif len(ikr.start_joints) != len(globs.state.joints):
-        raise UrGeneral(f"Wrong number of joints! Should be {len(globs.state.joints)}.")
-
-    ikr.pose = tr.make_pose_rel(globs.state.pose, ikr.pose)
-
     logger.debug(f"Got IK request: {ikr}")
+    result = globs.state.worker.request("ik", ikr=ikr.to_dict())
+    return jsonify(result)
 
-    with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
-        if ikr.avoid_collisions:
-            apply_collision_objects(scene)
-        else:
-            scene.remove_all_collision_objects()
 
-        scene.current_state.update(force=True)
-        scene.current_state.joint_positions = {j.name: j.value for j in ikr.start_joints}
-        pose_goal = pose_to_ros_pose(ikr.pose)
+@app.route("/hand_teaching", methods=["GET"])
+@requires_started
+def get_hand_teaching() -> RespT:
+    """Get hand teaching status.
+    ---
+    get:
+        description: Get hand teaching status.
+        tags:
+           - Robot
+        responses:
+            200:
+              description: Ok
+              content:
+                application/json:
+                    schema:
+                        type: boolean
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+    assert globs.state
+    return jsonify(globs.state.worker.request("get_freedrive_mode"))
 
-        try:
-            # Set the robot state and check collisions
-            if not scene.current_state.set_from_ik(PLANNING_GROUP_NAME, pose_goal, TOOL_LINK, timeout=3):
-                raise UrGeneral("Can't get IK!")
 
-            scene.current_state.update()  # required to update transforms
+@app.route("/hand_teaching", methods=["PUT"])
+@requires_started
+def put_hand_teaching() -> RespT:
+    """Set hand teaching status.
+    ---
+    put:
+        description: Set hand teaching status.
+        tags:
+           - Robot
+        parameters:
+            - in: query
+              name: enabled
+              schema:
+                type: boolean
+        responses:
+            204:
+              description: Ok
+            500:
+              description: "Error types: **General**, **StartError**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+    assert globs.state
 
-            if (
-                scene.is_state_colliding(
-                    robot_state=scene.current_state, joint_model_group_name=PLANNING_GROUP_NAME, verbose=True
-                )
-                and ikr.avoid_collisions
-            ):
-                raise UrGeneral("State is in collision.")  # TODO IK exception...
-        except UrGeneral:
-            if not ikr.avoid_collisions:
-                # restore collision objects
-                apply_collision_objects(scene)
-            raise
+    enabled = request.args.get("enabled", default="false").lower() == "true"
+    globs.state.worker.request("set_freedrive_mode", enabled=enabled)
 
-        assert len(scene.current_state.joint_positions) == len(globs.state.joints)
-
-        return jsonify([Joint(jn, jv).to_dict() for jn, jv in scene.current_state.joint_positions.items()])
+    return Response(status=204)
 
 
 @app.route("/eef/pose", methods=["GET"])
@@ -978,30 +650,9 @@ def get_eef_pose() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
-
-    ps = RosPose()
-
-    time = rclpy.time.Time()
-
-    globs.state.node.buffer.can_transform(BASE_LINK, TOOL_LINK, time, timeout=rclpy.time.Duration(seconds=1.0))
-    transform = globs.state.node.buffer.lookup_transform(BASE_LINK, TOOL_LINK, time)
-    pst = do_transform_pose(ps, transform)
-
-    pose = Pose()
-    pose.position.x = pst.position.x
-    pose.position.y = pst.position.y
-    pose.position.z = pst.position.z
-
-    pose.orientation.x = pst.orientation.x
-    pose.orientation.y = pst.orientation.y
-    pose.orientation.z = pst.orientation.z
-    pose.orientation.w = pst.orientation.w
-
-    pose = tr.make_pose_abs(globs.state.pose, pose)
-
-    return jsonify(pose.to_dict()), 200
+    pose = globs.state.worker.request("get_eef_pose")
+    return jsonify(pose), 200
 
 
 @app.route("/eef/pose", methods=["PUT"])
@@ -1050,7 +701,6 @@ def put_eef_pose() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
 
     if not isinstance(request.json, dict):
@@ -1061,36 +711,7 @@ def put_eef_pose() -> RespT:
     payload = float(request.args.get("payload", default=0.0))
     safe = request.args.get("safe", default="true") == "true"
 
-    pose = tr.make_pose_rel(globs.state.pose, pose)
-
-    pose_goal = PoseStamped()
-    pose_goal.header.frame_id = BASE_LINK
-
-    pose_goal.pose.orientation.x = pose.orientation.x
-    pose_goal.pose.orientation.y = pose.orientation.y
-    pose_goal.pose.orientation.z = pose.orientation.z
-    pose_goal.pose.orientation.w = pose.orientation.w
-    pose_goal.pose.position.x = pose.position.x
-    pose_goal.pose.position.y = pose.position.y
-    pose_goal.pose.position.z = pose.position.z
-
-    with globs.state.moveitpy.get_planning_scene_monitor().read_write() as scene:
-        if safe:
-            apply_collision_objects(scene)
-        else:
-            scene.remove_all_collision_objects()
-
-        scene.current_state.update(force=True)
-        scene.current_state.joint_positions = {j.name: j.value for j in globs.state.joints}
-        scene.current_state.update()
-
-    globs.state.ur_manipulator.set_start_state_to_current_state()
-    globs.state.ur_manipulator.set_goal_state(pose_stamped_msg=pose_goal, pose_link=TOOL_LINK)
-
-    globs.state.node.set_speed_slider(velocity)
-    globs.state.node.set_payload(payload)
-
-    plan_and_execute(globs.state.moveitpy, globs.state.ur_manipulator, logger)
+    globs.state.worker.request("move_to_pose", pose=pose.to_dict(), velocity=velocity, payload=payload, safe=safe)
     return Response(status=204)
 
 
@@ -1122,16 +743,10 @@ def put_suck() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
 
-    if not globs.state.tool:
-        # "simulate" the tool when not configured (e.g. when using with simulation)
-        logger.warning("PUT /suction/suck called while a tool is not configured.")
-        return Response(status=204)
-
     vacuum = int(request.args.get("vacuum", default=60))
-    globs.state.tool.vacuum_on(vacuum)
+    globs.state.worker.request("suck", vacuum=vacuum)
 
     return Response(status=204)
 
@@ -1159,15 +774,8 @@ def get_vacuum() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
-
-    if not globs.state.tool:
-        # "simulate" the tool when not configured (e.g. when using with simulation)
-        logger.warning("PUT /suction/vacuum called while a tool is not configured.")
-        return jsonify(Vacuum(0, 0).to_dict())
-
-    return jsonify(Vacuum(globs.state.tool.get_channelA_vacuum(), globs.state.tool.get_channelB_vacuum()).to_dict())
+    return jsonify(globs.state.worker.request("vacuum"))
 
 
 @app.route("/suction/release", methods=["PUT"])
@@ -1189,15 +797,8 @@ def put_release() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-
     assert globs.state
-
-    if not globs.state.tool:
-        logger.warning("PUT /suction/release called while a tool is not configured.")
-        return Response(status=204)
-
-    globs.state.tool.release_vacuum()
-
+    globs.state.worker.request("release")
     return Response(status=204)
 
 
@@ -1218,10 +819,6 @@ def main() -> None:
     logger.setLevel(args.debug)
     globs.debug = args.debug
 
-    # TODO there will be a ROS-specific scene service
-    # if not args.swagger:
-    #    scene_service.wait_for()
-
     if not INTERACT_WITH_DASHBOARD:
         logger.warning("Interaction with robot dashboard disabled. Make sure you know what it means.")
 
@@ -1232,11 +829,10 @@ def main() -> None:
         port_from_url(URL),
         [Vacuum, Pose, Joint, InverseKinematicsRequest, WebApiError],
         args.swagger,
-        # dependencies={"ARCOR2 Scene": "1.0.0"},
     )
 
     if globs.state:
-        globs.state.shutdown()
+        globs.state.worker.stop()
 
 
 if __name__ == "__main__":

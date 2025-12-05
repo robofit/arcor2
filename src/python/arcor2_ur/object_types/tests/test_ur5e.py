@@ -16,6 +16,7 @@ def test_signatures() -> None:
     assert inspect.signature(Robot.inverse_kinematics) == inspect.signature(Ur5e.inverse_kinematics)
     assert inspect.signature(Robot.forward_kinematics) == inspect.signature(Ur5e.forward_kinematics)
     assert inspect.signature(Robot.stop) == inspect.signature(Ur5e.stop)
+    assert inspect.signature(Robot.get_hand_teaching_mode) == inspect.signature(Ur5e.get_hand_teaching_mode)
     assert inspect.signature(Robot.set_hand_teaching_mode) == inspect.signature(Ur5e.set_hand_teaching_mode)
 
 

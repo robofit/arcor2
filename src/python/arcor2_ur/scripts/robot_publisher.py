@@ -1,4 +1,5 @@
 import rclpy  # pants: no-infer-dep
+from rclpy.executors import ExternalShutdownException  # pants: no-infer-dep
 from rclpy.node import Node  # pants: no-infer-dep
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy  # pants: no-infer-dep
 from std_msgs.msg import Bool  # pants: no-infer-dep
@@ -24,10 +25,15 @@ def main() -> None:
     publisher_node = PublisherNode()
     publisher_node.robot_program_running_pub.publish(Bool(data=True))
     publisher_node.robot_mode_pub.publish(RobotMode(mode=RobotMode.RUNNING))
-    rclpy.spin(publisher_node)
-
-    publisher_node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(publisher_node)
+    except ExternalShutdownException:
+        # Happens when the process is terminated from the outside; exit cleanly.
+        pass
+    finally:
+        publisher_node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

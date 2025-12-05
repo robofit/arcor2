@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from arcor2.clients import scene_service
@@ -20,8 +22,11 @@ def test_basics(start_processes: Urls) -> None:
 
     assert len(ot.robot_joints()) == 6
     pos = ot.get_end_effector_pose("")
-    pos.position.z -= 0.01
+    orig_z = pos.position.z
+    pos.position.z -= 0.05
     ot.move_to_pose("", pos, 0.5)
+    pos_after = ot.get_end_effector_pose("")
+    assert orig_z - pos_after.position.z > 0.045
 
     ot.suck()
     ot.release()
@@ -44,5 +49,15 @@ def test_basics(start_processes: Urls) -> None:
     assert not scene_service.collision_ids()
 
     ot.move_to_pose("", pos, 0.5)
+
+    assert not ot.get_hand_teaching_mode()
+
+    ot.set_hand_teaching_mode(True)
+    assert ot.get_hand_teaching_mode()
+    time.sleep(0.5)
+    assert ot.get_hand_teaching_mode()
+
+    ot.set_hand_teaching_mode(False)
+    assert not ot.get_hand_teaching_mode()
 
     ot.cleanup()

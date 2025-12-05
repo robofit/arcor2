@@ -1,6 +1,7 @@
 services:
   ur-demo-ursim:
-    image: universalrobots/ursim_e-series:5.17.3  # version should match version of the Polyscope on the robot
+    # version should match version of the Polyscope on the robot
+    image: universalrobots/ursim_e-series:5.22.0  # TODO should be 5.24.0 but it is not working (5.23.0 either)
     container_name: ur-demo-ursim
     ports:  # network_mode: host can't be (easily) used as ursim starts its own X server
       - "5900:5900"  # VNC port

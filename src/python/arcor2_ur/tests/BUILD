@@ -1,4 +1,5 @@
 python_tests(
+    dependencies=["3rdparty#PyYAML"],
     runtime_package_dependencies=[
         "src/python/arcor2_ur/scripts:ur", "src/python/arcor2_ur/scripts:robot_publisher",
     ],

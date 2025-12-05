@@ -1,6 +1,7 @@
 import logging
 import os
 import random
+import signal
 import subprocess as sp
 import time
 from typing import Iterator, NamedTuple
@@ -8,7 +9,7 @@ from typing import Iterator, NamedTuple
 import pytest
 
 from arcor2.helpers import find_free_port
-from arcor2_arserver.tests.testutils import CheckHealthException, check_health, finish_processes, log_proc_output
+from arcor2_arserver.tests.testutils import CheckHealthException, check_health, log_proc_output
 
 LOGGER = logging.getLogger(__name__)
 
@@ -16,6 +17,24 @@ LOGGER = logging.getLogger(__name__)
 class Urls(NamedTuple):
     ros_domain_id: str
     robot_url: str
+
+
+def _finish_processes(processes) -> None:
+    for proc in processes:
+        if proc.poll() is None:
+            try:
+                os.killpg(proc.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                proc.wait(timeout=5)
+            except sp.TimeoutExpired:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                proc.wait(timeout=1)
+        log_proc_output(proc.communicate())
 
 
 def _load_ros_env() -> dict[str, str]:
@@ -93,13 +112,13 @@ def start_processes(request) -> Iterator[Urls]:
     processes.append(robot_proc)
 
     if robot_proc.poll():
-        finish_processes(processes)
+        _finish_processes(processes)
         raise Exception("Robot service died.")
 
     try:
         check_health("UR", robot_url, timeout=20)
     except CheckHealthException:
-        finish_processes(processes)
+        _finish_processes(processes)
         raise
 
     # robot_mode etc. is not published with mock_hw -> there is this helper node to do that
@@ -108,9 +127,9 @@ def start_processes(request) -> Iterator[Urls]:
     processes.append(robot_pub_proc)
 
     if robot_pub_proc.poll():
-        finish_processes(processes)
+        _finish_processes(processes)
         raise Exception("Robot publisher node died.")
 
     yield Urls(ros_domain_id, robot_url)
 
-    finish_processes(processes)
+    _finish_processes(processes)
