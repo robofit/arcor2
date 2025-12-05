@@ -60,6 +60,12 @@ class Ur5e(Robot):
     def cleanup(self):
         self._stop()
 
+    def get_hand_teaching_mode(self) -> bool:
+        return rest.call(rest.Method.GET, f"{self.settings.url}/hand_teaching", return_type=bool)
+
+    def set_hand_teaching_mode(self, enabled: bool) -> None:
+        rest.call(rest.Method.PUT, f"{self.settings.url}/hand_teaching", params={"enabled": enabled})
+
     def get_end_effectors_ids(self) -> set[str]:
         return {"default"}
 

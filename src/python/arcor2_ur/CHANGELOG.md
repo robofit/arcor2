@@ -2,6 +2,17 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.6.0] - 2025-12-05
+
+### Added
+
+- Freedrive mode.
+
+### Changed
+
+- Updated dependencies, ROS 2 driver, etc.
+- ROS 2 communication moved to separate process (to fix misterious problems).
+
 ## [1.5.0] - 2024-12-16
 
 ### Changed

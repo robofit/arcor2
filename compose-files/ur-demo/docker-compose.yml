@@ -1,6 +1,6 @@
 services:
   ur-demo-robot-api:
-    image: arcor2/arcor2_ur:1.5.0
+    image: arcor2/arcor2_ur:1.6.0
     container_name: ur-demo-robot-api
     ports:
       - "5012:5012"
