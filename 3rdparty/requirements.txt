@@ -11,17 +11,13 @@ autopep8~=2.3.2
 colorlog~=6.10.1
 ciso8601~=2.3.3
 dataclasses-jsonschema[fast-validation,apispec,fast-dateparsing]~=2.16.0
-easyhid~=0.0.10
-fanucpy~=0.1.14
 fastuuid~=0.14.0
 flask-swagger-ui~=5.21.0
 flask_cors~=6.0.1
 types_flask_cors~=6.0.0.20250809
-gTTS~=2.5.4
-hidapi~=0.14.0.post4
 lru-dict~=1.4.1
 numpy-quaternion[scipy,numba]~=2024.0.13
-numpy>=1.26.4,<2  # numpy 2.x.y is blocked by fanucpy
+numpy~=2.3.5
 open3d==0.19.0
 openapi-spec-validator~=0.7.2
 opencv-contrib-python~=4.10.0.84
@@ -30,7 +26,6 @@ packaging~=25.0
 pydub~=0.25.1
 pyhumps==3.8.0
 pyserial~=3.5
-pyspacemouse~=1.1.4
 pytest-asyncio~=1.3.0
 pytest-randomly~=4.0.1
 pytest-repeat~=0.9.4

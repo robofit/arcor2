@@ -50,7 +50,7 @@ def average_quaternions(Q: numpy.ndarray) -> numpy.ndarray:
     for i in range(0, M):
         q = Q[i, :]
         # multiply q with its transposed version q' and add A
-        A = numpy.outer(q, q) + A
+        A = numpy.outer(q, q) + A  # type: ignore
 
     # scale
     A = (1.0 / M) * A
