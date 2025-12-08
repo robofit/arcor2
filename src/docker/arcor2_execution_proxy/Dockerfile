@@ -7,13 +7,17 @@ COPY src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex /bi
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
 FROM python:3.12.7-bookworm
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN mkdir -p /root/tokens \
 	&& mkdir -p /root/project
 
 # curl is for healthcheck
-RUN apt-get update \
-        && apt-get install -y -q --no-install-recommends curl=7.88.1-10+deb12u14 \
+RUN set -euo pipefail \
+        && apt-get update \
+        && curl_ver="$(apt-cache policy curl | awk '/Candidate:/ {print $2}')" \
+        && apt-get install -y -q --no-install-recommends \
+        "curl=${curl_ver}" \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

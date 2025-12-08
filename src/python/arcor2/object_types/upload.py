@@ -120,5 +120,11 @@ def upload_def(
             description=f"URDF for {obj_type.id}",
         )
 
+    # workaround for Asset behavior (it keeps orphaned .py assets when doing upsert of the mesh)
+    if obj_type.id not in {oti.id for oti in ps.get_object_type_ids()}:
+        for ai in asset.asset_info():
+            if ai.file_name == f"{obj_type.id}.py":
+                asset.delete_asset(ai.id)
+
     print(f"Storing '{obj_type.id}'...")
     ps.update_object_type(obj_type)

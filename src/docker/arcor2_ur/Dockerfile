@@ -38,11 +38,16 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/r
 COPY build-support/install_ur_dependencies.sh /root/install_ur_dependencies.sh
 
 # libgl1-mesa-glx ??
-RUN apt-get update \
+RUN set -euo pipefail \
+        && apt-get update \
         && /root/install_ur_dependencies.sh \
+        && glib_ver="$(apt-cache policy libglib2.0-0t64 | awk '/Candidate:/ {print $2}')" \
+        && gomp_ver="$(apt-cache policy libgomp1 | awk '/Candidate:/ {print $2}')" \
+        && libusb_ver="$(apt-cache policy libusb-1.0-0 | awk '/Candidate:/ {print $2}')" \
         && apt-get install -y -q --no-install-recommends \
-        libglib2.0-0t64=2.80.0-6ubuntu3.4 \
-        libgomp1=14.2.0-4ubuntu2~24.04 libusb-1.0-0=2:1.0.27-1 \
+        "libglib2.0-0t64=${glib_ver}" \
+        "libgomp1=${gomp_ver}" \
+        "libusb-1.0-0=${libusb_ver}" \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

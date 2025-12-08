@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.6.0] - WIP
+
+### Fixed
+
+- Wrong parameter name in Asset service client (`delete_asset` function).
+- `upload_def` - added workaround to handle orphaned `.py` assets.
+
 ## [1.5.0] - 2024-09-12
 
 ### Changed
