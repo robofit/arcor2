@@ -19,6 +19,11 @@ jobs:
   build:
     env:
       PANTS_CONFIG_FILES: pants.ci.toml
+      PEX_ROOT: ${{ github.workspace }}/.pex
+      PANTS_SETUP_CACHE_DIR: ${{ github.workspace }}/.cache/pants/setup
+      PANTS_NAMED_CACHES_DIR: ${{ github.workspace }}/.cache/pants/named_caches
+      PANTS_LOCAL_STORE_DIR: ${{ github.workspace }}/.cache/pants/lmdb_store
+      TMPDIR: ${{ github.workspace }}/.tmp
     runs-on: ubuntu-24.04
     needs: org-check
     strategy:
@@ -28,25 +33,38 @@ jobs:
     - name: Maximize build space
       uses: easimon/maximize-build-space@v10
       with:
-        root-reserve-mb: 30000
+        root-reserve-mb: 8096
         swap-size-mb: 1024
         remove-dotnet: 'true'
         remove-android: 'true'
         remove-haskell: 'true'
         remove-docker-images: 'true'
+    - name: Show disk space
+      run: |
+        df -h / /mnt $GITHUB_WORKSPACE
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
         lfs: true
+    - name: Prepare workspace tmpdir
+      run: |
+        mkdir -p "$GITHUB_WORKSPACE/.tmp"
+        chmod 1777 "$GITHUB_WORKSPACE/.tmp"
     - name: Checkout LFS objects
       run: git lfs checkout
+    - name: Move Docker storage to workspace
+      run: |
+        sudo systemctl stop docker || sudo service docker stop
+        sudo rm -rf /var/lib/docker
+        mkdir -p "$GITHUB_WORKSPACE/.docker"
+        sudo ln -s "$GITHUB_WORKSPACE/.docker" /var/lib/docker
+        sudo chown -R "$USER":"$USER" "$GITHUB_WORKSPACE/.docker"
+        sudo systemctl start docker || sudo service docker start
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
     - uses: ros-tooling/setup-ros@v0.7
-      with:
-        required-ros-distributions: jazzy
     - uses: pantsbuild/actions/init-pants@v5-scie-pants
       with:
         pants-python-version: ${{ matrix.python-version }}
@@ -59,9 +77,11 @@ jobs:
         pants --changed-since=HEAD update-build-files --check
     - name: install system dependencies
       run: | # cargo is required to build fastuuid (no wheels for Python 3.11)
-        sudo apt update
-        sudo apt install jq cargo
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends jq cargo
         sudo ./build-support/install_ur_dependencies.sh
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
     - name: Lint
       run: |
         pants --changed-since=origin/master lint
@@ -73,7 +93,7 @@ jobs:
         source /opt/ros/jazzy/setup.bash
         pants --changed-since=origin/master --changed-dependents=transitive test
     - name: Build Docker images
-      run: |  # filter out non-essential docker images (there was a problem with full storage on github)
+      run: |
         pants filter --target-type=docker_image --changed-since=origin/master --changed-dependents=transitive | xargs pants package
     - name: Build Python packages
       run: |

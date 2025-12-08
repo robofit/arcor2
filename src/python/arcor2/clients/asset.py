@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from dataclasses_jsonschema import JsonSchemaMixin
+from dataclasses_jsonschema.type_defs import Nullable
 
 from arcor2 import rest
 
@@ -21,7 +22,7 @@ class AssetInfo(JsonSchemaMixin):
     name: Optional[str] = None
     extension: Optional[str] = None
     directory_path: Optional[str] = None
-    description: Optional[str] = None
+    description: Nullable[str | None] = None
     tags: Optional[list[str]] = None
     dependencies: Optional[list[str]] = None
 
@@ -48,7 +49,7 @@ def create_asset(
     """Creates the asset."""
 
     if upsert and asset_exists(id):
-        delete_asset(id, remove_dependers=True)
+        delete_asset(id, remove_dependents=True)
 
     return rest.call(
         rest.Method.POST,
@@ -66,8 +67,8 @@ def create_asset(
     )
 
 
-def delete_asset(id: str, remove_dependers: bool = False) -> None:
-    rest.call(rest.Method.DELETE, f"{URL}/assets/{id}", params={"remove_dependers": remove_dependers})
+def delete_asset(id: str, remove_dependents: bool = False) -> None:
+    rest.call(rest.Method.DELETE, f"{URL}/assets/{id}", params={"remove_dependents": remove_dependents})
 
 
 def asset_exists(id: str) -> bool:

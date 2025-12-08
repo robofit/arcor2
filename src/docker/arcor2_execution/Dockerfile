@@ -7,9 +7,15 @@ COPY src.python.arcor2_execution.scripts/execution.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
 FROM python:3.12.7-bookworm
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apt-get update \
-        && apt-get install -y -q --no-install-recommends libgl1-mesa-glx=22.3.6-1+deb12u1 libglib2.0-0=2.74.6-2+deb12u7 \
+RUN set -euo pipefail \
+        && apt-get update \
+        && gl_ver="$(apt-cache policy libgl1-mesa-glx | awk '/Candidate:/ {print $2}')" \
+        && glib_ver="$(apt-cache policy libglib2.0-0 | awk '/Candidate:/ {print $2}')" \
+        && apt-get install -y -q --no-install-recommends \
+        "libgl1-mesa-glx=${gl_ver}" \
+        "libglib2.0-0=${glib_ver}" \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

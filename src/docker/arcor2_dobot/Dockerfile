@@ -7,10 +7,22 @@ COPY src.python.arcor2_dobot.scripts/dobot.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
 FROM python:3.12.7-bookworm
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # curl is for healthcheck
-RUN apt-get update \
-        && apt-get install -y -q --no-install-recommends libgl1-mesa-glx=22.3.6-1+deb12u1 libglib2.0-0=2.74.6-2+deb12u7 libgomp1=12.2.0-14+deb12u1 libusb-1.0-0=2:1.0.26-1 curl=7.88.1-10+deb12u14 \
+RUN set -euo pipefail \
+        && apt-get update \
+        && gl_ver="$(apt-cache policy libgl1-mesa-glx | awk '/Candidate:/ {print $2}')" \
+        && glib_ver="$(apt-cache policy libglib2.0-0 | awk '/Candidate:/ {print $2}')" \
+        && gomp_ver="$(apt-cache policy libgomp1 | awk '/Candidate:/ {print $2}')" \
+        && libusb_ver="$(apt-cache policy libusb-1.0-0 | awk '/Candidate:/ {print $2}')" \
+        && curl_ver="$(apt-cache policy curl | awk '/Candidate:/ {print $2}')" \
+        && apt-get install -y -q --no-install-recommends \
+        "libgl1-mesa-glx=${gl_ver}" \
+        "libglib2.0-0=${glib_ver}" \
+        "libgomp1=${gomp_ver}" \
+        "libusb-1.0-0=${libusb_ver}" \
+        "curl=${curl_ver}" \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
