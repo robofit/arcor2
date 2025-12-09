@@ -2,6 +2,12 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [1.6.1] - 2025-12-09
+
+### Fixed
+
+- Constrained workspace boundaries to make planning more reliable.
+
 ## [1.6.0] - 2025-12-05
 
 ### Added
