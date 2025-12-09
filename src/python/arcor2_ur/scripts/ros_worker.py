@@ -36,6 +36,8 @@ from arcor2_ur.vgc10 import VGC10
 logger = get_logger(__name__)
 
 FREEDRIVE_KEEPALIVE_PERIOD = 0.1
+WORKSPACE_MIN = (-1.0, -1.0, -0.1)  # range of UR5e is 850mm
+WORKSPACE_MAX = (1.0, 1.0, 1.0)
 
 
 class CollisionObjectTuple(NamedTuple):
@@ -606,6 +608,7 @@ class RosWorkerRuntime:
 
         ur_manipulator.set_start_state_to_current_state()
         ur_manipulator.set_goal_state(pose_stamped_msg=pose_goal, pose_link=self.tool_link)
+        ur_manipulator.set_workspace(*WORKSPACE_MIN, *WORKSPACE_MAX)  # not documented anywhere :-D
 
         self.node.set_speed_slider(velocity)
         self.node.set_payload(payload)

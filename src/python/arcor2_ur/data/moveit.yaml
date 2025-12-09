@@ -8,12 +8,35 @@ planning_scene_monitor_options:
   wait_for_initial_state_timeout: 10.0
 
 planning_pipelines:
-  namespace: "moveit_cpp"  # optional, default is ~
   pipeline_names: ["ompl"]
 
 plan_request_params:
-  planning_attempts: 1
+  planning_attempts: 2
   planning_pipeline: ompl
+  planner_id: RRTConnectkConfigDefault
   max_velocity_scaling_factor: 1.0
   max_acceleration_scaling_factor: 1.0
   planning_time: 5.0
+  goal_joint_tolerance: 0.001
+  goal_position_tolerance: 0.005
+  goal_orientation_tolerance: 0.01
+
+ompl:
+  start_state_max_bounds_error: 0.1
+  start_state_max_dt: 0.5
+  jiggle_fraction: 0.05
+  max_sampling_attempts: 100
+
+  planning_plugins:
+    - ompl_interface/OMPLPlanner
+
+  request_adapters:
+    - default_planning_request_adapters/ResolveConstraintFrames
+    - default_planning_request_adapters/ValidateWorkspaceBounds
+    - default_planning_request_adapters/CheckStartStateBounds
+    - default_planning_request_adapters/CheckStartStateCollision
+
+  response_adapters:
+    - default_planning_response_adapters/AddTimeOptimalParameterization
+    - default_planning_response_adapters/ValidateSolution
+    - default_planning_response_adapters/DisplayMotionPath
