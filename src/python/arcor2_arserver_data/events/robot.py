@@ -12,9 +12,9 @@ from arcor2.data.events import Event
 @dataclass
 class RobotMoveToData(JsonSchemaMixin):
     class MoveEventType(common.StrEnum):
-        START: str = "start"
-        END: str = "end"
-        FAILED: str = "failed"
+        START = "start"
+        END = "end"
+        FAILED = "failed"
 
     move_event_type: MoveEventType
     robot_id: str

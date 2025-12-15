@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Iterator, ValuesView
+from typing import Iterator, ValuesView
 
 from arcor2.data import common as cmn
 from arcor2.exceptions import Arcor2Exception
@@ -31,14 +31,8 @@ class CachedBase:
         self.int_modified: None | datetime = data.int_modified
 
 
-class UpdateableMixin:
-    if TYPE_CHECKING:
-        __slots__ = "modified", "int_modified"
-
-        modified: None | datetime = None
-        int_modified: None | datetime = None
-    else:
-        __slots__ = ()
+class UpdateableMixin(CachedBase):
+    __slots__ = ()
 
     def update_modified(self) -> None:
         self.int_modified = datetime.now(tz=timezone.utc)
@@ -148,11 +142,11 @@ class CachedScene(CachedBase):
         raise Arcor2Exception(f"Object with method {object_method} was not found")
 
 
-class UpdateableCachedScene(UpdateableMixin, CachedScene):
+class UpdateableCachedScene(CachedScene, UpdateableMixin):
     __slots__ = ()
 
     def __init__(self, scene: cmn.Scene | CachedScene):
-        super(UpdateableCachedScene, self).__init__(copy.deepcopy(scene))
+        super().__init__(copy.deepcopy(scene))
 
     def upsert_object(self, obj: cmn.SceneObject) -> None:
         self._objects[obj.id] = obj
@@ -589,7 +583,7 @@ class CachedProject(CachedBase):
         raise CachedProjectException(f"Action {name} in project {self.name} not found.")
 
 
-class UpdateableCachedProject(UpdateableMixin, CachedProject):
+class UpdateableCachedProject(CachedProject, UpdateableMixin):
     __slots__ = ()
 
     def __init__(self, project: cmn.Project | CachedProject):

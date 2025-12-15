@@ -10,11 +10,11 @@ from arcor2.data.common import Pose
 
 
 class Model3dType(Enum):
-    NONE: str = "None"
-    BOX: str = "Box"
-    CYLINDER: str = "Cylinder"
-    SPHERE: str = "Sphere"
-    MESH: str = "Mesh"
+    NONE = "None"
+    BOX = "Box"
+    CYLINDER = "Cylinder"
+    SPHERE = "Sphere"
+    MESH = "Mesh"
 
 
 @dataclass

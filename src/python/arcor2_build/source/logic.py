@@ -3,6 +3,7 @@ from ast import (
     AST,
     Assign,
     Compare,
+    Constant,
     Continue,
     Eq,
     FunctionDef,
@@ -10,11 +11,8 @@ from ast import (
     Load,
     Module,
     Name,
-    NameConstant,
-    Num,
     Pass,
     Store,
-    Str,
     While,
     expr,
     keyword,
@@ -59,11 +57,11 @@ def program_src(type_defs: TypesDict, project: CProject, scene: CScene, add_logi
         aval: None | expr = None
 
         if isinstance(val, bool):  # subclass of int
-            aval = NameConstant(value=val, kind=None)
+            aval = Constant(value=val)
         elif isinstance(val, (int, float)):
-            aval = Num(value=val, kind=None)
+            aval = Constant(value=val)
         elif isinstance(val, str):
-            aval = Str(value=val, kind="")
+            aval = Constant(value=val)
 
         if not aval:
             raise Arcor2Exception(f"Unsupported project parameter type ({param.type}) or value ({val}).")
@@ -162,7 +160,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
             ac_obj,
             act.action_type,
             args,
-            [keyword(arg="an", value=Str(value=current_action.name, kind=""))],
+            [keyword(arg="an", value=Constant(value=current_action.name))],
             current_action.flow(FlowTypes.DEFAULT).outputs,
         )
 
@@ -221,7 +219,13 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
                 from arcor2 import json
 
                 condition_value = json.loads(output.condition.value)
-                comp = NameConstant(value=condition_value, kind=None)
+                if (
+                    not isinstance(condition_value, (str, bytes, bool, int, float, complex))
+                    and condition_value is not None
+                ):
+                    raise SourceException(f"Unsupported condition value type: {type(condition_value).__name__}")
+
+                comp = Constant(value=condition_value)
                 what = output.condition.parse_what()
                 output_name = project.action(what.action_id).flow(what.flow_name).outputs[what.output_index]
 
@@ -234,7 +238,7 @@ def add_logic_to_loop(type_defs: TypesDict, tree: Module, scene: CScene, project
                 if idx == 0:
                     root_if = cond
                     container.body.append(root_if)
-                    logger.debug(f"Adding branch for: {condition_value}")
+                    logger.debug(f"Adding branch for: {condition_value!r}")
                 else:
                     assert isinstance(root_if, If)
                     root_if.orelse.append(cond)

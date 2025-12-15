@@ -1,4 +1,4 @@
-import importlib
+import importlib.util as importlib_util
 import os
 import sys
 
@@ -36,9 +36,9 @@ def test_global_aps_cls() -> None:
     import arcor2_runtime.resources  # noqa
 
     my_name = "my_module"
-    my_spec = importlib.util.spec_from_loader(my_name, loader=None)
+    my_spec = importlib_util.spec_from_loader(my_name, loader=None)
     assert my_spec
-    my_module = importlib.util.module_from_spec(my_spec)
+    my_module = importlib_util.module_from_spec(my_spec)
 
     cproj = CachedProject(proj)
 

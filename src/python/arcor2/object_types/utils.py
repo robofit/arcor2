@@ -3,15 +3,15 @@ import inspect
 import os
 import shutil
 from dataclasses import is_dataclass
-from typing import Any, Callable, Iterator, get_type_hints
+from typing import Any, Callable, Iterator, cast, get_type_hints
 
 import typing_inspect
 from dataclasses_jsonschema import JsonSchemaMixin, ValidationError
 
-import arcor2
 from arcor2 import json
 from arcor2.data.common import ActionMetadata, Parameter
 from arcor2.exceptions import Arcor2Exception
+from arcor2.object_types import abstract as abstract_module
 from arcor2.object_types.abstract import Generic, Settings
 from arcor2.source.utils import find_class_def, parse
 
@@ -52,7 +52,7 @@ def check_object_type(type_def: type[Generic]) -> None:
 def built_in_types() -> Iterator[tuple[str, type[Generic]]]:
     """Yields class name and class definition tuple."""
 
-    for cls_name, cls_type in inspect.getmembers(arcor2.object_types.abstract, predicate=inspect.isclass):
+    for cls_name, cls_type in inspect.getmembers(abstract_module, predicate=lambda member: inspect.isclass(member)):
         try:
             if not issubclass(cls_type, Generic):
                 continue
@@ -61,7 +61,7 @@ def built_in_types() -> Iterator[tuple[str, type[Generic]]]:
             # CancelDict / issubclass() arg 1 must be a class
             continue
 
-        yield cls_name, cls_type
+        yield cls_name, cast(type[Generic], cls_type)
 
 
 def get_built_in_type(name: str) -> type[Generic]:
@@ -163,16 +163,21 @@ def get_settings_def(type_def: type[Generic]) -> type[Settings]:
     else:
         settings_cls = param.annotation
 
-    if not is_dataclass(settings_cls):
+    if not inspect.isclass(settings_cls):
+        raise Arcor2Exception("Settings have invalid annotation.")
+
+    settings_cls_type = cast(type[object], settings_cls)
+
+    if not is_dataclass(settings_cls_type):
         raise Arcor2Exception("Settings misses @dataclass decorator.")
 
     try:
-        if not issubclass(settings_cls, Settings):
-            raise Arcor2Exception(f"Settings have invalid type ({settings_cls.__name__}).")
+        if not issubclass(settings_cls_type, Settings):
+            raise Arcor2Exception(f"Settings have invalid type ({settings_cls_type.__name__}).")
     except TypeError:
         raise Arcor2Exception("Settings have invalid annotation.")
 
-    return settings_cls
+    return settings_cls_type
 
 
 def base_from_source(source: str | ast.AST, cls_name: str) -> list[str]:
@@ -215,13 +220,19 @@ def iterate_over_actions(
     ]
 ]:
     for method_name, method in inspect.getmembers(type_def, inspect.isroutine):
-        try:
-            if not isinstance(method.__action__, ActionMetadata):
-                continue
-        except AttributeError:
+        action_meta = getattr(method, "__action__", None)
+        if not isinstance(action_meta, ActionMetadata):
             continue
 
-        yield method_name, method
+        yield method_name, cast(
+            Callable[
+                [
+                    Any,
+                ],
+                Any,
+            ],
+            method,
+        )
 
 
 def prepare_object_types_dir(path: str, module: str) -> None:

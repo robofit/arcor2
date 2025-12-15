@@ -45,12 +45,12 @@ TOKENS_DB_PATH = os.path.join(DB_PATH, "tokens")
 class ExecutionState(Enum):
     """Represents the state of package execution."""
 
-    Undefined: str = "Undefined"
-    Running: str = "Running"
-    Completed: str = "Completed"
-    Faulted: str = "Faulted"
-    Paused: str = "Paused"
-    Pending: str = "Pending"
+    Undefined = "Undefined"
+    Running = "Running"
+    Completed = "Completed"
+    Faulted = "Faulted"
+    Paused = "Paused"
+    Pending = "Pending"
 
 
 @dataclass

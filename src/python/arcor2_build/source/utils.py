@@ -7,6 +7,7 @@ from ast import (
     Call,
     ClassDef,
     Compare,
+    Constant,
     Eq,
     ExceptHandler,
     Expr,
@@ -21,7 +22,6 @@ from ast import (
     Pass,
     Return,
     Store,
-    Str,
     Try,
     While,
     With,
@@ -106,7 +106,7 @@ def empty_script_tree(project_id: str, add_main_loop: bool = True) -> Module:
             ),
             If(
                 test=Compare(
-                    left=Name(id="__name__", ctx=Load()), ops=[Eq()], comparators=[Str(value="__main__", kind="")]
+                    left=Name(id="__name__", ctx=Load()), ops=[Eq()], comparators=[Constant(value="__main__")]
                 ),
                 body=[
                     Try(
@@ -211,7 +211,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             attr=CachedProject.bare_action_point.__name__,
                             ctx=Load(),
                         ),
-                        args=[Str(value=ap.id, kind="")],
+                        args=[Constant(value=ap.id)],
                         keywords=[],
                     ),
                     attr="position",
@@ -235,7 +235,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             attr=SpecialValues.joints,
                             ctx=Load(),
                         ),
-                        args=[Str(value=joints.id, kind="")],
+                        args=[Constant(value=joints.id)],
                         keywords=[],
                     ),
                     type_comment=None,
@@ -330,7 +330,7 @@ def global_action_points_class(project: CachedProject) -> str:
                             attr="pose",
                             ctx=Load(),
                         ),
-                        args=[Str(value=ori.id, kind="")],
+                        args=[Constant(value=ori.id)],
                         keywords=[],
                     ),
                     type_comment=None,

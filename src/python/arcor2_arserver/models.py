@@ -1,5 +1,6 @@
 import inspect
 from enum import Enum
+from typing import Any, cast
 
 from apispec import APISpec
 from apispec.exceptions import DuplicateComponentNameError
@@ -14,12 +15,15 @@ from arcor2.data.rpc.common import RPC
 def _rename_childs(obj: type[JsonSchemaMixin] | type[Enum]) -> None:
     for _, child_obj in inspect.getmembers(obj, inspect.isclass):
         if issubclass(child_obj, (JsonSchemaMixin, Enum)):
-            if hasattr(child_obj, "__renamed__"):
+            if getattr(child_obj, "__renamed__", None) is not None:
                 continue
 
+            cast_child = cast(Any, child_obj)
+
             if "." in child_obj.__qualname__:
-                child_obj.__name__ = "".join(child_obj.__qualname__.split("."))
-                child_obj.__renamed__ = None
+                cast_child.__name__ = "".join(child_obj.__qualname__.split("."))
+
+            cast_child.__renamed__ = None
 
             _rename_childs(child_obj)
 

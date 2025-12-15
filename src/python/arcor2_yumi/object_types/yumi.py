@@ -75,18 +75,18 @@ class ProgramStopped(RwsException):
 
 
 class ExecutionState(StrEnum):
-    running: str = "running"
-    stopped: str = "stopped"
+    running = "running"
+    stopped = "stopped"
 
 
 class ControllerState(StrEnum):
-    init: str = "init"
-    motoron: str = "motoron"
-    motoroff: str = "motoroff"
-    guardstop: str = "guardstop"
-    emergencystop: str = "emergencystop"
-    emergencystopreset: str = "emergencystopreset"
-    sysfail: str = "sysfail"
+    init = "init"
+    motoron = "motoron"
+    motoroff = "motoroff"
+    guardstop = "guardstop"
+    emergencystop = "emergencystop"
+    emergencystopreset = "emergencystopreset"
+    sysfail = "sysfail"
 
 
 class RWS:
@@ -977,8 +977,8 @@ class YuMiArm:
 
 
 class YumiArms(StrEnum):
-    LEFT: str = "left"
-    RIGHT: str = "right"
+    LEFT = "left"
+    RIGHT = "right"
 
 
 class YuMi(MultiArmRobot):

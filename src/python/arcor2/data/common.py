@@ -31,7 +31,7 @@ def uid(prefix: str) -> str:
 class StrEnum(BuiltinStrEnum):
     @classmethod
     def set(cls) -> set[str]:
-        return set(map(lambda c: c.value, cls))  # type: ignore
+        return {c.value for c in cls}
 
 
 @unique
@@ -42,7 +42,7 @@ class IntEnum(int, Enum):
 
 
 class FlowTypes(StrEnum):
-    DEFAULT: str = "default"
+    DEFAULT = "default"
 
 
 class LinkToActionOutput(NamedTuple):
@@ -407,8 +407,8 @@ class ActionParameterException(Arcor2Exception):
 @dataclass
 class ActionParameter(Parameter):
     class TypeEnum(StrEnum):
-        PROJECT_PARAMETER: str = "project_parameter"
-        LINK: str = "link"
+        PROJECT_PARAMETER = "project_parameter"
+        LINK = "link"
 
     def str_from_value(self) -> str:
         val = json.loads(self.value)
