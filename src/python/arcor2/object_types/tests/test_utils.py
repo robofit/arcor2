@@ -7,9 +7,9 @@ from arcor2.object_types.utils import settings_from_params
 
 
 class MyEnum(StrEnum):
-    OPT1: str = "opt1"
-    OPT2: str = "opt2"
-    OPT3: str = "opt3"
+    OPT1 = "opt1"
+    OPT2 = "opt2"
+    OPT3 = "opt3"
 
 
 @dataclass

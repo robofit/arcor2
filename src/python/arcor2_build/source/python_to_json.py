@@ -76,7 +76,7 @@ def get_parameters(
             value_type = plugin_from_type(method.annotations[param_name])
 
             if plugin_from_type(type(arg.value)) != value_type:
-                raise Arcor2Exception(f"Value {arg.value} type in method is not equal to the required value type")
+                raise Arcor2Exception(f"Value {arg.value!r} type in method is not equal to the required value type")
 
             param_type = value_type.type_name()
             param_value = value_type.value_to_json(arg.value)
@@ -180,7 +180,13 @@ def gen_action(
     try:
         for key in rest_of_node.keywords:
             if "an" == key.arg and isinstance(key.value, Constant):
-                name = key.value.value
+                const_value = key.value.value
+                if isinstance(const_value, bytes):
+                    name = const_value.decode()
+                elif isinstance(const_value, str):
+                    name = const_value
+                else:
+                    raise Arcor2Exception(f'Unexpected type for "an": {type(const_value)}')
         if not name:
             raise AttributeError
     except AttributeError:

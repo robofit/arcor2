@@ -29,9 +29,9 @@ class DobotException(RobotException):
 
 
 class MoveType(StrEnum):
-    JUMP: str = "JUMP"
-    JOINTS: str = "JOINTS"
-    LINEAR: str = "LINEAR"
+    JUMP = "JUMP"
+    JOINTS = "JOINTS"
+    LINEAR = "LINEAR"
 
 
 MOVE_TYPE_MAPPING = {

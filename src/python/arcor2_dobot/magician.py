@@ -9,11 +9,11 @@ from arcor2_dobot.dobot_api import DobotApiException
 
 
 class Joints(StrEnum):
-    J1: str = "magician_joint_1"
-    J2: str = "magician_joint_2"
-    J3: str = "magician_joint_3"
-    J4: str = "magician_joint_4"
-    J5: str = "magician_joint_5"
+    J1 = "magician_joint_1"
+    J2 = "magician_joint_2"
+    J3 = "magician_joint_3"
+    J4 = "magician_joint_4"
+    J5 = "magician_joint_5"
 
 
 class DobotMagician(Dobot):

@@ -12,8 +12,8 @@ class DummyMultiArmRobot(MultiArmRobot):
     _ABSTRACT = False
 
     class Arms(StrEnum):
-        left: str = "left"
-        right: str = "right"
+        left = "left"
+        right = "right"
 
     GRIPPERS: dict[str, set[str]] = {
         Arms.left: {"l_gripper_1", "l_gripper_2"},

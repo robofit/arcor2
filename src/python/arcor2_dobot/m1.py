@@ -6,10 +6,10 @@ from arcor2_dobot.dobot_api import DobotApiException
 
 
 class Joints(StrEnum):
-    J1: str = "dobot_m1_axis_2_joint"
-    J2: str = "dobot_m1_axis_3_joint"
-    J3: str = "dobot_m1_z_axis_joint"
-    J4: str = "dobot_m1_axis_4_joint"
+    J1 = "dobot_m1_axis_2_joint"
+    J2 = "dobot_m1_axis_3_joint"
+    J3 = "dobot_m1_z_axis_joint"
+    J4 = "dobot_m1_axis_4_joint"
 
 
 class DobotM1(Dobot):

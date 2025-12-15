@@ -136,8 +136,8 @@ class RegisterForRobotEvent(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             class RegisterEnum(StrEnum):
-                EEF_POSE: str = "eef_pose"
-                JOINTS: str = "joints"
+                EEF_POSE = "eef_pose"
+                JOINTS = "joints"
 
             robot_id: str
             what: RegisterEnum
@@ -349,19 +349,19 @@ class StepRobotEef(RPC):
         @dataclass
         class Args(JsonSchemaMixin):
             class Axis(StrEnum):
-                X: str = "x"
-                Y: str = "y"
-                Z: str = "z"
+                X = "x"
+                Y = "y"
+                Z = "z"
 
             class What(StrEnum):
-                POSITION: str = "position"
-                ORIENTATION: str = "orientation"
+                POSITION = "position"
+                ORIENTATION = "orientation"
 
             class Mode(StrEnum):
-                WORLD: str = "world"
-                ROBOT: str = "robot"
-                USER: str = "user"
-                RELATIVE: str = "relative"
+                WORLD = "world"
+                ROBOT = "robot"
+                USER = "user"
+                RELATIVE = "relative"
 
             robot_id: str
             end_effector_id: str

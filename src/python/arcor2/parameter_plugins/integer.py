@@ -1,5 +1,5 @@
 import ast
-from ast import Num
+from ast import Constant
 from dataclasses import dataclass
 from typing import Any, Callable
 
@@ -95,8 +95,8 @@ class IntegerPlugin(ParameterPlugin):
     @classmethod
     def parameter_ast(
         cls, type_defs: TypesDict, scene: CScene, project: CProject, action_id: str, parameter_id: str
-    ) -> Num:
-        return Num(value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id), kind=None)
+    ) -> Constant:
+        return Constant(value=cls.parameter_execution_value(type_defs, scene, project, action_id, parameter_id))
 
 
 class IntegerListPlugin(ListParameterPlugin):

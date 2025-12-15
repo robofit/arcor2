@@ -41,10 +41,10 @@ class SceneState(Event):
     @dataclass
     class Data(JsonSchemaMixin):
         class StateEnum(common.StrEnum):
-            Stopped: str = "stopped"
-            Starting: str = "starting"
-            Started: str = "started"
-            Stopping: str = "stopping"
+            Stopped = "stopped"
+            Starting = "starting"
+            Started = "started"
+            Stopping = "stopping"
 
         state: StateEnum
         message: Optional[str] = None

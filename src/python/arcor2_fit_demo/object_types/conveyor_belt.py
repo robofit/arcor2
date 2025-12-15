@@ -11,8 +11,8 @@ from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 
 
 class Direction(StrEnum):
-    LEFT: str = "left"
-    RIGHT: str = "right"
+    LEFT = "left"
+    RIGHT = "right"
 
 
 @dataclass
