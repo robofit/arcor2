@@ -4,12 +4,12 @@ from arcor2 import json
 from arcor2.data.common import Action, ActionParameter, Flow, Orientation, Pose, Position
 from arcor2.data.events import Event
 from arcor2.data.object_type import Box as BoxModel
-from arcor2.object_types.upload import upload_def
-from arcor2.parameter_plugins.pose import PosePlugin
-from arcor2.test_objects.box import Box
 from arcor2_arserver.tests.testutils import event, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
+from arcor2_object_types.parameter_plugins.pose import PosePlugin
+from arcor2_object_types.test_objects.box import Box
+from arcor2_object_types.upload import upload_def
 
 
 @dataclass

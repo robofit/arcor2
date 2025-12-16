@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from arcor2.data.object_type import Box, Mesh
-from arcor2.object_types.upload import Urdf, upload_def, upload_whatever
 from arcor2_fit_demo import get_data
 from arcor2_fit_demo.object_types.abstract_dobot import AbstractDobot
 from arcor2_fit_demo.object_types.conveyor_belt import ConveyorBelt
@@ -11,6 +10,7 @@ from arcor2_fit_demo.object_types.erp import Erp
 from arcor2_fit_demo.object_types.fit_common_mixin import FitCommonMixin
 from arcor2_fit_demo.object_types.optical_quality_control import OpticalQualityControl
 from arcor2_fit_demo.object_types.weighing_machine import WeighingMachine
+from arcor2_object_types.upload import Urdf, upload_def, upload_whatever
 
 
 def main() -> None:

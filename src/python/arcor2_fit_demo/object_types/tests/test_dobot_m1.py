@@ -1,11 +1,11 @@
 import inspect
 
-from arcor2.object_types.abstract import Robot
-from arcor2.object_types.tests.conftest import docstrings
-from arcor2.object_types.utils import check_object_type
-from arcor2.urdf import urdf_from_path
 from arcor2_fit_demo import get_data
 from arcor2_fit_demo.object_types.dobot_m1 import DobotM1
+from arcor2_object_types.abstract import Robot
+from arcor2_object_types.tests.conftest import docstrings
+from arcor2_object_types.utils import check_object_type
+from arcor2_urdf_utils.urdf import urdf_from_path
 
 
 def test_docstrings() -> None:

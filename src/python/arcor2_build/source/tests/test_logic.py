@@ -16,10 +16,10 @@ from arcor2.data.common import (
     Scene,
     SceneObject,
 )
-from arcor2.object_types.abstract import Generic
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
+from arcor2_object_types.abstract import Generic
 
 TAB = 4
 

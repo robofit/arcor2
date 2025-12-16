@@ -2,10 +2,10 @@ import asyncio
 
 from websockets.server import WebSocketServerProtocol
 
-from arcor2 import ws_server
 from arcor2.data import events
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
+from arcor2_web import ws_server
 
 
 async def broadcast_event(event: events.Event) -> None:

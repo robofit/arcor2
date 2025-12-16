@@ -2,12 +2,16 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
-## [1.6.0] - WIP
+## [2.0.0] - 2025-12-17
 
-### Fixed
+### Breaking
 
-- Wrong parameter name in Asset service client (`delete_asset` function).
-- `upload_def` - added workaround to handle orphaned `.py` assets.
+- Built-in ObjectTypes (flow/logic/time/random) were moved out of `arcor2` into the new `arcor2_object_types` package; the `arcor2_upload_object_types` PEX/Docker image is now built from there.
+- Project/Asset REST clients were removed from `arcor2`; use the combined `arcor2_storage` package (sync/async clients).
+
+### Changed
+
+- Upload helpers were moved alongside the new packages (`arcor2_storage`, `arcor2_object_types`), keeping dependency direction clean.
 
 ## [1.5.0] - 2024-09-12
 
@@ -81,7 +85,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 
-- Target REST endpoints for `arcor2.clients.scene_service` updated to match new API convention.
+- Target REST endpoints for `arcor2_scene_data.scene_service` updated to match new API convention.
   - `/collisions/{model_type}/{model_id}` changed to `/collisions/{model_type}`, `model_id` moved to request 
   parameters as `{model_type}Id`.
   - `/transforms/{transform_id}/local-pose` changed to `/transforms/{transform_id}/pose/local`.
@@ -238,7 +242,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - Project service client updated to API version 0.8.0.
-- `ARCOR2_PERSISTENT_STORAGE_URL` renamed to `ARCOR2_PROJECT_SERVICE_URL`.  
+- `ARCOR2_PERSISTENT_STORAGE_URL` renamed to `ARCOR2_STORAGE_SERVICE_URL`.  
 - Dependencies updated.
 
 ## [0.16.0] - 2021-05-21

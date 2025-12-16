@@ -4,12 +4,12 @@ from io import BytesIO
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL.Image import Image
 
-from arcor2 import rest
 from arcor2.data.camera import CameraParameters
 from arcor2.data.common import Joint, Pose
 from arcor2.exceptions import Arcor2Exception
 from arcor2_calibration_data import CALIBRATION_URL, EstimatedPose, MarkerCorners
 from arcor2_calibration_data.exceptions import NotFound
+from arcor2_web import rest
 
 
 class CalibrationException(Arcor2Exception):

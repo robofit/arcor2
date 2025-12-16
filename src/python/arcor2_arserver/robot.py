@@ -4,10 +4,8 @@ from typing import Any
 
 import arcor2.helpers as hlp
 from arcor2.cached import CachedScene
-from arcor2.clients import aio_asset as asset
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import MultiArmRobot, Robot
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
@@ -16,6 +14,8 @@ from arcor2_arserver.object_types.data import ObjectTypeData
 from arcor2_arserver.object_types.source import function_implemented
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data.robot import RobotMeta
+from arcor2_object_types.abstract import MultiArmRobot, Robot
+from arcor2_storage import aio_client as project_client
 
 
 class RobotPoseException(Arcor2Exception):
@@ -168,7 +168,7 @@ async def get_robot_meta(obj_type: ObjectTypeData) -> None:
     )
 
     if urdf_name := obj_type.type_def.urdf_package_name:
-        if not await asset.asset_exists(urdf_name):
+        if not await project_client.asset_exists(urdf_name):
             logger.error(f"URDF package {urdf_name} for {obj_type.meta.type} does not exist.")
         else:
             obj_type.robot_meta.urdf_package_filename = urdf_name

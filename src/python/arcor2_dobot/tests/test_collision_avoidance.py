@@ -1,11 +1,11 @@
 import pytest
 
-from arcor2 import rest
-from arcor2.clients import scene_service
 from arcor2.data.common import Pose, Position, WebApiError
 from arcor2.data.object_type import Box
 from arcor2_dobot.dobot import MoveType
 from arcor2_dobot.tests.conftest import Urls
+from arcor2_scene_data import scene_service
+from arcor2_web import rest
 
 
 def test_collision_avoidance(start_processes: Urls) -> None:

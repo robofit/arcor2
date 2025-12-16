@@ -2,13 +2,13 @@ import pytest
 
 from arcor2 import json
 from arcor2.data import common
-from arcor2.object_types.random_actions import RandomActions
 from arcor2_arserver.tests.testutils import event, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
+from arcor2_object_types.random_actions import RandomActions
 
 
-@pytest.mark.additional_deps([["src.python.arcor2.scripts/upload_builtin_objects.pex"]])
+@pytest.mark.additional_deps([["src.python.arcor2_object_types.scripts/upload_object_types.pex"]])
 def test_project_const(start_processes: None, ars: ARServer) -> None:
     event(ars, events.c.ShowMainScreen)
 

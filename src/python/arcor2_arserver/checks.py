@@ -11,11 +11,11 @@ from arcor2.data.common import (
 )
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import LogicContainer
-from arcor2.parameter_plugins import ParameterPluginException
-from arcor2.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 from arcor2_arserver.object_types.data import ObjectTypeData, ObjectTypeDict
 from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver_data.objects import ObjectAction
+from arcor2_object_types.parameter_plugins import ParameterPluginException
+from arcor2_object_types.parameter_plugins.utils import known_parameter_types, plugin_from_type_name
 
 # TODO refactor the module somewhere, so it can be also used within arcor2_build?
 
@@ -200,11 +200,22 @@ def check_action_params(
 
     assert action_type == object_action.name
 
-    if len(object_action.parameters) != len(action.parameters):
-        raise Arcor2Exception("Unexpected number of parameters.")
+    expected_params = {param.name: param for param in object_action.parameters}
+    provided_params = {param.name: param for param in action.parameters}
+
+    unexpected_params = provided_params.keys() - expected_params.keys()
+    if unexpected_params:
+        raise Arcor2Exception(f"Action contains unexpected parameters: {', '.join(sorted(unexpected_params))}.")
 
     for req_param in object_action.parameters:
-        param = action.parameter(req_param.name)
+        param = provided_params.get(req_param.name)
+        if param is None:
+            if req_param.default_value is None:
+                raise Arcor2Exception("Unexpected number of parameters.")
+
+            param = ActionParameter(req_param.name, req_param.type, req_param.default_value)
+            action.parameters.append(param)
+            provided_params[req_param.name] = param
 
         if param.type == ActionParameter.TypeEnum.PROJECT_PARAMETER:
             pparam = project.parameter(param.str_from_value())

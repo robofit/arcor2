@@ -5,9 +5,9 @@ from typing import Iterator, NamedTuple
 
 import pytest
 
-from arcor2.clients import scene_service
 from arcor2.helpers import find_free_port
 from arcor2_arserver.tests.testutils import check_health, finish_processes
+from arcor2_scene_data import scene_service
 
 LOGGER = logging.getLogger(__name__)
 

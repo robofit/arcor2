@@ -9,22 +9,22 @@ from typing import TypeVar
 import humps
 from dataclasses_jsonschema import JsonSchemaMixin, JsonSchemaValidationError
 
-from arcor2 import env, json, rest
+from arcor2 import env, json
 from arcor2 import transformations as tr
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.clients import scene_service
 from arcor2.data.common import Project, Scene
 from arcor2.data.events import PackageInfo
 from arcor2.data.object_type import Box, Cylinder, Mesh, Models, ObjectModel, Sphere
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, MultiArmRobot, Robot
-from arcor2.object_types.utils import built_in_types_names, settings_from_params
-from arcor2.parameter_plugins.base import TypesDict
+from arcor2_object_types.abstract import CollisionObject, Generic, GenericWithPose, MultiArmRobot, Robot
+from arcor2_object_types.utils import built_in_types_names, settings_from_params
 from arcor2_runtime import action, package
 from arcor2_runtime.action import patch_aps, patch_object_actions, patch_with_action_mapping, print_event
 from arcor2_runtime.arguments import parse_args
 from arcor2_runtime.events import RobotEef, RobotJoints
 from arcor2_runtime.exceptions import print_exception
+from arcor2_scene_data import scene_service
+from arcor2_web import rest
 
 
 class ResourcesException(Arcor2Exception):
@@ -127,7 +127,7 @@ class Resources:
             except IOError:
                 models[obj_type] = None
 
-        type_defs: TypesDict = {}
+        type_defs: dict[str, type[Generic]] = {}
 
         for scene_obj_type in self.scene.object_types:  # get all type-defs
             assert scene_obj_type not in type_defs

@@ -20,9 +20,9 @@ from arcor2.data.common import (
     Scene,
 )
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic
-from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2_build.source.utils import SpecialValues, find_Call, find_Compare, find_While
+from arcor2_object_types.abstract import Generic
+from arcor2_object_types.parameter_plugins.utils import plugin_from_type
 
 
 def action_point_in_list(action_points: list[ActionPoint], action_name: str) -> str | None:
@@ -61,9 +61,18 @@ def get_parameters(
     """
 
     parameters: list[ActionParameter] = []
-    # -2 because in AST "self" and "an" parameter is not in args
-    # if in parameters of method is before "an" * then "an" is not in method.args
-    if len(rest_of_node.args) != len(method.args) - 2 + len(method.kwonlyargs):
+
+    positional_params = method.args[1:]  # skip self
+    # `an` is always passed as keyword argument, not part of positional count
+    if "an" in positional_params:
+        positional_params.remove("an")
+
+    max_positional = len(positional_params)
+    defaults = method.defaults or ()
+    min_positional = max_positional - len(defaults)
+    min_positional = max(min_positional, 0)
+
+    if not (min_positional <= len(rest_of_node.args) <= max_positional):
         raise Arcor2Exception(f"Wrong number of parameters in method {ast.unparse(rest_of_node)}")
 
     for i in range(len(rest_of_node.args)):

@@ -1,11 +1,11 @@
 import time
 from dataclasses import dataclass
 
-from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Pose, StrEnum
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import CollisionObject
+from arcor2_object_types.abstract import CollisionObject
+from arcor2_web import rest
 
 from .fit_common_mixin import FitCommonMixin, UrlSettings  # noqa:ABS101
 

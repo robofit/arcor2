@@ -15,10 +15,10 @@ from flask import jsonify, request
 
 from arcor2 import env
 from arcor2.data import common, object_type, scene
-from arcor2.flask import Response, RespT, create_app, run_app
 from arcor2.logging import get_logger
 from arcor2_scene import SCENE_PORT, SCENE_SERVICE_NAME, version
 from arcor2_scene.exceptions import NotFound, SceneGeneral, WebApiError
+from arcor2_web.flask import Response, RespT, create_app, run_app
 
 app = create_app(__name__)
 logger = get_logger(__name__)

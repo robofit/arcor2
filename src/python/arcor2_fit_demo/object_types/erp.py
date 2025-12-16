@@ -1,7 +1,7 @@
 import time
 
 from arcor2.data.common import ActionMetadata
-from arcor2.object_types.abstract import Generic
+from arcor2_object_types.abstract import Generic
 
 
 class Erp(Generic):

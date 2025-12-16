@@ -1,8 +1,8 @@
 import inspect
 
-from arcor2.object_types.abstract import Robot
-from arcor2.object_types.tests.conftest import docstrings
-from arcor2.object_types.utils import check_object_type
+from arcor2_object_types.abstract import Robot
+from arcor2_object_types.tests.conftest import docstrings
+from arcor2_object_types.utils import check_object_type
 from arcor2_ur.object_types.ur5e import Ur5e
 
 

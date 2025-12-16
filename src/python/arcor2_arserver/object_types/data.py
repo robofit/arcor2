@@ -2,9 +2,9 @@ from ast import AST
 from dataclasses import dataclass, field
 
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic
 from arcor2_arserver_data.objects import ObjectAction, ObjectTypeMeta
 from arcor2_arserver_data.robot import RobotMeta
+from arcor2_object_types.abstract import Generic
 
 
 @dataclass

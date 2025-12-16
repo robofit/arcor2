@@ -6,16 +6,16 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from humps import depascalize
 
-from arcor2 import rest
 from arcor2.cached import CachedProject
 from arcor2.data.common import Action, ActionPoint, Flow, LogicItem, Position, Project, Scene, SceneObject
 from arcor2.data.execution import PackageMeta
 from arcor2.data.rpc.common import IdArgs
-from arcor2.object_types.random_actions import RandomActions
 from arcor2_arserver.tests.testutils import build_url_str
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_build.source.utils import global_action_points_class
+from arcor2_object_types.random_actions import RandomActions
+from arcor2_web import rest
 
 import_random_actions = """
 import random
@@ -23,7 +23,7 @@ from typing import Optional
 
 from arcor2.data.common import ActionMetadata
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic\n"""
+from arcor2_object_types.abstract import Generic\n"""
 
 script = """
 #!/usr/bin/env python3
@@ -120,12 +120,16 @@ def test_import(start_processes: None, ars: ARServer) -> None:
 
     if c_updated_project.actions[0].name == "ac1":
         assert c_updated_project.actions[0].type == "obj_1/random_bool"
-        assert c_updated_project.actions[0].parameters == []
+        assert len(c_updated_project.actions[0].parameters) == 1
+        assert c_updated_project.actions[0].parameters[0].name == "probability"
+        assert c_updated_project.actions[0].parameters[0].type == "double"
         assert c_updated_project.actions[0].flows[0].outputs == ["bool_res1"]
 
         assert c_updated_project.actions[1].name == "ac2"
         assert c_updated_project.actions[1].type == "obj_1/random_bool"
-        assert c_updated_project.actions[1].parameters == []
+        assert len(c_updated_project.actions[1].parameters) == 1
+        assert c_updated_project.actions[1].parameters[0].name == "probability"
+        assert c_updated_project.actions[1].parameters[0].type == "double"
         assert c_updated_project.actions[1].flows[0].outputs == ["bool_res2"]
 
         assert c_updated_project.find_logic_start_end(LogicItem.START, c_updated_project.actions[0].id)
@@ -135,12 +139,16 @@ def test_import(start_processes: None, ars: ARServer) -> None:
     else:
         assert c_updated_project.actions[1].name == "ac1"
         assert c_updated_project.actions[1].type == "obj_1/random_bool"
-        assert c_updated_project.actions[1].parameters == []
+        assert len(c_updated_project.actions[1].parameters) == 1
+        assert c_updated_project.actions[1].parameters[0].name == "probability"
+        assert c_updated_project.actions[1].parameters[0].type == "double"
         assert c_updated_project.actions[1].flows[0].outputs == ["bool_res1"]
 
         assert c_updated_project.actions[0].name == "ac2"
         assert c_updated_project.actions[0].type == "obj_1/random_bool"
-        assert c_updated_project.actions[0].parameters == []
+        assert len(c_updated_project.actions[0].parameters) == 1
+        assert c_updated_project.actions[0].parameters[0].name == "probability"
+        assert c_updated_project.actions[0].parameters[0].type == "double"
         assert c_updated_project.actions[0].flows[0].outputs == ["bool_res2"]
 
         assert c_updated_project.find_logic_start_end(LogicItem.START, c_updated_project.actions[1].id)

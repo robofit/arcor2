@@ -2,12 +2,12 @@ from ast import AST, Assign, Call, ClassDef, ImportFrom, Module, Name, NameConst
 
 import humps
 
-import arcor2.object_types
+import arcor2_object_types
 from arcor2.exceptions import Arcor2NotImplemented
-from arcor2.object_types.utils import built_in_types_names
 from arcor2.source import SourceException
 from arcor2.source.utils import find_function, find_raises, get_name
 from arcor2_arserver_data.objects import ObjectTypeMeta
+from arcor2_object_types.utils import built_in_types_names
 
 
 # TODO could this be done like this https://stackoverflow.com/a/9269964/3142796 ??
@@ -17,7 +17,7 @@ def new_object_type(parent: ObjectTypeMeta, child: ObjectTypeMeta) -> AST:
     tree = Module(body=[], type_ignores=[])
 
     if parent.type in built_in_types_names():
-        import_from = arcor2.object_types.abstract.__name__
+        import_from = arcor2_object_types.abstract.__name__
     else:
         import_from = f".{humps.depascalize(parent.type)}"
 

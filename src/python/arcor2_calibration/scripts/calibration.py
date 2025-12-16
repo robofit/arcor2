@@ -18,10 +18,8 @@ import arcor2_calibration
 from arcor2 import env
 from arcor2 import transformations as tr
 from arcor2.data.common import Pose, Position
-from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
-from arcor2.urdf import urdf_from_url
 from arcor2_calibration import calibration
 from arcor2_calibration.calibration import detect_corners, estimate_camera_pose
 from arcor2_calibration.quaternions import weighted_average_quaternions
@@ -29,6 +27,8 @@ from arcor2_calibration.robot import calibrate_robot
 from arcor2_calibration_data import CALIBRATION_URL, SERVICE_NAME, Corner, EstimatedPose, MarkerCorners
 from arcor2_calibration_data.client import CalibrateRobotArgs
 from arcor2_calibration_data.exceptions import Invalid, NotFound, WebApiError
+from arcor2_urdf_utils.urdf import urdf_from_url
+from arcor2_web.flask import RespT, create_app, run_app
 
 logger = get_logger(__name__)
 logger.propagate = False

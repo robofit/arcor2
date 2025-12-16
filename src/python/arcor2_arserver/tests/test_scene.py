@@ -1,14 +1,14 @@
-from arcor2.clients import project_service
 from arcor2.data.common import Pose, Position, Project, Scene, SceneObject
 from arcor2.data.events import Event
 from arcor2.data.object_type import Box as BoxModel
 from arcor2.data.rpc.common import IdArgs
-from arcor2.object_types.upload import upload_def
-from arcor2.test_objects.box import Box
-from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
 from arcor2_arserver.tests.testutils import ars_connection_str, event, event_mapping, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
+from arcor2_object_types.test_objects.box import Box
+from arcor2_object_types.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
+from arcor2_object_types.upload import upload_def
+from arcor2_storage import client as project_service
 
 
 def test_scene_basic_rpcs(start_processes: None, ars: ARServer) -> None:

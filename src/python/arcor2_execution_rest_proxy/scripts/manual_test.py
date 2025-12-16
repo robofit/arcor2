@@ -1,4 +1,4 @@
-from arcor2 import rest
+from arcor2_web import rest
 from arcor2_execution_rest_proxy.scripts.execution_rest_proxy import ExecutionInfo, ExecutionState
 import time
 import requests

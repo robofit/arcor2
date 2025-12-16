@@ -1,4 +1,4 @@
-from arcor2.object_types.abstract import Generic, Settings
+from arcor2_object_types.abstract import Generic, Settings
 
 from .logging_mixin import LoggingMixin  # noqa:ABS101
 

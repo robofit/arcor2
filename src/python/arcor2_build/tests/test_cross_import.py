@@ -7,11 +7,11 @@ from typing import Iterator
 
 import pytest
 
-from arcor2 import rest
-from arcor2.clients import project_service as ps
 from arcor2.data.common import Project, ProjectSources, Scene, SceneObject
 from arcor2.data.object_type import ObjectType
 from arcor2.helpers import find_free_port
+from arcor2_storage import client as ps
+from arcor2_web import rest
 
 build_url = ""
 
@@ -39,32 +39,37 @@ def check_health(service_name: str, service_url: str, timeout: int = 60) -> None
 def start_processes() -> Iterator[None]:
     global build_url
 
-    my_env = os.environ.copy()
-    kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        my_env = os.environ.copy()
+        kwargs = {"env": my_env, "stdout": sp.PIPE, "stderr": sp.STDOUT}
 
-    project_port = find_free_port()
-    project_url = f"http://0.0.0.0:{project_port}"
-    my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
-    my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
-    ps.URL = project_url
+        project_port = find_free_port()
+        project_url = f"http://0.0.0.0:{project_port}"
+        my_env["ARCOR2_STORAGE_SERVICE_URL"] = project_url
+        my_env["ARCOR2_ASSET_SERVICE_URL"] = project_url
+        my_env["ARCOR2_STORAGE_SERVICE_PORT"] = str(project_port)
+        my_env["ARCOR2_STORAGE_DB_PATH"] = os.path.join(tmp_dir, "project.sqlite")
+        ps.URL = project_url
 
-    processes = []
+        processes = []
 
-    processes.append(sp.Popen(["python", "src.python.arcor2_mocks.scripts/mock_project.pex"], **kwargs))  # type: ignore
+        processes.append(
+            sp.Popen(["python", "src.python.arcor2_storage.scripts/storage.pex"], **kwargs)  # type: ignore
+        )
 
-    check_health("Project", project_url)
+        check_health("Project", project_url)
 
-    build_url = f"http://0.0.0.0:{find_free_port()}"
-    my_env["ARCOR2_BUILD_URL"] = build_url
-    my_env["ARCOR2_PROJECT_PATH"] = "whatever"
-    processes.append(
-        sp.Popen(["python", "src.python.arcor2_build.scripts/build.pex", "--debug"], **kwargs)  # type: ignore
-    )
-    check_health("Build", build_url)
+        build_url = f"http://0.0.0.0:{find_free_port()}"
+        my_env["ARCOR2_BUILD_URL"] = build_url
+        my_env["ARCOR2_PROJECT_PATH"] = "whatever"
+        processes.append(
+            sp.Popen(["python", "src.python.arcor2_build.scripts/build.pex", "--debug"], **kwargs)  # type: ignore
+        )
+        check_health("Build", build_url)
 
-    yield None
+        yield None
 
-    finish_processes(processes)
+        finish_processes(processes)
 
 
 additional_module = """
@@ -73,7 +78,7 @@ def whatever():
 """
 
 ot1 = """
-from arcor2.object_types.abstract import Generic
+from arcor2_object_types.abstract import Generic
 from .additional_module import whatever
 
 class ObjectTypeOne(Generic):
@@ -81,7 +86,7 @@ class ObjectTypeOne(Generic):
 """
 
 ot2 = """
-from arcor2.object_types.abstract import Generic
+from arcor2_object_types.abstract import Generic
 from .object_type_one import ObjectTypeOne
 from .additional_module import whatever
 

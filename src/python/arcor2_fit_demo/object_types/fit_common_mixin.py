@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from arcor2 import rest
-from arcor2.object_types.abstract import Settings
+from arcor2_object_types.abstract import Settings
+from arcor2_web import rest
 
 
 @dataclass

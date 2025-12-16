@@ -9,7 +9,6 @@ from aiofiles import tempfile
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
-from arcor2 import rest
 from arcor2.data import common, rpc
 from arcor2.data.rpc import get_id
 from arcor2.exceptions import Arcor2Exception
@@ -23,6 +22,7 @@ from arcor2_arserver_data import events as sevts
 from arcor2_build_data import URL as BUILD_URL
 from arcor2_execution_data import URL as EXE_URL
 from arcor2_execution_data import rpc as erpc
+from arcor2_web import rest
 
 if TYPE_CHECKING:
     ReqQueue = asyncio.Queue[rpc.common.RPC.Request]

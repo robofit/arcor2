@@ -10,7 +10,7 @@ The service provides logging capabilities through the network. Logging-related m
 ```python
 from typing import Optional
 
-from arcor2.object_types.abstract import Generic, Settings
+from arcor2_object_types.abstract import Generic, Settings
 
 try:
     from .logging_mixin import LoggingMixin  # this is used within an execution package

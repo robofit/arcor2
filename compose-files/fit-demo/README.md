@@ -5,14 +5,14 @@ This demo incorporates Dobot M1, Dobot Magician, a conveyor belt (connected to M
 
 To run a simulation environment (where Dobot and Kinect services are started in mock mode), you can use just `docker compose up`. When running with the actual hardware, please use `docker compose -f docker-compose.yml -f docker-compose.lab.yml up`.
 
-## Uploading ObjectTypes to Project service
+## Uploading ObjectTypes to the Storage service
 
 Objects for fit-demo are uploaded with every start of the compose, but you can also do that manually:
 
 ```bash
-docker run --rm --network="fit-demo-project-network" --env ARCOR2_PROJECT_SERVICE_URL=http://fit-demo-project:10000 arcor2/arcor2_upload_fit_demo:VERSION
+docker run --rm --network="fit-demo-storage-network" --env ARCOR2_STORAGE_SERVICE_URL=http://fit-demo-storage:10000 arcor2/arcor2_upload_fit_demo:VERSION
 ```
-The network has to be set to any network where the Project service is accessible. Instead of `VERSION`, use the desired version of the arcor2_fit_demo package. 
+The network has to be set to any network where the Storage service is accessible. Instead of `VERSION`, use the desired version of the arcor2_fit_demo package.
 
 ## Scaling of Calibration service
 

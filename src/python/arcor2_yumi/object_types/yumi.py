@@ -23,7 +23,7 @@ from arcor2 import transformations as tr
 from arcor2.data.common import ActionMetadata, IntEnum, Joint, Orientation, Pose, Position, StrEnum
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
-from arcor2.object_types.abstract import MultiArmRobot, Settings
+from arcor2_object_types.abstract import MultiArmRobot, Settings
 
 
 class RawResponse(NamedTuple):

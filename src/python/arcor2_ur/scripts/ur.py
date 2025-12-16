@@ -15,13 +15,13 @@ from arcor2 import env
 from arcor2.data import common, object_type
 from arcor2.data.common import Joint, Pose
 from arcor2.data.robot import InverseKinematicsRequest
-from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2_ur import get_data, version
 from arcor2_ur.exceptions import NotFound, StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
 from arcor2_ur.scripts.ros_worker import CollisionObjectTuple, RosWorkerClient
+from arcor2_web.flask import RespT, create_app, run_app
 
 logger = get_logger(__name__)
 

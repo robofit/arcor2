@@ -97,7 +97,7 @@ jobs:
         pants filter --target-type=docker_image --changed-since=origin/master --changed-dependents=transitive | xargs pants package
     - name: Build Python packages
       run: |
-        pants filter --target-type=python_distribution :: | xargs pants package
+        pants --filter-target-type=python_distribution package ::
         # check for cyclic dependencies or other problems
         python -m venv ./tstvenv
         source ./tstvenv/bin/activate

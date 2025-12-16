@@ -8,12 +8,9 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import env
 from arcor2 import transformations as tr
-from arcor2 import ws_server
-from arcor2.clients.project_service import URL as ps_url
 from arcor2.data import common
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import run_in_executor
-from arcor2.object_types.abstract import Camera, MultiArmRobot, Robot
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
@@ -31,7 +28,10 @@ from arcor2_arserver_data.events.common import ProcessState
 from arcor2_arserver_data.events.robot import HandTeachingMode
 from arcor2_calibration_data import client as calib_client
 from arcor2_calibration_data.client import CalibrateRobotArgs
+from arcor2_object_types.abstract import Camera, MultiArmRobot, Robot
 from arcor2_runtime.events import RobotEef, RobotJoints
+from arcor2_storage.client import URL as ps_url
+from arcor2_web import ws_server
 
 RBT_CALIB = "RobotCalibration"
 

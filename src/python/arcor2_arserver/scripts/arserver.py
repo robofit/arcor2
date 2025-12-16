@@ -19,11 +19,9 @@ import arcor2.helpers as hlp
 import arcor2_arserver
 import arcor2_arserver_data
 import arcor2_execution_data
-from arcor2 import env, json, ws_server
-from arcor2.clients import aio_scene_service as scene_srv
+from arcor2 import env, json
 from arcor2.data import events, rpc
 from arcor2.exceptions import Arcor2Exception
-from arcor2.parameter_plugins.utils import known_parameter_types
 from arcor2_arserver import events as server_events
 from arcor2_arserver import execution as exe
 from arcor2_arserver import globals as glob
@@ -40,7 +38,10 @@ from arcor2_arserver_data.rpc import objects as obj_rpc
 from arcor2_execution_data import EVENTS as EXE_EVENTS
 from arcor2_execution_data import EXPOSED_RPCS
 from arcor2_execution_data import RPCS as EXE_RPCS
+from arcor2_object_types.parameter_plugins.utils import known_parameter_types
 from arcor2_runtime import events as runtime_events
+from arcor2_scene_data import aio_scene_service as scene_srv
+from arcor2_web import ws_server
 
 
 async def handle_manager_incoming_messages(manager_client) -> None:
@@ -135,7 +136,7 @@ async def _initialize_server() -> None:
         try:
             await storage.initialize_module()
             break
-        except storage.ProjectServiceException as e:
+        except storage.StorageClientException as e:
             logger.error(f"Failed to communicate with Project service. {str(e)}")
             await asyncio.sleep(1)
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from arcor2 import rest
 from arcor2.data.common import Joint, Pose, StrEnum
+from arcor2_web import rest
 
 from .abstract_dobot import AbstractDobot, MoveType  # noqa:ABS101
 from .fit_common_mixin import UrlSettings  # noqa:ABS101

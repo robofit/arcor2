@@ -3,7 +3,6 @@ import json
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.data.common import ActionParameter, Flow, Pose, Position
-from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_returning_pose import ObjectReturningPose
 from arcor2_arserver.tests.testutils import (
     add_logic_item,
@@ -18,6 +17,7 @@ from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_execution_data import events as eevents
 from arcor2_execution_data import rpc as erpc
+from arcor2_object_types.upload import upload_def
 
 
 def test_linked_pose(start_processes: None, ars: ARServer) -> None:

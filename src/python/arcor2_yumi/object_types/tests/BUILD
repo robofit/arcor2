@@ -1,1 +1,1 @@
-python_tests(interpreter_constraints=["==3.12.*"])
+python_tests()

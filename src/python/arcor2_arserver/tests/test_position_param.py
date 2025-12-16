@@ -3,9 +3,6 @@ import json
 from arcor2.data import common
 from arcor2.data import events as arcor2_events
 from arcor2.data.common import ActionParameter, Flow, Position
-from arcor2.object_types.upload import upload_def
-from arcor2.parameter_plugins.position import PositionPlugin
-from arcor2.test_objects.position_param import PositionParam
 from arcor2_arserver.tests.testutils import (
     add_logic_item,
     close_project,
@@ -19,6 +16,9 @@ from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
 from arcor2_execution_data import events as eevents
 from arcor2_execution_data import rpc as erpc
+from arcor2_object_types.parameter_plugins.position import PositionPlugin
+from arcor2_object_types.test_objects.position_param import PositionParam
+from arcor2_object_types.upload import upload_def
 
 
 def test_position_param(start_processes: None, ars: ARServer) -> None:

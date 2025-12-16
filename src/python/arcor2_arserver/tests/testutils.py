@@ -8,8 +8,6 @@ from typing import Iterator, TypeVar
 
 import pytest
 
-from arcor2 import rest
-from arcor2.clients import asset, project_service, scene_service
 from arcor2.data import common
 from arcor2.data.events import Event
 from arcor2.data.rpc import get_id
@@ -17,6 +15,11 @@ from arcor2.helpers import find_free_port
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer
 from arcor2_execution_data import EVENTS as EXE_EVENTS
+from arcor2_scene_data import scene_service
+from arcor2_storage import client as project_service
+from arcor2_web import rest
+
+asset = project_service
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,23 +64,15 @@ def start_processes(request) -> Iterator[None]:
 
             project_port = find_free_port()
             project_url = f"http://0.0.0.0:{project_port}"
-            my_env["ARCOR2_PROJECT_SERVICE_URL"] = project_url
-            my_env["ARCOR2_PROJECT_SERVICE_MOCK_PORT"] = str(project_port)
+            my_env["ARCOR2_STORAGE_DB_PATH"] = os.path.join(tmp_dir, "project.sqlite")
+            my_env["ARCOR2_STORAGE_SERVICE_URL"] = project_url
+            my_env["ARCOR2_ASSET_SERVICE_URL"] = project_url
+            my_env["ARCOR2_STORAGE_SERVICE_PORT"] = str(project_port)
             project_service.URL = project_url
             processes.append(
-                sp.Popen(["python", "src.python.arcor2_mocks.scripts/mock_project.pex"], **kwargs)  # type: ignore
+                sp.Popen(["python", "src.python.arcor2_storage.scripts/storage.pex"], **kwargs)  # type: ignore
             )
             check_health("Project", project_url)
-
-            asset_port = find_free_port()
-            asset_url = f"http://0.0.0.0:{asset_port}"
-            my_env["ARCOR2_ASSET_SERVICE_URL"] = asset_url
-            my_env["ARCOR2_ASSET_SERVICE_MOCK_PORT"] = str(asset_port)
-            asset.URL = asset_url
-            processes.append(
-                sp.Popen(["python", "src.python.arcor2_mocks.scripts/mock_asset.pex"], **kwargs)  # type: ignore
-            )
-            check_health("Asset", asset_url)
 
             scene_port = find_free_port()
             scene_url = f"http://0.0.0.0:{scene_port}"

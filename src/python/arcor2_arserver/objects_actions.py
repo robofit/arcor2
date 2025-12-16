@@ -3,14 +3,9 @@ from typing import NamedTuple
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene
-from arcor2.clients import aio_asset as asset
 from arcor2.data.events import Event
 from arcor2.data.object_type import Mesh, ObjectModel
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types import utils as otu
-from arcor2.object_types.abstract import Generic, Robot
-from arcor2.object_types.utils import built_in_types_names, prepare_object_types_dir
-from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source.utils import parse
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
@@ -30,6 +25,11 @@ from arcor2_arserver.object_types.utils import (
 from arcor2_arserver.robot import get_robot_meta
 from arcor2_arserver_data.events.objects import ChangedObjectTypes
 from arcor2_arserver_data.objects import ObjectTypeMeta
+from arcor2_object_types import utils as otu
+from arcor2_object_types.abstract import Generic, Robot
+from arcor2_object_types.parameter_plugins.base import TypesDict
+from arcor2_object_types.utils import built_in_types_names, prepare_object_types_dir
+from arcor2_storage import aio_client as project_client
 
 
 def get_types_dict() -> TypesDict:
@@ -139,7 +139,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             object_types[obj_id] = ObjectTypeData(meta)
             return
 
-        if isinstance(model, Mesh) and not await asset.asset_exists(model.asset_id):
+        if isinstance(model, Mesh) and not await project_client.asset_exists(model.asset_id):
             logger.error(f"Disabling {meta.type} as its mesh file {model.asset_id} does not exist.")
             meta.disabled = True
             meta.problem = "Mesh file does not exist."
@@ -147,7 +147,7 @@ async def get_object_data(object_types: ObjectTypeDict, obj_id: str) -> None:
             return
 
         kwargs = {model.type().value.lower(): model}
-        meta.object_model = ObjectModel(model.type(), **kwargs)  # type: ignore
+        meta.object_model = ObjectModel(model.type(), **kwargs)
 
     ast = parse(obj.source)
     otd = ObjectTypeData(meta, type_def, object_actions(type_def, ast), ast)
@@ -273,7 +273,7 @@ async def update_object_model(meta: ObjectTypeMeta, om: ObjectModel) -> None:
         raise Arcor2Exception("Model id must be equal to ObjectType id.")
 
     if isinstance(model, Mesh):
-        if not await asset.asset_exists(model.asset_id):
+        if not await project_client.asset_exists(model.asset_id):
             raise Arcor2Exception(f"File {model.asset_id} associated to mesh {model.id} does not exist.")
 
     # when updating model of an already existing object, the type might be different
