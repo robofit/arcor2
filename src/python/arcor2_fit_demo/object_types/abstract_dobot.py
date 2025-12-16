@@ -1,8 +1,8 @@
 from arcor2 import DynamicParamTuple as DPT
-from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import RobotType
-from arcor2.object_types.abstract import Robot, RobotException
+from arcor2_object_types.abstract import Robot, RobotException
+from arcor2_web import rest
 
 from .fit_common_mixin import FitCommonMixin  # noqa:ABS101
 

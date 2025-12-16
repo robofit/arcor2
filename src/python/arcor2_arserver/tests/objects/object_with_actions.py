@@ -1,7 +1,7 @@
 import random
 
 from arcor2.data.common import ActionMetadata, IntEnum
-from arcor2.object_types.abstract import Generic, Settings
+from arcor2_object_types.abstract import Generic, Settings
 
 
 class MyEnum(IntEnum):

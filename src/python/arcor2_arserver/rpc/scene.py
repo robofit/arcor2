@@ -13,7 +13,6 @@ from arcor2.data import common, object_type
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.image import image_from_str
-from arcor2.object_types.abstract import Generic, VirtualCollisionObject
 from arcor2.source.utils import tree_to_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
@@ -67,6 +66,7 @@ from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
 from arcor2_arserver_data.objects import ObjectTypeMeta
 from arcor2_calibration_data import client as calibration
+from arcor2_object_types.abstract import Generic, VirtualCollisionObject
 
 
 @asynccontextmanager

@@ -26,12 +26,12 @@ from arcor2.cached import CachedScene as CScene
 from arcor2.data.common import Action, ActionParameter, FlowTypes
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logging import get_logger
-from arcor2.parameter_plugins.base import TypesDict
-from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2.source import SCRIPT_HEADER, SourceException
 from arcor2.source.utils import add_import, add_method_call, tree_to_str
 from arcor2_build.source.object_types import object_instance_from_res
 from arcor2_build.source.utils import empty_script_tree, find_function, find_last_assign, main_loop
+from arcor2_object_types.parameter_plugins.base import TypesDict
+from arcor2_object_types.parameter_plugins.utils import plugin_from_type_name
 
 logger = get_logger(__name__, logging.DEBUG if env.get_bool("ARCOR2_LOGIC_DEBUG", False) else logging.INFO)
 

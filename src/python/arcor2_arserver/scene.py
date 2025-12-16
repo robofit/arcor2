@@ -5,13 +5,10 @@ from typing import AsyncIterator, TypeVar
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedScene, UpdateableCachedScene
-from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data.common import Parameter, Pose, SceneObject
 from arcor2.data.events import Event
 from arcor2.data.object_type import Models
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot, VirtualCollisionObject
-from arcor2.object_types.utils import settings_from_params
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
@@ -26,6 +23,9 @@ from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data.events.common import ShowMainScreen
 from arcor2_arserver_data.events.scene import OpenScene, SceneClosed, SceneObjectChanged, SceneState
 from arcor2_arserver_data.objects import ObjectTypeMeta
+from arcor2_object_types.abstract import CollisionObject, Generic, GenericWithPose, Robot, VirtualCollisionObject
+from arcor2_object_types.utils import settings_from_params
+from arcor2_scene_data import aio_scene_service as scene_srv
 
 # TODO maybe this could be property of ARServerScene(CachedScene)?
 _scene_state: SceneState = SceneState(SceneState.Data(SceneState.Data.StateEnum.Stopped))

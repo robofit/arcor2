@@ -9,9 +9,9 @@ from arcor2.cached import CachedProject, CachedScene
 from arcor2.data.common import Pose, ProjectRobotJoints, StrEnum
 from arcor2.data.events import ActionStateAfter, ActionStateBefore, Event, PackageState
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic
-from arcor2.object_types.utils import iterate_over_actions
-from arcor2.parameter_plugins.utils import plugin_from_instance
+from arcor2_object_types.abstract import Generic
+from arcor2_object_types.parameter_plugins.utils import plugin_from_instance
+from arcor2_object_types.utils import iterate_over_actions
 from arcor2_runtime.exceptions import print_exception
 
 

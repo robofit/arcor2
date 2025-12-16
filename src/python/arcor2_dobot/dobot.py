@@ -9,8 +9,8 @@ from arcor2.data.common import Joint, Orientation, Pose, StrEnum
 from arcor2.env import get_float
 from arcor2.exceptions import Arcor2NotImplemented
 from arcor2.helpers import NonBlockingLock
-from arcor2.object_types.abstract import RobotException
 from arcor2_dobot.dobot_api import MODE_PTP, DobotApi, DobotApiException
+from arcor2_object_types.abstract import RobotException
 
 # TODO jogging
 

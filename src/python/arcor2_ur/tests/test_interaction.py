@@ -2,10 +2,10 @@ import time
 
 import pytest
 
-from arcor2.clients import scene_service
 from arcor2.data.common import Orientation, Pose, Position
 from arcor2.data.object_type import Box
 from arcor2.exceptions import Arcor2Exception
+from arcor2_scene_data import scene_service
 from arcor2_ur.object_types.ur5e import Ur5e, UrSettings
 from arcor2_ur.tests.conftest import Urls
 

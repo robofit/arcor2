@@ -4,10 +4,10 @@ from typing import cast
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2 import rest
 from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
 from arcor2.data.robot import InverseKinematicsRequest
-from arcor2.object_types.abstract import Robot, Settings
+from arcor2_object_types.abstract import Robot, Settings
+from arcor2_web import rest
 
 
 @dataclass

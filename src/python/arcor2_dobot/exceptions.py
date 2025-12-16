@@ -1,5 +1,5 @@
-from arcor2.flask import FlaskException, General, WebApiErrorFactory
 from arcor2_dobot import __name__ as package_name
+from arcor2_web.flask import FlaskException, General, WebApiErrorFactory
 
 
 class DobotException(FlaskException):

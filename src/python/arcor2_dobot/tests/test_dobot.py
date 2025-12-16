@@ -1,8 +1,10 @@
 from subprocess import check_output
 
 import yaml
-from openapi_spec_validator import validate_spec
+
+from arcor2_web.testing.openapi import assert_valid_openapi_spec
 
 
 def test_dobot_openapi() -> None:
-    validate_spec(yaml.full_load(check_output(["python", "src.python.arcor2_dobot.scripts/dobot.pex", "--swagger"])))
+    spec = yaml.full_load(check_output(["python", "src.python.arcor2_dobot.scripts/dobot.pex", "--swagger"]))
+    assert_valid_openapi_spec(spec)

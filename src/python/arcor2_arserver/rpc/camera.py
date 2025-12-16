@@ -6,7 +6,6 @@ from arcor2.cached import UpdateableCachedScene
 from arcor2.exceptions import Arcor2Exception
 from arcor2.helpers import run_in_executor
 from arcor2.image import image_to_str
-from arcor2.object_types.abstract import Camera
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
@@ -15,6 +14,7 @@ from arcor2_arserver.scene import ensure_scene_started, get_instance, update_sce
 from arcor2_arserver_data.events.common import ProcessState
 from arcor2_arserver_data.rpc.camera import CalibrateCamera, CameraColorImage, CameraColorParameters
 from arcor2_calibration_data import client as calib_client
+from arcor2_object_types.abstract import Camera
 
 
 async def camera_color_image_cb(req: CameraColorImage.Request, ui: WsClient) -> CameraColorImage.Response:

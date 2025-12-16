@@ -5,11 +5,11 @@ from typing import Any
 from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2.data import events
-from arcor2.object_types.abstract import Generic
 from arcor2_arserver.lock import Lock
 from arcor2_arserver.object_types.data import ObjectTypeDict, ObjTypeDict
 from arcor2_arserver.user import Users
 from arcor2_arserver_data.events.common import ShowMainScreen
+from arcor2_object_types.abstract import Generic
 
 VERBOSE: bool = False
 

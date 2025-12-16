@@ -3,7 +3,8 @@ import tempfile
 from subprocess import check_output
 
 import yaml
-from openapi_spec_validator import validate_spec
+
+from arcor2_web.testing.openapi import assert_valid_openapi_spec
 
 
 def test_execution_proxy_openapi() -> None:
@@ -11,11 +12,10 @@ def test_execution_proxy_openapi() -> None:
         my_env = os.environ.copy()
         my_env["ARCOR2_PROJECT_PATH"] = tmp_dir
 
-        validate_spec(
-            yaml.full_load(
-                check_output(
-                    ["python", "src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex", "--swagger"],
-                    env=my_env,
-                )
+        spec = yaml.full_load(
+            check_output(
+                ["python", "src.python.arcor2_execution_rest_proxy.scripts/execution_rest_proxy.pex", "--swagger"],
+                env=my_env,
             )
         )
+        assert_valid_openapi_spec(spec)

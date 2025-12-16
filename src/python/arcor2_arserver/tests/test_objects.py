@@ -2,13 +2,13 @@ import pytest
 
 from arcor2.data.common import Pose
 from arcor2.data.object_type import Box, Cylinder, Mesh, Model3dType, ObjectModel, Sphere
-from arcor2.object_types.abstract import CollisionObject
-from arcor2.object_types.upload import upload_def
-from arcor2.test_objects.box import Box as BoxType
-from arcor2.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
 from arcor2_arserver.tests.testutils import asset, event, lock_object, project_service, unlock_object
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer, get_id
+from arcor2_object_types.abstract import CollisionObject
+from arcor2_object_types.test_objects.box import Box as BoxType
+from arcor2_object_types.test_objects.dummy_multiarm_robot import DummyMultiArmRobot
+from arcor2_object_types.upload import upload_def
 
 mesh_filename = "test_type.dae"
 

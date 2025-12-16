@@ -9,7 +9,7 @@ import pytest
 from arcor2.data.common import ActionMetadata, Orientation, Pose, Position, ProjectRobotJoints
 from arcor2.data.events import ActionStateAfter, ActionStateBefore, PackageState
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import Generic
+from arcor2_object_types.abstract import Generic
 from arcor2_runtime.action import ACTION_NAME_ID_MAPPING_ATTR, AP_ID_ATTR, patch_object_actions
 
 

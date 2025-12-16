@@ -1,5 +1,5 @@
-from arcor2.flask import FlaskException, WebApiErrorFactory
 from arcor2_execution_rest_proxy import __name__ as package_name
+from arcor2_web.flask import FlaskException, WebApiErrorFactory
 
 
 class ExecutionRestProxyException(FlaskException):

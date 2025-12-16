@@ -22,7 +22,7 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 import arcor2_execution
 import arcor2_execution_data
-from arcor2 import env, json, ws_server
+from arcor2 import env, json
 from arcor2.data import common
 from arcor2.data import rpc as arcor2_rpc
 from arcor2.data.events import Event, PackageInfo, PackageState, ProjectException
@@ -32,6 +32,7 @@ from arcor2.logging import get_aiologger
 from arcor2_execution_data import EVENTS, URL, events, rpc
 from arcor2_execution_data.common import PackageSummary, ProjectMeta
 from arcor2_runtime.package import PROJECT_PATH, read_package_meta, write_package_meta
+from arcor2_web import ws_server
 
 logger = get_aiologger("Execution")
 

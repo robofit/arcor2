@@ -6,13 +6,11 @@ from websockets.server import WebSocketServerProtocol as WsClient
 
 from arcor2 import helpers as hlp
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.clients import aio_scene_service as scene_srv
 from arcor2.data import events, rpc
 from arcor2.data.common import Parameter, Pose, Position, SceneObject
 from arcor2.data.object_type import Model3dType
 from arcor2.data.scene import MeshFocusAction
 from arcor2.exceptions import Arcor2Exception
-from arcor2.object_types.abstract import CollisionObject, GenericWithPose, Robot
 from arcor2.source.utils import tree_to_str
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
@@ -35,6 +33,8 @@ from arcor2_arserver.scene import (
 )
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
+from arcor2_object_types.abstract import CollisionObject, GenericWithPose, Robot
+from arcor2_scene_data import aio_scene_service as scene_srv
 
 
 @dataclass
@@ -381,7 +381,7 @@ async def delete_object_type_cb(
 
         try:
             await storage.delete_model(obj_type.meta.object_model.model().id)
-        except storage.ProjectServiceException as e:
+        except storage.StorageClientException as e:
             logger.error(str(e))
 
     async def _delete_ot(ot: str) -> None:

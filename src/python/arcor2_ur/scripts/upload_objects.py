@@ -1,4 +1,4 @@
-from arcor2.object_types.upload import Urdf, upload_def
+from arcor2_object_types.upload import Urdf, upload_def
 from arcor2_ur import get_data
 from arcor2_ur.object_types.ur5e import Ur5e
 

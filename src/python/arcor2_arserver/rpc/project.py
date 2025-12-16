@@ -12,10 +12,6 @@ from arcor2.data import common
 from arcor2.data.events import Event, PackageState
 from arcor2.exceptions import Arcor2Exception
 from arcor2.logic import check_for_loops
-from arcor2.object_types.abstract import Generic, Robot
-from arcor2.parameter_plugins.base import ParameterPluginException
-from arcor2.parameter_plugins.pose import PosePlugin
-from arcor2.parameter_plugins.utils import plugin_from_type_name
 from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver import notifications as notif
@@ -51,6 +47,10 @@ from arcor2_arserver.scene import (
 )
 from arcor2_arserver_data import events as sevts
 from arcor2_arserver_data import rpc as srpc
+from arcor2_object_types.abstract import Generic, Robot
+from arcor2_object_types.parameter_plugins.base import ParameterPluginException
+from arcor2_object_types.parameter_plugins.pose import PosePlugin
+from arcor2_object_types.parameter_plugins.utils import plugin_from_type_name
 
 
 @asynccontextmanager
@@ -212,7 +212,7 @@ async def list_projects_cb(req: srpc.p.ListProjects.Request, ui: WsClient) -> sr
 
         try:
             scene = await storage.get_scene(project.scene_id)
-        except storage.ProjectServiceException:
+        except storage.StorageClientException:
             pd.problems = ["Scene does not exist."]
             return pd
 

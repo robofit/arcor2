@@ -2,10 +2,10 @@ import pytest
 
 from arcor2.data import common
 from arcor2.data.rpc import get_id
-from arcor2.object_types.abstract import Generic, GenericWithPose
 from arcor2_arserver.tests.testutils import event, lock_object, unlock_object
 from arcor2_arserver_data import events, objects, rpc
 from arcor2_arserver_data.client import ARServer
+from arcor2_object_types.abstract import Generic, GenericWithPose
 
 pytest_plugins = ["pytest_asyncio", "arcor2_arserver.tests.testutils"]
 

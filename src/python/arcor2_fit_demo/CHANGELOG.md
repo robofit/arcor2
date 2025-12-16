@@ -2,6 +2,13 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+
+## [1.6.0] - 2025-12-17
+
+### Changed
+
+- Compatibility with `arcor2_storage`.
+
 ## [1.5.1] - 2025-02-24
 
 ### Changed

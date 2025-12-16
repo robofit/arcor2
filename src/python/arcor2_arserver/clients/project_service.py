@@ -9,8 +9,11 @@ from lru import LRU
 
 from arcor2 import env
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.clients import aio_project_service as ps
-from arcor2.clients.aio_project_service import (
+from arcor2.data.common import IdDesc
+from arcor2.data.object_type import ObjectType
+from arcor2.exceptions import Arcor2Exception
+from arcor2_storage import aio_client as ps
+from arcor2_storage.aio_client import (
     delete_model,
     get_mesh,
     get_meshes,
@@ -19,10 +22,7 @@ from arcor2.clients.aio_project_service import (
     put_model,
     update_project_sources,
 )
-from arcor2.clients.project_service import ProjectServiceException
-from arcor2.data.common import IdDesc
-from arcor2.data.object_type import ObjectType
-from arcor2.exceptions import Arcor2Exception
+from arcor2_storage.client import StorageClientException
 
 
 @dataclass
@@ -135,7 +135,7 @@ async def get_object_type_iddesc(object_type_id: str) -> IdDesc:
     try:
         return _object_type_list.listing[object_type_id]
     except KeyError:
-        raise ProjectServiceException("Unknown object type.")
+        raise StorageClientException("Unknown object type.")
 
 
 async def get_project(project_id: str) -> CachedProject:
@@ -297,7 +297,7 @@ __all__ = [
     delete_object_type.__name__,
     delete_scene.__name__,
     delete_project.__name__,
-    ProjectServiceException.__name__,
+    StorageClientException.__name__,
     get_scene_ids.__name__,
     get_project_ids.__name__,
     get_object_type_ids.__name__,

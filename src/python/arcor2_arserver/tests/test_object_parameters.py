@@ -2,11 +2,11 @@ import json
 
 from arcor2.data.common import Parameter, Scene
 from arcor2.data.rpc.common import IdArgs
-from arcor2.object_types.upload import upload_def
 from arcor2_arserver.tests.objects.object_with_settings import ObjectWithSettings
 from arcor2_arserver.tests.testutils import event, lock_object, save_project, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
+from arcor2_object_types.upload import upload_def
 
 
 def test_object_parameters(start_processes: None, ars: ARServer, scene: Scene) -> None:

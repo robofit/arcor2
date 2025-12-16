@@ -1,4 +1,4 @@
-from arcor2.flask import FlaskException, WebApiErrorFactory
+from arcor2_web.flask import FlaskException, WebApiErrorFactory
 
 
 class CalibrationServiceException(FlaskException):

@@ -1,5 +1,5 @@
 from arcor2.data.common import Joint, Pose
-from arcor2.object_types.abstract import Robot, Settings
+from arcor2_object_types.abstract import Robot, Settings
 
 from .logging_mixin import LoggingMixin  # noqa:ABS101
 

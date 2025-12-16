@@ -21,9 +21,9 @@ from arcor2.data.common import (
     SceneObject,
     StrEnum,
 )
-from arcor2.object_types.abstract import Generic
-from arcor2.parameter_plugins.utils import plugin_from_type
 from arcor2_build.source.python_to_json import python_to_json
+from arcor2_object_types.abstract import Generic
+from arcor2_object_types.parameter_plugins.utils import plugin_from_type
 
 head = """#!/usr/bin/env python3
 # -*- coding: utf-8 -*-

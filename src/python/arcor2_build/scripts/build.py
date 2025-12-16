@@ -22,17 +22,12 @@ import arcor2_build
 import arcor2_runtime.resources  # noqa
 from arcor2 import env, json
 from arcor2.cached import CachedProject, CachedScene
-from arcor2.clients import project_service as ps
 from arcor2.data.common import Project, ProjectSources, Scene
 from arcor2.data.execution import PackageMeta
 from arcor2.data.object_type import Models, ObjectModel, ObjectType
 from arcor2.exceptions import Arcor2Exception
-from arcor2.flask import RespT, create_app, run_app
 from arcor2.helpers import port_from_url, save_and_import_type_def, save_type_def
 from arcor2.logging import get_logger
-from arcor2.object_types.abstract import Generic
-from arcor2.object_types.utils import base_from_source, built_in_types_names, prepare_object_types_dir
-from arcor2.parameter_plugins.base import TypesDict
 from arcor2.source import SourceException
 from arcor2.source.utils import parse
 from arcor2_build.source.logic import program_src
@@ -40,8 +35,13 @@ from arcor2_build.source.python_to_json import python_to_json
 from arcor2_build.source.utils import global_action_points_class
 from arcor2_build_data import DEPENDENCIES, SERVICE_NAME, URL, ImportResult
 from arcor2_build_data.exceptions import Conflict, InvalidPackage, InvalidProject, NotFound, WebApiError
+from arcor2_object_types.abstract import Generic
+from arcor2_object_types.parameter_plugins.base import TypesDict
+from arcor2_object_types.utils import base_from_source, built_in_types_names, prepare_object_types_dir
+from arcor2_storage import client as ps
+from arcor2_web.flask import RespT, create_app, run_app
 
-OBJECT_TYPE_MODULE = "arcor2_object_types"
+OBJECT_TYPE_MODULE = "arcor2_object_types_tmp"
 
 original_sys_path = list(sys.path)
 original_sys_modules = dict(sys.modules)
@@ -229,8 +229,7 @@ def _publish(project_id: str, package_name: str) -> RespT:
                             raise InvalidProject("Invalid source code.")
 
                         zf.writestr(script_path, script)
-
-                    except ps.ProjectServiceException:
+                    except ps.StorageClientException:
                         logger.info("Script not found on project service, creating one from scratch.")
 
                         # write script without the main loop
@@ -506,7 +505,7 @@ def project_import() -> RespT:
     if not overwrite_scene:
         try:
             ps_scene = ps.get_scene(scene.id)
-        except ps.ProjectServiceException:
+        except ps.StorageClientException:
             pass
         else:
             # do not take created / modified into account
@@ -519,7 +518,7 @@ def project_import() -> RespT:
     if not overwrite_project:
         try:
             ps_project = ps.get_project(project.id)
-        except ps.ProjectServiceException:
+        except ps.StorageClientException:
             pass
         else:
             # do not take created / modified into account
@@ -537,14 +536,14 @@ def project_import() -> RespT:
                 # ignore changes in description (no one cares)
                 if ot.source != obj_type.source or ot.model != obj_type.model:
                     raise Conflict(f"Difference detected for {obj_type.id} object type. Overwrite needed.")
-            except ps.ProjectServiceException:
+            except ps.StorageClientException:
                 pass
 
     if not overwrite_project_sources and not project.has_logic:
         try:
             if ps.get_project_sources(project.id).script != script:
                 raise Conflict("Script difference detected. Overwrite needed.")
-        except ps.ProjectServiceException:
+        except ps.StorageClientException:
             pass
 
     if not overwrite_collision_models:
@@ -552,7 +551,7 @@ def project_import() -> RespT:
             try:
                 if model != ps.get_model(model.id, model.type()):
                     raise Conflict("Collision model difference detected. Overwrite needed.")
-            except ps.ProjectServiceException:
+            except ps.StorageClientException:
                 pass
 
     if update_project_from_script:
