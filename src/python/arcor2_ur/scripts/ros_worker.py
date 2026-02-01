@@ -300,26 +300,40 @@ class MyNode(Node):
 def apply_collision_objects(
     scene, collision_objects: dict[str, CollisionObjectTuple], base_pose: Pose, base_link: str
 ) -> None:
-    scene.remove_all_collision_objects()
+    scene.remove_all_collision_objects()  # just to be sure that scene is clean for update
 
     for obj_id, obj in collision_objects.items():
-        if not isinstance(obj.model, object_type.Box):
-            continue
-
         collision_object = CollisionObject()
         collision_object.header.frame_id = base_link
         collision_object.id = obj_id
 
-        box_pose = pose_to_ros_pose(tr.make_pose_rel(base_pose, obj.pose))
+        obj_pose = pose_to_ros_pose(tr.make_pose_rel(base_pose, obj.pose))
+        prim = SolidPrimitive()
 
-        box = SolidPrimitive()
-        box.type = SolidPrimitive.BOX
-        box.dimensions = (obj.model.size_x, obj.model.size_y, obj.model.size_z)
+        if isinstance(obj.model, object_type.Box):
+            prim.type = SolidPrimitive.BOX
+            prim.dimensions = [obj.model.size_x, obj.model.size_y, obj.model.size_z]
 
-        collision_object.primitives.append(box)
-        collision_object.primitive_poses.append(box_pose)
+            collision_object.primitives.append(prim)
+            collision_object.primitive_poses.append(obj_pose)
+
+        elif isinstance(obj.model, object_type.Sphere):
+            prim.type = SolidPrimitive.SPHERE
+            prim.dimensions = [obj.model.radius]
+
+            collision_object.primitives.append(prim)
+            collision_object.primitive_poses.append(obj_pose)
+
+        elif isinstance(obj.model, object_type.Cylinder):
+            prim.type = SolidPrimitive.CYLINDER
+            prim.dimensions = [obj.model.height, obj.model.radius]
+
+            collision_object.primitives.append(prim)
+            collision_object.primitive_poses.append(obj_pose)
+
+        # elif isinstance(obj.model, object_type.Mesh):
+
         collision_object.operation = CollisionObject.ADD
-
         scene.apply_collision_object(collision_object)
 
     scene.current_state.update()
