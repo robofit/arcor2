@@ -85,6 +85,64 @@ def collision_ids() -> set[str]:
     return set(rest.call(rest.Method.GET, f"{URL}/collisions", list_return_type=str))
 
 
+@handle(SceneServiceException, logger, message="Failed to add or update the graspable model.")
+def upsert_graspable(
+    model: Models,
+    pose: Pose,
+    mesh_parameters: None | MeshParameters = None,
+    *,
+    state: str | None = None,
+    source: str | None = None,
+    stamp: str | None = None,
+) -> None:
+    params = model.to_dict()
+    model_type = model.type().value.lower()
+
+    params[f"{model_type}Id"] = model.id
+    del params["id"]
+
+    if state is not None:
+        params["state"] = state
+    if source is not None:
+        params["source"] = source
+    if stamp is not None:
+        params["stamp"] = stamp
+
+    if model.type() == Model3dType.MESH:
+        params["meshFileId"] = params.pop("asset_id")
+        if mesh_parameters:
+            params.update(mesh_parameters.to_dict())
+
+    rest.call(rest.Method.PUT, f"{URL}/graspables/{model_type}", body=pose, params=params)
+
+
+@handle(SceneServiceException, logger, message="Failed to list graspables.")
+def graspable_ids() -> set[str]:
+    return set(rest.call(rest.Method.GET, f"{URL}/graspables", list_return_type=str))
+
+
+@handle(SceneServiceException, logger, message="Failed to get graspable states.")
+def graspable_states() -> dict[str, str]:
+    states: dict[str, str] = {}
+    for gid in graspable_ids():
+        payload = rest.call(rest.Method.GET, f"{URL}/graspables/{gid}", return_type=dict)
+        state = payload.get("state")
+        if not isinstance(state, str):
+            raise SceneServiceException(f"Graspable {gid} has invalid or missing 'state'.")
+        states[gid] = state
+    return states
+
+
+@handle(SceneServiceException, logger, message="Failed to delete the graspable.")
+def delete_graspable_id(graspable_id: str) -> None:
+    rest.call(rest.Method.DELETE, f"{URL}/graspables/{graspable_id}")
+
+
+def delete_all_graspable() -> None:
+    for cid in collision_ids():
+        delete_collision_id(cid)
+
+
 @handle(SceneServiceException, logger, message="Failed to focus the object.")
 def focus(mfa: MeshFocusAction) -> Pose:
     return rest.call(rest.Method.PUT, f"{URL}/utils/focus", body=mfa, return_type=Pose)
@@ -167,4 +225,9 @@ __all__ = [
     upsert_transform.__name__,
     local_pose.__name__,
     world_pose.__name__,
+    upsert_graspable.__name__,
+    delete_graspable_id.__name__,
+    graspable_ids.__name__,
+    delete_all_graspable.__name__,
+    graspable_states.__name__,
 ]

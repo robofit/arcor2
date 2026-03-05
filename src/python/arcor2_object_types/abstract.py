@@ -2,13 +2,15 @@ import abc
 import copy
 import inspect
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from enum import Enum
 
 from dataclasses_jsonschema import JsonSchemaMixin
 from PIL import Image
 
 from arcor2 import CancelDict, DynamicParamDict
 from arcor2.data.camera import CameraParameters
-from arcor2.data.common import ActionMetadata, Joint, Pose, SceneObject
+from arcor2.data.common import ActionMetadata, Joint, Parameter, Pose, SceneObject
 from arcor2.data.object_type import Models, PrimitiveModels
 from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
@@ -178,6 +180,123 @@ class CollisionObject(GenericWithPose):
         :param state: State of a collision model.
         :return:
         """
+        self.enabled = state
+
+    set_enabled.__action__ = ActionMetadata()  # type: ignore
+
+
+class GraspableState(str, Enum):
+    WORLD = "WORLD"
+    ATTACHED = "ATTACHED"
+    RESERVED = "RESERVED"
+    LOST = "LOST"
+
+
+class GraspableSource(str, Enum):
+    CAMERA = "camera"
+    FIXED = "fixed"
+    OTHER = "other"
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+class GraspableObject(GenericWithPose):
+    mesh_filename: None | str = None
+
+    def __init__(
+        self,
+        obj_id: str,
+        name: str,
+        pose: Pose,
+        collision_model: Models,
+        state: GraspableState = GraspableState.WORLD,
+        source: GraspableSource = GraspableSource.OTHER,
+        stamp: str | None = None,
+        settings: None | Settings = None,
+    ) -> None:
+        super().__init__(obj_id, name, pose, settings)
+
+        self.collision_model = copy.deepcopy(collision_model)
+        self._enabled = True
+
+        self._state = state
+        self._source = source
+        self._stamp = stamp or _utc_now_iso()
+
+        self.collision_model.id = self.id
+        _scene_service().upsert_graspable(
+            self.collision_model,
+            pose,
+            state=self._state.value,
+            source=self._source.value,
+            stamp=self._stamp,
+        )
+
+    def set_pose(self, pose: Pose) -> None:
+        super().set_pose(pose)
+        if self._enabled:
+            _scene_service().upsert_graspable(
+                self.collision_model,
+                pose,
+                state=self._state.value,
+                source=self._source.value,
+                stamp=self._stamp,
+            )
+
+    @property
+    def enabled(self) -> bool:
+        svc = _scene_service()
+        assert (self.id in svc.graspable_ids()) == self._enabled
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool) -> None:
+        svc = _scene_service()
+
+        if not self._enabled and enabled:
+            assert self.id not in svc.graspable_ids()
+            svc.upsert_graspable(
+                self.collision_model,
+                self.pose,
+                state=self._state.value,
+                source=self._source.value,
+                stamp=self._stamp,
+            )
+
+        if self._enabled and not enabled:
+            svc.delete_graspable_id(self.id)
+
+        self._enabled = enabled
+
+    @property
+    def state(self) -> GraspableState:
+        return self._state
+
+    def set_state(self, state: GraspableState, *, an: None | str = None) -> None:
+        self._state = state
+        # re-upsert so server knows about new state
+        if self._enabled:
+            _scene_service().upsert_graspable(
+                self.collision_model,
+                self.pose,
+                state=self._state.value,
+                source=self._source.value,
+                stamp=self._stamp,
+            )
+
+    set_state.__action__ = ActionMetadata()  # type: ignore
+
+    @property
+    def source(self) -> GraspableSource:
+        return self._source
+
+    @property
+    def stamp(self) -> str:
+        return self._stamp
+
+    def set_enabled(self, state: bool, *, an: None | str = None) -> None:
         self.enabled = state
 
     set_enabled.__action__ = ActionMetadata()  # type: ignore

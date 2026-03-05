@@ -78,7 +78,8 @@ jobs:
     - name: install system dependencies
       run: | # cargo is required to build fastuuid (no wheels for Python 3.11)
         sudo apt-get update
-        sudo apt-get install -y --no-install-recommends jq cargo
+        sudo apt-get install -y --no-install-recommends jq
+        sudo df -h
         sudo ./build-support/install_ur_dependencies.sh
         sudo apt-get clean
         sudo rm -rf /var/lib/apt/lists/*
