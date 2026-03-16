@@ -1,14 +1,22 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
-    directory: "/.github/"
+    directory: "/"
     schedule:
       interval: "daily"
   - package-ecosystem: "docker"
-    directory: "/src/docker"
+    directories:
+      - "/src/docker/*"
     schedule:
       interval: "daily"
+    groups:
+      docker-base-images:
+        group-by: dependency-name
   - package-ecosystem: "docker-compose"
-    directory: "/compose-files"
+    directories:
+      - "/compose-files/*"
     schedule:
       interval: "daily"
+    groups:
+      compose-images:
+        group-by: dependency-name

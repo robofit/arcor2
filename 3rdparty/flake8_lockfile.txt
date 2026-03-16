@@ -4,7 +4,7 @@
 //
 // --- BEGIN PANTS LOCKFILE METADATA: DO NOT EDIT OR REMOVE ---
 // {
-//   "version": 3,
+//   "version": 6,
 //   "valid_for_interpreter_constraints": [
 //     "CPython==3.12.*"
 //   ],
@@ -20,7 +20,12 @@
 //   "manylinux": "manylinux2014",
 //   "requirement_constraints": [],
 //   "only_binary": [],
-//   "no_binary": []
+//   "no_binary": [],
+//   "excludes": [],
+//   "overrides": [],
+//   "sources": [],
+//   "lock_style": "universal",
+//   "complete_platforms": []
 // }
 // --- END PANTS LOCKFILE METADATA ---
 
@@ -279,23 +284,24 @@
           "artifacts": [
             {
               "algorithm": "sha256",
-              "hash": "d9a90dba89607489548a49d557f8bac8112bd25d3cbc8aeef23e860811bd5ed9",
-              "url": "https://files.pythonhosted.org/packages/a0/56/0cc15b8ff2613c1d5c3dc1f3f576ede1c43868c1bc2e5ccaa2d4bcd7974d/vulture-2.14-py2.py3-none-any.whl"
+              "hash": "a3d8ebef918694326620eb128fa783486c8d285b23381c2b457d864ac056ef8d",
+              "url": "https://files.pythonhosted.org/packages/1c/f3/07cf122e145bc6df976030e9935123124c3fcb5044cf407b5e71e85821b4/vulture-2.15-py3-none-any.whl"
             },
             {
               "algorithm": "sha256",
-              "hash": "cb8277902a1138deeab796ec5bef7076a6e0248ca3607a3f3dee0b6d9e9b8415",
-              "url": "https://files.pythonhosted.org/packages/8e/25/925f35db758a0f9199113aaf61d703de891676b082bd7cf73ea01d6000f7/vulture-2.14.tar.gz"
+              "hash": "f9d8b4ce29c69950d323f21dceab4a4d6c694403dffbed7713c4691057e561fe",
+              "url": "https://files.pythonhosted.org/packages/59/c6/4f147b621b4c0899eb1770f98113334bb706ebd251ac2be979316b1985fa/vulture-2.15.tar.gz"
             }
           ],
           "project_name": "vulture",
           "requires_dists": [
             "tomli>=1.1.0; python_version < \"3.11\""
           ],
-          "requires_python": ">=3.8",
-          "version": "2.14"
+          "requires_python": ">=3.9",
+          "version": "2.15"
         }
       ],
+      "marker": null,
       "platform_tag": null
     }
   ],
@@ -303,7 +309,7 @@
   "only_wheels": [],
   "overridden": [],
   "path_mappings": {},
-  "pex_version": "2.45.2",
+  "pex_version": "2.81.0",
   "pip_version": "24.2",
   "prefer_older_binary": false,
   "requirements": [
@@ -316,7 +322,7 @@
     "vulture"
   ],
   "requires_python": [
-    "==3.12.*"
+    "CPython==3.12.*"
   ],
   "resolver_version": "pip-2020-resolver",
   "style": "universal",
