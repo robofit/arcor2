@@ -73,7 +73,7 @@ services:
       - fit-demo2-network
 
   fit-demo2-nginx:
-    image: nginx:1.27.1
+    image: nginx:1.29.6
     container_name: "fit-demo2-nginx"
     volumes:
       - ./nginx.2.conf:/etc/nginx/conf.d/default.conf
