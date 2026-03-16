@@ -11,9 +11,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN set -euo pipefail \
         && apt-get update \
-        && curl_ver="$(apt-cache policy curl | awk '/Candidate:/ {print $2}')" \
         && apt-get install -y -q --no-install-recommends \
-        "curl=${curl_ver}" \
+        curl \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

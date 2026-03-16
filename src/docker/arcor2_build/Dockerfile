@@ -12,13 +12,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # curl is for healthcheck
 RUN set -euo pipefail \
         && apt-get update \
-        && gl_ver="$(apt-cache policy libgl1-mesa-glx | awk '/Candidate:/ {print $2}')" \
-        && glib_ver="$(apt-cache policy libglib2.0-0 | awk '/Candidate:/ {print $2}')" \
-        && curl_ver="$(apt-cache policy curl | awk '/Candidate:/ {print $2}')" \
         && apt-get install -y -q --no-install-recommends \
-        "libgl1-mesa-glx=${gl_ver}" \
-        "libglib2.0-0=${glib_ver}" \
-        "curl=${curl_ver}" \
+        libgl1-mesa-glx \
+        libglib2.0-0 \
+        curl \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
