@@ -1,12 +1,12 @@
-FROM python:3.12.7-bookworm as deps
+FROM python:3.12.12-bookworm as deps
 COPY src.python.arcor2_dobot.scripts/dobot.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.12.7-bookworm as srcs
+FROM python:3.12.12-bookworm as srcs
 COPY src.python.arcor2_dobot.scripts/dobot.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.12.7-bookworm
+FROM python:3.12.12-bookworm
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # curl is for healthcheck

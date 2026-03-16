@@ -8,11 +8,17 @@ on:
     branches:
       - master
 
+env:
+  PANTS_CONFIG_FILES: pants.ci.toml
+  PEX_ROOT: ${{ github.workspace }}/.pex
+  PANTS_SETUP_CACHE_DIR: ${{ github.workspace }}/.cache/pants/setup
+  PANTS_NAMED_CACHES_DIR: ${{ github.workspace }}/.cache/pants/named_caches
+  PANTS_LOCAL_STORE_DIR: ${{ github.workspace }}/.cache/pants/lmdb_store
+  TMPDIR: ${{ github.workspace }}/.tmp
+
 jobs:
   build:
-    env:
-      PANTS_CONFIG_FILES: pants.ci.toml
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ['3.12']
@@ -21,35 +27,36 @@ jobs:
       with:
         fetch-depth: 0
         lfs: true
+    - name: Prepare workspace tmpdir
+      run: |
+        mkdir -p "$GITHUB_WORKSPACE/.tmp"
+        chmod 1777 "$GITHUB_WORKSPACE/.tmp"
     - name: Get Pants version
       id: pants_version
       run: |
-        # Capture the "pants_version = " line from config.
-        PANTS_VERSION=$(grep -E '^pants_version\s*=' pants.toml)
-        echo "::set-output name=pants_version::$PANTS_VERSION"
+        PANTS_VERSION=$(awk -F'"' '/^pants_version\s*=/{print $2}' pants.toml)
+        echo "pants_version=$PANTS_VERSION" >> "$GITHUB_OUTPUT"
     - name: Checkout LFS objects
       run: git lfs checkout
     - uses: pat-s/always-upload-cache@v3  # default actions/cache is not saving cache on failure (e.g. when ./pants lint :: fails)
       id: cache_pants_setup
       with:
         path: |
-          ~/.cache/pants/setup
+          ${{ env.PANTS_SETUP_CACHE_DIR }}
         key: pants-setup-${{ steps.pants_version.outputs.pants_version }}
     - uses: pat-s/always-upload-cache@v3
       id: cached_named_caches
       with:
         path: |
-          ~/.cache/pants/named_caches
-        # The Python backend uses named_caches for Pip/PEX state,
-        # so it is appropriate to invalidate on requirements.txt changes.
-        key: pants-named-caches-${{ runner.os }}-${{ hashFiles('pants.toml') }}-${{ hashFiles('requirements.txt') }}
+          ${{ env.PANTS_NAMED_CACHES_DIR }}
+        # The Python backend uses named_caches for Pip/PEX state, so include the lockfile inputs in the key.
+        key: pants-named-caches-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pants.toml', '3rdparty/*.txt') }}
         # Note that falling back to a restore key may give a useful partial result that will save time
         # over completely clean state, but will cause the cache entry to grow without bound over time.
         # See https://pants.readme.io/docs/using-pants-in-ci for tips on how to periodically clean it up.
         # Alternatively you may want to avoid using restore keys.
         restore-keys: |
-          pants-named-caches-${{ runner.os }}-${{ hashFiles('pants.toml') }}-${{ hashFiles('requirements.txt') }}
-          pants-named-caches-${{ runner.os }}-${{ hashFiles('pants.toml') }}-
+          pants-named-caches-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pants.toml') }}-
           pants-named-caches-${{ runner.os }}-
     # If you're not using a fine-grained remote caching service (see https://www.pantsbuild.org/docs/remote-caching),
     # then you may also want to preserve the local Pants cache (lmdb_store). However this must invalidate for
@@ -59,10 +66,12 @@ jobs:
       id: cache_lmdb_store
       with:
         path: |
-          ~/.cache/pants/lmdb_store
-        key: pants-lmdb-store-${{ runner.os }}-${{ hashFiles('**/*') }}
+          ${{ env.PANTS_LOCAL_STORE_DIR }}
+        key: pants-lmdb-store-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('pants.toml', '3rdparty/*.txt') }}
         # Same caveat as above regarding the issues with restore keys.
-        restore-keys: pants-lmdb-store-${{ runner.os }}-
+        restore-keys: |
+          pants-lmdb-store-${{ runner.os }}-py${{ matrix.python-version }}-
+          pants-lmdb-store-${{ runner.os }}-
     - name: Prune pants cache
       run: |
         ./build-support/nuke-cache.sh
@@ -75,8 +84,8 @@ jobs:
         pants --version
     - name: install system dependencies
       run: |
-        sudo ./build-support/install_kinect_prerequisites.sh
-        sudo apt install jq cargo
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends cargo
     - name: Get dependencies
       run: |
         pants export
@@ -85,4 +94,5 @@ jobs:
       with:
         name: pants-log
         path: .pants.d/pants.log
+        if-no-files-found: ignore
       if: always()  # We want the log even on failures.
