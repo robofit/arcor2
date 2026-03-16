@@ -45,7 +45,7 @@ jobs:
     - name: Checkout LFS objects
       run: git lfs checkout
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - uses: pantsbuild/actions/init-pants@v5-scie-pants
@@ -141,7 +141,7 @@ jobs:
         sudo chown -R "$USER":"$USER" "$GITHUB_WORKSPACE/.docker"
         sudo systemctl start docker || sudo service docker start
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - uses: pantsbuild/actions/init-pants@v5-scie-pants
