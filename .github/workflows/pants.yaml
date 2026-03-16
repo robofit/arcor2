@@ -92,7 +92,7 @@ jobs:
         pip install "pipdeptree==2.30.0"
         pipdeptree -w fail
     - name: Upload pants log
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pants-log-build-py${{ matrix.python-version }}
         path: .pants.d/pants.log
@@ -154,7 +154,7 @@ jobs:
       run: |
         pants --filter-target-type=docker_image --changed-since=origin/master --changed-dependents=transitive package
     - name: Upload pants log
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pants-log-docker-py${{ matrix.python-version }}
         path: .pants.d/pants.log
