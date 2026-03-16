@@ -86,7 +86,7 @@ services:
         condition: service_healthy
 
   fit-demo2-upload-object-types:
-    image: arcor2/arcor2_upload_fit_demo:1.5.1
+    image: arcor2/arcor2_upload_fit_demo:1.6.0
     container_name: "fit-demo2-upload-object-types"
     depends_on:
       fit-demo2-storage:
