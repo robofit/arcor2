@@ -1,19 +1,18 @@
-FROM python:3.12.7-bookworm as deps
+FROM python:3.12.12-bookworm as deps
 COPY src.python.arcor2_storage.scripts/storage.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=deps --compile /bin/app
 
-FROM python:3.12.7-bookworm as srcs
+FROM python:3.12.12-bookworm as srcs
 COPY src.python.arcor2_storage.scripts/storage.pex /binary.pex
 RUN PEX_TOOLS=1 PYTHONOPTIMIZE=1 /usr/local/bin/python /binary.pex venv --scope=srcs --compile /bin/app
 
-FROM python:3.12.7-bookworm
+FROM python:3.12.12-bookworm
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN set -euo pipefail \
         && apt-get update \
-        && curl_ver="$(apt-cache policy curl | awk '/Candidate:/ {print $2}')" \
         && apt-get install -y -q --no-install-recommends \
-        "curl=${curl_ver}" \
+        curl \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

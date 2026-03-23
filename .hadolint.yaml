@@ -1,0 +1,3 @@
+# Base images here follow moving distro tags, so exact apt package pins create brittle builds.
+ignored:
+  - DL3008
