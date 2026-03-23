@@ -5,6 +5,8 @@ import logging
 import os
 from dataclasses import dataclass, field
 from functools import wraps
+from math import dist
+from typing import Any
 
 import humps
 from ament_index_python.packages import get_package_share_directory  # pants: no-infer-dep
@@ -17,10 +19,11 @@ from arcor2.data.common import Joint, Pose
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
+from arcor2_object_types.abstract import GraspableState
 from arcor2_ur import get_data, version
 from arcor2_ur.exceptions import NotFound, StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
-from arcor2_ur.scripts.ros_worker import CollisionObjectTuple, GraspableObjectTuple, RosWorkerClient
+from arcor2_ur.scripts.ros_worker import CollisionSceneObject, RosWorkerClient
 from arcor2_web.flask import RespT, create_app, run_app
 
 logger = get_logger(__name__)
@@ -47,16 +50,8 @@ class ServiceState:
 class Globs:
     debug = False
     state: ServiceState | None = None
-    collision_objects: dict[str, CollisionObjectTuple] = field(default_factory=dict)
-    graspable_objects: dict[str, GraspableObjectTuple] = field(default_factory=dict)
+    collision_objects: dict[str, CollisionSceneObject] = field(default_factory=dict)
     scene_started = False  # flag for "Scene service"
-
-
-def _graspable_meta_from_request() -> tuple[str, str, str]:
-    state = request.args.get("state", default="WORLD")
-    source = request.args.get("source", default="other")
-    stamp = request.args.get("stamp", default="")
-    return state, source, stamp
 
 
 globs: Globs = Globs()
@@ -95,6 +90,17 @@ def requires_started(f):
         return f(*args, **kwargs)
 
     return wrapped
+
+
+def parse_collision_body() -> tuple[common.Pose, dict[str, Any]]:
+    body = humps.decamelize(request.json)
+
+    if "pose" in body:
+        pose = common.Pose.from_dict(body["pose"])
+        metadata = body.get("metadata", {}) or {}
+        return pose, metadata
+
+    return common.Pose.from_dict(body), {}
 
 
 @app.route("/system/start", methods=["PUT"])  # for compatibility with Scene service
@@ -137,7 +143,6 @@ def put_start() -> RespT:
     worker = RosWorkerClient(
         pose,
         globs.collision_objects,
-        globs.graspable_objects,
         BASE_LINK,
         TOOL_LINK,
         PLANNING_GROUP_NAME,
@@ -201,6 +206,145 @@ def get_started() -> RespT:
     return jsonify(started())
 
 
+@app.route("/graspable/reserve-nearest", methods=["PUT"])
+def put_reserve_nearest_graspable() -> RespT:
+    """Reserve nearest graspable object in WORLD state.
+    ---
+    put:
+        tags:
+            - Graspable
+        description: Find the nearest graspable object in WORLD state within the given radius, mark it as RESERVED, and return its ID. If no such object is found, returns null.
+        requestBody:
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    required:
+                      - position
+                      - radius
+                    properties:
+                      position:
+                        $ref: Position
+                      radius:
+                        type: number
+                        format: float
+        responses:
+            200:
+              description: ID of the reserved graspable object, or null if no matching object was found.
+              content:
+                application/json:
+                  schema:
+                    oneOf:
+                      - type: string
+                      - type: "null"
+            500:
+              description: "Error types: **General**, **UrGeneral**."
+              content:
+                application/json:
+                  schema:
+                    $ref: WebApiError
+    """
+    if not isinstance(request.json, dict):
+        raise UrGeneral("Body should be a JSON dict containing position and radius.")
+
+    body = humps.decamelize(request.json)
+
+    try:
+        position = common.Position.from_dict(body["position"])
+        radius = float(body["radius"])
+    except KeyError as exc:
+        raise UrGeneral(f"Missing key: {exc.args[0]}")
+
+    if radius < 0.0:
+        raise UrGeneral("Radius has to be >= 0.")
+
+    nearest_id: str | None = None
+    nearest_distance: float | None = None
+
+    for obj_id, obj in globs.collision_objects.items():
+
+        # only graspable objects
+        if obj.metadata.get("object_type") != "graspable":
+            continue
+
+        # only WORLD objects
+        if obj.metadata.get("state") != GraspableState.WORLD.value:
+            continue
+
+        current_distance = position.distance(obj.pose.position)
+
+        if current_distance >= radius:
+            continue
+
+        if nearest_distance is None or current_distance < nearest_distance:
+            nearest_id = obj_id
+            nearest_distance = current_distance
+
+    if nearest_id is None:
+        return jsonify("")
+
+    # change object state to RESERVED
+    globs.collision_objects[nearest_id].metadata["state"] = GraspableState.RESERVED.value
+
+    # refresh worker
+    if started():
+        assert globs.state
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
+
+    return jsonify(nearest_id)
+
+
+@app.route("/graspable/move", methods=["PUT"])
+@requires_started
+def move_object() -> RespT:
+    """Moves graspable object using robot.
+    ---
+    put:
+        tags:
+            - Graspable
+        summary: Move graspable object to target pose.
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - object_id
+                            - effector_type
+                            - pose
+                        properties:
+                            object_id:
+                                type: string
+                            effector_type:
+                                type: string
+                            pose:
+                                $ref: Pose
+        responses:
+            204:
+                description: Ok
+            500:
+                description: "Error types: **General**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
+    """
+
+    body = humps.decamelize(request.json)
+
+    object_id = body["object_id"]
+    effector_type = body["effector_type"]
+    pose = Pose.from_dict(body["pose"])
+
+    assert globs.state
+    globs.state.worker.request(
+        "move_object_to_pose", object_id=object_id, effector_type=effector_type, pose=pose.to_dict()
+    )
+
+    return Response(status=204)
+
+
 @app.route("/collisions/box", methods=["PUT"])
 def put_box() -> RespT:
     """Add or update collision box.
@@ -246,12 +390,12 @@ def put_box() -> RespT:
                         schema:
                             $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = request.args.to_dict()
     box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
-    globs.collision_objects[box.id] = CollisionObjectTuple(box, common.Pose.from_dict(humps.decamelize(request.json)))
+
+    globs.collision_objects[box.id] = CollisionSceneObject(box, pose, metadata)
 
     if started():
         assert globs.state
@@ -295,16 +439,12 @@ def put_sphere() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
-    globs.collision_objects[sphere.id] = CollisionObjectTuple(
-        sphere, common.Pose.from_dict(humps.decamelize(request.json))
-    )
 
-    logger.warning("Sphere collision object added but will be ignored as only boxes are supported at the moment.")
+    globs.collision_objects[sphere.id] = CollisionSceneObject(sphere, pose, metadata)
 
     if started():
         assert globs.state
@@ -357,16 +497,12 @@ def put_cylinder() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
-    globs.collision_objects[cylinder.id] = CollisionObjectTuple(
-        cylinder, common.Pose.from_dict(humps.decamelize(request.json))
-    )
 
-    logger.warning("Cylinder collision object added but will be ignored as only boxes are supported at the moment.")
+    globs.collision_objects[cylinder.id] = CollisionSceneObject(cylinder, pose, metadata)
 
     if started():
         assert globs.state
@@ -427,14 +563,14 @@ def put_mesh() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
-    globs.collision_objects[mesh.id] = CollisionObjectTuple(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
 
-    logger.warning("Mesh collision object added but will be ignored as only boxes are supported at the moment.")
+    globs.collision_objects[mesh.id] = CollisionSceneObject(mesh, pose, metadata)
+
+    logger.warning("Mesh ignored (only boxes supported).")
 
     if started():
         assert globs.state
@@ -809,445 +945,6 @@ def put_release() -> RespT:
     assert globs.state
     globs.state.worker.request("release")
     return Response(status=204)
-
-
-@app.route("/graspables/box", methods=["PUT"])
-def put_graspable_box() -> RespT:
-    """Add or update graspable box.
-    ---
-    put:
-        tags:
-            - Graspables
-        description: Add or update graspable box.
-        parameters:
-            - name: boxId
-              in: query
-              description: unique graspable box ID
-              required: true
-              schema:
-                type: string
-            - name: sizeX
-              in: query
-              schema:
-                type: number
-                format: float
-            - name: sizeY
-              in: query
-              schema:
-                type: number
-                format: float
-            - name: sizeZ
-              in: query
-              schema:
-                type: number
-                format: float
-            - name: state
-              in: query
-              schema:
-                type: string
-                default: WORLD
-            - name: source
-              in: query
-              schema:
-                type: string
-                default: other
-            - name: stamp
-              in: query
-              schema:
-                type: string
-                default: ""
-        requestBody:
-              content:
-                application/json:
-                  schema:
-                    $ref: Pose
-        responses:
-            204:
-                description: Ok
-            500:
-                description: "Error types: **General**, **UrGeneral**."
-                content:
-                    application/json:
-                        schema:
-                            $ref: WebApiError
-    """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
-
-    state, source, stamp = _graspable_meta_from_request()
-
-    args = request.args.to_dict()
-    box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
-    pose = common.Pose.from_dict(humps.decamelize(request.json))
-
-    globs.graspable_objects[box.id] = GraspableObjectTuple(
-        model=box,
-        pose=pose,
-        state=state,
-        source=source,
-        stamp=stamp,
-    )
-
-    # collision-like update logic, but for graspables
-    if started():
-        assert globs.state
-        globs.state.worker.request("update_graspables", graspable_objects=globs.graspable_objects)
-
-    return Response(status=204)
-
-
-@app.route("/graspables/sphere", methods=["PUT"])
-def put_graspable_sphere() -> RespT:
-    """Add or update graspable sphere.
-    ---
-    put:
-        tags:
-            - Graspables
-        description: Add or update graspable sphere.
-        parameters:
-            - name: sphereId
-              in: query
-              description: unique graspable sphere ID
-              required: true
-              schema:
-                type: string
-            - name: radius
-              in: query
-              schema:
-                type: number
-                format: float
-            - name: state
-              in: query
-              schema:
-                type: string
-                default: WORLD
-            - name: source
-              in: query
-              schema:
-                type: string
-                default: other
-            - name: stamp
-              in: query
-              schema:
-                type: string
-                default: ""
-        requestBody:
-              content:
-                application/json:
-                  schema:
-                    $ref: Pose
-        responses:
-            204:
-              description: Ok
-            500:
-              description: "Error types: **General**, **UrGeneral**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
-
-    state, source, stamp = _graspable_meta_from_request()
-
-    args = humps.decamelize(request.args.to_dict())
-    sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
-    pose = common.Pose.from_dict(humps.decamelize(request.json))
-
-    globs.graspable_objects[sphere.id] = GraspableObjectTuple(
-        model=sphere,
-        pose=pose,
-        state=state,
-        source=source,
-        stamp=stamp,
-    )
-
-    if started():
-        assert globs.state
-        globs.state.worker.request("update_graspables", graspable_objects=globs.graspable_objects)
-
-    return Response(status=204)
-
-
-@app.route("/graspables/cylinder", methods=["PUT"])
-def put_graspable_cylinder() -> RespT:
-    """Add or update graspable cylinder.
-    ---
-    put:
-        tags:
-            - Graspables
-        description: Add or update graspable cylinder.
-        parameters:
-            - name: cylinderId
-              in: query
-              description: unique graspable cylinder ID
-              required: true
-              schema:
-                type: string
-            - name: radius
-              in: query
-              schema:
-                type: number
-                format: float
-            - name: height
-              in: query
-              schema:
-                type: number
-                format: float
-            - name: state
-              in: query
-              schema:
-                type: string
-                default: WORLD
-            - name: source
-              in: query
-              schema:
-                type: string
-                default: other
-            - name: stamp
-              in: query
-              schema:
-                type: string
-                default: ""
-        requestBody:
-              content:
-                application/json:
-                  schema:
-                    $ref: Pose
-        responses:
-            204:
-              description: Ok
-            500:
-              description: "Error types: **General**, **UrGeneral**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
-
-    state, source, stamp = _graspable_meta_from_request()
-
-    args = humps.decamelize(request.args.to_dict())
-    cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
-    pose = common.Pose.from_dict(humps.decamelize(request.json))
-
-    globs.graspable_objects[cylinder.id] = GraspableObjectTuple(
-        model=cylinder,
-        pose=pose,
-        state=state,
-        source=source,
-        stamp=stamp,
-    )
-
-    if started():
-        assert globs.state
-        globs.state.worker.request("update_graspables", graspable_objects=globs.graspable_objects)
-
-    return Response(status=204)
-
-
-@app.route("/graspables/mesh", methods=["PUT"])
-def put_graspable_mesh() -> RespT:
-    """Add or update graspable mesh.
-    ---
-    put:
-        tags:
-            - Graspables
-        description: Add or update graspable mesh.
-        parameters:
-            - name: meshId
-              in: query
-              description: unique graspable mesh ID
-              required: true
-              schema:
-                type: string
-            - name: meshFileId
-              in: query
-              schema:
-                type: string
-            - name: meshScaleX
-              in: query
-              schema:
-                type: number
-                format: float
-                default: 1.0
-            - name: meshScaleY
-              in: query
-              schema:
-                type: number
-                format: float
-                default: 1.0
-            - name: meshScaleZ
-              in: query
-              schema:
-                type: number
-                format: float
-                default: 1.0
-            - name: state
-              in: query
-              schema:
-                type: string
-                default: WORLD
-            - name: source
-              in: query
-              schema:
-                type: string
-                default: other
-            - name: stamp
-              in: query
-              schema:
-                type: string
-                default: ""
-        requestBody:
-              content:
-                application/json:
-                  schema:
-                    $ref: Pose
-        responses:
-            204:
-              description: Ok
-            500:
-              description: "Error types: **General**, **UrGeneral**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
-
-    state, source, stamp = _graspable_meta_from_request()
-
-    args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
-    pose = common.Pose.from_dict(humps.decamelize(request.json))
-
-    globs.graspable_objects[mesh.id] = GraspableObjectTuple(
-        model=mesh,
-        pose=pose,
-        state=state,
-        source=source,
-        stamp=stamp,
-    )
-
-    if started():
-        assert globs.state
-        globs.state.worker.request("update_graspables", graspable_objects=globs.graspable_objects)
-
-    return Response(status=204)
-
-
-@app.route("/graspables/<string:id>", methods=["DELETE"])
-def delete_graspable(id: str) -> RespT:
-    """Deletes graspable object.
-    ---
-    delete:
-        tags:
-            - Graspables
-        summary: Deletes graspable object.
-        parameters:
-            - name: id
-              in: path
-              description: unique graspable ID
-              required: true
-              schema:
-                type: string
-        responses:
-            204:
-              description: Ok
-            500:
-              description: "Error types: **General**, **NotFound**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-    try:
-        del globs.graspable_objects[id]
-    except KeyError:
-        raise NotFound("Graspable not found")
-
-    if started():
-        assert globs.state
-        globs.state.worker.request("update_graspables", graspable_objects=globs.graspable_objects)
-
-    return Response(status=204)
-
-
-@app.route("/graspables", methods=["GET"])
-def get_graspables() -> RespT:
-    """Gets graspable ids.
-    ---
-    get:
-        tags:
-        - Graspables
-        summary: Gets graspable ids.
-        responses:
-            200:
-              description: Success
-              content:
-                application/json:
-                  schema:
-                    type: array
-                    items:
-                      type: string
-            500:
-              description: "Error types: **General**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-    return jsonify(list(globs.graspable_objects.keys()))
-
-
-@app.route("/graspables/<string:id>", methods=["GET"])
-def get_graspable(id: str) -> RespT:
-    """Gets graspable detail.
-    ---
-    get:
-        tags:
-          - Graspables
-        summary: Gets graspable detail.
-        parameters:
-            - name: id
-              in: path
-              description: unique graspable ID
-              required: true
-              schema:
-                type: string
-        responses:
-            200:
-              description: Success
-            500:
-              description: "Error types: **General**, **NotFound**."
-              content:
-                application/json:
-                  schema:
-                    $ref: WebApiError
-    """
-    try:
-        entry = globs.graspable_objects[id]
-    except KeyError:
-        raise NotFound("Graspable not found")
-
-    model = entry.model
-    pose = entry.pose
-
-    return jsonify(
-        {
-            "id": id,
-            "modelType": model.type().value.lower(),
-            "model": model.to_dict(),
-            "pose": pose.to_dict(),
-            "state": entry.state,
-            "source": entry.source,
-            "stamp": entry.stamp,
-        }
-    )
 
 
 def main() -> None:

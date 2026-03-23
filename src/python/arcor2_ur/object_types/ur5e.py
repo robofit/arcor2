@@ -4,7 +4,7 @@ from typing import cast
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
+from arcor2.data.common import ActionMetadata, Joint, Pose, Position, StrEnum
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2_object_types.abstract import Robot, Settings
 from arcor2_web import rest
@@ -22,6 +22,13 @@ class Vacuum(JsonSchemaMixin):
 
     def avg(self) -> float:
         return (self.a + self.b) / 2
+
+
+@dataclass
+class MoveObject(JsonSchemaMixin):
+    object_id: str
+    effector_type: str
+    pose: Pose
 
 
 class VacuumChannel(StrEnum):
@@ -111,6 +118,14 @@ class Ur5e(Robot):
                 f"{self.settings.url}/eef/pose",
                 body=pose,
                 params={"velocity": speed, "payload": payload, "safe": safe},
+            )
+
+    def move_object_to_pose(self, object_id: str, effector_type: str, pose: Pose) -> None:
+        with self._move_lock:
+            rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/graspable/move",
+                body=MoveObject(object_id, effector_type, pose),
             )
 
     def suck(

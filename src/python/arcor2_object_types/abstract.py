@@ -10,7 +10,7 @@ from PIL import Image
 
 from arcor2 import CancelDict, DynamicParamDict
 from arcor2.data.camera import CameraParameters
-from arcor2.data.common import ActionMetadata, Joint, Parameter, Pose, SceneObject
+from arcor2.data.common import ActionMetadata, Joint, Pose, SceneObject, StrEnum
 from arcor2.data.object_type import Models, PrimitiveModels
 from arcor2.data.robot import RobotType
 from arcor2.docstring import parse_docstring
@@ -185,24 +185,54 @@ class CollisionObject(GenericWithPose):
     set_enabled.__action__ = ActionMetadata()  # type: ignore
 
 
-class GraspableState(str, Enum):
+class GraspableState(StrEnum):
+    """Logical state of a graspable object in the scene.
+
+    WORLD
+        Free object in the environment. Acts as a collision obstacle.
+
+    RESERVED
+        Reserved by the robot. Waiting for pickup.
+
+    ATTACHED
+        Attached to the robot end-effector.
+
+    LOST
+        Object not observable. Location unknown.
+    """
+
     WORLD = "WORLD"
-    ATTACHED = "ATTACHED"
     RESERVED = "RESERVED"
+    ATTACHED = "ATTACHED"
     LOST = "LOST"
 
 
-class GraspableSource(str, Enum):
-    CAMERA = "camera"
-    FIXED = "fixed"
-    OTHER = "other"
+class GraspableSource(StrEnum):
+    """Source of the object pose information.
+
+    CAMERA
+        Detected by a vision system.
+
+    FIXED
+        Predefined static object.
+
+    OTHER
+        Arbitrary or unspecified source (e.g., tests, debugging, simulations, or other scenarios).
+    """
+
+    CAMERA = "CAMERA"
+    FIXED = "FIXED"
+    OTHER = "OTHER"
 
 
 def _utc_now_iso() -> str:
+    """Return the current UTC timestamp in ISO 8601 format."""
     return datetime.now(timezone.utc).isoformat()
 
 
 class GraspableObject(GenericWithPose):
+    """Object in the scene that can potentially be grasped."""
+
     mesh_filename: None | str = None
 
     def __init__(
@@ -220,86 +250,98 @@ class GraspableObject(GenericWithPose):
 
         self.collision_model = copy.deepcopy(collision_model)
         self._enabled = True
-
         self._state = state
         self._source = source
         self._stamp = stamp or _utc_now_iso()
 
+        # originally, each model has id == object type (e.g. BigBox) but here we need to set it to something unique
         self.collision_model.id = self.id
+        self._upsert_graspable()
+
+    def _upsert_graspable(self) -> None:
         _scene_service().upsert_graspable(
             self.collision_model,
-            pose,
-            state=self._state.value,
-            source=self._source.value,
+            self.pose,
+            state=self._state,
+            source=self._source,
             stamp=self._stamp,
         )
 
     def set_pose(self, pose: Pose) -> None:
         super().set_pose(pose)
         if self._enabled:
-            _scene_service().upsert_graspable(
-                self.collision_model,
-                pose,
-                state=self._state.value,
-                source=self._source.value,
-                stamp=self._stamp,
-            )
+            self._upsert_graspable()
 
     @property
     def enabled(self) -> bool:
+        """If the object has a collision model, this indicates whether the
+        model is enabled (set on the Scene service).
+
+        When set, it updates the state of the model on the Scene service.
+        :return:
+        """
+
         svc = _scene_service()
-        assert (self.id in svc.graspable_ids()) == self._enabled
+        assert (self.id in svc.collision_ids()) == self._enabled
         return self._enabled
 
     @enabled.setter
     def enabled(self, enabled: bool) -> None:
-        svc = _scene_service()
-
         if not self._enabled and enabled:
-            assert self.id not in svc.graspable_ids()
-            svc.upsert_graspable(
-                self.collision_model,
-                self.pose,
-                state=self._state.value,
-                source=self._source.value,
-                stamp=self._stamp,
-            )
-
+            svc = _scene_service()
+            assert self.id not in svc.collision_ids()
+            self._upsert_graspable()
         if self._enabled and not enabled:
-            svc.delete_graspable_id(self.id)
-
+            _scene_service().delete_collision_id(self.id)
         self._enabled = enabled
+
+    def set_enabled(self, state: bool, *, an: None | str = None) -> None:
+        """Enables control of the object's collision model.
+
+        :param state: State of a collision model.
+        :return:
+        """
+        self.enabled = state
+
+    set_enabled.__action__ = ActionMetadata()  # type: ignore
 
     @property
     def state(self) -> GraspableState:
         return self._state
 
-    def set_state(self, state: GraspableState, *, an: None | str = None) -> None:
+    @state.setter
+    def state(self, state: GraspableState) -> None:
         self._state = state
-        # re-upsert so server knows about new state
-        if self._enabled:
-            _scene_service().upsert_graspable(
-                self.collision_model,
-                self.pose,
-                state=self._state.value,
-                source=self._source.value,
-                stamp=self._stamp,
-            )
+        self._stamp = _utc_now_iso()
 
-    set_state.__action__ = ActionMetadata()  # type: ignore
+        if self._enabled:
+            self._upsert_graspable()
 
     @property
     def source(self) -> GraspableSource:
         return self._source
 
+    @source.setter
+    def source(self, source: GraspableSource) -> None:
+        self._source = source
+        self._stamp = _utc_now_iso()
+
+        if self._enabled:
+            self._upsert_graspable()
+
     @property
     def stamp(self) -> str:
         return self._stamp
 
-    def set_enabled(self, state: bool, *, an: None | str = None) -> None:
-        self.enabled = state
+    def set_state(self, state: GraspableState, *, an: None | str = None) -> None:
+        self.state = state
 
-    set_enabled.__action__ = ActionMetadata()  # type: ignore
+    set_state.__action__ = ActionMetadata()  # type: ignore
+
+    def set_source(self, source: GraspableSource, *, an: None | str = None) -> None:
+        self.source = source
+
+    set_source.__action__ = ActionMetadata()  # type: ignore
 
 
 class VirtualCollisionObject(CollisionObject):
