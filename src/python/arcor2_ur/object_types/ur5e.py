@@ -29,6 +29,9 @@ class MoveObject(JsonSchemaMixin):
     object_id: str
     effector_type: str
     pose: Pose
+    velocity: float = 50.0
+    payload: float = 0.0
+    safe: bool = True
 
 
 class VacuumChannel(StrEnum):
@@ -120,12 +123,30 @@ class Ur5e(Robot):
                 params={"velocity": speed, "payload": payload, "safe": safe},
             )
 
-    def move_object_to_pose(self, object_id: str, effector_type: str, pose: Pose) -> None:
+    def move_object_to_pose(
+        self,
+        object_id: str,
+        effector_type: str,
+        pose: Pose,
+        speed: float = 50.0,
+        safe: bool = True,
+        payload: float = 0.0,
+    ) -> None:
+        assert 0.0 <= speed <= 100.0
+        assert 0.0 <= payload <= 5.0
+
         with self._move_lock:
             rest.call(
                 rest.Method.PUT,
                 f"{self.settings.url}/graspable/move",
-                body=MoveObject(object_id, effector_type, pose),
+                body=MoveObject(
+                    object_id=object_id,
+                    effector_type=effector_type,
+                    pose=pose,
+                    velocity=speed,
+                    payload=payload,
+                    safe=safe,
+                ),
             )
 
     def suck(

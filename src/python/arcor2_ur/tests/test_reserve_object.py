@@ -40,9 +40,9 @@ def test_reserve_object(start_processes: Urls) -> None:
     assert cyl3.id in scene_service.collision_ids()
     time.sleep(1)
 
-    assert cyl1.id == scene_service.reserve_nearest_graspable(Position(0.5, 0.5, 0.5), 0.05)
-    assert cyl3.id == scene_service.reserve_nearest_graspable(Position(0.0, 0.0, 0.0), 0.05)
-    assert "" == scene_service.reserve_nearest_graspable(Position(0.0, 0.0, 0.0), 0.05)
+    assert cyl1.id == scene_service.reserve_nearest_graspable(Position(0.5, 0.5, 0.5), 0.5)
+    assert cyl3.id == scene_service.reserve_nearest_graspable(Position(0.0, 0.0, 0.0), 0.5)
+    assert "" == scene_service.reserve_nearest_graspable(Position(0.0, 0.0, 0.0), 0.5)
 
     scene_service.delete_all_collisions()
 

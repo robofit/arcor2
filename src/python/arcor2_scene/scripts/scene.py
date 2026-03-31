@@ -5,7 +5,6 @@ import logging
 import math
 import random
 import time
-from dataclasses import dataclass, field
 from typing import Any
 
 import humps
@@ -19,8 +18,7 @@ from arcor2.data import common, object_type, scene
 from arcor2.logging import get_logger
 from arcor2_scene import SCENE_PORT, SCENE_SERVICE_NAME, version
 from arcor2_scene.exceptions import NotFound, SceneGeneral, WebApiError
-from arcor2_ur.scripts.ros_worker import CollisionSceneObject
-from arcor2_ur.scripts.ur import parse_collision_body
+from arcor2_ur.common import CollisionSceneObject, parse_collision_body
 from arcor2_web.flask import Response, RespT, create_app, run_app
 
 app = create_app(__name__)

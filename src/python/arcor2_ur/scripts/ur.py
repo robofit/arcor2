@@ -21,9 +21,10 @@ from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
 from arcor2_object_types.abstract import GraspableState
 from arcor2_ur import get_data, version
+from arcor2_ur.common import CollisionSceneObject, parse_collision_body
 from arcor2_ur.exceptions import NotFound, StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
-from arcor2_ur.scripts.ros_worker import CollisionSceneObject, RosWorkerClient
+from arcor2_ur.scripts.ros_worker import RosWorkerClient
 from arcor2_web.flask import RespT, create_app, run_app
 
 logger = get_logger(__name__)
@@ -90,17 +91,6 @@ def requires_started(f):
         return f(*args, **kwargs)
 
     return wrapped
-
-
-def parse_collision_body() -> tuple[common.Pose, dict[str, Any]]:
-    body = humps.decamelize(request.json)
-
-    if "pose" in body:
-        pose = common.Pose.from_dict(body["pose"])
-        metadata = body.get("metadata", {}) or {}
-        return pose, metadata
-
-    return common.Pose.from_dict(body), {}
 
 
 @app.route("/system/start", methods=["PUT"])  # for compatibility with Scene service
@@ -336,10 +326,19 @@ def move_object() -> RespT:
     object_id = body["object_id"]
     effector_type = body["effector_type"]
     pose = Pose.from_dict(body["pose"])
+    velocity = float(body.get("velocity", 50.0)) / 100.0
+    payload = float(body.get("payload", 0.0))
+    safe = bool(body.get("safe", True))
 
     assert globs.state
     globs.state.worker.request(
-        "move_object_to_pose", object_id=object_id, effector_type=effector_type, pose=pose.to_dict()
+        "move_object_to_pose",
+        object_id=object_id,
+        effector_type=effector_type,
+        pose=pose.to_dict(),
+        velocity=velocity,
+        payload=payload,
+        safe=safe,
     )
 
     return Response(status=204)
