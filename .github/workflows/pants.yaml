@@ -67,6 +67,7 @@ jobs:
         sudo df -h / /mnt "$GITHUB_WORKSPACE"
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends jq cargo
+        sudo df -h
         sudo ./build-support/install_ur_dependencies.sh
         echo "Disk space after installing system dependencies:"
         sudo df -h / /mnt "$GITHUB_WORKSPACE"

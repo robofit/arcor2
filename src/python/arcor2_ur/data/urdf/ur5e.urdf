@@ -61,13 +61,13 @@
     <visual>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/base.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/base.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/base.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/base.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -80,13 +80,13 @@
     <visual>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/shoulder.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/shoulder.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 3.141592653589793" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/shoulder.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/shoulder.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -99,13 +99,13 @@
     <visual>
       <origin rpy="1.5707963267948966 0 -1.5707963267948966" xyz="0 0 0.138"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/upperarm.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/upperarm.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 -1.5707963267948966" xyz="0 0 0.138"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/upperarm.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/upperarm.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -118,13 +118,13 @@
     <visual>
       <origin rpy="1.5707963267948966 0 -1.5707963267948966" xyz="0 0 0.007"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/forearm.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/forearm.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 -1.5707963267948966" xyz="0 0 0.007"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/forearm.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/forearm.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -137,13 +137,13 @@
     <visual>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 -0.127"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/wrist1.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/wrist1.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 -0.127"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/wrist1.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/wrist1.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -156,13 +156,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 -0.0997"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/wrist2.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/wrist2.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 -0.0997"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/wrist2.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/wrist2.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -175,13 +175,13 @@
     <visual>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 -0.0989"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/visual/wrist3.dae"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/wrist3.dae"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="1.5707963267948966 0 0" xyz="0 0 -0.0989"/>
       <geometry>
-        <mesh filename="package://meshes/ur5e/collision/wrist3.stl"/>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/wrist3.stl"/>
       </geometry>
     </collision>
     <inertial>
@@ -257,7 +257,7 @@
   </joint>
   <link name="ft_frame"/>
   <joint name="wrist_3_link-ft_frame" type="fixed">
-    <parent link="wrist_3_link"/>
+    <parent link="tool0"/>
     <child link="ft_frame"/>
     <origin rpy="3.141592653589793 0 0" xyz="0 0 0"/>
   </joint>
@@ -276,7 +276,7 @@
   <!-- ROS-Industrial 'flange' frame - attachment point for EEF models -->
   <link name="flange"/>
   <joint name="wrist_3-flange" type="fixed">
-    <parent link="wrist_3_link"/>
+    <parent link="tool0"/>
     <child link="flange"/>
     <origin rpy="0 -1.5707963267948966 -1.5707963267948966" xyz="0 0 0"/>
   </joint>
@@ -288,4 +288,53 @@
     <parent link="flange"/>
     <child link="tool0"/>
   </joint>
+
+  <link name="onrobot_vgc10_base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/base_link_1cup.stl"/>
+      </geometry>
+      <material name="ur_dark_gray">
+        <color rgba="0.18 0.18 0.18 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/base_link_1cup.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="suction">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/visual/suction_cup_1cup.stl"/>
+      </geometry>
+      <material name="ur_light_gray">
+        <color rgba="0.75 0.75 0.75 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file:///mnt/c/Users/Office/Desktop/diplomka/kod/arcor2-ur5e/src/python/arcor2_ur/data/urdf/meshes/ur5e/collision/suction_cup_1cup.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="vgc10_suction_joint" type="fixed">
+    <origin xyz="0 0 0.094901" rpy="0 0 0"/>
+    <parent link="onrobot_vgc10_base_link"/>
+    <child link="suction"/>
+  </joint>
+
+  <joint name="wrist_3_to_vgc10_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="wrist_3_link"/>
+    <child link="onrobot_vgc10_base_link"/>
+  </joint>
+
 </robot>
