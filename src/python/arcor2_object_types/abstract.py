@@ -194,6 +194,10 @@ class GraspableState(StrEnum):
     RESERVED
         Reserved by the robot. Waiting for pickup.
 
+    HIDDEN
+        Object is hidden so the robot can attach it.
+        This state is used only in ros_worker file.
+
     ATTACHED
         Attached to the robot end-effector.
 
@@ -203,6 +207,7 @@ class GraspableState(StrEnum):
 
     WORLD = "WORLD"
     RESERVED = "RESERVED"
+    HIDEN = "HIDEN"
     ATTACHED = "ATTACHED"
     LOST = "LOST"
 

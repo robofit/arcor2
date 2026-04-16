@@ -410,21 +410,25 @@ def put_line_safe() -> RespT:
     arcor2/ros x forward, y left, z up
     unity      x Right,   y Up,   z Forward
     """
-    for obj_id, (model, pose) in collision_objects.items():
+    for obj_id, obj in collision_objects.items():
+        model = obj.model
+        pose = obj.pose
+
         if isinstance(model, object_type.Box):
-            # The left bottom corner on the front will be placed at (0, 0, 0)
             sx = model.size_x + inflation
             sy = model.size_y + inflation
             sz = model.size_z + inflation
 
             tm = o3d.geometry.TriangleMesh.create_box(sx, sy, sz)
-
             tm = tm.translate([pose.position.x - sx / 2, pose.position.y - sy / 2, pose.position.z - sz / 2])
+
         elif isinstance(model, object_type.Cylinder):
             tm = o3d.geometry.TriangleMesh.create_cylinder(model.radius + inflation, model.height + inflation)
+
         elif isinstance(model, object_type.Sphere):
             tm = o3d.geometry.TriangleMesh.create_sphere(model.radius + inflation)
-        else:  # TODO mesh
+
+        else:
             logger.warning(f"Unsupported type of collision model: {model.type()}.")
             continue
 

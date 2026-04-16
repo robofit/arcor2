@@ -25,9 +25,17 @@ class Vacuum(JsonSchemaMixin):
 
 
 @dataclass
-class MoveObject(JsonSchemaMixin):
+class AttachObject(JsonSchemaMixin):
     object_id: str
     effector_type: str
+    velocity: float = 50.0
+    payload: float = 0.0
+    safe: bool = True
+
+
+@dataclass
+class DetachObject(JsonSchemaMixin):
+    object_id: str
     pose: Pose
     velocity: float = 50.0
     payload: float = 0.0
@@ -123,10 +131,33 @@ class Ur5e(Robot):
                 params={"velocity": speed, "payload": payload, "safe": safe},
             )
 
-    def move_object_to_pose(
+    def attach_object(
         self,
         object_id: str,
         effector_type: str,
+        speed: float = 50.0,
+        safe: bool = True,
+        payload: float = 0.0,
+    ) -> None:
+        assert 0.0 <= speed <= 100.0
+        assert 0.0 <= payload <= 5.0
+
+        with self._move_lock:
+            rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/graspable/attach",
+                body=AttachObject(
+                    object_id=object_id,
+                    effector_type=effector_type,
+                    velocity=speed,
+                    payload=payload,
+                    safe=safe,
+                ),
+            )
+
+    def detach_object(
+        self,
+        object_id: str,
         pose: Pose,
         speed: float = 50.0,
         safe: bool = True,
@@ -138,10 +169,9 @@ class Ur5e(Robot):
         with self._move_lock:
             rest.call(
                 rest.Method.PUT,
-                f"{self.settings.url}/graspable/move",
-                body=MoveObject(
+                f"{self.settings.url}/graspable/detach",
+                body=DetachObject(
                     object_id=object_id,
-                    effector_type=effector_type,
                     pose=pose,
                     velocity=speed,
                     payload=payload,

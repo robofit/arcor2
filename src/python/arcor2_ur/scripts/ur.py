@@ -284,9 +284,76 @@ def put_reserve_nearest_graspable() -> RespT:
     return jsonify(nearest_id)
 
 
-@app.route("/graspable/move", methods=["PUT"])
+@app.route("/graspable/attach", methods=["PUT"])
 @requires_started
-def move_object() -> RespT:
+def attach_object() -> RespT:
+    """Attaches a graspable object to the robot end-effector.
+    The robot first moves to a pre-attach pose and then to the attach pose.
+    ---
+    put:
+        tags:
+            - Graspable
+        summary: Attach a graspable object using pre-attach and attach poses.
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - object_id
+                            - effector_type
+                        properties:
+                            object_id:
+                                type: string
+                            effector_type:
+                                type: string
+                            velocity:
+                                type: number
+                                format: float
+                                default: 50.0
+                            payload:
+                                type: number
+                                format: float
+                                default: 0.0
+                            safe:
+                                type: boolean
+                                default: true
+        responses:
+            204:
+                description: Ok
+            500:
+                description: "Error types: **General**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
+    """
+
+    body = humps.decamelize(request.json)
+
+    object_id = body["object_id"]
+    effector_type = body["effector_type"]
+    velocity = float(body.get("velocity", 50.0)) / 100.0
+    payload = float(body.get("payload", 0.0))
+    safe = bool(body.get("safe", True))
+
+    assert globs.state
+    globs.state.worker.request(
+        "attach_object",
+        object_id=object_id,
+        effector_type=effector_type,
+        velocity=velocity,
+        payload=payload,
+        safe=safe,
+    )
+
+    return Response(status=204)
+
+
+@app.route("/graspable/detach", methods=["PUT"])
+@requires_started
+def detach_object() -> RespT:
     """Moves graspable object using robot.
     ---
     put:
@@ -324,7 +391,6 @@ def move_object() -> RespT:
     body = humps.decamelize(request.json)
 
     object_id = body["object_id"]
-    effector_type = body["effector_type"]
     pose = Pose.from_dict(body["pose"])
     velocity = float(body.get("velocity", 50.0)) / 100.0
     payload = float(body.get("payload", 0.0))
@@ -332,9 +398,8 @@ def move_object() -> RespT:
 
     assert globs.state
     globs.state.worker.request(
-        "move_object_to_pose",
+        "detach_object",
         object_id=object_id,
-        effector_type=effector_type,
         pose=pose.to_dict(),
         velocity=velocity,
         payload=payload,
