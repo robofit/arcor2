@@ -3,8 +3,12 @@
 import argparse
 import logging
 import os
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from functools import wraps
+from importlib import resources
+from pathlib import Path
 
 import humps
 from ament_index_python.packages import get_package_share_directory  # pants: no-infer-dep
@@ -17,17 +21,18 @@ from arcor2.data.common import Joint, Pose
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2.helpers import port_from_url
 from arcor2.logging import get_logger
-from arcor2_ur import get_data, version
+from arcor2_ur import version
+from arcor2_ur.common import CollisionSceneObject, EffectorType, GraspableState, GraspPosition, parse_collision_body
 from arcor2_ur.exceptions import NotFound, StartError, UrGeneral, WebApiError
 from arcor2_ur.object_types.ur5e import Vacuum
-from arcor2_ur.scripts.ros_worker import CollisionObjectTuple, RosWorkerClient
+from arcor2_ur.scripts.ros_worker import RosWorkerClient
 from arcor2_web.flask import RespT, create_app, run_app
 
 logger = get_logger(__name__)
 
 URL = os.getenv("ARCOR2_UR_URL", "http://localhost:5012")
 BASE_LINK = os.getenv("ARCOR2_UR_BASE_LINK", "base_link")
-TOOL_LINK = os.getenv("ARCOR2_UR_TOOL_LINK", "tool0")
+TOOL_LINK = os.getenv("ARCOR2_UR_TOOL_LINK", "suction_tcp")
 UR_TYPE = os.getenv("ARCOR2_UR_TYPE", "ur5e")
 PLANNING_GROUP_NAME = os.getenv("ARCOR2_UR_PLANNING_GROUP_NAME", "ur_manipulator")
 ROBOT_IP = os.getenv("ARCOR2_UR_ROBOT_IP", "")
@@ -47,32 +52,59 @@ class ServiceState:
 class Globs:
     debug = False
     state: ServiceState | None = None
-    collision_objects: dict[str, CollisionObjectTuple] = field(default_factory=dict)
+    collision_objects: dict[str, CollisionSceneObject] = field(default_factory=dict)
     scene_started = False  # flag for "Scene service"
 
 
 globs: Globs = Globs()
 app = create_app(__name__)
 
+
 # this is normally specified in a launch file
-moveit_config = (
-    MoveItConfigsBuilder(robot_name="ur", package_name="ur_moveit_config")
-    .robot_description(
-        os.path.join(get_package_share_directory("ur_description"), "urdf", "ur.urdf.xacro"),
-        {"name": "ur", "ur_type": UR_TYPE},
+def load_custom_urdf() -> str:
+    urdf_res = resources.files("arcor2_ur").joinpath("data/urdf/ur5e.urdf")
+    meshes_res = resources.files("arcor2_ur").joinpath("data/urdf/meshes")
+
+    text = urdf_res.read_text(encoding="utf-8")
+
+    meshes_cache_dir = Path(tempfile.gettempdir()) / f"arcor2_ur_meshes_{version()}"
+
+    if not meshes_cache_dir.exists():
+        with resources.as_file(meshes_res) as meshes_dir:
+            shutil.copytree(meshes_dir, meshes_cache_dir, dirs_exist_ok=True)
+
+    text = text.replace(
+        "package://meshes/",
+        f"file://{meshes_cache_dir.as_posix()}/",
     )
-    .robot_description_semantic(
-        os.path.join(get_package_share_directory("ur_moveit_config"), "srdf", "ur.srdf.xacro"), {"name": UR_TYPE}
-    )
-    .trajectory_execution(
-        os.path.join(get_package_share_directory("ur_moveit_config"), "config", "moveit_controllers.yaml")
-    )
-    .robot_description_kinematics(
-        os.path.join(get_package_share_directory("ur_moveit_config"), "config", "kinematics.yaml")
-    )
-    .moveit_cpp(file_path=get_data("moveit.yaml"))
-    .to_moveit_configs()
-).to_dict()
+
+    return text
+
+
+def load_custom_srdf() -> str:
+    srdf_res = resources.files("arcor2_ur").joinpath("data/urdf/ur5e.srdf")
+    return srdf_res.read_text(encoding="utf-8")
+
+
+moveit_yaml_res = resources.files("arcor2_ur").joinpath("data/moveit.yaml")
+custom_srdf_res = resources.files("arcor2_ur").joinpath("data/urdf/ur5e.srdf")
+
+with resources.as_file(moveit_yaml_res) as moveit_yaml_path, resources.as_file(custom_srdf_res) as custom_srdf_path:
+    moveit_config = (
+        MoveItConfigsBuilder(robot_name="ur", package_name="ur_moveit_config")
+        .robot_description_semantic(str(custom_srdf_path))
+        .trajectory_execution(
+            os.path.join(get_package_share_directory("ur_moveit_config"), "config", "moveit_controllers.yaml")
+        )
+        .robot_description_kinematics(
+            os.path.join(get_package_share_directory("ur_moveit_config"), "config", "kinematics.yaml")
+        )
+        .moveit_cpp(file_path=str(moveit_yaml_path))
+        .to_moveit_configs()
+    ).to_dict()
+
+moveit_config["robot_description"] = load_custom_urdf()
+moveit_config["robot_description_semantic"] = load_custom_srdf()
 
 
 def started() -> bool:
@@ -192,6 +224,349 @@ def get_started() -> RespT:
     return jsonify(started())
 
 
+@app.route("/graspable/<string:object_id>/state", methods=["GET"])
+def get_graspable_state(object_id: str) -> RespT:
+    """Return graspable object state."""
+    try:
+        obj = globs.collision_objects[object_id]
+    except KeyError:
+        raise NotFound("Graspable object not found")
+
+    return jsonify(obj.metadata["state"])
+
+
+@app.route("/graspable/<string:object_id>/position", methods=["GET"])
+def get_graspable_position(object_id: str) -> RespT:
+    """Return graspable object position."""
+    try:
+        obj = globs.collision_objects[object_id]
+    except KeyError:
+        raise NotFound("Graspable object not found")
+
+    return jsonify(obj.pose.position.to_dict())
+
+
+@app.route("/graspable/pick_up_object_by_position", methods=["PUT"])
+@requires_started
+def pick_up_object_by_position() -> RespT:
+    """Find nearest graspable object and attach it.
+    ---
+    put:
+        tags:
+            - Graspable
+        summary: Find nearest graspable object in radius and attach it.
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - position
+                            - radius
+                        properties:
+                            position:
+                                $ref: '#/components/schemas/Position'
+                            radius:
+                                type: number
+                                format: float
+                            effector_type:
+                                type: string
+                                enum:
+                                    - SUCK
+                                default: SUCK
+                            grasp_position:
+                                type: string
+                                enum:
+                                    - TOP
+                                    - RIGHT
+                                    - LEFT
+                                    - FRONT
+                                    - BACK
+                                    - BOTTOM
+                                    - ALL
+                                default: ALL
+                            object_type_name:
+                                type: string
+                                description: Optional model type filter.
+                            velocity:
+                                type: number
+                                format: float
+                                default: 50.0
+                            payload:
+                                type: number
+                                format: float
+                                default: 0.0
+                            safe:
+                                type: boolean
+                                default: true
+        responses:
+            204:
+                description: Ok
+            500:
+                description: "Error types: **General**, **UrGeneral**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
+    """
+    if not isinstance(request.json, dict):
+        raise UrGeneral("Body should be a JSON dict.")
+
+    body = humps.decamelize(request.json)
+
+    try:
+        position = common.Position.from_dict(body["position"])
+        radius = float(body["radius"])
+    except KeyError as exc:
+        raise UrGeneral(f"Missing key: {exc.args[0]}")
+
+    if radius < 0.0:
+        raise UrGeneral("Radius has to be >= 0.")
+
+    effector_type = EffectorType(body.get("effector_type", EffectorType.SUCK))
+    grasp_position = GraspPosition(body.get("grasp_position", GraspPosition.ALL))
+
+    object_type_name = (
+        object_type.MODEL_MAPPING[object_type.Model3dType(body["object_type_name"])]
+        if body.get("object_type_name")
+        else None
+    )
+    velocity = float(body.get("velocity", 50.0)) / 100.0
+    payload = float(body.get("payload", 0.0))
+    safe = bool(body.get("safe", True))
+
+    nearest_id: str | None = None
+    nearest_distance: float | None = None
+
+    for obj_id, obj in globs.collision_objects.items():
+        if obj.metadata.get("object_type") != "graspable":
+            continue
+
+        if obj.metadata.get("state") != GraspableState.WORLD:
+            continue
+
+        if object_type_name is not None and not isinstance(obj.model, object_type_name):
+            continue
+
+        current_distance = position.distance(obj.pose.position)
+        if current_distance > radius:
+            continue
+
+        if nearest_distance is None or current_distance < nearest_distance:
+            nearest_id = obj_id
+            nearest_distance = current_distance
+
+    if nearest_id is None:
+        raise UrGeneral("No graspable object found for given position, radius and type.")
+
+    selected = globs.collision_objects[nearest_id]
+    previous_state = selected.metadata.get("state")
+    selected.metadata["state"] = GraspableState.RESERVED
+
+    assert globs.state
+
+    try:
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
+        metadata = globs.state.worker.request(
+            "pick_up_object",
+            object_id=nearest_id,
+            effector_type=effector_type,
+            grasp_position=grasp_position,
+            velocity=velocity,
+            payload=payload,
+            safe=safe,
+        )
+
+        selected.metadata.clear()
+        selected.metadata.update(metadata)
+    except Exception:
+        selected.metadata["state"] = previous_state
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
+        raise
+
+    return Response(status=204)
+
+
+@app.route("/graspable/pick_up_object_by_id", methods=["PUT"])
+@requires_started
+def pick_up_object_by_id() -> RespT:
+    """Attach graspable object by ID.
+    ---
+    put:
+        tags:
+            - Graspable
+        summary: Attach graspable object by ID.
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - object_id
+                        properties:
+                            object_id:
+                                type: string
+                            effector_type:
+                                type: string
+                                enum:
+                                    - SUCK
+                                default: SUCK
+                            grasp_position:
+                                type: string
+                                enum:
+                                    - TOP
+                                    - RIGHT
+                                    - LEFT
+                                    - FRONT
+                                    - BACK
+                                    - BOTTOM
+                                    - ALL
+                                default: ALL
+                            velocity:
+                                type: number
+                                format: float
+                                default: 50.0
+                            payload:
+                                type: number
+                                format: float
+                                default: 0.0
+                            safe:
+                                type: boolean
+                                default: true
+        responses:
+            204:
+                description: Ok
+            500:
+                description: "Error types: **General**, **UrGeneral**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
+    """
+    body = humps.decamelize(request.json)
+
+    object_id = body["object_id"]
+    effector_type = EffectorType(body.get("effector_type", EffectorType.SUCK))
+    grasp_position = GraspPosition(body.get("grasp_position", GraspPosition.ALL))
+    velocity = float(body.get("velocity", 50.0)) / 100.0
+    payload = float(body.get("payload", 0.0))
+    safe = bool(body.get("safe", True))
+
+    try:
+        selected = globs.collision_objects[object_id]
+    except KeyError:
+        raise NotFound("Graspable object not found")
+
+    if selected.metadata.get("object_type") != "graspable":
+        raise UrGeneral(f"Object {object_id} is not graspable.")
+
+    if selected.metadata.get("state") != GraspableState.WORLD:
+        raise UrGeneral(f"Object {object_id} is not in WORLD state.")
+
+    previous_state = selected.metadata.get("state")
+    selected.metadata["state"] = GraspableState.RESERVED
+
+    assert globs.state
+
+    try:
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
+        metadata = globs.state.worker.request(
+            "pick_up_object",
+            object_id=object_id,
+            effector_type=effector_type,
+            grasp_position=grasp_position,
+            velocity=velocity,
+            payload=payload,
+            safe=safe,
+        )
+
+        selected.metadata.clear()
+        selected.metadata.update(metadata)
+    except Exception:
+        selected.metadata["state"] = previous_state
+        globs.state.worker.request("update_collisions", collision_objects=globs.collision_objects)
+        raise
+
+    return Response(status=204)
+
+
+@app.route("/graspable/place_object", methods=["PUT"])
+@requires_started
+def place_object() -> RespT:
+    """Moves graspable object using robot.
+    ---
+    put:
+        tags:
+            - Graspable
+        summary: Move graspable object to target pose.
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        required:
+                            - effector_type
+                            - pose
+                        properties:
+                            object_id:
+                                type: string
+                                description: Optional object ID.
+                            effector_type:
+                                type: string
+                                enum:
+                                    - SUCK
+                                default: SUCK
+                            pose:
+                                $ref: Pose
+                            velocity:
+                                type: number
+                                format: float
+                                default: 50.0
+                            payload:
+                                type: number
+                                format: float
+                                default: 0.0
+                            safe:
+                                type: boolean
+                                default: true
+        responses:
+            204:
+                description: Ok
+            500:
+                description: "Error types: **General**."
+                content:
+                    application/json:
+                        schema:
+                            $ref: WebApiError
+    """
+
+    body = humps.decamelize(request.json)
+
+    pose = Pose.from_dict(body["pose"])
+    velocity = float(body.get("velocity", 50.0)) / 100.0
+    payload = float(body.get("payload", 0.0))
+    safe = bool(body.get("safe", True))
+
+    assert globs.state
+    update = globs.state.worker.request(
+        "place_object",
+        pose=pose.to_dict(),
+        velocity=velocity,
+        payload=payload,
+        safe=safe,
+    )
+
+    obj = globs.collision_objects[update["object_id"]]
+    obj.metadata["state"] = update["state"]
+    obj.metadata.pop("attached_pose", None)
+    obj.pose = pose
+
+    return Response(status=204)
+
+
 @app.route("/collisions/box", methods=["PUT"])
 def put_box() -> RespT:
     """Add or update collision box.
@@ -199,7 +574,7 @@ def put_box() -> RespT:
     put:
         tags:
             - Collisions
-        description: Add or update collision box.
+        description: Add or update collision box. Use metadata.object_type=graspable for graspable objects.
         parameters:
             - name: boxId
               in: query
@@ -223,10 +598,41 @@ def put_box() -> RespT:
                 type: number
                 format: float
         requestBody:
-              content:
+            required: true
+            content:
                 application/json:
-                  schema:
-                    $ref: Pose
+                    schema:
+                        type: object
+                        required:
+                            - pose
+                        properties:
+                            pose:
+                                $ref: Pose
+                            metadata:
+                                type: object
+                                description: Optional metadata for graspable object support.
+                                properties:
+                                    object_type:
+                                        type: string
+                                        enum:
+                                            - graspable
+                                    state:
+                                        type: string
+                                        enum:
+                                            - WORLD
+                                            - RESERVED
+                                            - HIDDEN
+                                            - ATTACHED
+                                    source:
+                                        type: string
+                                        enum:
+                                            - CAMERA
+                                            - FIXED
+                                            - OTHER
+                                    stamp:
+                                        type: string
+                                        format: date-time
+                                additionalProperties: true
         responses:
             204:
                 description: Ok
@@ -237,12 +643,12 @@ def put_box() -> RespT:
                         schema:
                             $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = request.args.to_dict()
     box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
-    globs.collision_objects[box.id] = CollisionObjectTuple(box, common.Pose.from_dict(humps.decamelize(request.json)))
+
+    globs.collision_objects[box.id] = CollisionSceneObject(box, pose, metadata)
 
     if started():
         assert globs.state
@@ -258,7 +664,7 @@ def put_sphere() -> RespT:
     put:
         tags:
             - Collisions
-        description: Add or update collision sphere.
+        description: Add or update collision sphere. Use metadata.object_type=graspable for graspable objects.
         parameters:
             - name: sphereId
               in: query
@@ -272,10 +678,41 @@ def put_sphere() -> RespT:
                 type: number
                 format: float
         requestBody:
-              content:
+            required: true
+            content:
                 application/json:
-                  schema:
-                    $ref: Pose
+                    schema:
+                        type: object
+                        required:
+                            - pose
+                        properties:
+                            pose:
+                                $ref: Pose
+                            metadata:
+                                type: object
+                                description: Optional metadata for graspable object support.
+                                properties:
+                                    object_type:
+                                        type: string
+                                        enum:
+                                            - graspable
+                                    state:
+                                        type: string
+                                        enum:
+                                            - WORLD
+                                            - RESERVED
+                                            - HIDDEN
+                                            - ATTACHED
+                                    source:
+                                        type: string
+                                        enum:
+                                            - CAMERA
+                                            - FIXED
+                                            - OTHER
+                                    stamp:
+                                        type: string
+                                        format: date-time
+                                additionalProperties: true
         responses:
             204:
               description: Ok
@@ -286,16 +723,12 @@ def put_sphere() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
-    globs.collision_objects[sphere.id] = CollisionObjectTuple(
-        sphere, common.Pose.from_dict(humps.decamelize(request.json))
-    )
 
-    logger.warning("Sphere collision object added but will be ignored as only boxes are supported at the moment.")
+    globs.collision_objects[sphere.id] = CollisionSceneObject(sphere, pose, metadata)
 
     if started():
         assert globs.state
@@ -311,7 +744,7 @@ def put_cylinder() -> RespT:
     put:
         tags:
             - Collisions
-        description: Add or update collision cylinder.
+        description: Add or update collision cylinder. Use metadata.object_type=graspable for graspable objects.
         parameters:
             - name: cylinderId
               in: query
@@ -330,17 +763,44 @@ def put_cylinder() -> RespT:
                 type: number
                 format: float
         requestBody:
-              content:
+            required: true
+            content:
                 application/json:
-                  schema:
-                    $ref: Pose
+                    schema:
+                        type: object
+                        required:
+                            - pose
+                        properties:
+                            pose:
+                                $ref: Pose
+                            metadata:
+                                type: object
+                                description: Optional metadata for graspable object support.
+                                properties:
+                                    object_type:
+                                        type: string
+                                        enum:
+                                            - graspable
+                                    state:
+                                        type: string
+                                        enum:
+                                            - WORLD
+                                            - RESERVED
+                                            - HIDDEN
+                                            - ATTACHED
+                                    source:
+                                        type: string
+                                        enum:
+                                            - CAMERA
+                                            - FIXED
+                                            - OTHER
+                                    stamp:
+                                        type: string
+                                        format: date-time
+                                additionalProperties: true
         responses:
-            200:
+            204:
               description: Ok
-              content:
-                application/json:
-                  schema:
-                    type: string
             500:
               description: "Error types: **General**, **SceneGeneral**."
               content:
@@ -348,16 +808,12 @@ def put_cylinder() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
-    globs.collision_objects[cylinder.id] = CollisionObjectTuple(
-        cylinder, common.Pose.from_dict(humps.decamelize(request.json))
-    )
 
-    logger.warning("Cylinder collision object added but will be ignored as only boxes are supported at the moment.")
+    globs.collision_objects[cylinder.id] = CollisionSceneObject(cylinder, pose, metadata)
 
     if started():
         assert globs.state
@@ -373,7 +829,7 @@ def put_mesh() -> RespT:
     put:
         tags:
             - Collisions
-        description: Add or update collision mesh.
+        description: Add or update collision mesh. Use metadata.object_type=graspable for graspable objects.
         parameters:
             - name: meshId
               in: query
@@ -404,10 +860,41 @@ def put_mesh() -> RespT:
                 format: float
                 default: 1.0
         requestBody:
-              content:
+            required: true
+            content:
                 application/json:
-                  schema:
-                    $ref: Pose
+                    schema:
+                        type: object
+                        required:
+                            - pose
+                        properties:
+                            pose:
+                                $ref: Pose
+                            metadata:
+                                type: object
+                                description: Optional metadata for graspable object support.
+                                properties:
+                                    object_type:
+                                        type: string
+                                        enum:
+                                            - graspable
+                                    state:
+                                        type: string
+                                        enum:
+                                            - WORLD
+                                            - RESERVED
+                                            - HIDDEN
+                                            - ATTACHED
+                                    source:
+                                        type: string
+                                        enum:
+                                            - CAMERA
+                                            - FIXED
+                                            - OTHER
+                                    stamp:
+                                        type: string
+                                        format: date-time
+                                additionalProperties: true
         responses:
             204:
               description: Ok
@@ -418,14 +905,22 @@ def put_mesh() -> RespT:
                   schema:
                     $ref: WebApiError
     """
-    if not isinstance(request.json, dict):
-        raise UrGeneral("Body should be a JSON dict containing Pose.")
+    pose, metadata = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
-    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
-    globs.collision_objects[mesh.id] = CollisionObjectTuple(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
 
-    logger.warning("Mesh collision object added but will be ignored as only boxes are supported at the moment.")
+    mesh_scale = (
+        float(args.get("mesh_scale_x", 1.0)),
+        float(args.get("mesh_scale_y", 1.0)),
+        float(args.get("mesh_scale_z", 1.0)),
+    )
+
+    metadata = metadata.copy()
+    metadata["mesh_scale"] = mesh_scale
+
+    mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
+
+    globs.collision_objects[mesh.id] = CollisionSceneObject(mesh, pose, metadata)
 
     if started():
         assert globs.state
@@ -711,7 +1206,13 @@ def put_eef_pose() -> RespT:
     payload = float(request.args.get("payload", default=0.0))
     safe = request.args.get("safe", default="true") == "true"
 
-    globs.state.worker.request("move_to_pose", pose=pose.to_dict(), velocity=velocity, payload=payload, safe=safe)
+    globs.state.worker.request(
+        "move_to_pose",
+        pose=pose.to_dict(),
+        velocity=velocity,
+        payload=payload,
+        safe=safe,
+    )
     return Response(status=204)
 
 

@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<robot name="ur5e">
+
+  <group name="ur_manipulator">
+    <chain base_link="base_link" tip_link="suction_tcp"/>
+  </group>
+
+  <group name="suction">
+    <link name="suction_base_link"/>
+    <link name="suction_cup_link"/>
+    <link name="suction_tcp"/>
+  </group>
+
+  <end_effector name="suction" parent_link="tool0" group="suction"/>
+
+  <!-- Disable all self-collisions between robot/tool links -->
+
+  <disable_collisions link1="base_link" link2="base_link_inertia" reason="Never"/>
+  <disable_collisions link1="base_link" link2="shoulder_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="upper_arm_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="forearm_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="wrist_1_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="wrist_2_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="base_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="base_link" link2="tool0" reason="Never"/>
+  <disable_collisions link1="base_link" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="base_link" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="base_link_inertia" link2="shoulder_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="upper_arm_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="forearm_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="wrist_1_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="wrist_2_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="flange" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="tool0" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="base_link_inertia" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="shoulder_link" link2="upper_arm_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="forearm_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="wrist_1_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="wrist_2_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="tool0" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="shoulder_link" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="upper_arm_link" link2="forearm_link" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="wrist_1_link" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="wrist_2_link" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="tool0" reason="Never"/>
+  <disable_collisions link1="upper_arm_link" link2="suction_base_link" reason="Never"/>
+
+  <disable_collisions link1="forearm_link" link2="wrist_1_link" reason="Never"/>
+  <disable_collisions link1="forearm_link" link2="wrist_2_link" reason="Never"/>
+  <disable_collisions link1="forearm_link" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="forearm_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="forearm_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="forearm_link" link2="tool0" reason="Never"/>
+
+  <disable_collisions link1="wrist_1_link" link2="wrist_2_link" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="tool0" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="wrist_1_link" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="wrist_2_link" link2="wrist_3_link" reason="Never"/>
+  <disable_collisions link1="wrist_2_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="wrist_2_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="wrist_2_link" link2="tool0" reason="Never"/>
+  <disable_collisions link1="wrist_2_link" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="wrist_2_link" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="wrist_2_link" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="wrist_3_link" link2="ft_frame" reason="Never"/>
+  <disable_collisions link1="wrist_3_link" link2="flange" reason="Never"/>
+  <disable_collisions link1="wrist_3_link" link2="tool0" reason="Never"/>
+  <disable_collisions link1="wrist_3_link" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="wrist_3_link" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="wrist_3_link" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="ft_frame" link2="flange" reason="Never"/>
+  <disable_collisions link1="ft_frame" link2="tool0" reason="Never"/>
+  <disable_collisions link1="ft_frame" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="ft_frame" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="ft_frame" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="flange" link2="tool0" reason="Never"/>
+  <disable_collisions link1="flange" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="flange" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="flange" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="tool0" link2="suction_base_link" reason="Never"/>
+  <disable_collisions link1="tool0" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="tool0" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="suction_base_link" link2="suction_cup_link" reason="Never"/>
+  <disable_collisions link1="suction_base_link" link2="suction_tcp" reason="Never"/>
+
+  <disable_collisions link1="suction_cup_link" link2="suction_tcp" reason="Never"/>
+
+</robot>

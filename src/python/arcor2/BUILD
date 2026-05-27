@@ -6,5 +6,5 @@ arcor2_python_distribution(
         "src/python/arcor2/data/rpc",
         "src/python/arcor2/exceptions",
         "src/python/arcor2/source",
-    ]
+    ],
 )

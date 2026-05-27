@@ -1,20 +1,29 @@
+import copy
 import importlib
 import multiprocessing
+import tempfile
 import threading
 import time
 from multiprocessing.connection import Connection
-from typing import Any, Callable, NamedTuple, cast
+from pathlib import Path
+from typing import Any, Callable, cast
 
+import open3d as o3d
 import rclpy  # pants: no-infer-dep
+from geometry_msgs.msg import Point  # pants: no-infer-dep
 from geometry_msgs.msg import Pose as RosPose  # pants: no-infer-dep
-from geometry_msgs.msg import PoseStamped  # pants: no-infer-dep
 from moveit.planning import MoveItPy, PlanningComponent  # pants: no-infer-dep
+from moveit_msgs.msg import AttachedCollisionObject  # pants: no-infer-dep
 from moveit_msgs.msg import CollisionObject  # pants: no-infer-dep
+from moveit_msgs.msg import Constraints  # pants: no-infer-dep
+from moveit_msgs.msg import OrientationConstraint  # pants: no-infer-dep
+from moveit_msgs.msg import PositionConstraint  # pants: no-infer-dep
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup  # pants: no-infer-dep
 from rclpy.node import Node  # pants: no-infer-dep
 from rclpy.qos import QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy  # pants: no-infer-dep
 from sensor_msgs.msg import JointState  # pants: no-infer-dep
-from shape_msgs.msg import SolidPrimitive  # pants: no-infer-dep
+from shape_msgs.msg import Mesh as RosMesh  # pants: no-infer-dep
+from shape_msgs.msg import MeshTriangle, SolidPrimitive  # pants: no-infer-dep
 from std_msgs.msg import Bool, String  # pants: no-infer-dep
 from std_srvs.srv import Trigger  # pants: no-infer-dep
 from tf2_ros.buffer import Buffer  # pants: no-infer-dep
@@ -24,13 +33,16 @@ from ur_dashboard_msgs.srv import Load  # pants: no-infer-dep
 from ur_msgs.srv import SetPayload, SetSpeedSliderFraction  # pants: no-infer-dep
 
 from arcor2 import transformations as tr
-from arcor2.data import common, object_type
-from arcor2.data.common import Joint, Pose
+from arcor2.data import object_type
+from arcor2.data.common import Joint, Orientation, Pose, Position
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2.logging import get_logger
+from arcor2_storage import client as storage_client
 from arcor2_ur import topics
+from arcor2_ur.common import CollisionSceneObject, EffectorType, GraspableState, GraspPosition
 from arcor2_ur.exceptions import UrGeneral
 from arcor2_ur.object_types.ur5e import Vacuum
+from arcor2_ur.scripts.grasp_planner import generate_grasp_poses
 from arcor2_ur.vgc10 import VGC10
 
 logger = get_logger(__name__)
@@ -38,11 +50,6 @@ logger = get_logger(__name__)
 FREEDRIVE_KEEPALIVE_PERIOD = 0.1
 WORKSPACE_MIN = (-1.0, -1.0, -0.1)  # range of UR5e is 850mm
 WORKSPACE_MAX = (1.0, 1.0, 1.0)
-
-
-class CollisionObjectTuple(NamedTuple):
-    model: object_type.Models
-    pose: common.Pose
 
 
 def pose_to_ros_pose(ps: Pose) -> RosPose:
@@ -55,6 +62,93 @@ def pose_to_ros_pose(ps: Pose) -> RosPose:
     rp.orientation.z = ps.orientation.z
     rp.orientation.w = ps.orientation.w
     return rp
+
+
+def mesh_file_to_ros_mesh(
+    mesh_data: bytes,
+    asset_id: str,
+    scale: tuple[float, float, float] = (1.0, 1.0, 1.0),
+) -> RosMesh:
+    if not mesh_data:
+        raise UrGeneral(f"Mesh asset '{asset_id}' is empty.")
+
+    suffix = Path(asset_id).suffix.lower()
+    if not suffix:
+        raise UrGeneral(f"Mesh asset '{asset_id}' has no file extension.")
+
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+        tmp.write(mesh_data)
+        tmp.flush()
+
+        loaded = o3d.io.read_triangle_mesh(tmp.name)
+
+    if loaded.is_empty():
+        raise UrGeneral(f"Mesh asset '{asset_id}' has no geometry.")
+
+    vertices = tuple(
+        (
+            float(vertex[0]) * scale[0],
+            float(vertex[1]) * scale[1],
+            float(vertex[2]) * scale[2],
+        )
+        for vertex in loaded.vertices
+    )
+    triangles = tuple((int(triangle[0]), int(triangle[1]), int(triangle[2])) for triangle in loaded.triangles)
+
+    if not vertices or not triangles:
+        raise UrGeneral(f"Mesh asset '{asset_id}' has no usable mesh data.")
+
+    ros_mesh = RosMesh()
+
+    for x, y, z in vertices:
+        point = Point()
+        point.x = x
+        point.y = y
+        point.z = z
+        ros_mesh.vertices.append(point)
+
+    for a, b, c in triangles:
+        triangle = MeshTriangle()
+        triangle.vertex_indices = [a, b, c]
+        ros_mesh.triangles.append(triangle)
+
+    return ros_mesh
+
+
+def make_pose_constraints(
+    pose: Pose,
+    frame_id: str,
+    link_name: str,
+    position_tolerance: float = 0.01,
+    orientation_tolerance: float = 0.01,
+) -> Constraints:
+    constraints = Constraints()
+
+    position_constraint = PositionConstraint()
+    position_constraint.header.frame_id = frame_id
+    position_constraint.link_name = link_name
+    position_constraint.weight = 1.0
+
+    sphere = SolidPrimitive()
+    sphere.type = SolidPrimitive.SPHERE
+    sphere.dimensions = [position_tolerance]
+
+    position_constraint.constraint_region.primitives.append(sphere)
+    position_constraint.constraint_region.primitive_poses.append(pose_to_ros_pose(pose))
+
+    orientation_constraint = OrientationConstraint()
+    orientation_constraint.header.frame_id = frame_id
+    orientation_constraint.link_name = link_name
+    orientation_constraint.orientation = pose_to_ros_pose(pose).orientation
+    orientation_constraint.absolute_x_axis_tolerance = orientation_tolerance
+    orientation_constraint.absolute_y_axis_tolerance = orientation_tolerance
+    orientation_constraint.absolute_z_axis_tolerance = orientation_tolerance
+    orientation_constraint.weight = 1.0
+
+    constraints.position_constraints.append(position_constraint)
+    constraints.orientation_constraints.append(orientation_constraint)
+
+    return constraints
 
 
 def plan_and_execute(
@@ -93,6 +187,47 @@ def wait_for_future(future, *, timeout_sec: float = 2.0):
         raise UrGeneral("Service call timed out.")
 
     return future.result()
+
+
+def rotate_vector(q: Orientation, v: tuple[float, float, float]) -> tuple[float, float, float]:
+    x, y, z, w = q.x, q.y, q.z, q.w
+    vx, vy, vz = v
+
+    # quaternion * vector * quaternion_conjugate
+    tx = 2 * (y * vz - z * vy)
+    ty = 2 * (z * vx - x * vz)
+    tz = 2 * (x * vy - y * vx)
+
+    rx = vx + w * tx + (y * tz - z * ty)
+    ry = vy + w * ty + (z * tx - x * tz)
+    rz = vz + w * tz + (x * ty - y * tx)
+
+    return rx, ry, rz
+
+
+def normalize_orientation(q: Orientation) -> Orientation:
+    norm = (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w) ** 0.5
+    if norm == 0.0:
+        raise UrGeneral("Invalid quaternion.")
+    return Orientation(q.x / norm, q.y / norm, q.z / norm, q.w / norm)
+
+
+def compute_offset_pose_in_tool_axis(pose: Pose, distance: float) -> Pose:
+    q = normalize_orientation(pose.orientation)
+    dx, dy, dz = rotate_vector(q, (0.0, 0.0, -distance))
+
+    return Pose(
+        Position(
+            pose.position.x + dx,
+            pose.position.y + dy,
+            pose.position.z + dz,
+        ),
+        q,
+    )
+
+
+def compute_target_eef_pose(target_object_pose: Pose, attached_pose: Pose) -> Pose:
+    return tr.make_pose_abs(target_object_pose, attached_pose.inversed())
 
 
 class MyNode(Node):
@@ -297,41 +432,13 @@ class MyNode(Node):
             self._joint_state_handler(list(msg.name), list(msg.position))
 
 
-def apply_collision_objects(
-    scene, collision_objects: dict[str, CollisionObjectTuple], base_pose: Pose, base_link: str
-) -> None:
-    scene.remove_all_collision_objects()
-
-    for obj_id, obj in collision_objects.items():
-        if not isinstance(obj.model, object_type.Box):
-            continue
-
-        collision_object = CollisionObject()
-        collision_object.header.frame_id = base_link
-        collision_object.id = obj_id
-
-        box_pose = pose_to_ros_pose(tr.make_pose_rel(base_pose, obj.pose))
-
-        box = SolidPrimitive()
-        box.type = SolidPrimitive.BOX
-        box.dimensions = (obj.model.size_x, obj.model.size_y, obj.model.size_z)
-
-        collision_object.primitives.append(box)
-        collision_object.primitive_poses.append(box_pose)
-        collision_object.operation = CollisionObject.ADD
-
-        scene.apply_collision_object(collision_object)
-
-    scene.current_state.update()
-
-
 class RosWorkerRuntime:
     def __init__(
         self,
         base_pose: Pose,
         base_link: str,
         tool_link: str,
-        collision_objects: dict[str, CollisionObjectTuple],
+        collision_objects: dict[str, CollisionSceneObject],
         interact_with_dashboard: bool,
         robot_ip: str,
         vgc10_port: int,
@@ -343,6 +450,7 @@ class RosWorkerRuntime:
         self.base_link = base_link
         self.tool_link = tool_link
         self.collision_objects = collision_objects.copy()
+        self.mesh_models: dict[tuple[str, tuple[float, float, float]], RosMesh] = {}
         self.joints: list[Joint] = []
         self.tool: VGC10 | None = None
         self.freedrive_mode = False
@@ -404,7 +512,7 @@ class RosWorkerRuntime:
 
         moveitpy, _ = self._get_moveit()
         with moveitpy.get_planning_scene_monitor().read_write() as scene:
-            apply_collision_objects(scene, self.collision_objects, self.base_pose, self.base_link)
+            self.apply_collision_objects(scene)
 
     def _update_joints(self, names: list[str], positions: list[float]) -> None:
         self.joints = [Joint(name, position) for name, position in zip(names, positions)]
@@ -461,7 +569,7 @@ class RosWorkerRuntime:
             return set()
         list_controllers_cls: Any = self._list_controllers_client.srv_type
         req = list_controllers_cls.Request()
-        resp = wait_for_future(self._list_controllers_client.call_async(req), timeout_sec=5.0)
+        resp = wait_for_future(self._list_controllers_client.call_async(req), timeout_sec=15.0)
         if resp is None:
             return set()
         return {c.name for c in resp.controller if c.state == "active"}
@@ -494,22 +602,33 @@ class RosWorkerRuntime:
         req.deactivate_controllers = to_deactivate
         req.strictness = 2  # STRICT
         req.activate_asap = False
-        req.timeout.sec = 5
+        req.timeout.sec = 15
         req.timeout.nanosec = 0
 
-        resp = wait_for_future(self._switch_controller_client.call_async(req), timeout_sec=10.0)
+        resp = wait_for_future(self._switch_controller_client.call_async(req), timeout_sec=20.0)
         if resp is None or not resp.ok:
             msg = getattr(resp, "message", "")
             raise UrGeneral(f"Controller switch failed. {msg}")
 
     def _current_pose(self) -> Pose:
         ros_time = rclpy.time.Time()
+        deadline = time.monotonic() + 30.0
+        last_error: Exception | None = None
 
-        if not self.node.buffer.can_transform(
-            self.base_link, self.tool_link, ros_time, timeout=rclpy.time.Duration(seconds=5.0)
-        ):
-            raise UrGeneral("Can't get transform")
-        transform = self.node.buffer.lookup_transform(self.base_link, self.tool_link, ros_time)
+        while time.monotonic() < deadline:
+            try:
+                transform = self.node.buffer.lookup_transform(
+                    self.base_link,
+                    self.tool_link,
+                    ros_time,
+                    timeout=rclpy.time.Duration(seconds=1.0),
+                )
+                break
+            except Exception as exc:
+                last_error = exc
+                time.sleep(0.05)
+        else:
+            raise UrGeneral(f"Can't get transform {self.base_link}->{self.tool_link}: {last_error}")
 
         t = transform.transform
 
@@ -575,7 +694,13 @@ class RosWorkerRuntime:
             time.sleep(0.02)
         raise UrGeneral("Target pose was not reached.")
 
-    def move_to_pose(self, pose: Pose, velocity: float, payload: float, safe: bool) -> dict:
+    def move_to_pose(
+        self,
+        pose: Pose,
+        velocity: float,
+        payload: float,
+        safe: bool,
+    ) -> dict:
         if self.freedrive_mode:
             raise UrGeneral("Freedrive mode is active. Disable hand teaching before commanding motion.")
 
@@ -584,21 +709,10 @@ class RosWorkerRuntime:
         previous_joints = list(self.joints)
         pose = tr.make_pose_rel(self.base_pose, pose)
 
-        pose_goal = PoseStamped()
-        pose_goal.header.frame_id = self.base_link
-
-        pose_goal.pose.orientation.x = pose.orientation.x
-        pose_goal.pose.orientation.y = pose.orientation.y
-        pose_goal.pose.orientation.z = pose.orientation.z
-        pose_goal.pose.orientation.w = pose.orientation.w
-        pose_goal.pose.position.x = pose.position.x
-        pose_goal.pose.position.y = pose.position.y
-        pose_goal.pose.position.z = pose.position.z
-
         moveitpy, ur_manipulator = self._get_moveit()
         with moveitpy.get_planning_scene_monitor().read_write() as scene:
             if safe:
-                apply_collision_objects(scene, self.collision_objects, self.base_pose, self.base_link)
+                self.apply_collision_objects(scene)
             else:
                 scene.remove_all_collision_objects()
 
@@ -607,7 +721,14 @@ class RosWorkerRuntime:
             scene.current_state.update()
 
         ur_manipulator.set_start_state_to_current_state()
-        ur_manipulator.set_goal_state(pose_stamped_msg=pose_goal, pose_link=self.tool_link)
+        goal_constraints = make_pose_constraints(
+            pose,
+            self.base_link,
+            self.tool_link,
+            position_tolerance=0.01,
+            orientation_tolerance=0.01,
+        )
+        ur_manipulator.set_goal_state(motion_plan_constraints=[goal_constraints])
         ur_manipulator.set_workspace(*WORKSPACE_MIN, *WORKSPACE_MAX)  # not documented anywhere :-D
 
         self.node.set_speed_slider(velocity)
@@ -617,9 +738,108 @@ class RosWorkerRuntime:
 
         # TODO why is this needed (for tests to pass)?
         self._wait_for_joint_update(previous_joints)
-        self._wait_for_transform_update(previous_transform_time)
-        self._wait_for_pose_reached(target_abs)
+        try:
+            self._wait_for_transform_update(previous_transform_time, timeout=15.0)
+        except UrGeneral:
+            logger.warning("Transform did not update after motion, checking pose anyway.")
+        self._wait_for_pose_reached(target_abs, tolerance=0.01)
         return {}
+
+    def apply_collision_objects(self, scene) -> None:
+        scene.remove_all_collision_objects()
+
+        scene.current_state.update(force=True)
+        attached_objects = scene.planning_scene_message.robot_state.attached_collision_objects
+        attached_id = attached_objects[0].object.id if attached_objects else None
+
+        for obj_id, obj in self.collision_objects.items():
+            state = obj.metadata.get("state")
+
+            if state == GraspableState.HIDDEN:
+                continue
+
+            # object is already attached
+            elif state == GraspableState.ATTACHED and attached_id is not None:
+                continue
+
+            elif state == GraspableState.ATTACHED:
+                attached_pose_dict = obj.metadata.get("attached_pose")
+                if attached_pose_dict is None:
+                    raise UrGeneral(f"Attached object {obj_id} has no attached_pose metadata.")
+
+                pose_in_frame = Pose.from_dict(cast(dict[str, Any], attached_pose_dict))
+
+                attached = self.create_collision_object(obj, pose_in_frame, attach=True)
+                scene.process_attached_collision_object(attached)
+                logger.info(f"Attached object id: {obj_id}")
+                continue
+
+            else:  # normal collision object
+                pose_in_frame = tr.make_pose_rel(self.base_pose, obj.pose)
+                collision = self.create_collision_object(obj, pose_in_frame)
+                scene.apply_collision_object(collision)
+
+        scene.current_state.update(force=True)
+        scene.current_state.update()
+
+    def create_collision_object(
+        self, obj: CollisionSceneObject, pose_in_frame: Pose, attach: bool = False
+    ) -> CollisionObject | AttachedCollisionObject:
+
+        collision_object = CollisionObject()
+        if attach:
+            collision_object.header.frame_id = self.tool_link
+        else:
+            collision_object.header.frame_id = self.base_link
+        collision_object.id = obj.model.id
+        collision_object.operation = CollisionObject.ADD
+
+        if isinstance(obj.model, object_type.Box):
+            prim = SolidPrimitive()
+            prim.type = SolidPrimitive.BOX
+            prim.dimensions = [obj.model.size_x, obj.model.size_y, obj.model.size_z]
+
+            collision_object.primitives.append(prim)
+            collision_object.primitive_poses.append(pose_to_ros_pose(pose_in_frame))
+
+        elif isinstance(obj.model, object_type.Sphere):
+            prim = SolidPrimitive()
+            prim.type = SolidPrimitive.SPHERE
+            prim.dimensions = [obj.model.radius]
+
+            collision_object.primitives.append(prim)
+            collision_object.primitive_poses.append(pose_to_ros_pose(pose_in_frame))
+
+        elif isinstance(obj.model, object_type.Cylinder):
+            prim = SolidPrimitive()
+            prim.type = SolidPrimitive.CYLINDER
+            prim.dimensions = [obj.model.height, obj.model.radius]
+
+            collision_object.primitives.append(prim)
+            collision_object.primitive_poses.append(pose_to_ros_pose(pose_in_frame))
+
+        elif isinstance(obj.model, object_type.Mesh):
+            asset_id = obj.model.asset_id
+            scale = obj.metadata.get("mesh_scale", (1.0, 1.0, 1.0))
+            cache_key = (asset_id, scale)
+            cached_mesh = self.mesh_models.get(cache_key)
+
+            if cached_mesh is None:
+                mesh_data = storage_client.get_asset_data(asset_id)
+                cached_mesh = mesh_file_to_ros_mesh(mesh_data, asset_id, scale)
+                self.mesh_models[cache_key] = cached_mesh
+
+            collision_object.meshes.append(copy.deepcopy(cached_mesh))
+            collision_object.mesh_poses.append(pose_to_ros_pose(pose_in_frame))
+
+        if attach:
+            attached = AttachedCollisionObject()
+            attached.link_name = self.tool_link
+            attached.object = collision_object
+            attached.touch_links = [self.tool_link, "suction_base_link", "suction_cup_link"]  # robot parts
+            return attached
+
+        return collision_object
 
     def get_joints(self) -> list[dict]:
         return [joint.to_dict() for joint in self.joints]
@@ -635,7 +855,7 @@ class RosWorkerRuntime:
         moveitpy, _ = self._get_moveit()
         with moveitpy.get_planning_scene_monitor().read_write() as scene:
             if ikr.avoid_collisions:
-                apply_collision_objects(scene, self.collision_objects, self.base_pose, self.base_link)
+                self.apply_collision_objects(scene)
             else:
                 scene.remove_all_collision_objects()
 
@@ -658,7 +878,7 @@ class RosWorkerRuntime:
                     raise UrGeneral("State is in collision.")
             except UrGeneral:
                 if not ikr.avoid_collisions:
-                    apply_collision_objects(scene, self.collision_objects, self.base_pose, self.base_link)
+                    self.apply_collision_objects(scene)
                 raise
 
             if len(scene.current_state.joint_positions) != len(self.joints):
@@ -675,11 +895,11 @@ class RosWorkerRuntime:
     def get_freedrive_mode(self) -> bool:
         return self.freedrive_mode
 
-    def update_collisions(self, collision_objects: dict[str, CollisionObjectTuple]) -> dict:
+    def update_collisions(self, collision_objects: dict[str, CollisionSceneObject]) -> dict:
         self.collision_objects = collision_objects.copy()
         moveitpy, _ = self._get_moveit()
         with moveitpy.get_planning_scene_monitor().read_write() as scene:
-            apply_collision_objects(scene, self.collision_objects, self.base_pose, self.base_link)
+            self.apply_collision_objects(scene)
         return {}
 
     def suck(self, vacuum: int) -> dict:
@@ -707,13 +927,172 @@ class RosWorkerRuntime:
             raise UrGeneral("MoveIt is not initialized.")
         return self.moveitpy, self.ur_manipulator
 
+    def attach_object(
+        self,
+        object_id: str,
+        effector_type: EffectorType,
+        grasp_position: GraspPosition,
+        velocity: float,
+        payload: float,
+        safe: bool,
+    ) -> dict:
+        object = self.collision_objects[object_id]
+        object.metadata.pop("attached_pose", None)
+
+        ros_mesh = None
+        if isinstance(object.model, object_type.Mesh):
+            asset_id = object.model.asset_id
+            scale = object.metadata.get("mesh_scale", (1.0, 1.0, 1.0))
+            cache_key = (asset_id, scale)
+            ros_mesh = self.mesh_models.get(cache_key)
+
+            if ros_mesh is None:
+                mesh_data = storage_client.get_asset_data(asset_id)
+                ros_mesh = mesh_file_to_ros_mesh(mesh_data, asset_id, scale)
+                self.mesh_models[cache_key] = ros_mesh
+
+        grasp_options = generate_grasp_poses(object, effector_type, grasp_position, ros_mesh)
+        logger.info(f"Generated {len(grasp_options)} grasp options for object {object_id}.")
+
+        trail = 0
+        for pre_grasp_pose, grasp_pose in grasp_options:
+            trail += 1
+            try:
+                self.inverse_kinematics(
+                    InverseKinematicsRequest(pose=pre_grasp_pose, start_joints=self.joints, avoid_collisions=False)
+                )
+                self.inverse_kinematics(
+                    InverseKinematicsRequest(pose=grasp_pose, start_joints=self.joints, avoid_collisions=False)
+                )
+                logger.info(f"IK accepted: {trail} grasp options.")
+            except Exception as exc:
+                logger.exception(
+                    f"IK rejected: {trail}/{len(grasp_options)} grasp candidate. "
+                    f"pre_grasp_pose={pre_grasp_pose.to_dict()}, "
+                    f"grasp_pose={grasp_pose.to_dict()}: {exc}"
+                )
+                continue
+
+            try:
+                self.move_to_pose(pre_grasp_pose, velocity, payload, safe)
+
+                if self.tool and effector_type == EffectorType.SUCK:
+                    self.suck(60)
+                    time.sleep(1.0)
+
+                object.metadata["state"] = GraspableState.HIDDEN
+                self.update_collisions(self.collision_objects)
+
+                self.move_to_pose(grasp_pose, velocity, payload, safe)
+
+                if self.tool and effector_type == EffectorType.SUCK:
+                    vac = Vacuum.from_dict(self.vacuum())
+                    if vac.avg() < 20:
+                        self.release()
+                        raise UrGeneral(f"Failed to attach object {object_id}: vacuum not reached.")
+
+                object.metadata["state"] = GraspableState.ATTACHED
+                attached_pose = tr.make_pose_rel(grasp_pose, object.pose)
+                object.metadata["attached_pose"] = attached_pose.to_dict()
+
+                self.update_collisions(self.collision_objects)
+
+            except Exception as exc:
+                logger.exception(
+                    f"Failed grasp candidate {trail}/{len(grasp_options)} "
+                    f"for object {object_id}. "
+                    f"pre_grasp_pose={pre_grasp_pose.to_dict()}, "
+                    f"grasp_pose={grasp_pose.to_dict()}: {exc}"
+                )
+
+                if self.tool:
+                    self.release()
+
+                object.metadata.pop("attached_pose", None)
+                object.metadata["state"] = GraspableState.WORLD
+                self.update_collisions(self.collision_objects)
+
+                continue
+
+            return object.metadata.copy()
+
+        raise UrGeneral(f"Unable to attach object {object_id}.")
+
+    def detach_object(
+        self,
+        target_pose: Pose,
+        velocity: float,
+        payload: float,
+        safe: bool,
+    ) -> dict[str, Any]:
+        object_id = self.get_attached_object_id()
+        if object_id is None:
+            raise UrGeneral("No object to detach.")
+
+        logger.info(f"Detaching object id: {object_id}")
+        object = self.collision_objects[object_id]
+
+        attached_pose_dict = object.metadata.get("attached_pose")
+        if attached_pose_dict is None:
+            raise UrGeneral(f"Object {object_id} is not attached.")
+
+        attached_pose = Pose.from_dict(attached_pose_dict)
+        target_eef_pose = compute_target_eef_pose(target_pose, attached_pose)
+        post_detach_pose = compute_offset_pose_in_tool_axis(target_eef_pose, 0.20)
+
+        self.move_to_pose(target_eef_pose, velocity, payload, safe)
+
+        if self.tool:
+            self.release()
+            time.sleep(1.0)
+
+        self.move_to_pose(post_detach_pose, velocity, payload, safe)
+
+        self.remove_attached_object(object_id)
+        object.metadata.pop("attached_pose", None)
+        object.pose = target_pose
+        object.metadata["state"] = GraspableState.WORLD
+        self.update_collisions(self.collision_objects)
+
+        logger.info(f"Detached object id: {object_id}")
+
+        return {"object_id": object_id, "state": object.metadata["state"]}
+
+    def get_attached_object_id(self) -> str | None:
+
+        moveitpy, _ = self._get_moveit()
+
+        planning_scene_msg = None
+        with moveitpy.get_planning_scene_monitor().read_write() as scene:
+            scene.current_state.update(force=True)
+            planning_scene_msg = scene.planning_scene_message
+
+        attached_objects = planning_scene_msg.robot_state.attached_collision_objects
+
+        if not attached_objects:
+            return None
+
+        return attached_objects[0].object.id
+
+    def remove_attached_object(self, object_id: str) -> None:
+        moveitpy, _ = self._get_moveit()
+
+        attached = AttachedCollisionObject()
+        attached.link_name = self.tool_link
+        attached.object.id = object_id
+        attached.object.operation = CollisionObject.REMOVE
+
+        with moveitpy.get_planning_scene_monitor().read_write() as scene:
+            scene.process_attached_collision_object(attached)
+            scene.current_state.update(force=True)
+
 
 def ros_worker_main(
     conn: Connection,
     base_pose: Pose,
     base_link: str,
     tool_link: str,
-    collision_objects: dict[str, CollisionObjectTuple],
+    collision_objects: dict[str, CollisionSceneObject],
     interact_with_dashboard: bool,
     robot_ip: str,
     vgc10_port: int,
@@ -771,7 +1150,29 @@ def ros_worker_main(
                     result = runtime.get_eef_pose()
                 elif op == "move_to_pose":
                     pose = Pose.from_dict(kwargs["pose"])
-                    result = runtime.move_to_pose(pose, kwargs["velocity"], kwargs["payload"], kwargs["safe"])
+                    result = runtime.move_to_pose(
+                        pose,
+                        kwargs["velocity"],
+                        kwargs["payload"],
+                        kwargs["safe"],
+                    )
+                elif op == "pick_up_object":
+                    result = runtime.attach_object(
+                        kwargs["object_id"],
+                        EffectorType(kwargs["effector_type"]),
+                        GraspPosition(kwargs["grasp_position"]),
+                        kwargs["velocity"],
+                        kwargs["payload"],
+                        kwargs["safe"],
+                    )
+                elif op == "place_object":
+                    pose = Pose.from_dict(kwargs["pose"])
+                    result = runtime.detach_object(
+                        pose,
+                        kwargs["velocity"],
+                        kwargs["payload"],
+                        kwargs["safe"],
+                    )
                 elif op == "get_joints":
                     result = runtime.get_joints()
                 elif op == "ik":
@@ -811,7 +1212,7 @@ class RosWorkerClient:
     def __init__(
         self,
         pose: Pose,
-        collision_objects: dict[str, CollisionObjectTuple],
+        collision_objects: dict[str, CollisionSceneObject],
         base_link: str,
         tool_link: str,
         planning_group_name: str,

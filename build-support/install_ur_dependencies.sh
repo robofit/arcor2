@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+set -euxo pipefail
+
+apt-get update
+
+# debug check
+apt-cache search ros-jazzy | head || true
 
 # Keep ROS packages pinned so CI and the arcor2_ur image exercise the same UR stack over time.
 apt-get install -y -q --no-install-recommends \

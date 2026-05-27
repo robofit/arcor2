@@ -80,7 +80,12 @@ jobs:
     - name: Test
       run: |
         source /opt/ros/jazzy/setup.bash
-        pants --changed-since=origin/master --changed-dependents=transitive test
+        pants --changed-since=origin/master --changed-dependents=transitive --tag='-unstable_ros' test
+
+    - name: Test changed unstable ROS tests serially with retries
+      run: |
+        source /opt/ros/jazzy/setup.bash
+        pants --process-execution-local-parallelism=1 --changed-since=origin/master --changed-dependents=transitive --tag='unstable_ros' test --test-attempts-default=1
     - name: Build Python packages
       run: |
         pants --filter-target-type=python_distribution package ::

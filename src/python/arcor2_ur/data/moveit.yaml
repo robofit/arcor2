@@ -11,12 +11,12 @@ planning_pipelines:
   pipeline_names: ["ompl"]
 
 plan_request_params:
-  planning_attempts: 2
+  planning_attempts: 3
   planning_pipeline: ompl
   planner_id: RRTConnectkConfigDefault
   max_velocity_scaling_factor: 1.0
   max_acceleration_scaling_factor: 1.0
-  planning_time: 5.0
+  planning_time: 10.0
   goal_joint_tolerance: 0.001
   goal_position_tolerance: 0.005
   goal_orientation_tolerance: 0.01
@@ -40,3 +40,12 @@ ompl:
     - default_planning_response_adapters/AddTimeOptimalParameterization
     - default_planning_response_adapters/ValidateSolution
     - default_planning_response_adapters/DisplayMotionPath
+
+  planner_configs:
+    RRTConnectkConfigDefault:
+      type: geometric::RRTConnect
+      range: 0.0
+
+  ur_manipulator:
+    planner_configs:
+      - RRTConnectkConfigDefault

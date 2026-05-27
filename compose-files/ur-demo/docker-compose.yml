@@ -1,11 +1,18 @@
 services:
   ur-demo-robot-api:
-    image: arcor2/arcor2_ur:1.7.0
+    image: arcor2/arcor2_ur:1.8.0
     container_name: ur-demo-robot-api
     ports:
       - "5012:5012"
-#    environment:
-#       - ARCOR2_UR_DEBUG=1
+    environment:
+      - DISPLAY=${DISPLAY}
+      - WAYLAND_DISPLAY=${WAYLAND_DISPLAY}
+      - XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}
+      - PULSE_SERVER=${PULSE_SERVER}
+      # - ARCOR2_UR_DEBUG=1
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /mnt/wslg:/mnt/wslg
     restart: always  # the service tends to crash when calling PUT /state/stop
     cap_add:
       - SYS_NICE
@@ -15,7 +22,7 @@ services:
       memlock: 8428281856
     # network_mode: host
   ur-demo-arserver:
-    image: arcor2/arcor2_arserver:1.4.0
+    image: arcor2/arcor2_arserver:1.8.0
     container_name: ur-demo-arserver
     depends_on:
       ur-demo-storage:
@@ -53,7 +60,7 @@ services:
       - ur-demo-network
 
   ur-demo-execution:
-    image: arcor2/arcor2_execution:1.7.0
+    image: arcor2/arcor2_execution:1.8.0
     container_name: ur-demo-execution
     networks:
       - ur-demo-network
@@ -117,7 +124,7 @@ services:
         condition: service_healthy
 
   ur-demo-upload-object-types:
-    image: arcor2/arcor2_ur_ot:1.7.0
+    image: arcor2/arcor2_ur_ot:1.8.0
     container_name: "ur-demo-upload-object-types"
     depends_on:
       ur-demo-storage:
@@ -128,7 +135,7 @@ services:
       - ARCOR2_STORAGE_SERVICE_URL=http://ur-demo-storage:10000
 
   ur-demo-upload-builtin-objects:
-    image: arcor2/arcor2_upload_object_types:2.0.0
+    image: arcor2/arcor2_upload_object_types:1.8.0
     container_name: "ur-demo-upload-builtin-objects"
     depends_on:
       ur-demo-storage:

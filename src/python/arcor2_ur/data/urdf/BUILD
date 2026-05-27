@@ -1,8 +1,7 @@
-resources(
-    name="ur5e",
+files(
+    name="urdf",
     sources=[
         "ur5e.urdf",
-        "meshes/ur5e/collision/*.stl",
-        "meshes/ur5e/visual/*.dae",
+        "meshes/**",
     ],
 )

@@ -288,4 +288,50 @@
     <parent link="flange"/>
     <child link="tool0"/>
   </joint>
+
+  <link name="suction_base_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/ur5e/collision/base_link_1cup.stl"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/ur5e/collision/base_link_1cup.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="tool0_to_suction_base" type="fixed">
+    <parent link="tool0"/>
+    <child link="suction_base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="suction_cup_link">
+    <visual>
+      <geometry>
+        <mesh filename="package://meshes/ur5e/collision/suction_cup_1cup.stl"/>
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://meshes/ur5e/collision/suction_cup_1cup.stl"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="suction_base_to_cup" type="fixed">
+    <parent link="suction_base_link"/>
+    <child link="suction_cup_link"/>
+    <origin xyz="0 0 0.1025" rpy="0 0 0"/>
+  </joint>
+
+  <link name="suction_tcp"/>
+
+  <joint name="suction_cup_to_tcp" type="fixed">
+    <parent link="suction_cup_link"/>
+    <child link="suction_tcp"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
 </robot>

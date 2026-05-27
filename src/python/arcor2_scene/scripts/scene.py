@@ -18,6 +18,7 @@ from arcor2.data import common, object_type, scene
 from arcor2.logging import get_logger
 from arcor2_scene import SCENE_PORT, SCENE_SERVICE_NAME, version
 from arcor2_scene.exceptions import NotFound, SceneGeneral, WebApiError
+from arcor2_ur.common import parse_collision_body
 from arcor2_web.flask import Response, RespT, create_app, run_app
 
 app = create_app(__name__)
@@ -97,12 +98,11 @@ def put_box() -> RespT:
                             $ref: WebApiError
     """
 
-    if not isinstance(request.json, dict):
-        raise SceneGeneral("Body should be a JSON dict containing Pose.")
+    pose, _ = parse_collision_body()
 
     args = request.args.to_dict()
     box = object_type.Box(args["boxId"], float(args["sizeX"]), float(args["sizeY"]), float(args["sizeZ"]))
-    collision_objects[box.id] = CollisionObject(box, common.Pose.from_dict(humps.decamelize(request.json)))
+    collision_objects[box.id] = CollisionObject(box, pose)
 
     return jsonify("ok"), 200
 
@@ -147,12 +147,11 @@ def put_sphere() -> RespT:
                     $ref: WebApiError
     """
 
-    if not isinstance(request.json, dict):
-        raise SceneGeneral("Body should be a JSON dict containing Pose.")
+    pose, _ = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     sphere = object_type.Sphere(args["sphere_id"], float(args["radius"]))
-    collision_objects[sphere.id] = CollisionObject(sphere, common.Pose.from_dict(humps.decamelize(request.json)))
+    collision_objects[sphere.id] = CollisionObject(sphere, pose)
     return jsonify("ok"), 200
 
 
@@ -201,12 +200,11 @@ def put_cylinder() -> RespT:
                     $ref: WebApiError
     """
 
-    if not isinstance(request.json, dict):
-        raise SceneGeneral("Body should be a JSON dict containing Pose.")
+    pose, _ = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     cylinder = object_type.Cylinder(args["cylinder_id"], float(args["radius"]), float(args["height"]))
-    collision_objects[cylinder.id] = CollisionObject(cylinder, common.Pose.from_dict(humps.decamelize(request.json)))
+    collision_objects[cylinder.id] = CollisionObject(cylinder, pose)
     return jsonify("ok"), 200
 
 
@@ -267,12 +265,11 @@ def put_mesh() -> RespT:
                     $ref: WebApiError
     """
 
-    if not isinstance(request.json, dict):
-        raise SceneGeneral("Body should be a JSON dict containing Pose.")
+    pose, _ = parse_collision_body()
 
     args = humps.decamelize(request.args.to_dict())
     mesh = object_type.Mesh(args["mesh_id"], args["mesh_file_id"])
-    collision_objects[mesh.id] = CollisionObject(mesh, common.Pose.from_dict(humps.decamelize(request.json)))
+    collision_objects[mesh.id] = CollisionObject(mesh, pose)
     return jsonify("ok"), 200
 
 

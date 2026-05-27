@@ -42,6 +42,7 @@ RUN set -euo pipefail \
         && apt-get update \
         && /root/install_ur_dependencies.sh \
         && apt-get install -y -q --no-install-recommends \
+        ros-jazzy-rviz2 \
         libglib2.0-0t64 \
         libgomp1 \
         libusb-1.0-0 \
@@ -54,6 +55,7 @@ ENV ARCOR2_UR_TYPE=${ARCOR2_UR_TYPE}
 ENV ARCOR2_UR_ROBOT_IP=${ARCOR2_UR_ROBOT_IP}
 ENV ARCOR2_UR_STARTUP_SLEEP=${ARCOR2_UR_STARTUP_SLEEP}
 
+COPY src.python.arcor2_ur.scripts/robot_publisher.pex /bin/robot_publisher.pex
 COPY src/docker/arcor2_ur/start.sh /root/start.sh
 RUN chmod +x /root/start.sh
 ENTRYPOINT ["/root/start.sh"]

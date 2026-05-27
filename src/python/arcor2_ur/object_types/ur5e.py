@@ -4,9 +4,11 @@ from typing import cast
 
 from dataclasses_jsonschema import JsonSchemaMixin
 
-from arcor2.data.common import ActionMetadata, Joint, Pose, StrEnum
+from arcor2.data import object_type
+from arcor2.data.common import ActionMetadata, Joint, Pose, Position, StrEnum
 from arcor2.data.robot import InverseKinematicsRequest
 from arcor2_object_types.abstract import Robot, Settings
+from arcor2_ur.common import EffectorType, GraspableState, GraspPosition
 from arcor2_web import rest
 
 
@@ -22,6 +24,36 @@ class Vacuum(JsonSchemaMixin):
 
     def avg(self) -> float:
         return (self.a + self.b) / 2
+
+
+@dataclass
+class PickUpObjectByPosition(JsonSchemaMixin):
+    position: Position
+    radius: float
+    effector_type: EffectorType = EffectorType.SUCK
+    grasp_position: GraspPosition = GraspPosition.ALL
+    object_type_name: object_type.Model3dType | None = None
+    velocity: float = 50.0
+    payload: float = 0.0
+    safe: bool = True
+
+
+@dataclass
+class PickUpObjectById(JsonSchemaMixin):
+    object_id: str
+    effector_type: EffectorType = EffectorType.SUCK
+    grasp_position: GraspPosition = GraspPosition.ALL
+    velocity: float = 50.0
+    payload: float = 0.0
+    safe: bool = True
+
+
+@dataclass
+class DetachObject(JsonSchemaMixin):
+    pose: Pose
+    velocity: float = 50.0
+    payload: float = 0.0
+    safe: bool = True
 
 
 class VacuumChannel(StrEnum):
@@ -73,15 +105,24 @@ class Ur5e(Robot):
         return set()
 
     def suctions(self) -> set[str]:
-        return set("default")
+        return {"default"}
 
     def get_end_effector_pose(self, end_effector_id: str) -> Pose:
         return rest.call(rest.Method.GET, f"{self.settings.url}/eef/pose", return_type=Pose)
 
     def move_to_pose(
-        self, end_effector_id: str, target_pose: Pose, speed: float, safe: bool = True, linear: bool = True
+        self,
+        end_effector_id: str,
+        target_pose: Pose,
+        speed: float,
+        safe: bool = True,
+        linear: bool = True,
     ) -> None:
-        self.move(target_pose, speed * 100, safe)
+        self.move(
+            target_pose,
+            speed * 100,
+            safe=safe,
+        )
 
     def move(
         self,
@@ -110,8 +151,154 @@ class Ur5e(Robot):
                 rest.Method.PUT,
                 f"{self.settings.url}/eef/pose",
                 body=pose,
-                params={"velocity": speed, "payload": payload, "safe": safe},
+                timeout=rest.Timeout(read=120),
+                params={
+                    "velocity": speed,
+                    "payload": payload,
+                    "safe": safe,
+                },
             )
+
+    def pick_up_object_by_position(
+        self,
+        position: Position,
+        radius: float,
+        effector_type: EffectorType = EffectorType.SUCK,
+        grasp_position: GraspPosition = GraspPosition.ALL,
+        object_type_name: object_type.Model3dType | None = None,
+        speed: float = 50.0,
+        safe: bool = True,
+        payload: float = 0.0,
+        *,
+        an: None | str = None,
+    ) -> None:
+        """Picks up a graspable object from the selected area.
+
+        :param position: Center of the area where the object should be found.
+        :param radius: Search radius.
+        :param effector_type: Type of end effector used for grasping.
+        :param grasp_position: Preferred grasp position.
+        :param object_type_name: Optional object model type filter.
+        :param speed: Relative speed.
+        :param safe: Avoid collisions.
+        :param payload: Object weight.
+        :return:
+        """
+
+        assert radius >= 0.0
+        assert 0.0 <= speed <= 100.0
+        assert 0.0 <= payload <= 5.0
+
+        with self._move_lock:
+            rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/graspable/pick_up_object_by_position",
+                body=PickUpObjectByPosition(
+                    position=position,
+                    radius=radius,
+                    effector_type=effector_type,
+                    grasp_position=grasp_position,
+                    object_type_name=object_type_name,
+                    velocity=speed,
+                    payload=payload,
+                    safe=safe,
+                ),
+                timeout=rest.Timeout(read=120),
+            )
+
+    def pick_up_object_by_id(
+        self,
+        object_id: str,
+        effector_type: EffectorType = EffectorType.SUCK,
+        grasp_position: GraspPosition = GraspPosition.ALL,
+        speed: float = 50.0,
+        safe: bool = True,
+        payload: float = 0.0,
+        *,
+        an: None | str = None,
+    ) -> None:
+        """Picks up a graspable object by its ID.
+
+        :param object_id: Collision/graspable object ID.
+        :param effector_type: Type of end effector used for grasping.
+        :param grasp_position: Preferred grasp position.
+        :param speed: Relative speed.
+        :param safe: Avoid collisions.
+        :param payload: Object weight.
+        :return:
+        """
+
+        assert 0.0 <= speed <= 100.0
+        assert 0.0 <= payload <= 5.0
+
+        with self._move_lock:
+            rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/graspable/pick_up_object_by_id",
+                body=PickUpObjectById(
+                    object_id=object_id,
+                    effector_type=effector_type,
+                    grasp_position=grasp_position,
+                    velocity=speed,
+                    payload=payload,
+                    safe=safe,
+                ),
+                timeout=rest.Timeout(read=120),
+            )
+
+    def place_object(
+        self,
+        pose: Pose,
+        speed: float = 50.0,
+        safe: bool = True,
+        payload: float = 0.0,
+        *,
+        an: None | str = None,
+    ) -> None:
+        """Places the currently attached object to the target pose.
+
+        :param pose: Target pose of the placed object.
+        :param speed: Relative speed.
+        :param safe: Avoid collisions.
+        :param payload: Object weight.
+        :return:
+        """
+
+        assert 0.0 <= speed <= 100.0
+        assert 0.0 <= payload <= 5.0
+
+        with self._move_lock:
+            rest.call(
+                rest.Method.PUT,
+                f"{self.settings.url}/graspable/place_object",
+                body=DetachObject(
+                    pose=pose,
+                    velocity=speed,
+                    payload=payload,
+                    safe=safe,
+                ),
+                timeout=rest.Timeout(read=120),
+            )
+
+    def graspable_state(self, object_id: str) -> GraspableState:
+        """Returns graspable object state from the UR service."""
+
+        return GraspableState(
+            rest.call(
+                rest.Method.GET,
+                f"{self.settings.url}/graspable/{object_id}/state",
+                return_type=str,
+            )
+        )
+
+    def graspable_position(self, object_id: str) -> Position:
+        """Returns graspable object position from the UR service."""
+
+        return rest.call(
+            rest.Method.GET,
+            f"{self.settings.url}/graspable/{object_id}/position",
+            return_type=Position,
+        )
 
     def suck(
         self,
@@ -190,3 +377,6 @@ class Ur5e(Robot):
         )
 
     move.__action__ = ActionMetadata()  # type: ignore
+    pick_up_object_by_position.__action__ = ActionMetadata()  # type: ignore
+    pick_up_object_by_id.__action__ = ActionMetadata()  # type: ignore
+    place_object.__action__ = ActionMetadata()  # type: ignore

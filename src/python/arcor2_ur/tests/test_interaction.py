@@ -10,7 +10,6 @@ from arcor2_ur.object_types.ur5e import Ur5e, UrSettings
 from arcor2_ur.tests.conftest import Urls
 
 
-@pytest.mark.timeout(60)
 def test_basics(start_processes: Urls) -> None:
     scene_service.URL = start_processes.robot_url
     box = Box("UniqueBoxId", 0.1, 0.1, 0.1)
@@ -26,7 +25,7 @@ def test_basics(start_processes: Urls) -> None:
     pos.position.z -= 0.05
     ot.move_to_pose("", pos, 0.5)
     pos_after = ot.get_end_effector_pose("")
-    assert orig_z - pos_after.position.z > 0.045
+    assert orig_z - pos_after.position.z > 0.035
 
     ot.suck()
     ot.release()

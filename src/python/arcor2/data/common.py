@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import copy
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -138,6 +139,11 @@ class Position(IterableIndexable):
         self.z *= other
 
         return self
+
+    def distance(self, other: Position) -> float:
+        """Compute Euclidean distance between two positions."""
+        diff = self - other
+        return math.sqrt(diff.x**2 + diff.y**2 + diff.z**2)
 
     def to_dict(
         self,

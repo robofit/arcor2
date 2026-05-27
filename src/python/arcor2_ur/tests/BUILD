@@ -1,8 +1,34 @@
-python_tests(
-    dependencies=["3rdparty#PyYAML"],
-    runtime_package_dependencies=[
-        "src/python/arcor2_ur/scripts:ur", "src/python/arcor2_ur/scripts:robot_publisher",
+files(
+    name="mesh_assets",
+    sources=[
+        "test_mesh_object/triangle_block.stl",
     ],
 )
 
-python_test_utils(name="test_utils")
+python_test_utils(
+    name="test_utils",
+    sources=["conftest.py"],
+)
+
+python_tests(
+    name="tests",
+    sources=[
+        "test_*.py",
+        "test_collision/test_*.py",
+        "test_pick_up/test_*.py",
+        "test_pick_and_place/test_*.py",
+        "test_pick_and_move_whit_collisions/test_*.py",
+    ],
+    dependencies=[
+        ":test_utils",
+        ":mesh_assets",
+        "src/python/arcor2_ur/data/urdf:urdf",
+        "src/python/arcor2_ur/data:moveit_yaml",
+    ],
+    runtime_package_dependencies=[
+        "src/python/arcor2_ur/scripts:ur",
+        "src/python/arcor2_ur/scripts:robot_publisher",
+        "src/python/arcor2_storage/scripts:storage",
+    ],
+    tags=["unstable_ros"],
+)
