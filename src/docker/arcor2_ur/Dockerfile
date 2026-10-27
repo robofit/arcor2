@@ -30,16 +30,12 @@ RUN add-apt-repository universe
 
 ENV LANG=en_US.UTF-8
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
 
-# hadolint ignore=SC2086
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo \"${UBUNTU_CODENAME}\") main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null
-
+# the script also adds the ROS apt repository (a dated snapshot)
 COPY build-support/install_ur_dependencies.sh /root/install_ur_dependencies.sh
 
 # libgl1-mesa-glx ??
 RUN set -euo pipefail \
-        && apt-get update \
         && /root/install_ur_dependencies.sh \
         && apt-get install -y -q --no-install-recommends \
         libglib2.0-0t64 \

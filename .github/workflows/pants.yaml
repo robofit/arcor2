@@ -60,7 +60,6 @@ jobs:
     - name: Lint
       run: |
         pants --changed-since=origin/master lint
-    - uses: ros-tooling/setup-ros@v0.7
     - name: install system dependencies
       run: | # cargo is required when fastuuid falls back to a source build
         echo "Disk space before installing system dependencies:"

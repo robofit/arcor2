@@ -3,12 +3,16 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "monthly"
   - package-ecosystem: "docker"
     directories:
       - "/src/docker/*"
     schedule:
-      interval: "daily"
+      interval: "monthly"
+    ignore:
+      # images have to match the interpreter_constraints in pants.toml, so only patch releases are wanted
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
       docker-base-images:
         group-by: dependency-name
@@ -16,7 +20,7 @@ updates:
     directories:
       - "/compose-files/*"
     schedule:
-      interval: "daily"
+      interval: "monthly"
     groups:
       compose-images:
         group-by: dependency-name

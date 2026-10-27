@@ -25,7 +25,9 @@ Repo-wide guidance for coding agents working in this repository.
 - When tool dependencies change, update the matching file in `3rdparty/` (`mypy-requirements.txt`,
   `pytest-requirements.txt`, `flake8-requirements.txt`, `setuptools-requirements.txt`) and regenerate lockfiles.
 - Keep ROS Jazzy packages in `build-support/install_ur_dependencies.sh` pinned unless the goal is a deliberate UR stack
-  upgrade. Those pins keep host-side tests and the `arcor2_ur` image on the same stack over time.
+  upgrade. Those pins keep host-side tests and the `arcor2_ur` image on the same stack over time. They are installed
+  from a dated `snapshots.ros.org` snapshot (`ROS_SNAPSHOT` in the script); an upgrade bumps the snapshot and the pins
+  together.
 - Do not reintroduce exact Ubuntu package pins in Dockerfiles unless there is a clear reproducibility reason and the
   hadolint policy is updated with it.
 
