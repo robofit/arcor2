@@ -5,3 +5,13 @@ services:
     volumes:
       - ./robot_calibration.yaml:/root/robot_calibration.yaml
     network_mode: "host"  # ObjectType has to connect to localhost:5012
+  ur-demo-arserver:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - ARCOR2_SCENE_SERVICE_URL=http://host.docker.internal:5012
+  ur-demo-execution:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - ARCOR2_SCENE_SERVICE_URL=http://host.docker.internal:5012

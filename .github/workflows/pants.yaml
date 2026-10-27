@@ -34,7 +34,7 @@ jobs:
     - name: Show disk space
       run: |
         df -h / /mnt $GITHUB_WORKSPACE
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
         lfs: true
@@ -45,7 +45,7 @@ jobs:
     - name: Checkout LFS objects
       run: git lfs checkout
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - uses: pantsbuild/actions/init-pants@v5-scie-pants
@@ -92,7 +92,7 @@ jobs:
         pip install "pipdeptree==2.30.0"
         pipdeptree -w fail
     - name: Upload pants log
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pants-log-build-py${{ matrix.python-version }}
         path: .pants.d/pants.log
@@ -122,7 +122,7 @@ jobs:
     - name: Show disk space
       run: |
         df -h / /mnt $GITHUB_WORKSPACE
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
         lfs: true
@@ -141,7 +141,7 @@ jobs:
         sudo chown -R "$USER":"$USER" "$GITHUB_WORKSPACE/.docker"
         sudo systemctl start docker || sudo service docker start
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - uses: pantsbuild/actions/init-pants@v5-scie-pants
@@ -154,7 +154,7 @@ jobs:
       run: |
         pants --filter-target-type=docker_image --changed-since=origin/master --changed-dependents=transitive package
     - name: Upload pants log
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pants-log-docker-py${{ matrix.python-version }}
         path: .pants.d/pants.log
