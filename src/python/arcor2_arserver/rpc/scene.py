@@ -527,7 +527,8 @@ async def delete_scene_cb(req: srpc.s.DeleteScene.Request, ui: WsClient) -> None
             resp = srpc.s.DeleteScene.Response(result=False)
             resp.messages = ["Scene has associated projects."]
             resp.data = assoc_projects
-            await glob.LOCK.write_unlock(req.args.id, user_name)
+            if not req.dry_run:  # otherwise, it is unlocked by the context manager
+                await glob.LOCK.write_unlock(req.args.id, user_name)
             return resp
 
         if req.dry_run:

@@ -34,6 +34,7 @@ from arcor2_arserver.helpers import (
     make_name_unique,
     unique_name,
 )
+from arcor2_arserver.lock.exceptions import LockingException
 from arcor2_arserver.objects_actions import get_types_dict
 from arcor2_arserver.project import close_project, get_project_problems, notify_project_opened, open_project
 from arcor2_arserver.robot import check_eef_arm, get_end_effector_pose, get_pose_and_joints, get_robot_joints
@@ -449,10 +450,22 @@ async def update_action_point_parent_cb(req: srpc.p.UpdateActionPointParent.Requ
     # some super basic checks (not involving other objects) are performed before locking anything
     if req.args.new_parent_id == ("" if ap.parent is None else ap.parent):
         logger.warn(f"Attempted useless update of parent from {ap.parent} to {req.args.new_parent_id} on AP {ap.name}.")
+
+        # AP is unlocked as if the update was done, otherwise the lock would stay acquired
+        if (
+            not req.dry_run
+            and await glob.LOCK.is_write_locked(ap.id, user_name)
+            and not await glob.LOCK.is_write_locked(ap.id, user_name, True)
+        ):
+            await glob.LOCK.write_unlock(ap.id, user_name, True)
         return None
 
     if req.args.new_parent_id == ap.id:
         raise Arcor2Exception("AP can't be its own parent.")
+
+    # moving the AP to another tree would break the tree lock (and UI locks of its children would remain)
+    if await glob.LOCK.is_write_locked(ap.id, user_name, True):
+        raise LockingException("Action point has to be locked without its children.")
 
     to_lock = await get_unlocked_objects(ap.parent, user_name) if ap.parent else set()
     if req.args.new_parent_id:

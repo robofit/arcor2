@@ -265,11 +265,23 @@ async def check_feature(robot_inst: Robot, feature_name: str) -> None:
         raise Arcor2Exception(f"Unknown robot feature: {feature_name}.")
 
 
+def robot_to_lock(robot_id: str, user_name: str) -> set[str]:
+    """Robot locked by the user in UI remains locked (and is not unlocked after
+    the move), otherwise it has to be locked for the move.
+
+    Locks held by other RPCs (e.g. a running move) are not taken into
+    account, so the robot is locked again (with retries).
+    """
+
+    return set() if robot_id in glob.LOCK.all_ui_locks.get(user_name, set()) else {robot_id}
+
+
 async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
-    async with ctx_write_lock(req.args.robot_id, user_name, auto_unlock=False):
+    to_lock = robot_to_lock(req.args.robot_id, user_name)
+    async with ctx_write_lock(to_lock, user_name, auto_unlock=False):
         ensure_scene_started()
 
         robot_inst = get_robot_instance(req.args.robot_id)
@@ -301,7 +313,7 @@ async def move_to_pose_cb(req: srpc.r.MoveToPose.Request, ui: WsClient) -> None:
                 req.args.speed,
                 req.args.safe,
                 req.args.linear,
-                user_name,
+                user_name if to_lock else None,
             )
         )
 
@@ -310,14 +322,22 @@ async def move_to_joints_cb(req: srpc.r.MoveToJoints.Request, ui: WsClient) -> N
     glob.LOCK.scene_or_exception()
     user_name = glob.USERS.user_name(ui)
 
-    async with ctx_write_lock(req.args.robot_id, user_name, auto_unlock=False):
+    to_lock = robot_to_lock(req.args.robot_id, user_name)
+    async with ctx_write_lock(to_lock, user_name, auto_unlock=False):
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
         await check_feature(robot_inst, Robot.move_to_joints.__name__)
         await robot.check_robot_before_move(robot_inst)
 
         asyncio.ensure_future(
-            robot.move_to_joints(robot_inst, req.args.joints, req.args.speed, req.args.safe, user_name, req.args.arm_id)
+            robot.move_to_joints(
+                robot_inst,
+                req.args.joints,
+                req.args.speed,
+                req.args.safe,
+                user_name if to_lock else None,
+                req.args.arm_id,
+            )
         )
 
 
@@ -335,7 +355,8 @@ async def move_to_action_point_cb(req: srpc.r.MoveToActionPoint.Request, ui: WsC
     scene = glob.LOCK.scene_or_exception()
     project = glob.LOCK.project_or_exception()
 
-    async with ctx_write_lock(req.args.robot_id, glob.USERS.user_name(ui)):
+    user_name = glob.USERS.user_name(ui)
+    async with ctx_write_lock(robot_to_lock(req.args.robot_id, user_name), user_name):
         ensure_scene_started()
         robot_inst = get_robot_instance(req.args.robot_id)
 

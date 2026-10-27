@@ -38,6 +38,8 @@
 ### RPCs with non-standard behavior
 - `RenameObject`: After renaming an action object, the object is automatically unlocked by server.
 - `UpdateActionPointParent`: When updating parent of action point, only the child has to be locked manually. The parent is locked automatically by server and then both child and parent are unlocked automatically by server.
+  - The child is unlocked also when the parent is unchanged. A child locked including its tree can't be moved.
+- `WriteLock`: When the user already holds a lock of the object alone, requesting the tree lock upgrades it.
 - `AddLogicItem`: Only the first action has to be locked manually. After adding is finished, both start and end actions are unlocked automatically by server.
 - `UpdateConstant`: When update of a project constant is finished, it is automatically unlocked by server.
 - `UpdateLock`: Object can be locked alone or including tree. UpdateLock can switch between these two types.

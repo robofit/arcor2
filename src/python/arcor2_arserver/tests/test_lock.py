@@ -12,6 +12,7 @@ from arcor2_arserver.clients import project_service as storage
 from arcor2_arserver.globals import Lock
 from arcor2_arserver.helpers import ctx_read_lock
 from arcor2_arserver.lock.exceptions import CannotLock, LockingException
+from arcor2_arserver.rpc.robot import robot_to_lock
 from arcor2_arserver.tests.testutils import ars_connection_str, event, event_mapping, lock_object, unlock_object
 from arcor2_arserver_data import events, rpc
 from arcor2_arserver_data.client import ARServer, get_id
@@ -199,6 +200,19 @@ async def test_whole_lock_yield(lock: Lock) -> None:
             pass
     await lock.write_unlock(lock.scene.id, test)
 
+    # locks visible in UI make it fail immediately, with a message saying who holds them
+    ap = next(ap for ap in lock.project.action_points if ap.name == "ap")
+    assert await lock.write_lock(ap.id, test, notify=True)
+    for dry_run in (False, True):
+        with pytest.raises(CannotLock, match=f"{lock.ErrMessages.SOMETHING_LOCKED.value} \\(by {test}\\)"):
+            async with lock.get_lock(dry_run):
+                pass
+    await lock.write_unlock(ap.id, test, notify=True)
+    assert not lock.all_ui_locks
+
+    async with lock.get_lock():
+        pass
+
 
 @pytest.mark.asyncio
 async def test_recursive_locking(lock: Lock) -> None:
@@ -321,6 +335,38 @@ async def test_updating_lock(lock: Lock) -> None:
         await lock.update_lock(ap.id, test, rpc.lock.UpdateType.OBJECT)
     await lock.write_unlock(ap.id, test)
 
+    # the tree can't be locked while someone reads from it
+    assert await lock.write_lock(ap.id, test)
+    assert await lock.read_lock(ap_ap.id, "other_user")
+    with pytest.raises(LockingException):
+        await lock.update_lock(ap.id, test, rpc.lock.UpdateType.TREE)
+    await lock.read_unlock(ap_ap.id, "other_user")
+    await lock.update_lock(ap.id, test, rpc.lock.UpdateType.TREE)
+    await lock.write_unlock(ap.id, test)
+    assert not lock._locked_objects
+
+
+@pytest.mark.asyncio
+async def test_robot_to_lock(lock: Lock) -> None:
+    assert lock.scene
+
+    test = "test"
+    robot_id = next(iter(lock.scene.object_ids))
+    glob.LOCK = lock
+
+    assert robot_to_lock(robot_id, test) == {robot_id}
+
+    # lock held by another RPC (e.g. running move) has to be waited for
+    assert await lock.write_lock(robot_id, test)
+    assert robot_to_lock(robot_id, test) == {robot_id}
+    await lock.write_unlock(robot_id, test)
+
+    # robot locked by the user from UI is used as it is
+    assert await lock.write_lock(robot_id, test, notify=True)
+    assert robot_to_lock(robot_id, test) == set()
+    assert robot_to_lock(robot_id, "other_user") == {robot_id}
+    await lock.write_unlock(robot_id, test, notify=True)
+
 
 @pytest.mark.asyncio
 async def test_root_getter(lock: Lock) -> None:
@@ -378,6 +424,51 @@ async def test_auto_release(lock: Lock) -> None:
     assert await lock.get_write_locks_count() == 0
     assert not await lock.is_read_locked(ap2.id, test)
     await check_notification_content(lock, test, [ap.id, ap_ap.id, ap_ap_ap.id, ori.id, action.id], False)
+    assert not lock.all_ui_locks
+    assert test not in lock._release_tasks
+
+
+@pytest.mark.asyncio
+async def test_auto_release_of_child_objects(lock: Lock) -> None:
+    """Locks of objects that are not roots of their trees are released as
+    well."""
+
+    assert lock.project
+
+    test = "test"
+    ap_ap_ap = next(ap for ap in lock.project.action_points if ap.name == "ap_ap_ap")
+    ori = lock.project.ap_orientations(ap_ap_ap.id)[0]
+    action = lock.project.ap_actions(ap_ap_ap.id)[0]
+
+    lock._lock_timeout = 0.1
+    assert await lock.write_lock(action.id, test, notify=True)
+    await check_notification_content(lock, test, [action.id])
+    assert await lock.read_lock(ori.id, test)
+    assert lock.all_ui_locks
+
+    await lock.schedule_auto_release(test)
+    await lock._release_tasks[test]  # would raise if releasing failed
+
+    assert not lock._locked_objects
+    assert not lock.all_ui_locks
+    await check_notification_content(lock, test, [action.id], False)
+
+
+@pytest.mark.asyncio
+async def test_auto_release_without_ui_locks(lock: Lock) -> None:
+    assert lock.project
+
+    test = "test"
+    ap = next(ap for ap in lock.project.action_points if ap.name == "ap")
+
+    lock._lock_timeout = 0.1
+    assert await lock.read_lock(ap.id, test)
+
+    await lock.schedule_auto_release(test)
+    await lock._release_tasks[test]  # would raise if releasing failed
+
+    assert not lock._locked_objects
+    assert lock.notifications_q.empty()
 
 
 @pytest.mark.asyncio
@@ -558,6 +649,36 @@ def test_lock_events(start_processes: None, ars: ARServer, scene: cmn.Scene, pro
         ).result
 
     unlock_object(ars, ap.id)
+    event(ars2, events.lk.ObjectsUnlocked)
+
+    # owner of an object lock can upgrade it to lock the whole tree
+    lock_object(ars, ap.id)
+    event(ars2, events.lk.ObjectsLocked)
+    lock_object(ars, ap.id, True)
+    locked_evt = event(ars2, events.lk.ObjectsLocked)
+    for obj_id in (ap_ap.id, ap_ap_ap.id, ori.id):
+        assert obj_id in locked_evt.data.object_ids
+
+    # AP can't be moved to another tree while the tree is locked
+    resp = ars.call_rpc(
+        rpc.p.UpdateActionPointParent.Request(get_id(), rpc.p.UpdateActionPointParent.Request.Args(ap_ap_ap.id, "")),
+        rpc.p.UpdateActionPointParent.Response,
+    )
+    assert not resp.result
+    assert resp.messages
+    assert "without its children" in resp.messages[0]
+
+    unlock_object(ars, ap.id)
+    event(ars2, events.lk.ObjectsUnlocked)
+
+    # useless update of AP parent unlocks the AP as well
+    lock_object(ars, ap_ap.id)
+    event(ars2, events.lk.ObjectsLocked)
+    assert ars.call_rpc(
+        rpc.p.UpdateActionPointParent.Request(get_id(), rpc.p.UpdateActionPointParent.Request.Args(ap_ap.id, ap.id)),
+        rpc.p.UpdateActionPointParent.Response,
+    ).result
+    event(ars, events.lk.ObjectsUnlocked)
     event(ars2, events.lk.ObjectsUnlocked)
 
     # test lock will stay locked after logout for a while
