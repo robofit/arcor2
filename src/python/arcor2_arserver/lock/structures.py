@@ -98,6 +98,9 @@ class LockedObject:
         if len(self.write) > 1:
             raise LockingException(raise_msg)
 
+        if self.read:  # the same condition as for acquiring the tree lock
+            raise LockingException(f"There are read locks in the tree of {obj_id}.")
+
         if owner != self.write[obj_id]:
             raise LockingException(raise_msg)
 

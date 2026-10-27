@@ -4,6 +4,7 @@ from arcor2_arserver import globals as glob
 from arcor2_arserver import logger
 from arcor2_arserver.lock.exceptions import CannotLock
 from arcor2_arserver_data import rpc as srpc
+from arcor2_arserver_data.rpc.lock import UpdateType
 
 
 async def write_lock_cb(req: srpc.lock.WriteLock.Request, ui: WsClient) -> None:
@@ -11,6 +12,11 @@ async def write_lock_cb(req: srpc.lock.WriteLock.Request, ui: WsClient) -> None:
 
     if await glob.LOCK.is_write_locked(req.args.object_id, user_name, req.args.lock_tree):
         logger.warn(f"User {user_name} attempted to re-acquire lock for {req.args.object_id}. Pretending it is OK...")
+        return
+
+    if req.args.lock_tree and await glob.LOCK.is_write_locked(req.args.object_id, user_name):
+        # the user already holds a lock of the object only, so it is upgraded to lock the whole tree
+        await glob.LOCK.update_lock(req.args.object_id, user_name, UpdateType.TREE)
         return
 
     if not await glob.LOCK.write_lock(req.args.object_id, user_name, req.args.lock_tree, notify=True):

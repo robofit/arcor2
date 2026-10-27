@@ -2,6 +2,20 @@
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
+## [Unreleased]
+
+### Fixed
+
+- Locks of a logged-out user were not released when some of them were held on child objects (e.g. actions or orientations).
+- `WriteLock` can upgrade a lock already held by the same user to a lock of the whole tree.
+- `UpdateActionPointParent` refuses to move a tree-locked action point and unlocks the action point when the parent is unchanged.
+- Robot movement RPCs no longer fail when the robot is already locked by the same user.
+- Dry run of `DeleteScene` failed for scenes with associated projects.
+
+### Changed
+
+- Whole-project operations (e.g. saving) blocked by locked objects now report who holds the locks.
+
 ## [1.4.0] - 2025-12-17
 
 ### Changed 

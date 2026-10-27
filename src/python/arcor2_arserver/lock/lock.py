@@ -122,7 +122,8 @@ class Lock:
             # TODO turn warn into debug once the issue with "Locking failed" is gone
             if not dry_run:
                 logger.warn(f"Locking failed... ui_user_locks: {self._ui_user_locks}")
-            raise CannotLock(self.ErrMessages.LOCK_FAIL.value)
+            owners = ", ".join(sorted(self._ui_user_locks))
+            raise CannotLock(f"{self.ErrMessages.SOMETHING_LOCKED.value} (by {owners}).")
 
         i = 0
         yielded = False
@@ -146,7 +147,7 @@ class Lock:
                     await asyncio.sleep(self._retry_wait)
         finally:
             if i > self._lock_retries * 0.25:
-                logger.warn(f"Retry took {i * self._lock_timeout}")
+                logger.warn(f"Retry took {i * self._retry_wait}")
 
             if not yielded:
                 # TODO turn warn into debug once the issue with "Locking failed" is gone
@@ -455,6 +456,7 @@ class Lock:
         :param owner: affected user
         """
 
+        await self.cancel_auto_release(owner)
         self._release_tasks[owner] = asyncio.create_task(self._release_all_owner_locks(owner))
 
     async def cancel_auto_release(self, owner: str) -> None:
@@ -482,10 +484,21 @@ class Lock:
             if read or write:
                 logger.warn(f"{len(read) + len(write)} lock(s) of {owner} were just discarded.")
 
-            self._read_unlock(list(read), list(read.values()), owner)
-            self._write_unlock(list(write), list(write.values()), owner)
+            # read and write are in format object_id: root_id
+            try:
+                self._read_unlock(list(read.values()), list(read), owner)
+            except LockingException:
+                logger.exception(f"Failed to discard read locks of {owner}.")
 
-        if to_notify := self._ui_user_locks.pop(owner):
+            try:
+                self._write_unlock(list(write.values()), list(write), owner)
+            except LockingException:
+                logger.exception(f"Failed to discard write locks of {owner}.")
+
+        if self._release_tasks.get(owner) is asyncio.current_task():
+            del self._release_tasks[owner]
+
+        if to_notify := self._ui_user_locks.pop(owner, None):
             self.notifications_q.put_nowait(LockEventData(to_notify, owner))
 
     async def get_owner_locks(self, owner: str) -> tuple[dict[str, str], dict[str, str]]:
